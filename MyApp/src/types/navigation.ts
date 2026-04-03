@@ -53,4 +53,7 @@ export type RootStackParamList = {
   PrincipalPerformance: undefined;
   PrincipalAnnouncements: undefined;
   PrincipalFees: undefined;
+  PrincipalRSM: undefined;
+  PrincipalCreateExam: undefined;
+  PrincipalReviewExam: { examId: string };
 };
