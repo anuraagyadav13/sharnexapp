@@ -1,0 +1,17 @@
+﻿
+C:\Users\INTEL\Desktop\Krushna\sharnexapp\MyApp\App.tsx
+  44:7  error  'styles' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\INTEL\Desktop\Krushna\sharnexapp\MyApp\jest.setup.js
+  2:1  error  'jest' is not defined  no-undef
+
+C:\Users\INTEL\Desktop\Krushna\sharnexapp\MyApp\src\screens\HomeScreen.tsx
+   12:3   error    'Modal' is defined but never used       @typescript-eslint/no-unused-vars
+  179:28  warning  Inline style: { flexDirection: 'row' }  react-native/no-inline-styles
+  352:46  warning  Inline style: { zIndex: 999 }           react-native/no-inline-styles
+
+C:\Users\INTEL\Desktop\Krushna\sharnexapp\MyApp\src\screens\RegisterScreen.tsx
+  145:54  warning  Inline style: { marginBottom: 24 }  react-native/no-inline-styles
+
+Γ£û 6 problems (3 errors, 3 warnings)
+

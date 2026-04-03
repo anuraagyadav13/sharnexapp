@@ -1,0 +1,720 @@
+﻿src/screens/principal/PrincipalAddStudentScreen.tsx(316,5): error TS1136: Property assignment expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(328,19): error TS1005: ',' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(329,14): error TS1005: ',' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(330,15): error TS1005: ',' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(332,10): error TS1005: ',' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(333,10): error TS1005: ',' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(334,14): error TS1005: ',' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(335,13): error TS1005: ',' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(336,12): error TS1005: ',' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(337,5): error TS1136: Property assignment expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(338,17): error TS1005: ',' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(339,22): error TS1005: ',' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(340,20): error TS1005: ',' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(341,13): error TS1005: ',' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(342,10): error TS1005: ',' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(343,20): error TS1005: ',' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(344,3): error TS1135: Argument expression expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(344,4): error TS1128: Declaration or statement expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(348,16): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(349,16): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(350,17): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(351,20): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(352,22): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(353,20): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(354,15): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(355,14): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(356,3): error TS1109: Expression expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(356,4): error TS1128: Declaration or statement expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(359,11): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(360,17): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(361,20): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(362,15): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(363,19): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(364,17): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(365,3): error TS1109: Expression expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(365,4): error TS1128: Declaration or statement expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(366,45): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(366,59): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(366,84): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(366,89): error TS1128: Declaration or statement expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(367,39): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(367,64): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(367,70): error TS1128: Declaration or statement expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(370,15): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(371,20): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(372,20): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(373,22): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(374,17): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(376,16): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(377,17): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(377,37): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(377,42): error TS1128: Declaration or statement expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(379,17): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(380,14): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(380,18): error TS1109: Expression expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(380,19): error TS1128: Declaration or statement expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(381,43): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(381,59): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(381,68): error TS1128: Declaration or statement expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(383,36): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(383,58): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(383,63): error TS1128: Declaration or statement expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(385,57): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(385,81): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(385,102): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(385,111): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(385,117): error TS1128: Declaration or statement expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(388,15): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(389,16): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(390,16): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(391,20): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(392,22): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(393,17): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(394,20): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(395,3): error TS1109: Expression expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(395,4): error TS1128: Declaration or statement expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(396,45): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(396,61): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(396,70): error TS1128: Declaration or statement expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(399,20): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(400,22): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(401,17): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(402,16): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(403,17): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(403,37): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(403,43): error TS1128: Declaration or statement expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(405,17): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(406,14): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(407,3): error TS1109: Expression expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(407,4): error TS1128: Declaration or statement expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(408,43): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(408,59): error TS1005: ';' expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(408,68): error TS1128: Declaration or statement expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(410,1): error TS1128: Declaration or statement expected.
+src/screens/principal/PrincipalAddStudentScreen.tsx(410,2): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(251,5): error TS1136: Property assignment expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(263,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(270,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(273,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(279,11): error TS1005: ',' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(289,19): error TS1005: ',' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(292,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(293,5): error TS1136: Property assignment expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(294,17): error TS1005: ',' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(295,22): error TS1005: ',' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(296,20): error TS1005: ',' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(297,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(298,10): error TS1005: ',' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(299,3): error TS1135: Argument expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(299,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(302,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(303,19): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(304,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(305,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(306,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(307,22): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(308,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(309,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(309,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(312,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(313,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(313,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(317,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(318,12): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(319,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(320,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(320,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(323,19): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(324,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(325,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(326,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(326,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(329,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(330,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(331,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(331,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(334,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(335,22): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(336,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(338,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(339,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(339,37): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(339,42): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(341,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(342,14): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(342,18): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(342,19): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(345,13): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(346,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(347,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(347,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(350,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(351,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(352,5): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(353,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(354,22): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(355,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(356,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(357,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(357,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(360,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(361,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(361,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(364,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(364,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(367,11): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(368,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(369,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(370,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(371,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(372,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(372,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(375,13): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(376,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(377,12): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(378,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(378,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(381,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(382,14): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(383,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(384,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(384,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(388,8): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(389,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(389,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(392,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(393,19): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(394,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(395,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(396,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(397,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(398,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(399,22): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(400,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(400,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(403,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(404,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(405,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(405,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(408,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(409,19): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(410,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(411,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(412,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(413,22): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(415,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(416,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(416,37): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(416,42): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(418,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(419,14): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(419,18): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(419,19): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(422,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(423,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(424,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(424,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(428,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(429,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(430,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(431,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(431,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(434,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(435,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(436,21): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(437,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(437,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(440,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(441,19): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(442,5): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(443,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(444,12): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(445,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(446,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(446,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(449,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(449,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(452,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(453,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(454,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(455,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(455,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(458,8): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(459,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(459,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(462,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(463,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(464,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(464,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(467,8): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(468,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(469,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(469,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(471,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(475,11): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(476,9): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(477,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(478,18): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(479,22): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(480,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(481,18): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(482,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(483,19): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(484,19): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(485,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(485,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(488,18): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(489,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(490,19): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(491,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(492,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(493,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(494,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(495,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(496,22): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(497,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(498,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(498,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(501,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(502,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(503,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(503,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(506,18): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(507,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(508,19): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(509,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(510,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(511,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(512,22): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(514,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(515,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(515,37): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(515,42): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(517,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(518,14): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(518,18): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(518,19): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(521,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(522,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(523,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(523,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(524,1): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAddQuestionScreen.tsx(524,2): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherAttendanceScreen.tsx(189,5): error TS1136: Property assignment expected.
+src/screens/teacher/TeacherAttendanceScreen.tsx(200,16): error TS1005: ',' expected.
+src/screens/teacher/TeacherAttendanceScreen.tsx(206,18): error TS1005: ',' expected.
+src/screens/teacher/TeacherAttendanceScreen.tsx(212,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherAttendanceScreen.tsx(218,21): error TS1005: ',' expected.
+src/screens/teacher/TeacherAttendanceScreen.tsx(224,16): error TS1005: ',' expected.
+src/screens/teacher/TeacherAttendanceScreen.tsx(230,15): error TS1005: ',' expected.
+src/screens/teacher/TeacherAttendanceScreen.tsx(234,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherAttendanceScreen.tsx(238,11): error TS1005: ',' expected.
+src/screens/teacher/TeacherAttendanceScreen.tsx(243,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherAttendanceScreen.tsx(256,17): error TS1005: ',' expected.
+src/screens/teacher/TeacherAttendanceScreen.tsx(262,19): error TS1005: ',' expected.
+src/screens/teacher/TeacherAttendanceScreen.tsx(265,17): error TS1005: ',' expected.
+src/screens/teacher/TeacherAttendanceScreen.tsx(278,18): error TS1005: ',' expected.
+src/screens/teacher/TeacherAttendanceScreen.tsx(286,16): error TS1005: ',' expected.
+src/screens/teacher/TeacherAttendanceScreen.tsx(291,18): error TS1005: ',' expected.
+src/screens/teacher/TeacherAttendanceScreen.tsx(301,17): error TS1005: ',' expected.
+src/screens/teacher/TeacherAttendanceScreen.tsx(309,16): error TS1005: ',' expected.
+src/screens/teacher/TeacherAttendanceScreen.tsx(314,1): error TS1135: Argument expression expected.
+src/screens/teacher/TeacherAttendanceScreen.tsx(314,2): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(285,5): error TS1136: Property assignment expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(295,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(300,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(306,17): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(309,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(315,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(316,5): error TS1136: Property assignment expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(317,17): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(318,22): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(319,20): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(320,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(321,10): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(322,20): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(323,3): error TS1135: Argument expression expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(323,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(326,22): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(327,13): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(328,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(329,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(329,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(332,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(333,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(334,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(335,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(336,22): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(337,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(338,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(338,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(342,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(342,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(345,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(346,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(347,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(348,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(349,12): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(350,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(350,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(353,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(354,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(354,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(357,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(357,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(360,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(361,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(362,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(362,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(365,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(366,14): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(367,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(367,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(371,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(372,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(373,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(374,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(375,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(376,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(377,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(377,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(380,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(381,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(382,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(383,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(383,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(386,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(387,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(388,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(388,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(391,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(392,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(393,22): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(394,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(395,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(396,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(396,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(399,13): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(400,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(401,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(401,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(405,19): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(406,8): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(407,14): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(408,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(408,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(411,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(412,19): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(413,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(414,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(415,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(416,22): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(417,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(417,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(420,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(421,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(422,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(422,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(425,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(426,19): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(427,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(428,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(429,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(430,22): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(431,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(431,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(434,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(435,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(436,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(436,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(437,1): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateAssignmentScreen.tsx(437,2): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(282,5): error TS1136: Property assignment expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(293,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(299,15): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(305,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(308,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(313,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(322,16): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(326,5): error TS1136: Property assignment expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(327,17): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(328,22): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(329,20): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(330,3): error TS1135: Argument expression expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(330,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(333,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(334,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(334,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(337,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(338,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(338,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(341,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(342,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(342,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(346,11): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(347,9): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(348,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(349,18): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(350,22): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(351,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(352,18): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(353,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(354,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(354,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(357,18): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(358,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(359,19): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(360,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(361,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(362,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(363,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(364,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(365,22): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(366,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(367,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(367,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(370,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(371,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(372,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(372,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(375,18): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(376,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(377,19): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(378,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(379,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(380,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(381,22): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(383,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(384,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(384,37): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(384,42): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(386,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(387,14): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(387,18): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(387,19): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(390,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(391,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(392,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(392,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(393,1): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateQuizScreen.tsx(393,2): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(274,5): error TS1136: Property assignment expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(285,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(291,15): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(296,16): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(303,16): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(307,15): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(312,15): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(316,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(322,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(328,10): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(333,14): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(336,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(343,10): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(351,15): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(357,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(364,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(375,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(388,16): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(393,10): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(408,14): error TS1005: ',' expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(413,1): error TS1135: Argument expression expected.
+src/screens/teacher/TeacherCreateQuizStep3Screen.tsx(413,2): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherDashboard.tsx(323,5): error TS1136: Property assignment expected.
+src/screens/teacher/TeacherDashboard.tsx(324,17): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(325,20): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(326,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(327,16): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(328,17): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(329,15): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(330,15): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(331,22): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(346,15): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(349,23): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(356,23): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(363,26): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(369,26): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(375,19): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(376,18): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(377,23): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(378,19): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(380,15): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(381,15): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(382,18): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(383,24): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(384,22): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(385,15): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(386,19): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(387,18): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(388,15): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(389,19): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(390,18): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(391,17): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(392,17): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(393,19): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(394,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(395,14): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(396,18): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(397,20): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(398,15): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(399,15): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(400,19): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(401,1): error TS1005: ',' expected.
+src/screens/teacher/TeacherDashboard.tsx(401,2): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(294,5): error TS1136: Property assignment expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(306,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(313,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(318,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(328,20): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(332,21): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(338,19): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(342,20): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(349,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(357,18): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(361,15): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(370,17): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(375,14): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(381,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(387,14): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(392,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(399,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(403,19): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(407,19): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(408,25): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(409,20): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(411,18): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(412,24): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(413,19): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(415,17): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(416,23): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(417,18): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(419,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(430,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(446,16): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(451,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(463,16): error TS1005: ',' expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(468,1): error TS1135: Argument expression expected.
+src/screens/teacher/TeacherMarkAttendanceScreen.tsx(468,2): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherQuizScreen.tsx(341,5): error TS1136: Property assignment expected.
+src/screens/teacher/TeacherQuizScreen.tsx(352,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherQuizScreen.tsx(358,14): error TS1005: ',' expected.
+src/screens/teacher/TeacherQuizScreen.tsx(363,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherQuizScreen.tsx(368,17): error TS1005: ',' expected.
+src/screens/teacher/TeacherQuizScreen.tsx(372,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherQuizScreen.tsx(378,10): error TS1005: ',' expected.
+src/screens/teacher/TeacherQuizScreen.tsx(384,11): error TS1005: ',' expected.
+src/screens/teacher/TeacherQuizScreen.tsx(388,11): error TS1005: ',' expected.
+src/screens/teacher/TeacherQuizScreen.tsx(394,16): error TS1005: ',' expected.
+src/screens/teacher/TeacherQuizScreen.tsx(400,11): error TS1005: ',' expected.
+src/screens/teacher/TeacherQuizScreen.tsx(405,17): error TS1005: ',' expected.
+src/screens/teacher/TeacherQuizScreen.tsx(414,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherQuizScreen.tsx(420,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherQuizScreen.tsx(425,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherQuizScreen.tsx(429,19): error TS1005: ',' expected.
+src/screens/teacher/TeacherQuizScreen.tsx(444,23): error TS1005: ',' expected.
+src/screens/teacher/TeacherQuizScreen.tsx(449,21): error TS1005: ',' expected.
+src/screens/teacher/TeacherQuizScreen.tsx(461,25): error TS1005: ',' expected.
+src/screens/teacher/TeacherQuizScreen.tsx(466,1): error TS1135: Argument expression expected.
+src/screens/teacher/TeacherQuizScreen.tsx(466,2): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(202,5): error TS1136: Property assignment expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(215,11): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(220,10): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(236,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(242,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(248,15): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(255,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(263,18): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(267,15): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(276,17): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(281,14): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(287,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(292,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(297,20): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(300,19): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(303,13): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(307,20): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(310,19): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(314,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(327,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(338,16): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(343,10): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(358,14): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(363,1): error TS1135: Argument expression expected.
+src/screens/teacher/TeacherViewAttendanceScreen.tsx(363,2): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(236,5): error TS1136: Property assignment expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(247,16): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(253,14): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(259,12): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(264,17): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(271,17): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(274,10): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(278,5): error TS1136: Property assignment expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(279,17): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(280,17): error TS1005: ',' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(281,3): error TS1135: Argument expression expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(281,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(284,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(284,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(287,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(288,11): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(289,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(290,19): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(291,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(292,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(292,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(295,13): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(296,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(297,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(297,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(300,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(301,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(302,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(303,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(303,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(306,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(307,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(307,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(311,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(311,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(314,16): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(315,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(316,22): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(317,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(318,13): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(319,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(320,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(321,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(321,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(325,19): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(326,8): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(327,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(327,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(330,18): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(331,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(332,19): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(333,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(334,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(335,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(336,22): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(337,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(337,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(340,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(341,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(342,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(342,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(345,18): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(346,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(347,19): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(348,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(349,17): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(350,20): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(351,22): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(352,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(352,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(355,15): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(356,10): error TS1005: ';' expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(357,3): error TS1109: Expression expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(357,4): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(358,1): error TS1128: Declaration or statement expected.
+src/screens/teacher/TeacherViewSubmissionScreen.tsx(358,2): error TS1128: Declaration or statement expected.
