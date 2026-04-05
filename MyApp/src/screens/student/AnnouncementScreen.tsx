@@ -1,0 +1,293 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  StatusBar,
+  Platform,
+  ScrollView,
+  TouchableOpacity
+} from 'react-native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../../App';
+import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
+import ScaleButton from '../../components/animations/ScaleButton';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { NavigationDrawer } from '../../components/NavigationDrawer';
+
+type AnnouncementScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Announcements'>;
+
+interface Props {
+  navigation: AnnouncementScreenNavigationProp;
+}
+
+const ANNOUNCEMENTS = [
+  {
+    id: 1,
+    title: 'Mid-Term Examination Schedule',
+    priority: 'High priority',
+    time: '2 hrs ago',
+    sender: "Principal's Office",
+    description: 'The mid-term examination schedule for the Fall semester has been released. Please check the exam timetable on the school portal. All exams will be conducted in the main auditorium. Students must bring their school ID cards.',
+    attachments: ['Exam_Schedule.pdf', 'Guidelines.pdf'],
+    theme: '#EF4444', // Red
+  },
+  {
+    id: 2,
+    title: 'Mid-Term Examination Schedule',
+    priority: 'High priority',
+    time: '2 hrs ago',
+    sender: "Principal's Office",
+    description: 'The mid-term examination schedule for the Fall semester has been released. Please check the exam timetable on the school portal. All exams will be conducted in the main auditorium. Students must bring their school ID cards.',
+    attachments: ['Exam_Schedule.pdf', 'Guidelines.pdf'],
+    theme: '#3B82F6', // Blue
+  },
+  {
+    id: 3,
+    title: 'Mid-Term Examination Schedule',
+    priority: 'High priority',
+    time: '2 hrs ago',
+    sender: "Principal's Office",
+    description: 'The mid-term examination schedule for the Fall semester has been released. Please check the exam timetable on the school portal. All exams will be conducted in the main auditorium. Students must bring their school ID cards.',
+    attachments: ['Exam_Schedule.pdf', 'Guidelines.pdf'],
+    theme: '#10B981', // Green
+  }
+];
+
+const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
+  const [isDrawerOpen, setDrawerOpen] = useState(false);
+
+  return (
+    <View style={styles.mainContainer}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F9" />
+
+      {/* Global Header */}
+      <View style={styles.globalHeader}>
+        <ScaleButton 
+          style={styles.menuHandle} 
+          onPress={() => setDrawerOpen(true)}
+          hitSlop={{top: 20, bottom: 20, left: 20, right: 20}}
+          activeOpacity={0.7}
+          scaleTo={0.85}
+        >
+          <Ionicons name="menu" size={28} color="#1F2937" />
+        </ScaleButton>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <View style={styles.headerRight}>
+          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
+          <Ionicons name="settings-outline" size={22} color="#1F2937" />
+          <Ionicons name="moon-outline" size={22} color="#1F2937" />
+          <View style={styles.avatar}>
+             <Text style={styles.avatarText}>A</Text>
+          </View>
+        </View>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        
+        {/* Page Title */}
+        <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
+           <Text style={styles.pageTitle}>Announcements</Text>
+           <Text style={styles.pageSubtitle}>Important updates from your school and teachers</Text>
+        </Animated.View>
+
+        {/* Announcement List */}
+        {ANNOUNCEMENTS.map((item, index) => (
+          <Animated.View 
+            key={item.id} 
+            entering={FadeInUp.delay(100 + (index * 50)).springify()} 
+            style={[styles.card, { borderLeftColor: item.theme }]}
+          >
+             <View style={styles.cardHeaderRow}>
+               <Text style={styles.cardTitle}>{item.title}</Text>
+               <View style={styles.priorityPill}>
+                 <Ionicons name="alert-circle" size={13} color="#EF4444" style={{marginRight: 4}} />
+                 <Text style={styles.priorityText}>{item.priority}</Text>
+               </View>
+             </View>
+
+             <View style={styles.metaRow}>
+               <View style={styles.metaItem}>
+                 <Ionicons name="calendar-outline" size={12} color="#9CA3AF" />
+                 <Text style={styles.metaText}>{item.time}</Text>
+               </View>
+               <View style={styles.metaItem}>
+                 <Ionicons name="person-outline" size={12} color="#9CA3AF" />
+                 <Text style={styles.metaText}>{item.sender}</Text>
+               </View>
+             </View>
+
+             <Text style={styles.description}>{item.description}</Text>
+
+             {item.attachments.map((attach, idx) => (
+               <TouchableOpacity key={idx} style={styles.attachmentBox} activeOpacity={0.8}>
+                 <View style={styles.pdfIconWrap}>
+                   <Ionicons name="document" size={16} color="#EF4444" />
+                   <Text style={styles.pdfIconText}>PDF</Text>
+                 </View>
+                 <Text style={styles.attachmentText}>{attach}</Text>
+               </TouchableOpacity>
+             ))}
+          </Animated.View>
+        ))}
+
+      </ScrollView>
+
+      {/* Navigation Drawer */}
+      <NavigationDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        role="student"
+      />
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: '#FAF9F9' },
+  scrollContent: { paddingBottom: 40 },
+
+  globalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40, 
+    paddingBottom: 16,
+    backgroundColor: '#FFFFFF', 
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 8,
+    zIndex: 10,
+  },
+  menuHandle: { paddingRight: 10, paddingVertical: 10 },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#4F46E5', // Matches assignments screen accent
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 10,
+  },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  avatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#A855F7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#A855F7',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+
+  pageTitleWrapper: { marginBottom: 16, paddingHorizontal: 20, marginTop: 10 },
+  pageTitle: { fontSize: 24, fontWeight: '800', color: '#3B82F6', marginBottom: 4 },
+  pageSubtitle: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
+
+  card: {
+    backgroundColor: '#FFFFFF', 
+    borderRadius: 12, 
+    padding: 16, 
+    marginHorizontal: 20,
+    marginBottom: 16, 
+    // Edge color effect via strict border-left
+    borderWidth: 1, 
+    borderColor: '#FAFAFA',
+    borderLeftWidth: 4,
+    shadowColor: '#1E293B', 
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.08, 
+    shadowRadius: 10, 
+    elevation: 4,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+    gap: 10,
+  },
+  cardTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+    lineHeight: 20,
+  },
+  priorityPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  priorityText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#EF4444',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 12,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metaText: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
+  description: {
+    fontSize: 12.5,
+    color: '#111827',
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  attachmentBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+  },
+  pdfIconWrap: {
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  pdfIconText: {
+    position: 'absolute',
+    bottom: 2,
+    fontSize: 5,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 2,
+    borderRadius: 2,
+    overflow: 'hidden'
+  },
+  attachmentText: {
+    fontSize: 12,
+    color: '#111827',
+    fontWeight: '500',
+  }
+});
+
+export default AnnouncementScreen;
