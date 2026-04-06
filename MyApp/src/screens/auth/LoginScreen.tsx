@@ -17,6 +17,9 @@ import FadeInView from '../../components/animations/FadeInView';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { RootStackParamList } from '../../types/navigation';
 import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
+
 
 
 const ChevronBackIcon = ({ width = 18, height = 18 }) => (
@@ -61,27 +64,55 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
 
-  const handleLogin = () => {
-    if (password !== 'Krushna123') {
-      Alert.alert('Login Failed', 'Invalid password. Please use Krushna123');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleQuickLogin = (role: 'student' | 'teacher' | 'principal') => {
+    // For testing/panning purposes: Mock a successful login that matches backend seed data structure
+    const mockUser = {
+      id: role === 'student' ? 'student-1' : (role === 'teacher' ? 'teacher-math' : 'principal-1'),
+      institutionId: 'inst-001',
+      name: "Test " + (role === 'principal' ? 'Principal' : role.charAt(0).toUpperCase() + role.slice(1)),
+      role: role.toUpperCase(),
+      email: role + "@sharnex.com",
+    };
+    login("mock_token_" + role, role, mockUser);
+  };
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter both email and password');
       return;
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    setIsSubmitting(true);
+    try {
+      const response = await apiClient.post(ENDPOINTS.AUTH.LOGIN, {
+        email: email.trim(),
+        password,
+      });
 
-    if (normalizedEmail === 'student@sharnex.com') {
-      login('dummy_student_token', 'student');
-      navigation?.reset({ index: 0, routes: [{ name: 'StudentDashboard' as any }] });
-    } else if (normalizedEmail === 'teacher@sharnex.com') {
-      login('dummy_teacher_token', 'teacher');
-      navigation?.reset({ index: 0, routes: [{ name: 'TeacherDashboard' as any }] });
-    } else if (normalizedEmail === 'principal@sharnex.com') {
-      login('dummy_principal_token', 'principal');
-      navigation?.reset({ index: 0, routes: [{ name: 'PrincipalDashboard' as any }] });
-    } else {
-      Alert.alert('Login Failed', 'Please use student@sharnex.com, teacher@sharnex.com, or principal@sharnex.com');
+      const res = response.data;
+      if (res && res.data && res.data.tokens) {
+        // Map backend role string to frontend expected lowercase roles
+        let appRole: 'student' | 'teacher' | 'principal' = 'student';
+        const backendRole = res.data.user.role;
+        
+        if (backendRole === 'TEACHER' || backendRole === 'STAFF') appRole = 'teacher';
+        else if (backendRole === 'INSTITUTION_ADMIN' || backendRole === 'CENTRAL_ADMIN' || backendRole === 'PRINCIPAL') appRole = 'principal';
+        
+        login(res.data.tokens.accessToken, appRole as any, res.data.user);
+      } else {
+        throw new Error('Invalid response from server');
+      }
+    } catch (error: any) {
+      console.error('Login Error:', error);
+      const message = error.response?.data?.message || 'Something went wrong. Please try again.';
+      Alert.alert('Login Failed', message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
 
   return (
     <View style={styles.container}>
@@ -161,10 +192,32 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
               </FadeInView>
 
               <FadeInView delay={600}>
-                <ScaleButton style={styles.loginButton} onPress={handleLogin} activeOpacity={0.85}>
-                  <Text style={styles.loginButtonText}>Login</Text>
+                <ScaleButton 
+                  style={[styles.loginButton, isSubmitting && { opacity: 0.7 }]} 
+                  onPress={handleLogin} 
+                  disabled={isSubmitting}
+                  activeOpacity={0.85}>
+                  <Text style={styles.loginButtonText}>{isSubmitting ? 'Loading...' : 'Login'}</Text>
                 </ScaleButton>
               </FadeInView>
+
+              <FadeInView delay={650}>
+                <View style={styles.testLoginContainer}>
+                  <Text style={styles.testLoginLabel}>Quick Test Access:</Text>
+                  <View style={styles.testLoginRow}>
+                    <TouchableOpacity style={[styles.testTag, { backgroundColor: '#EEF2FF' }]} onPress={() => handleQuickLogin('student')}>
+                      <Text style={[styles.testTagText, { color: '#4F46E5' }]}>Student</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.testTag, { backgroundColor: '#ECFDF5' }]} onPress={() => handleQuickLogin('teacher')}>
+                      <Text style={[styles.testTagText, { color: '#059669' }]}>Teacher</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.testTag, { backgroundColor: '#FFF7ED' }]} onPress={() => handleQuickLogin('principal')}>
+                      <Text style={[styles.testTagText, { color: '#D97706' }]}>Principal</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </FadeInView>
+
 
               <FadeInView delay={700}>
                 <View style={styles.dividerContainer}>
@@ -188,14 +241,14 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                 </View>
               </FadeInView>
 
-              <FadeInView delay={900}>
+              {/* <FadeInView delay={900}>
                 <View style={styles.bottomRow}>
                   <Text style={styles.bottomText}>Don't have an account? </Text>
                   <TouchableOpacity onPress={() => navigation?.navigate('Register')}>
                     <Text style={styles.signUpText}>Sign Up Now</Text>
                   </TouchableOpacity>
                 </View>
-              </FadeInView>
+              </FadeInView> */}
             </View>
           </FadeInView>
         </ScrollView>
@@ -360,6 +413,34 @@ const styles = StyleSheet.create({
   signUpText: {
     fontSize: 14,
     color: '#6366F1',
+    fontWeight: '700',
+  },
+  testLoginContainer: {
+    marginTop: 8,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  testLoginLabel: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginBottom: 8,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  testLoginRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  testTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  testTagText: {
+    fontSize: 12,
     fontWeight: '700',
   },
 });

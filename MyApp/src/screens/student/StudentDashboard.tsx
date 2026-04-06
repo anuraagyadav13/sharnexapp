@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -8,7 +8,8 @@ import {
   Dimensions,
   Image,
   Platform,
-  StatusBar
+  StatusBar,
+  ActivityIndicator
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -18,6 +19,9 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect, Circle } from 'react-native-svg';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type DashboardNavigationProp = NativeStackNavigationProp<RootStackParamList, 'StudentDashboard'>;
 
@@ -156,10 +160,50 @@ const FAQItem = React.memo(({ question }: { question: string }) => (
   </TouchableOpacity>
 ));
 
+const StatCard = ({ title, value, color, icon }: { title: string, value: string | number, color: string, icon: string }) => (
+  <View style={styles.statCard}>
+    <View style={[styles.statIconCircle, { backgroundColor: `${color}15` }]}>
+      <Ionicons name={icon} size={20} color={color} />
+    </View>
+    <Text style={styles.statValue}>{value}</Text>
+    <Text style={styles.statTitle}>{title}</Text>
+  </View>
+);
+
 
 // --- Main Screen ---
 const StudentDashboard: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const { authState } = useAuth();
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [scheduleData, setScheduleData] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAllData = async () => {
+      try {
+        setIsLoading(true);
+        // 1. Get student profile details to find the student ID
+        const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+        const studentId = profileRes.data.id;
+
+        // 2. Fetch the dashboard summary and schedule in parallel
+        const [dashboardRes, scheduleRes] = await Promise.all([
+          apiClient.get(ENDPOINTS.STUDENT.DASHBOARD(studentId)),
+          apiClient.get(ENDPOINTS.STUDENT.SCHEDULE(studentId))
+        ]);
+        
+        setDashboardData(dashboardRes.data);
+        setScheduleData(scheduleRes.data.schedule || []);
+      } catch (error: any) {
+        console.error('Failed to fetch student dashboard data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAllData();
+  }, []);
 
   return (
     <View style={styles.mainContainer}>
@@ -181,7 +225,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
           >
             <Ionicons name="menu" size={28} color="#1F2937" />
           </ScaleButton>
-          <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+          <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
           <View style={styles.headerRight}>
             <TouchableOpacity style={styles.iconBtn}>
                <Ionicons name="notifications-outline" size={22} color="#111827" />
@@ -200,7 +244,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
                onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
             >
               <View style={[styles.avatar, {marginLeft: 10}]}>
-                <Text style={styles.avatarText}>A</Text>
+                <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -227,6 +271,30 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
           </View>
         </Animated.View>
 
+        {/* Dynamic Stats Row */}
+        {!isLoading && dashboardData && (
+          <View style={styles.statsRow}>
+            <StatCard 
+              title="Attendance" 
+              value={`${dashboardData.attendance?.percentage || 0}%`} 
+              color="#3B82F6" 
+              icon="calendar" 
+            />
+            <StatCard 
+              title="Assignments" 
+              value={dashboardData.stats?.upcomingAssignments || 0} 
+              color="#F97316" 
+              icon="document-text" 
+            />
+            <StatCard 
+              title="Avg. Score" 
+              value="85%" 
+              color="#10B981" 
+              icon="star" 
+            />
+          </View>
+        )}
+
         {/* Quick Actions */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -250,18 +318,26 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
             <Text style={[styles.sectionTitle, { color: '#4F46E5' }]}>Today’s Schedule</Text>
           </View>
           <View style={styles.scheduleList}>
-            <ScheduleCard
-              time="08:00 - 09:00" title="Mathematics" teacher="Mrs. Anita Rao" room="Room 101"
-              color="#3B82F6" status="Completed" />
-            <ScheduleCard
-              time="09:15 - 10:15" title="Science" teacher="Mr. John Smith" room="Lab 2"
-              color="#059669" isOngoing={true} bgStyleColor="#F0FDF4" borderStyleColor="#86EFAC" progress={65} />
-            <ScheduleCard
-              time="10:30 - 11:30" title="English" teacher="Ms. Sarah Johnson" room="Room 205"
-              color="#D946EF" status="Up next" />
-            <ScheduleCard
-              time="11:45 - 12:45" title="History" teacher="Mr. David Lee" room="Room 103"
-              color="#F97316" status="Up next" />
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#4F46E5" />
+            ) : scheduleData.length === 0 ? (
+              <Text style={styles.emptyText}>No classes scheduled for today.</Text>
+            ) : (
+              scheduleData.map((item, index) => (
+                <ScheduleCard
+                  key={index}
+                  time={`${item.time} - ${item.endTime}`} 
+                  title={item.subject} 
+                  teacher={item.teacher} 
+                  room={item.room}
+                  color={index % 2 === 0 ? "#3B82F6" : "#059669"} 
+                  status={item.status}
+                  isOngoing={item.status === 'Ongoing'}
+                  bgStyleColor={item.status === 'Ongoing' ? "#F0FDF4" : undefined}
+                  borderStyleColor={item.status === 'Ongoing' ? "#86EFAC" : undefined}
+                />
+              ))
+            )}
           </View>
         </View>
 
@@ -576,7 +652,28 @@ const styles = StyleSheet.create({
   needHelpDesc: { fontSize: 12, color: '#E0E7FF', textAlign: 'center', lineHeight: 18, marginBottom: 20, paddingHorizontal: 10, zIndex: 2 },
   needHelpButtonsRow: { flexDirection: 'row', gap: 12, width: '100%', zIndex: 2 },
   helpButtonOutlined: { flex: 1, paddingVertical: 10, borderRadius: 24, borderWidth: 1, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
-  helpButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' }
+  helpButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginTop: 24,
+  },
+  statIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 20,
+    fontWeight: '500',
+  },
 });
 
 export default StudentDashboard;

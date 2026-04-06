@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,8 @@ import {
   StatusBar,
   Platform,
   ScrollView,
-  TouchableOpacity
+  TouchableOpacity,
+  ActivityIndicator
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -14,6 +15,9 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type AnnouncementScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Announcements'>;
 
@@ -27,7 +31,7 @@ const ANNOUNCEMENTS = [
     title: 'Mid-Term Examination Schedule',
     priority: 'High priority',
     time: '2 hrs ago',
-    sender: "Principal's Office",
+    sender: "Institution's Office",
     description: 'The mid-term examination schedule for the Fall semester has been released. Please check the exam timetable on the school portal. All exams will be conducted in the main auditorium. Students must bring their school ID cards.',
     attachments: ['Exam_Schedule.pdf', 'Guidelines.pdf'],
     theme: '#EF4444', // Red
@@ -37,7 +41,7 @@ const ANNOUNCEMENTS = [
     title: 'Mid-Term Examination Schedule',
     priority: 'High priority',
     time: '2 hrs ago',
-    sender: "Principal's Office",
+    sender: "Institution's Office",
     description: 'The mid-term examination schedule for the Fall semester has been released. Please check the exam timetable on the school portal. All exams will be conducted in the main auditorium. Students must bring their school ID cards.',
     attachments: ['Exam_Schedule.pdf', 'Guidelines.pdf'],
     theme: '#3B82F6', // Blue
@@ -47,7 +51,7 @@ const ANNOUNCEMENTS = [
     title: 'Mid-Term Examination Schedule',
     priority: 'High priority',
     time: '2 hrs ago',
-    sender: "Principal's Office",
+    sender: "Institution's Office",
     description: 'The mid-term examination schedule for the Fall semester has been released. Please check the exam timetable on the school portal. All exams will be conducted in the main auditorium. Students must bring their school ID cards.',
     attachments: ['Exam_Schedule.pdf', 'Guidelines.pdf'],
     theme: '#10B981', // Green
@@ -56,6 +60,26 @@ const ANNOUNCEMENTS = [
 
 const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const { authState } = useAuth();
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAnnouncements = async () => {
+      try {
+        setIsLoading(true);
+        // @ts-ignore
+        const res = await apiClient.get(ENDPOINTS.ANNOUNCEMENTS);
+        setAnnouncements(res.data.announcements || []);
+      } catch (error) {
+        console.error('Failed to fetch announcements:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAnnouncements();
+  }, []);
 
   return (
     <View style={styles.mainContainer}>
@@ -72,13 +96,13 @@ const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
         >
           <Ionicons name="menu" size={28} color="#1F2937" />
         </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={22} color="#1F2937" />
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
           </View>
         </View>
       </View>
@@ -92,44 +116,53 @@ const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
         </Animated.View>
 
         {/* Announcement List */}
-        {ANNOUNCEMENTS.map((item, index) => (
-          <Animated.View 
-            key={item.id} 
-            entering={FadeInUp.delay(100 + (index * 50)).springify()} 
-            style={[styles.card, { borderLeftColor: item.theme }]}
-          >
-             <View style={styles.cardHeaderRow}>
-               <Text style={styles.cardTitle}>{item.title}</Text>
-               <View style={styles.priorityPill}>
-                 <Ionicons name="alert-circle" size={13} color="#EF4444" style={{marginRight: 4}} />
-                 <Text style={styles.priorityText}>{item.priority}</Text>
-               </View>
-             </View>
-
-             <View style={styles.metaRow}>
-               <View style={styles.metaItem}>
-                 <Ionicons name="calendar-outline" size={12} color="#9CA3AF" />
-                 <Text style={styles.metaText}>{item.time}</Text>
-               </View>
-               <View style={styles.metaItem}>
-                 <Ionicons name="person-outline" size={12} color="#9CA3AF" />
-                 <Text style={styles.metaText}>{item.sender}</Text>
-               </View>
-             </View>
-
-             <Text style={styles.description}>{item.description}</Text>
-
-             {item.attachments.map((attach, idx) => (
-               <TouchableOpacity key={idx} style={styles.attachmentBox} activeOpacity={0.8}>
-                 <View style={styles.pdfIconWrap}>
-                   <Ionicons name="document" size={16} color="#EF4444" />
-                   <Text style={styles.pdfIconText}>PDF</Text>
+        {isLoading ? (
+          <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 40 }} />
+        ) : announcements.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="notifications-off-outline" size={60} color="#E5E7EB" />
+            <Text style={styles.emptyText}>No announcements found</Text>
+          </View>
+        ) : (
+          announcements.map((item, index) => (
+            <Animated.View 
+              key={item.id} 
+              entering={FadeInUp.delay(100 + (index * 50)).springify()} 
+              style={[styles.card, { borderLeftColor: item.priority === 'High' ? '#EF4444' : '#3B82F6' }]}
+            >
+               <View style={styles.cardHeaderRow}>
+                 <Text style={styles.cardTitle}>{item.title}</Text>
+                 <View style={[styles.priorityPill, { backgroundColor: item.priority === 'High' ? '#FEE2E2' : '#DBEAFE' }]}>
+                   <Ionicons name="alert-circle" size={13} color={item.priority === 'High' ? '#EF4444' : '#3B82F6'} style={{marginRight: 4}} />
+                   <Text style={[styles.priorityText, { color: item.priority === 'High' ? '#EF4444' : '#3B82F6' }]}>{item.priority} priority</Text>
                  </View>
-                 <Text style={styles.attachmentText}>{attach}</Text>
-               </TouchableOpacity>
-             ))}
-          </Animated.View>
-        ))}
+               </View>
+
+               <View style={styles.metaRow}>
+                 <View style={styles.metaItem}>
+                   <Ionicons name="calendar-outline" size={12} color="#9CA3AF" />
+                   <Text style={styles.metaText}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+                 </View>
+                 <View style={styles.metaItem}>
+                   <Ionicons name="person-outline" size={12} color="#9CA3AF" />
+                   <Text style={styles.metaText}>{item.creatorName || 'Office'}</Text>
+                 </View>
+               </View>
+
+               <Text style={styles.description}>{item.content}</Text>
+
+               {(item.attachments || []).map((attach: any, idx: number) => (
+                 <TouchableOpacity key={idx} style={styles.attachmentBox} activeOpacity={0.8}>
+                   <View style={styles.pdfIconWrap}>
+                     <Ionicons name="document" size={16} color="#EF4444" />
+                     <Text style={styles.pdfIconText}>PDF</Text>
+                   </View>
+                   <Text style={styles.attachmentText}>{attach.name || 'document.pdf'}</Text>
+                 </TouchableOpacity>
+               ))}
+            </Animated.View>
+          ))
+        )}
 
       </ScrollView>
 
@@ -287,7 +320,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#111827',
     fontWeight: '500',
-  }
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 60,
+    opacity: 0.5,
+  },
+  emptyText: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
 });
 
 export default AnnouncementScreen;

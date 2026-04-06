@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   StatusBar,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -14,6 +15,9 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useState } from 'react';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type PerformanceScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Performance'>;
 
@@ -22,7 +26,43 @@ interface Props {
 }
 
 const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
+  const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [performance, setPerformance] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPerformance = async () => {
+      try {
+        setIsLoading(true);
+        // 1. Get profile for ID
+        const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+        const studentId = profileRes.data.id;
+
+        // 2. Fetch dashboard data which has performance metrics
+        const res = await apiClient.get(ENDPOINTS.STUDENT.DASHBOARD(studentId));
+        setPerformance(res.data.data);
+      } catch (error) {
+        console.error('Failed to fetch performance:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPerformance();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
+  const stats = performance?.stats || {};
+  const attendanceRate = stats.attendance?.rate || 0;
+  const assignmentRate = stats.assignments?.completionRate || 0;
+  const quizRate = stats.quizzes?.averageScore || 0;
 
   return (
     <View style={styles.mainContainer}>
@@ -39,13 +79,13 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
         >
           <Ionicons name="menu" size={28} color="#1F2937" />
         </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={22} color="#1F2937" />
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
           </View>
         </View>
       </View>
@@ -55,7 +95,7 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
         {/* Page Titles */}
         <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
            <Text style={styles.pageTitle}>Performance</Text>
-           <Text style={styles.pageSubtitle}>Take a look on your Performance</Text>
+           <Text style={styles.pageSubtitle}>Analyze your academic growth</Text>
         </Animated.View>
 
         {/* Card 1: Performance Overview */}
@@ -64,19 +104,19 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
            <View style={styles.cardDivider} />
            <View style={styles.gridContainer}>
               <View style={styles.gridBox}>
-                 <Text style={[styles.gridVal, {color: '#9333EA'}]}>70 %</Text>
-                 <Text style={styles.gridLbl}>Current GPA</Text>
+                 <Text style={[styles.gridVal, {color: '#9333EA'}]}>{quizRate}%</Text>
+                 <Text style={styles.gridLbl}>Avg Quiz Score</Text>
               </View>
               <View style={styles.gridBox}>
-                 <Text style={[styles.gridVal, {color: '#F97316'}]}>#8</Text>
+                 <Text style={[styles.gridVal, {color: '#F97316'}]}>#{performance?.rank || 'N/A'}</Text>
                  <Text style={styles.gridLbl}>Class Rank</Text>
               </View>
               <View style={styles.gridBox}>
-                 <Text style={[styles.gridVal, {color: '#F59E0B'}]}>+12%</Text>
-                 <Text style={styles.gridLbl}>Improvement Rate</Text>
+                 <Text style={[styles.gridVal, {color: '#F59E0B'}]}>{assignmentRate}%</Text>
+                 <Text style={styles.gridLbl}>Assignment Rate</Text>
               </View>
               <View style={styles.gridBox}>
-                 <Text style={[styles.gridVal, {color: '#3B82F6'}]}>93.5%</Text>
+                 <Text style={[styles.gridVal, {color: '#3B82F6'}]}>{attendanceRate}%</Text>
                  <Text style={styles.gridLbl}>Attendance</Text>
               </View>
            </View>
@@ -94,28 +134,17 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
            <View style={styles.cardDivider} />
 
            <View style={styles.centerBlock}>
-             <Text style={styles.hugePercent}>87.9 %</Text>
-             <Text style={styles.hugeSubtitle}>Current Term Average</Text>
-           </View>
-
-           <View style={[styles.gridContainer, {marginTop: 6}]}>
-              <View style={styles.gridBox}>
-                 <Text style={[styles.gridVal, {color: '#EF4444'}]}>5th</Text>
-                 <Text style={styles.gridLbl}>Class Rank</Text>
-              </View>
-              <View style={styles.gridBox}>
-                 <Text style={[styles.gridVal, {color: '#9333EA', fontSize: 18}]}>A-</Text>
-                 <Text style={styles.gridLbl}>Overall Grade</Text>
-              </View>
+             <Text style={styles.hugePercent}>{Math.round((quizRate + assignmentRate + attendanceRate) / 3)}%</Text>
+             <Text style={styles.hugeSubtitle}>Cumulative Average</Text>
            </View>
 
            <View style={styles.progressSection}>
              <View style={styles.progressRow}>
-               <Text style={styles.progressLbl}>Assignment Completed</Text>
-               <Text style={styles.progressVal}>98%</Text>
+               <Text style={styles.progressLbl}>Syllabus Covered</Text>
+               <Text style={styles.progressVal}>85%</Text>
              </View>
              <View style={styles.progressBarBg}>
-               <View style={[styles.progressBarFill, { width: '98%', backgroundColor: '#F97316' }]} />
+               <View style={[styles.progressBarFill, { width: '85%', backgroundColor: '#F97316' }]} />
              </View>
            </View>
         </Animated.View>
@@ -126,25 +155,17 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
            <View style={styles.cardDivider} />
            
            <View style={styles.centerBlock}>
-             <Text style={[styles.hugePercent, {color: '#000', textShadowRadius: 0, textShadowColor: 'transparent'}]}>100 %</Text>
+             <Text style={[styles.hugePercent, {color: '#000', textShadowRadius: 0, textShadowColor: 'transparent'}]}>{attendanceRate}%</Text>
              <Text style={styles.hugeSubtitle}>Current Attendance Rate</Text>
            </View>
 
            <View style={styles.gridContainer}>
               <View style={styles.gridBox}>
-                 <Text style={[styles.gridVal, {color: '#000'}]}>5/5</Text>
-                 <Text style={styles.gridLbl}>This Week</Text>
+                 <Text style={[styles.gridVal, {color: '#000'}]}>{stats.attendance?.present || 0}</Text>
+                 <Text style={styles.gridLbl}>Days Present</Text>
               </View>
               <View style={styles.gridBox}>
-                 <Text style={[styles.gridVal, {color: '#000'}]}>5/5</Text>
-                 <Text style={styles.gridLbl}>This Month</Text>
-              </View>
-              <View style={styles.gridBox}>
-                 <Text style={[styles.gridVal, {color: '#000'}]}>5/5</Text>
-                 <Text style={styles.gridLbl}>This Term</Text>
-              </View>
-              <View style={styles.gridBox}>
-                 <Text style={[styles.gridVal, {color: '#000'}]}>2</Text>
+                 <Text style={[styles.gridVal, {color: '#000'}]}>{stats.attendance?.absent || 0}</Text>
                  <Text style={styles.gridLbl}>Days Absent</Text>
               </View>
            </View>

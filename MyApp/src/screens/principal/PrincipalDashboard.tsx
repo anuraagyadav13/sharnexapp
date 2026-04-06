@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -7,7 +7,8 @@ import {
   StyleSheet,
   Platform,
   StatusBar,
-  Dimensions
+  Dimensions,
+  ActivityIndicator
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -17,6 +18,9 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type DashboardNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PrincipalDashboard'>;
 
@@ -57,6 +61,30 @@ const ActivityItem = React.memo(({ iconName, iconBgColor, name, action, time, is
 // --- Main Screen ---
 const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const { authState } = useAuth();
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        setIsLoading(true);
+        // authState has PrincipalId
+        const PrincipalId = authState.user?.PrincipalId;
+        if (!PrincipalId) return;
+
+        // @ts-ignore
+        const res = await apiClient.get(ENDPOINTS.Principal.DASHBOARD(PrincipalId));
+        setDashboardData(res.data);
+      } catch (error) {
+        console.error('Failed to fetch Principal dashboard:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboard();
+  }, [authState.user?.PrincipalId]);
 
   return (
     <View style={styles.mainContainer}>
@@ -80,7 +108,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
           </ScaleButton>
           
           <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>
-            Welcome back, Anurag
+            Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}
           </Text>
           
           <View style={styles.headerRight}>
@@ -101,7 +129,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
               onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
             >
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>A</Text>
+                <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -121,8 +149,8 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                 <Rect width="100%" height="100%" fill="url(#grad)" rx="16" ry="16" />
               </Svg>
             </View>
-            <Text style={styles.heroTitle}>Welcome to Institution Portal</Text>
-            <Text style={styles.heroSubtitle}>Manage your institution, staff, and students efficiently</Text>
+            <Text style={styles.heroTitle}>{dashboardData?.schoolName || 'Welcome to Principal Portal'}</Text>
+            <Text style={styles.heroSubtitle}>Managing {dashboardData?.stats?.students || 0} Students, {dashboardData?.stats?.teachers || 0} Teachers, and {dashboardData?.stats?.classes || 0} Classes</Text>
           </Animated.View>
         </View>
 
@@ -216,7 +244,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
       <NavigationDrawer
         isOpen={isDrawerOpen}
         onClose={() => setDrawerOpen(false)}
-        role="principal"
+        role="Principal"
       />
     </View>
   );

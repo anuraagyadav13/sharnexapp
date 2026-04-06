@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,17 @@ import {
   ScrollView,
   TouchableOpacity,
   Platform,
-  TextInput
+  TextInput,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherViewSubmission'>;
 
@@ -39,7 +44,49 @@ const MOCK_SUBMISSIONS = [
   }
 ];
 
-const TeacherViewSubmissionScreen: React.FC<Props> = ({ navigation }) => {
+const TeacherViewSubmissionScreen: React.FC<Props> = ({ navigation, route }) => {
+  // @ts-ignore
+  const { assignmentId, assignmentTitle, className, dueDate, maxMarks } = route.params || {};
+  const { authState } = useAuth();
+  const [submissions, setSubmissions] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [grades, setGrades] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const fetchSubmissions = async () => {
+      try {
+        setIsLoading(true);
+        const res = await apiClient.get(ENDPOINTS.TEACHER.SUBMISSIONS(assignmentId));
+        setSubmissions(res.data.data || []);
+      } catch (error) {
+        console.error('Failed to fetch submissions:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    if (assignmentId) fetchSubmissions();
+  }, [assignmentId]);
+
+  const handleGradeChange = (id: string, val: string) => {
+    setGrades(prev => ({ ...prev, [id]: val }));
+  };
+
+  const submitGrade = async (submissionId: string) => {
+    try {
+      const score = grades[submissionId];
+      if (!score) return;
+      
+      await apiClient.put(ENDPOINTS.TEACHER.GRADE_SUBMISSION(assignmentId, submissionId), {
+        marksObtained: parseInt(score),
+        feedback: 'Graded via mobile app'
+      });
+      Alert.alert('Success', 'Grade submitted!');
+    } catch (e) {
+      console.error('Failed to submit grade:', e);
+      Alert.alert('Error', 'Failed to submit grade');
+    }
+  };
+
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
@@ -47,13 +94,13 @@ const TeacherViewSubmissionScreen: React.FC<Props> = ({ navigation }) => {
       {/* Global Header */}
       <View style={styles.globalHeader}>
         <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={22} color="#1F2937" />
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
           </View>
         </View>
       </View>
@@ -63,82 +110,99 @@ const TeacherViewSubmissionScreen: React.FC<Props> = ({ navigation }) => {
          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
          </TouchableOpacity>
-         <Text style={styles.blueTitle}>Algebra Submissions</Text>
-         <Text style={styles.blueSubtitle}>Algebra Problem Set</Text>
+         <Text style={styles.blueTitle}>{assignmentTitle || 'Submissions'}</Text>
+         <Text style={styles.blueSubtitle}>Grading Portal</Text>
          
          <View style={styles.infoRow}>
             <View style={styles.infoItem}>
                <Ionicons name="school-outline" size={12} color="#E0E7FF" style={{marginRight: 6}} />
-               <Text style={styles.infoText}>Class 10-A</Text>
+               <Text style={styles.infoText}>{className || 'All Classes'}</Text>
             </View>
             <View style={styles.infoItem}>
                <Ionicons name="calendar-outline" size={12} color="#E0E7FF" style={{marginRight: 6}} />
-               <Text style={styles.infoText}>Oct 10, 2023</Text>
+               <Text style={styles.infoText}>Due: {dueDate ? new Date(dueDate).toLocaleDateString() : 'N/A'}</Text>
             </View>
             <View style={styles.infoItem}>
                <Ionicons name="people-outline" size={12} color="#E0E7FF" style={{marginRight: 6}} />
-               <Text style={styles.infoText}>Max: 20 points</Text>
+               <Text style={styles.infoText}>Max: {maxMarks || 100} points</Text>
             </View>
          </View>
       </Animated.View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
-        {/* Submissions List */}
-        {MOCK_SUBMISSIONS.map((submission, idx) => (
-          <Animated.View key={submission.id} entering={FadeInUp.delay(100 + idx * 100).springify()} style={styles.submissionCard}>
-             
-             {/* Card Header */}
-             <View style={styles.cardHeaderRow}>
-                <View>
-                   <Text style={styles.studentName}>{submission.name}</Text>
-                   <Text style={styles.studentId}>ID : {submission.stdId}</Text>
-                </View>
-                <Text style={styles.submitTimeText}>Submitted: {submission.time}</Text>
-             </View>
+        {isLoading ? (
+          <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
+        ) : submissions.length === 0 ? (
+          <Text style={{ textAlign: 'center', marginTop: 40, color: '#9CA3AF' }}>No submissions found.</Text>
+        ) : (
+          submissions.map((submission, idx) => (
+            <Animated.View key={submission.studentId} entering={FadeInUp.delay(100 + idx * 100).springify()} style={styles.submissionCard}>
+               
+               {/* Card Header */}
+               <View style={styles.cardHeaderRow}>
+                  <View>
+                     <Text style={styles.studentName}>{submission.studentName}</Text>
+                     <Text style={styles.studentId}>ID : {submission.rollNo || 'N/A'}</Text>
+                  </View>
+                  <Text style={styles.submitTimeText}>{submission.submittedAt}</Text>
+               </View>
 
-             {/* File Attachments */}
-             <View style={styles.filesContainer}>
-                {submission.files.map((file, fIdx) => (
-                   <View key={fIdx} style={styles.fileRow}>
-                      <View style={styles.pdfIconBox}>
-                         <View style={styles.pdfRedBg}>
-                            <Text style={styles.pdfIconText}>PDF</Text>
-                         </View>
-                      </View>
-                      <View>
-                         <Text style={styles.fileName}>{file.name}</Text>
-                         <Text style={styles.fileSize}>{file.size}</Text>
-                      </View>
-                   </View>
-                ))}
-             </View>
+               {/* File Attachments */}
+               <View style={styles.filesContainer}>
+                  {submission.files?.map((file: any, fIdx: number) => (
+                     <View key={fIdx} style={styles.fileRow}>
+                        <View style={styles.pdfIconBox}>
+                           <View style={styles.pdfRedBg}>
+                              <Text style={styles.pdfIconText}>PDF</Text>
+                           </View>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                           <Text style={styles.fileName} numberOfLines={1}>{file.name}</Text>
+                           <Text style={styles.fileSize}>{file.size}</Text>
+                        </View>
+                     </View>
+                  ))}
+               </View>
 
-             {/* Grade Input */}
-             <View style={styles.gradeInputContainer}>
-                <TextInput 
-                   style={styles.gradeInput}
-                   placeholder="Enter Grade / 20"
-                   placeholderTextColor="#9CA3AF"
-                   keyboardType="numeric"
-                />
-             </View>
+               {/* Grade Input */}
+               <View style={styles.gradeInputContainer}>
+                  <TextInput 
+                     style={styles.gradeInput}
+                     placeholder={`Enter Grade / ${submission.maxPoints || 100}`}
+                     placeholderTextColor="#9CA3AF"
+                     keyboardType="numeric"
+                     value={grades[submission.studentId] || submission.grade?.toString() || ''}
+                     onChangeText={(val) => handleGradeChange(submission.studentId, val)}
+                  />
+               </View>
 
-             {/* Action Buttons Row */}
-             <View style={styles.actionRow}>
-                <TouchableOpacity style={styles.actionBtnDownload} activeOpacity={0.8}>
-                   <Ionicons name="download-outline" size={16} color="#4F46E5" style={{marginRight: 6}} />
-                   <Text style={styles.actionBtnDownloadText}>Download</Text>
-                </TouchableOpacity>
+               {/* Action Buttons Row */}
+               <View style={styles.actionRow}>
+                  <TouchableOpacity 
+                    style={[styles.actionBtnDownload, { opacity: submission.files?.length > 0 ? 1 : 0.5 }]} 
+                    activeOpacity={0.8} 
+                    disabled={!submission.files?.length}
+                    onPress={() => {/* Handle view */}}
+                  >
+                     <Ionicons name="eye-outline" size={16} color="#4F46E5" style={{marginRight: 6}} />
+                     <Text style={styles.actionBtnDownloadText}>View File</Text>
+                  </TouchableOpacity>
 
-                <TouchableOpacity style={styles.actionBtnFeedback} activeOpacity={0.8}>
-                   <Ionicons name="chatbox-ellipses" size={16} color="#FFFFFF" style={{marginRight: 6}} />
-                   <Text style={styles.actionBtnFeedbackText}>Feedback</Text>
-                </TouchableOpacity>
-             </View>
+                  <TouchableOpacity 
+                    style={[styles.actionBtnFeedback, { opacity: submission.id ? 1 : 0.5 }]} 
+                    activeOpacity={0.8}
+                    disabled={!submission.id}
+                    onPress={() => submission.id && submitGrade(submission.id)}
+                  >
+                     <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={{marginRight: 6}} />
+                     <Text style={styles.actionBtnFeedbackText}>Save Grade</Text>
+                  </TouchableOpacity>
+               </View>
 
-          </Animated.View>
-        ))}
+            </Animated.View>
+          ))
+        )}
 
       </ScrollView>
     </View>

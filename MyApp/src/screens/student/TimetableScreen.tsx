@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Platform, ActivityIndicator } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type TimetableNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Timetable'>;
 
@@ -67,7 +70,49 @@ const getSubjectColors = (subject: string) => {
 };
 
 const TimetableScreen: React.FC<Props> = ({ navigation }) => {
+  const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [schedule, setSchedule] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTimetable = async () => {
+      try {
+        setIsLoading(true);
+        // 1. Get profile for student ID
+        const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+        const studentId = profileRes.data.id;
+
+        // 2. Get schedule
+        const res = await apiClient.get(ENDPOINTS.STUDENT.SCHEDULE(studentId));
+        setSchedule(res.data.schedule || []);
+      } catch (error) {
+        console.error('Failed to fetch timetable:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchTimetable();
+  }, []);
+
+  const getCellData = (day: string, time: string) => {
+    const dayMap: { [key: string]: string } = {
+      'MON': 'monday', 'TUE': 'tuesday', 'WED': 'wednesday', 
+      'THU': 'thursday', 'FRI': 'friday', 'SAT': 'saturday'
+    };
+    return schedule.find(s => 
+      s.day.toLowerCase() === dayMap[day] && 
+      (s.startTime.startsWith(time) || s.startTime.substring(0, 5) === time)
+    );
+  };
+
+  if (isLoading && schedule.length === 0) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -85,7 +130,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
 
         <View style={styles.centerHeaderContainer}>
           <Text style={styles.headerTitle}>Weekly Timetable</Text>
-          <Text style={styles.headerSubtitle}>Fall Semester</Text>
+          <Text style={styles.headerSubtitle}>Standard View</Text>
         </View>
 
         <View style={styles.headerRight}>
@@ -99,7 +144,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
             activeOpacity={0.8}
             onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
           >
-            <View style={[styles.avatar, { marginLeft: 12 }]}><Text style={styles.avatarText}>A</Text></View>
+            <View style={[styles.avatar, { marginLeft: 12 }]}><Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text></View>
           </TouchableOpacity>
         </View>
       </View>
@@ -130,7 +175,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
                 {/* Header Row (Days) */}
                 <View style={styles.daysHeaderRow}>
                   {DAYS.map(day => {
-                    const isToday = day === 'MON';
+                    const isToday = day === ['SUN','MON','TUE','WED','THU','FRI','SAT'][new Date().getDay()];
                     return (
                       <View key={day} style={styles.dayHeaderCell}>
                         <View style={[styles.dayBadge, isToday && styles.dayBadgeActive]}>
@@ -168,7 +213,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
                             {data ? (
                               <View style={[styles.card, { backgroundColor: getSubjectColors(data.subject).bg }]}>
                                 <View style={[styles.cardAccentLine, { backgroundColor: getSubjectColors(data.subject).accent }]} />
-                                <Text style={[styles.subjectText, { color: getSubjectColors(data.subject).text }]}>{data.subject}</Text>
+                                <Text style={[styles.subjectText, { color: getSubjectColors(data.subject).text }]} numberOfLines={1}>{data.subject}</Text>
                                 <View style={styles.teacherRow}>
                                   <Ionicons name="person" size={10} color={getSubjectColors(data.subject).accent} style={{ marginRight: 4, opacity: 0.6 }} />
                                   <Text style={[styles.teacherText, { color: getSubjectColors(data.subject).text, opacity: 0.8 }]} numberOfLines={1}>

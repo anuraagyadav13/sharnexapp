@@ -14,6 +14,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useAuth } from '../../store/AuthContext';
 
 const ANNOUNCEMENTS = [
   {
@@ -34,6 +35,7 @@ const ANNOUNCEMENTS = [
 
 const PrincipalAnnouncementsScreen = ({ navigation }: any) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const { authState } = useAuth();
   const [activeTab, setActiveTab] = useState('All');
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('general');
@@ -96,7 +98,7 @@ const PrincipalAnnouncementsScreen = ({ navigation }: any) => {
         </ScaleButton>
 
         <Text style={styles.topHeaderTitle} numberOfLines={1}>
-          Welcome back, Anurag
+          Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}
         </Text>
 
         <View style={styles.headerRight}>
@@ -107,7 +109,7 @@ const PrincipalAnnouncementsScreen = ({ navigation }: any) => {
             <Ionicons name="settings-outline" size={20} color="#111827" />
           </TouchableOpacity>
           <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}>
-            <View style={styles.avatar}><Text style={styles.avatarText}>A</Text></View>
+            <View style={styles.avatar}><Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text></View>
           </TouchableOpacity>
         </View>
       </View>
@@ -327,7 +329,7 @@ const PrincipalAnnouncementsScreen = ({ navigation }: any) => {
       </Modal>
 
       {/* Navigation Drawer */}
-      <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
+      <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="Principal" />
     </View>
   );
 };

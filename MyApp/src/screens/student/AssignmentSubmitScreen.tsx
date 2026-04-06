@@ -13,6 +13,7 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useAuth } from '../../store/AuthContext';
 
 type AssignmentSubmitNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AssignmentSubmit'>;
 
@@ -21,19 +22,20 @@ interface Props {
 }
 
 const AssignmentSubmitScreen: React.FC<Props> = ({ navigation }) => {
+  const { authState } = useAuth();
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* Global Header */}
       <View style={styles.globalHeader}>
-        <Text style={styles.globalHeaderTitle} numberOfLines={1}>Welcome back, Anurag</Text>
+        <Text style={styles.globalHeaderTitle} numberOfLines={1}>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={22} color="#1F2937" />
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>A</Text>
+            <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
           </View>
         </View>
       </View>

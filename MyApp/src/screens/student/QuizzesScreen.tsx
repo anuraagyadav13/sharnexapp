@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -7,6 +7,7 @@ import {
   StatusBar,
   Dimensions,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -16,6 +17,9 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type QuizzesNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Quizzes'>;
 
@@ -35,7 +39,8 @@ const SummaryCard = ({ delay, number, label, borderColor }: { delay: number, num
 const QuizCard = ({ 
   delay, headerTitle, headerBadge, badgeColor, badgeBg, 
   cardBadge, cardBadgeColor, cardBadgeBg, 
-  actionBtnText, actionBtnColor, actionBtnBg, actionBtnBorder, actionBtnIcon, onAction 
+  actionBtnText, actionBtnColor, actionBtnBg, actionBtnBorder, actionBtnIcon, onAction,
+  title, subtitle, subject, questionsCount, points, duration, teacherName
 }: any) => {
   return (
      <Animated.View entering={FadeInUp.delay(delay).springify()} style={styles.sectionContainer}>
@@ -48,63 +53,98 @@ const QuizCard = ({
            )}
         </View>
 
-        <View style={styles.quizCard}>
-           <View style={styles.quizCardTopRow}>
-              <Text style={styles.quizTitle}>Data Structure - Weekly Quiz</Text>
-              {cardBadge && (
-                 <View style={[styles.cardPill, { backgroundColor: cardBadgeBg, marginLeft: 8 }]}>
-                    <Text style={[styles.cardPillText, { color: cardBadgeColor }]}>{cardBadge}</Text>
-                 </View>
-              )}
-           </View>
-           <Text style={styles.quizSubtitle}>Comprehensive exam covering Arrays, Linked Lists, Stacks, and Queues</Text>
+         <View style={styles.quizCard}>
+            <View style={styles.quizCardTopRow}>
+               <Text style={styles.quizTitle} numberOfLines={1}>{title}</Text>
+               {cardBadge && (
+                  <View style={[styles.cardPill, { backgroundColor: cardBadgeBg, marginLeft: 8 }]}>
+                     <Text style={[styles.cardPillText, { color: cardBadgeColor }]}>{cardBadge}</Text>
+                  </View>
+               )}
+            </View>
+            <Text style={styles.quizSubtitle} numberOfLines={2}>{subtitle || 'No description available'}</Text>
 
-           <View style={styles.quizGrid}>
-              <View style={styles.quizGridCol}>
-                 <MaterialCommunityIcons name="book" size={14} color="#4F46E5" />
-                 <Text style={styles.quizGridText}>Data Structures</Text>
-              </View>
-              <View style={styles.quizGridCol}>
-                 <Ionicons name="help-circle" size={14} color="#4F46E5" />
-                 <Text style={styles.quizGridText}>50 Questions</Text>
-              </View>
-              <View style={styles.quizGridCol}>
-                 <Ionicons name="star" size={14} color="#4F46E5" />
-                 <Text style={styles.quizGridText}>100 Points</Text>
-              </View>
-              <View style={styles.quizGridCol}>
-                 <Ionicons name="time" size={14} color="#4F46E5" />
-                 <Text style={styles.quizGridText}>120 Minutes</Text>
-              </View>
-           </View>
+            <View style={styles.quizGrid}>
+               <View style={styles.quizGridCol}>
+                  <MaterialCommunityIcons name="book" size={14} color="#4F46E5" />
+                  <Text style={styles.quizGridText}>{subject}</Text>
+               </View>
+               <View style={styles.quizGridCol}>
+                  <Ionicons name="help-circle" size={14} color="#4F46E5" />
+                  <Text style={styles.quizGridText}>{questionsCount} Questions</Text>
+               </View>
+               <View style={styles.quizGridCol}>
+                  <Ionicons name="star" size={14} color="#4F46E5" />
+                  <Text style={styles.quizGridText}>{points} Points</Text>
+               </View>
+               <View style={styles.quizGridCol}>
+                  <Ionicons name="time" size={14} color="#4F46E5" />
+                  <Text style={styles.quizGridText}>{duration} Minutes</Text>
+               </View>
+            </View>
 
-           <View style={styles.cardBottomRow}>
-              <View style={styles.instructorProfile}>
-                 <FontAwesome5 name="chalkboard-teacher" size={16} color="#3B82F6" style={{marginRight: 8}} />
-                 <Text style={styles.instructorName}>Dr. Sarah Johnsen</Text>
-              </View>
+            <View style={styles.cardBottomRow}>
+               <View style={styles.instructorProfile}>
+                  <FontAwesome5 name="chalkboard-teacher" size={16} color="#3B82F6" style={{marginRight: 8}} />
+                  <Text style={styles.instructorName} numberOfLines={1}>{teacherName}</Text>
+               </View>
 
-              <ScaleButton 
-                 style={[
-                   styles.actionBtn, 
-                   { backgroundColor: actionBtnBg },
-                   actionBtnBorder ? { borderWidth: 1, borderColor: actionBtnBorder } : null
-                 ]} 
-                 activeOpacity={0.8} 
-                 scaleTo={0.95} 
-                 onPress={onAction}
-              >
-                 {actionBtnIcon && <Ionicons name={actionBtnIcon} size={14} color={actionBtnColor} style={styles.btnIconLayout} />}
-                 <Text style={[styles.actionBtnText, { color: actionBtnColor }]}>{actionBtnText}</Text>
-              </ScaleButton>
-           </View>
-        </View>
-     </Animated.View>
-  );
+               <ScaleButton 
+                  style={[
+                    styles.actionBtn, 
+                    { backgroundColor: actionBtnBg },
+                    actionBtnBorder ? { borderWidth: 1, borderColor: actionBtnBorder } : null
+                  ]} 
+                  activeOpacity={0.8} 
+                  scaleTo={0.95} 
+                  onPress={onAction}
+               >
+                  {actionBtnIcon && <Ionicons name={actionBtnIcon} size={14} color={actionBtnColor} style={styles.btnIconLayout} />}
+                  <Text style={[styles.actionBtnText, { color: actionBtnColor }]}>{actionBtnText}</Text>
+               </ScaleButton>
+            </View>
+         </View>
+      </Animated.View>
+   );
 }
 
 const QuizzesScreen: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const { authState } = useAuth();
+  const [quizzes, setQuizzes] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({
+    upcoming: 0,
+    active: 0,
+    completed: 0,
+    grades: 0
+  });
+
+  useEffect(() => {
+    const fetchQuizzes = async () => {
+      try {
+        setIsLoading(true);
+        // @ts-ignore
+        const res = await apiClient.get(ENDPOINTS.QUIZZES);
+        const data = res.data.data;
+        setQuizzes(data);
+
+        // Compute summary
+        setStats({
+          upcoming: data.filter((q: any) => q.derivedStatus === 'upcoming').length,
+          active: data.filter((q: any) => q.derivedStatus === 'started' || q.derivedStatus === 'active').length,
+          completed: data.filter((q: any) => q.hasAttempt).length,
+          grades: 0 // Placeholder
+        });
+      } catch (error) {
+        console.error('Failed to fetch quizzes:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchQuizzes();
+  }, []);
 
   return (
     <View style={styles.mainContainer}>
@@ -121,13 +161,13 @@ const QuizzesScreen: React.FC<Props> = ({ navigation }) => {
         >
           <Ionicons name="menu" size={28} color="#1F2937" />
         </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={22} color="#1F2937" />
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>A</Text>
+            <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
           </View>
         </View>
       </View>
@@ -142,66 +182,104 @@ const QuizzesScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* Top Summaries Grid 2x2 universally matching Assignments geometry */}
         <View style={styles.summaryGrid}>
-          <SummaryCard delay={100} number="4" label="Upcoming Quizzes" borderColor="#3B82F6" />
-          <SummaryCard delay={150} number="4" label="Active Now" borderColor="#10B981" />
-          <SummaryCard delay={200} number="4" label="Completed" borderColor="#F59E0B" />
-          <SummaryCard delay={250} number="4" label="Grades" borderColor="#8B5CF6" />
+          <SummaryCard delay={100} number={stats.upcoming.toString()} label="Upcoming Quizzes" borderColor="#3B82F6" />
+          <SummaryCard delay={150} number={stats.active.toString()} label="Active Now" borderColor="#10B981" />
+          <SummaryCard delay={200} number={stats.completed.toString()} label="Completed" borderColor="#F59E0B" />
+          <SummaryCard delay={250} number={stats.grades.toString()} label="Grades" borderColor="#8B5CF6" />
         </View>
 
         <View style={styles.listsWrapper}>
-           {/* Section 1: Active Quiz */}
-           <QuizCard 
-             delay={300}
-             headerTitle="Active Quiz"
-             headerBadge="1 Active"
-             badgeColor="#10B981"
-             badgeBg="#ECFDF5"
-             
-             actionBtnText="Start Quiz"
-             actionBtnColor="#FFFFFF"
-             actionBtnBg="#4F46E5" 
-             actionBtnIcon="play-circle"
-             onAction={() => navigation.navigate('StartQuiz', { quizId: '1' })} 
-           />
+           {isLoading ? (
+             <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
+           ) : quizzes.length === 0 ? (
+             <View style={styles.emptyContainer}>
+               <Ionicons name="time-outline" size={60} color="#E5E7EB" />
+               <Text style={styles.emptyText}>No quizzes found</Text>
+             </View>
+           ) : (
+             <>
+               {/* Section 1: Active In-Progress Quizzes */}
+               {quizzes.filter(q => q.derivedStatus === 'started' || q.derivedStatus === 'active').map((q, i) => (
+                 <QuizCard 
+                   key={q.id}
+                   delay={300 + i * 50}
+                   headerTitle="Active Quiz"
+                   headerBadge="Started"
+                   badgeColor="#10B981"
+                   badgeBg="#ECFDF5"
+                   title={q.title}
+                   subtitle={q.description}
+                   subject={q.subject}
+                   questionsCount={q.questions?.length || 0}
+                   points={q.totalMarks || 100}
+                   duration={q.duration || q.timeLimit || 0}
+                   teacherName={q.teacherName || 'Instructor'}
+                   actionBtnText="Resume Quiz"
+                   actionBtnColor="#FFFFFF"
+                   actionBtnBg="#4F46E5" 
+                   actionBtnIcon="play-circle"
+                   onAction={() => navigation.navigate('StartQuiz', { quizId: q.id })} 
+                 />
+               ))}
 
-           {/* Section 2: Upcoming Quizzes */}
-           <QuizCard 
-             delay={400}
-             headerTitle="Upcoming Quizzes"
-             headerBadge="3 Upcoming"
-             badgeColor="#EF4444"
-             badgeBg="#FEF2F2"
-             
-             cardBadge="Starts May 15"
-             cardBadgeColor="#EF4444"
-             cardBadgeBg="#FEF2F2"
+               {/* Section 2: Upcoming / Startable */}
+               {quizzes.filter(q => q.derivedStatus === 'upcoming' || q.derivedStatus === 'available').map((q, i) => (
+                 <QuizCard 
+                   key={q.id}
+                   delay={400 + i * 50}
+                   headerTitle={q.derivedStatus === 'available' ? "Available Now" : "Upcoming Quiz"}
+                   headerBadge={q.derivedStatus === 'available' ? "Ready" : "Scheduled"}
+                   badgeColor={q.derivedStatus === 'available' ? "#3B82F6" : "#EF4444"}
+                   badgeBg={q.derivedStatus === 'available' ? "#EFF6FF" : "#FEF2F2"}
+                   title={q.title}
+                   subtitle={q.description}
+                   subject={q.subject}
+                   questionsCount={q.questions?.length || 0}
+                   points={q.totalMarks || 100}
+                   duration={q.duration || q.timeLimit || 0}
+                   teacherName={q.teacherName || 'Instructor'}
+                   cardBadge={q.startAt ? new Date(q.startAt).toLocaleDateString() : 'Available'}
+                   cardBadgeColor={q.derivedStatus === 'available' ? "#10B981" : "#EF4444"}
+                   cardBadgeBg={q.derivedStatus === 'available' ? "#ECFDF5" : "#FEF2F2"}
+                   actionBtnText={q.derivedStatus === 'available' ? "Start Now" : "View Details"}
+                   actionBtnColor={q.derivedStatus === 'available' ? "#FFFFFF" : "#3B82F6"}
+                   actionBtnBg={q.derivedStatus === 'available' ? "#10B981" : "#FFFFFF"}
+                   actionBtnBorder={q.derivedStatus === 'available' ? undefined : "#E5E7EB"}
+                   actionBtnIcon={q.derivedStatus === 'available' ? "play" : "eye"}
+                   onAction={() => q.derivedStatus === 'available' 
+                     ? navigation.navigate('StartQuiz', { quizId: q.id }) 
+                     : navigation.navigate('ViewQuizDetail', { quizId: q.id })}
+                 />
+               ))}
 
-             actionBtnText="View Details"
-             actionBtnColor="#3B82F6" 
-             actionBtnBg="#FFFFFF"
-             actionBtnBorder="#E5E7EB"
-             actionBtnIcon="eye"      
-             onAction={() => navigation.navigate('ViewQuizDetail', { quizId: '1' })}
-           />
-
-           {/* Section 3: Recently Completed */}
-           <QuizCard 
-             delay={500}
-             headerTitle="Recently Completed"
-             headerBadge="4 Completed"
-             badgeColor="#3B82F6"
-             badgeBg="#EFF6FF"
-             
-             cardBadge="Completed"
-             cardBadgeColor="#3B82F6"
-             cardBadgeBg="#EFF6FF"
-
-             actionBtnText="View Analytics"
-             actionBtnColor="#FFFFFF"
-             actionBtnBg="#10B981" 
-             actionBtnIcon="bar-chart-outline" 
-             onAction={() => navigation.navigate('QuizDetails', { quizId: '1' })}
-           />
+               {/* Section 3: Recently Completed */}
+               {quizzes.filter(q => q.hasAttempt).map((q, i) => (
+                 <QuizCard 
+                   key={q.id}
+                   delay={500 + i * 50}
+                   headerTitle="Completed"
+                   headerBadge="Result Ready"
+                   badgeColor="#3B82F6"
+                   badgeBg="#EFF6FF"
+                   title={q.title}
+                   subtitle={q.description}
+                   subject={q.subject}
+                   questionsCount={q.questions?.length || 0}
+                   points={q.totalMarks || 100}
+                   duration={q.duration || q.timeLimit || 0}
+                   teacherName={q.teacherName || 'Instructor'}
+                   cardBadge="Completed"
+                   cardBadgeColor="#3B82F6"
+                   cardBadgeBg="#EFF6FF"
+                   actionBtnText="View Analytics"
+                   actionBtnColor="#FFFFFF"
+                   actionBtnBg="#8B5CF6" 
+                   actionBtnIcon="bar-chart-outline" 
+                   onAction={() => navigation.navigate('QuizDetails', { quizId: q.id })}
+                 />
+               ))}
+             </>
+           )}
         </View>
 
       </ScrollView>
@@ -431,6 +509,18 @@ const styles = StyleSheet.create({
   },
   btnIconLayout: {
     marginRight: 4, // Matches assignments
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 60,
+    opacity: 0.5,
+  },
+  emptyText: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
   },
 });
 

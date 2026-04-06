@@ -15,8 +15,10 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
+import { useAuth } from '../../store/AuthContext';
 
 const PrincipalAddStaffScreen = ({ navigation }: any) => {
+  const { authState } = useAuth();
   const [activeTab, setActiveTab] = useState('personal'); // personal, bank, professional, face
   
   // Calendars
@@ -75,14 +77,14 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
         </ScaleButton>
 
         <Text style={styles.topHeaderTitle} numberOfLines={1}>
-          Welcome back, Anurag
+          Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}
         </Text>
 
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.iconBtnTransparent}><Ionicons name="notifications-outline" size={20} color="#111827" /></TouchableOpacity>
           <TouchableOpacity style={styles.iconBtnTransparent} onPress={() => navigation.navigate('AccountSettings')}><Ionicons name="settings-outline" size={20} color="#111827" /></TouchableOpacity>
           <TouchableOpacity style={styles.iconBtnTransparent}><Ionicons name="moon-outline" size={20} color="#111827" /></TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}><View style={styles.avatar}><Text style={styles.avatarText}>A</Text></View></TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}><View style={styles.avatar}><Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text></View></TouchableOpacity>
         </View>
       </View>
 

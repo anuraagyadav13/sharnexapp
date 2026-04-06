@@ -14,6 +14,7 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
+import { useAuth } from '../../store/AuthContext';
 import { RootStackParamList } from '../../types/navigation';
 
 type PrincipalRSMNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PrincipalRSM'>;
@@ -66,6 +67,7 @@ const getStatusColors = (status: ExamStatus) => {
 
 const PrincipalRSMscreen: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const { authState } = useAuth();
   const [searchText, setSearchText] = useState('');
 
   const filteredExams = useMemo(() => {
@@ -98,7 +100,7 @@ const PrincipalRSMscreen: React.FC<Props> = ({ navigation }) => {
         </ScaleButton>
 
         <Text style={styles.topHeaderTitle} numberOfLines={1}>
-          Welcome back, Anurag
+          Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}
         </Text>
 
         <View style={styles.headerRight}>
@@ -113,7 +115,7 @@ const PrincipalRSMscreen: React.FC<Props> = ({ navigation }) => {
             onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
           >
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>A</Text>
+              <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -242,7 +244,7 @@ const PrincipalRSMscreen: React.FC<Props> = ({ navigation }) => {
       <NavigationDrawer
         isOpen={isDrawerOpen}
         onClose={() => setDrawerOpen(false)}
-        role="principal"
+        role="Principal"
       />
     </View>
   );

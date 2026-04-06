@@ -15,6 +15,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { useAuth } from '../../store/AuthContext';
 
 const StatCard = React.memo(({ color, value, label, subtext }: any) => (
   <View style={[styles.statCard, { borderLeftColor: color, borderLeftWidth: 4 }]}>
@@ -59,6 +60,7 @@ const DUMMY_SUBJECTS = [
 
 const PrincipalSubjectsScreen = ({ navigation }: any) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const { authState } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   
@@ -97,7 +99,7 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
         </ScaleButton>
 
         <Text style={styles.headerTitle} numberOfLines={1}>
-          Welcome back, Anurag
+          Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}
         </Text>
 
         <View style={styles.headerRight}>
@@ -118,7 +120,7 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
             onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
           >
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>A</Text>
+              <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -171,7 +173,7 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
       <NavigationDrawer
         isOpen={isDrawerOpen}
         onClose={() => setDrawerOpen(false)}
-        role="principal"
+        role="Principal"
       />
 
       {/* Add Subject Modal */}

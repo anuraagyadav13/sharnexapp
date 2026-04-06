@@ -12,6 +12,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useAuth } from '../../store/AuthContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherMonitorLive'>;
 
@@ -29,6 +30,7 @@ const MOCK_PARTICIPANTS = Array.from({ length: 4 }).map((_, i) => ({
 }));
 
 const TeacherMonitorLiveScreen: React.FC<Props> = ({ navigation }) => {
+  const { authState } = useAuth();
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
@@ -36,13 +38,13 @@ const TeacherMonitorLiveScreen: React.FC<Props> = ({ navigation }) => {
       {/* Global Header */}
       <View style={styles.globalHeader}>
         <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={22} color="#1F2937" />
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
           </View>
         </View>
       </View>

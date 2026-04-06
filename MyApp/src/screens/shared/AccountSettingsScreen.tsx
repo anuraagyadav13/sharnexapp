@@ -68,10 +68,10 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
   const { authState } = useAuth();
   const role = authState.role;
   const isTeacher = role === 'teacher';
-  const isPrincipal = role === 'principal';
-  const roleTitle = isPrincipal ? 'Principal' : isTeacher ? 'Teacher' : 'Student';
-  const secondaryTabTitle = isPrincipal ? 'Institution Info' : isTeacher ? 'Professional Info' : 'Parent Information';
-  const idLabel = isPrincipal ? 'PRN2023-01X' : isTeacher ? 'EMP2023-12A' : 'CS2023-789';
+  const isInstitution = role === 'institution';
+  const roleTitle = isInstitution ? 'Institution' : isTeacher ? 'Teacher' : 'Student';
+  const secondaryTabTitle = isInstitution ? 'Institution Info' : isTeacher ? 'Professional Info' : 'Parent Information';
+  const idLabel = isInstitution ? 'PRN2023-01X' : isTeacher ? 'EMP2023-12A' : 'CS2023-789';
 
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
@@ -101,13 +101,13 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
         >
           <Ionicons name="menu" size={28} color="#1F2937" />
         </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'User'}</Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={22} color="#1F2937" />
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'U'}</Text>
           </View>
         </View>
       </View>
@@ -124,15 +124,15 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
         <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.heroCard}>
            <ScaleButton activeOpacity={0.8} scaleTo={0.92} style={styles.heroAvatarContainer}>
               <View style={styles.heroAvatar}>
-                 <Text style={styles.heroAvatarText}>AS</Text>
+                 <Text style={styles.heroAvatarText}>{authState.user?.name?.charAt(0) || 'U'}</Text>
               </View>
               <View style={styles.cameraIconBadge}>
                  <Ionicons name="camera-outline" size={12} color="#4F46E5" />
               </View>
            </ScaleButton>
             <View style={styles.heroInfo}>
-              <Text style={styles.heroName}>Anurag Yadav</Text>
-              <Text style={styles.heroDetails}>@Email.com | ID: {idLabel}</Text>
+              <Text style={styles.heroName}>{authState.user?.name || 'User Name'}</Text>
+              <Text style={styles.heroDetails}>{authState.user?.email || 'Email.com'} | ID: {idLabel}</Text>
               <View style={styles.heroStatusPill}>
                  <Text style={styles.heroStatusText}>Active {roleTitle}</Text>
               </View>

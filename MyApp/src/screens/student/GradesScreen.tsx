@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,8 @@ import {
   StatusBar,
   Platform,
   ScrollView,
-  TouchableOpacity
+  TouchableOpacity,
+  ActivityIndicator
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -14,6 +15,8 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
 
 type GradesScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Grades'>;
 
@@ -35,7 +38,27 @@ const REPORTS = [
 ];
 
 const GradesScreen: React.FC<Props> = ({ navigation }) => {
+  const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [grades, setGrades] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchGrades = async () => {
+      try {
+        setIsLoading(true);
+        const res = await apiClient.get('/rms/results/student');
+        if (res.data.success) {
+          setGrades(res.data.data || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch grades:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchGrades();
+  }, []);
 
   return (
     <View style={styles.mainContainer}>
@@ -52,13 +75,13 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
         >
           <Ionicons name="menu" size={28} color="#1F2937" />
         </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={22} color="#1F2937" />
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
           </View>
         </View>
       </View>
@@ -72,45 +95,58 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
         </Animated.View>
 
         {/* Subjects List */}
-        {SUBJECTS.map((item, index) => (
-          <Animated.View 
-            key={`sub-${item.id}`} 
-            entering={FadeInUp.delay(100 + (index * 50)).springify()} 
-            style={styles.subjectCard}
-          >
-             <View style={styles.cardHeaderRow}>
-               <View>
-                 <Text style={styles.subjectName}>{item.name}</Text>
-                 <Text style={styles.teacherName}>{item.teacher}</Text>
+        {isLoading ? (
+          <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 40 }} />
+        ) : grades.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="school-outline" size={60} color="#E5E7EB" />
+            <Text style={styles.emptyText}>No grade records found</Text>
+          </View>
+        ) : (
+          grades.map((item, index) => (
+            <Animated.View 
+              key={item.id || index} 
+              entering={FadeInUp.delay(100 + (index * 50)).springify()} 
+              style={styles.subjectCard}
+            >
+               <View style={styles.cardHeaderRow}>
+                 <View>
+                   <Text style={styles.subjectName}>{item.exam_name || 'Exam Result'}</Text>
+                   <Text style={styles.teacherName}>{item.subject_name || 'Term Exam'}</Text>
+                 </View>
+                 <View style={[styles.statusPill, { backgroundColor: item.grade?.startsWith('A') ? '#D1FAE5' : '#FEF3C7' }]}>
+                   <Text style={[styles.statusText, { color: item.grade?.startsWith('A') ? '#059669' : '#D97706' }]}>{item.grade || 'N/A'}</Text>
+                 </View>
                </View>
-               <View style={styles.statusPill}>
-                 <Text style={styles.statusText}>{item.status}</Text>
-               </View>
-             </View>
 
-             <View style={styles.divider} />
+               <View style={styles.divider} />
 
-             <View style={styles.statsRow}>
-               <View style={styles.statCol}>
-                 <Text style={styles.statLabel}>Assignments</Text>
-                 <Text style={styles.statValue}>{item.assignments}</Text>
+               <View style={styles.statsRow}>
+                 <View style={styles.statCol}>
+                   <Text style={styles.statLabel}>Score</Text>
+                   <Text style={styles.statValue}>{item.score || 0}</Text>
+                 </View>
+                 <View style={styles.statCol}>
+                   <Text style={styles.statLabel}>Total Marks</Text>
+                   <Text style={styles.statValue}>{item.total_marks || 100}</Text>
+                 </View>
+                 <View style={styles.statCol}>
+                   <Text style={styles.statLabel}>Percentage</Text>
+                   <Text style={styles.statValue}>
+                     {item.total_marks ? Math.round((item.score / item.total_marks) * 100) : 0}%
+                   </Text>
+                 </View>
                </View>
-               <View style={styles.statCol}>
-                 <Text style={styles.statLabel}>Quizzes</Text>
-                 <Text style={styles.statValue}>{item.quizzes}</Text>
-               </View>
-               <View style={styles.statCol}>
-                 <Text style={styles.statLabel}>Exams</Text>
-                 <Text style={styles.statValue}>{item.exams}</Text>
-               </View>
-             </View>
 
-             <View style={styles.gradeBox}>
-               <Text style={styles.gradeLabel}>Overall Grade</Text>
-               <Text style={styles.gradeValue}>{item.grade}</Text>
-             </View>
-          </Animated.View>
-        ))}
+               <View style={styles.gradeBox}>
+                 <Text style={styles.gradeLabel}>Result Status</Text>
+                 <Text style={[styles.gradeValue, { color: item.percentage >= 40 || !item.percentage ? '#059669' : '#EF4444' }]}>
+                   {item.percentage >= 40 || !item.percentage ? 'PASSED' : 'RE-EXAM'}
+                 </Text>
+               </View>
+            </Animated.View>
+          ))
+        )}
 
         {/* Recent Reports Area */}
         <Animated.View entering={FadeInUp.delay(350).springify()} style={styles.reportsWrapper}>
@@ -351,7 +387,19 @@ const styles = StyleSheet.create({
     fontSize: 8,
     color: '#9CA3AF',
     marginTop: 6,
-  }
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 60,
+    opacity: 0.5,
+  },
+  emptyText: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
 });
 
 export default GradesScreen;

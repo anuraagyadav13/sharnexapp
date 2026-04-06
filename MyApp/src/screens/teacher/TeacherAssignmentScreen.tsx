@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,8 @@ import {
   StatusBar,
   ScrollView,
   TouchableOpacity,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -14,50 +15,34 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherAssignment'>;
 
-const MOCK_ASSIGNMENTS = [
-  {
-    id: 1,
-    subject: 'Mathematics',
-    title: 'Algebra Problem Set',
-    dueDate: 'Due Today • 11 : 59 PM',
-    class: 'Class 10-A',
-    date: 'Oct 10, 2023',
-    maxPoints: 'Max: 20 points',
-    submitted: 8,
-    total: 10,
-    indicatorColor: '#EF4444',
-  },
-  {
-    id: 2,
-    subject: 'Mathematics',
-    title: 'Algebra Problem Set',
-    dueDate: 'Due Today • 11 : 59 PM',
-    class: 'Class 10-A',
-    date: 'Oct 10, 2023',
-    maxPoints: 'Max: 20 points',
-    submitted: 8,
-    total: 10,
-    indicatorColor: '#F97316',
-  },
-  {
-    id: 3,
-    subject: 'Mathematics',
-    title: 'Algebra Problem Set',
-    dueDate: 'Due Today • 11 : 59 PM',
-    class: 'Class 10-A',
-    date: 'Oct 10, 2023',
-    maxPoints: 'Max: 20 points',
-    submitted: 8,
-    total: 10,
-    indicatorColor: '#F97316',
-  },
-];
-
 const TeacherAssignmentScreen: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const { authState } = useAuth();
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      try {
+        const teacherId = authState.user?.id;
+        if (!teacherId) return;
+
+        const res = await apiClient.get(ENDPOINTS.TEACHER.ASSIGNMENTS(teacherId));
+        setAssignments(res.data.assignments || []);
+      } catch (error) {
+        console.error('Failed to fetch teacher assignments:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchAssignments();
+  }, []);
 
   return (
     <View style={styles.mainContainer}>
@@ -74,102 +59,107 @@ const TeacherAssignmentScreen: React.FC<Props> = ({ navigation }) => {
         >
           <Ionicons name="menu" size={28} color="#1F2937" />
         </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
-        <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
+          <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
+          <View style={styles.headerRight}>
+            <Ionicons name="notifications-outline" size={22} color="#1F2937" />
+            <Ionicons name="settings-outline" size={22} color="#1F2937" />
+            <Ionicons name="moon-outline" size={22} color="#1F2937" />
+            <View style={styles.avatar}>
+               <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
+            </View>
           </View>
         </View>
-      </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
-        {/* Page Title & Add Button */}
-        <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
-           <View style={{flex: 1}}>
-              <Text style={styles.pageTitle}>Assignments</Text>
-              <Text style={styles.pageSubtitle}>Manage and grade students submission</Text>
-           </View>
-           <TouchableOpacity style={styles.newAssignmentBtn} activeOpacity={0.8} onPress={() => navigation.navigate('TeacherCreateAssignment')}>
-              <Text style={styles.newAssignmentText}>+ New Assignment</Text>
-           </TouchableOpacity>
-        </Animated.View>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          
+          {/* Page Title & Add Button */}
+          <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
+             <View style={{flex: 1}}>
+                <Text style={styles.pageTitle}>Assignments</Text>
+                <Text style={styles.pageSubtitle}>Manage and grade students submission</Text>
+             </View>
+             <TouchableOpacity style={styles.newAssignmentBtn} activeOpacity={0.8} onPress={() => navigation.navigate('TeacherCreateAssignment')}>
+                <Text style={styles.newAssignmentText}>+ New Assignment</Text>
+             </TouchableOpacity>
+          </Animated.View>
 
-        {/* Assignment Cards List */}
-        <View style={styles.listContainer}>
-          {MOCK_ASSIGNMENTS.map((item, index) => {
-            const progressPercent = (item.submitted / item.total) * 100;
+          {/* Assignment Cards List */}
+          <View style={styles.listContainer}>
+            {isLoading ? (
+              <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
+            ) : assignments.length === 0 ? (
+              <Text style={styles.emptyText}>No assignments posted yet.</Text>
+            ) : (
+              assignments.map((item: any, index: number) => {
+                const submittedCount = item.submissions || 0;
+                const totalStudents = item.total || 0;
+                const progressPercent = totalStudents > 0 ? (submittedCount / totalStudents) * 100 : 0;
 
-            return (
-              <Animated.View 
-                 key={item.id} 
-                 entering={FadeInUp.delay(100 + index * 100).springify()} 
-                 style={[styles.assignmentCard, { borderLeftColor: item.indicatorColor }]}
-              >
-                 {/* Top Tags */}
-                 <View style={styles.tagsContainer}>
-                    <View style={styles.dueBadge}>
-                       <Ionicons name="alarm-outline" size={13} color="#EF4444" style={{marginRight: 4}} />
-                       <Text style={styles.dueBadgeText}>{item.dueDate}</Text>
-                    </View>
-                 </View>
-                 <View style={styles.subjectBadge}>
-                    <Text style={styles.subjectBadgeText}>{item.subject}</Text>
-                 </View>
+                return (
+                  <Animated.View 
+                     key={item.id} 
+                     entering={FadeInUp.delay(100 + index * 100).springify()} 
+                     style={[styles.assignmentCard, { borderLeftColor: index % 2 === 0 ? '#EF4444' : '#F97316' }]}
+                  >
+                     {/* Top Tags */}
+                     <View style={styles.tagsContainer}>
+                        <View style={styles.dueBadge}>
+                           <Ionicons name="alarm-outline" size={13} color="#EF4444" style={{marginRight: 4}} />
+                           <Text style={styles.dueBadgeText}>Due {item.dueDate ? new Date(item.dueDate).toLocaleDateString() : 'N/A'}</Text>
+                        </View>
+                     </View>
+                     <View style={styles.subjectBadge}>
+                        <Text style={styles.subjectBadgeText}>{item.subject}</Text>
+                     </View>
 
-                 {/* Title */}
-                 <Text style={styles.cardTitle}>{item.title}</Text>
+                     {/* Title */}
+                     <Text style={styles.cardTitle}>{item.title}</Text>
 
-                 {/* Info Row */}
-                 <View style={styles.infoRow}>
-                    <View style={styles.infoItem}>
-                       <Ionicons name="people-outline" size={13} color="#9CA3AF" style={{marginRight: 4}}/>
-                       <Text style={styles.infoText}>{item.class}</Text>
-                    </View>
-                    <View style={styles.infoItem}>
-                       <Ionicons name="calendar-outline" size={13} color="#9CA3AF" style={{marginRight: 4}}/>
-                       <Text style={styles.infoText}>{item.date}</Text>
-                    </View>
-                    <View style={styles.infoItem}>
-                       <Ionicons name="school-outline" size={13} color="#9CA3AF" style={{marginRight: 4}}/>
-                       <Text style={styles.infoText}>{item.maxPoints}</Text>
-                    </View>
-                 </View>
+                     {/* Info Row */}
+                     <View style={styles.infoRow}>
+                        <View style={styles.infoItem}>
+                           <Ionicons name="people-outline" size={13} color="#9CA3AF" style={{marginRight: 4}}/>
+                           <Text style={styles.infoText}>{item.class}</Text>
+                        </View>
+                        <View style={styles.infoItem}>
+                           <Ionicons name="calendar-outline" size={13} color="#9CA3AF" style={{marginRight: 4}}/>
+                           <Text style={styles.infoText}>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}</Text>
+                        </View>
+                        <View style={styles.infoItem}>
+                           <Ionicons name="school-outline" size={13} color="#9CA3AF" style={{marginRight: 4}}/>
+                           <Text style={styles.infoText}>Max: {item.maxPoints}</Text>
+                        </View>
+                     </View>
 
-                 {/* Progress Section */}
-                 <View style={styles.progressContainer}>
-                    <View style={styles.progressHeader}>
-                       <Text style={styles.progressLabel}>Submission Progress</Text>
-                       <Text style={styles.progressValue}>{item.submitted}/{item.total} Submitted</Text>
-                    </View>
-                    <View style={styles.progressBarBg}>
-                       <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
-                    </View>
-                 </View>
+                     {/* Progress Section */}
+                     <View style={styles.progressContainer}>
+                        <View style={styles.progressHeader}>
+                           <Text style={styles.progressLabel}>Submission Progress</Text>
+                           <Text style={styles.progressValue}>{submittedCount}/{totalStudents} Submitted</Text>
+                        </View>
+                        <View style={styles.progressBarBg}>
+                           <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
+                        </View>
+                     </View>
 
-                 {/* Action Buttons Row */}
-                 <View style={styles.cardActionsRow}>
-                    <TouchableOpacity style={styles.actionBtnView} activeOpacity={0.8} onPress={() => navigation.navigate('TeacherViewSubmission', { assignmentId: item.id.toString() })}>
-                       <Ionicons name="eye-outline" size={15} color="#FFFFFF" style={{marginRight: 6}} />
-                       <Text style={styles.actionBtnViewText}>View All Submission</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionBtnEdit} activeOpacity={0.8}>
-                       <Ionicons name="create-outline" size={15} color="#1F2937" style={{marginRight: 4}} />
-                       <Text style={styles.actionBtnEditText}>Edit</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionBtnRemind} activeOpacity={0.8}>
-                       <Ionicons name="notifications" size={15} color="#FFFFFF" style={{marginRight: 4}} />
-                       <Text style={styles.actionBtnRemindText}>Remind</Text>
-                    </TouchableOpacity>
-                 </View>
+                     {/* Action Buttons Row */}
+                     <View style={styles.cardActionsRow}>
+                        <TouchableOpacity style={styles.actionBtnView} activeOpacity={0.8} onPress={() => navigation.navigate('TeacherViewSubmission', { assignmentId: item.id })}>
+                           <Ionicons name="eye-outline" size={15} color="#FFFFFF" style={{marginRight: 6}} />
+                           <Text style={styles.actionBtnViewText}>View All Submission</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.actionBtnEdit} activeOpacity={0.8}>
+                           <Ionicons name="create-outline" size={15} color="#1F2937" style={{marginRight: 4}} />
+                           <Text style={styles.actionBtnEditText}>Edit</Text>
+                        </TouchableOpacity>
+                     </View>
 
-              </Animated.View>
-            );
-          })}
-        </View>
+                  </Animated.View>
+                );
+              })
+            )}
+          </View>
+
 
       </ScrollView>
 
@@ -412,6 +402,13 @@ const styles = StyleSheet.create({
      color: '#FFFFFF',
      fontSize: 11,
      fontWeight: '700',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 40,
+    fontWeight: '500',
   },
 });
 

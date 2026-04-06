@@ -1,6 +1,6 @@
 export type RootStackParamList = {
   Login: undefined;
-  Register: undefined;
+  // Register: undefined;
   Home: undefined;
   
   // Student Screens
@@ -28,16 +28,16 @@ export type RootStackParamList = {
   // Teacher Screens
   TeacherDashboard: undefined;
   TeacherAttendance: undefined;
-  TeacherViewAttendance: { classId: string };
-  TeacherMarkAttendance: undefined;
+  TeacherViewAttendance: { classId: string, className?: string };
+  TeacherMarkAttendance: { classId: string, className?: string };
   TeacherAssignment: undefined;
   TeacherViewSubmission: { assignmentId: string };
   TeacherCreateAssignment: undefined;
   TeacherQuiz: undefined;
   TeacherCreateQuiz: undefined;
-  TeacherCreateQuizStep2: undefined;
+  TeacherCreateQuizStep2: { quizData: any };
   TeacherAddQuestion: undefined;
-  TeacherCreateQuizStep3: undefined;
+  TeacherCreateQuizStep3: { quizData: any };
   TeacherViewQuizResult: { quizId: string };
   TeacherMonitorLive: { quizId: string };
 
@@ -56,5 +56,5 @@ export type RootStackParamList = {
   PrincipalAnnouncements: undefined;
   PrincipalFees: undefined;
   PrincipalRSM: undefined;
-  PrincipalCreateExamScreen: undefined;
+  PrincipalCreateExam: undefined;
 };

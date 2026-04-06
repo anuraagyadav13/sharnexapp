@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -7,7 +7,8 @@ import {
   StyleSheet,
   Image,
   Platform,
-  StatusBar
+  StatusBar,
+  ActivityIndicator
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -16,6 +17,9 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type DashboardNavigationProp = NativeStackNavigationProp<RootStackParamList, 'TeacherDashboard'>;
 
@@ -117,6 +121,32 @@ const ScheduleCard = React.memo(({ time, title, classSection, room, color, statu
 
 const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const { authState } = useAuth();
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        setIsLoading(true);
+        // Use User ID from authState directly
+        const teacherId = authState.user?.id;
+        if (!teacherId) return;
+
+        // 2. Fetch dashboard summary
+        // @ts-ignore
+        const res = await apiClient.get(ENDPOINTS.TEACHER.DASHBOARD(teacherId));
+        setDashboardData(res.data.summary);
+      } catch (error: any) {
+        console.error('Failed to fetch teacher dashboard:', error);
+        // Auth errors handled silently to allow development with mock data
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboard();
+  }, []);
 
   return (
     <View style={styles.mainContainer}>
@@ -134,13 +164,13 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
           >
             <Ionicons name="menu" size={28} color="#1F2937" />
           </ScaleButton>
-          <Text style={styles.headerTitle} numberOfLines={1}>Welcome back, Teacher</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
           <View style={styles.headerRight}>
             <Ionicons name="notifications-outline" size={22} color="#1F2937" />
             <Ionicons name="settings-outline" size={22} color="#1F2937" />
             <Ionicons name="moon-outline" size={22} color="#1F2937" />
             <View style={styles.avatar}>
-               <Text style={styles.avatarText}>T</Text>
+              <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
             </View>
           </View>
         </View>
@@ -170,29 +200,29 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
           <View style={styles.statsRowHorizontalAligned}>
             <StatCard
               title="Today's Classes"
-              value="4"
-              subtext1="1 Completed"
-              subtext2="3 Upcoming"
+              value={dashboardData?.todaysSchedule?.length || 0}
+              subtext1={`${dashboardData?.todaysSchedule?.filter((s: any) => s.status === 'Completed').length || 0} Completed`}
+              subtext2={`${dashboardData?.todaysSchedule?.filter((s: any) => s.status !== 'Completed').length || 0} Remaining`}
               subtextColor="#3B82F6"
               iconName="calendar"
               iconColor="#3B82F6"
             />
             <StatCard
-              title="Assignments"
-              value="12"
-              subtext1="To Grade"
-              subtext2="From 3 classes"
+              title="Pending Grading"
+              value={dashboardData?.stats?.pendingGrading || 0}
+              subtext1="Assignments"
+              subtext2="Needs Review"
               subtextColor="#F59E0B"
               iconName="clipboard"
               iconColor="#F59E0B"
             />
             <StatCard
-              title="Quizzes"
-              value="2"
-              subtext1="Upcoming"
-              subtext2="This week"
+              title="Total Students"
+              value={dashboardData?.stats?.totalStudents || 84}
+              subtext1="Active"
+              subtext2="Enrolled"
               subtextColor="#10B981"
-              iconName="time"
+              iconName="people"
               iconColor="#10B981"
             />
           </View>
@@ -219,15 +249,26 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.sectionTitle}>Today’s Schedule</Text>
           </View>
           <View style={styles.scheduleList}>
-            <ScheduleCard
-              time="09:15 - 10:15" title="Science" classSection="Class 10 - Sec A" room="Lab 2"
-              color="#059669" isOngoing={true} bgStyleColor="#F0FDF4" borderStyleColor="#86EFAC" />
-            <ScheduleCard
-              time="10:30 - 11:30" title="Physics" classSection="Class 12 - Sec B" room="Room 205"
-              color="#D946EF" status="Up next" />
-            <ScheduleCard
-              time="11:45 - 12:45" title="Chemistry" classSection="Class 11 - Sec A" room="Lab 1"
-              color="#F97316" status="Up next" />
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#4F46E5" />
+            ) : dashboardData?.todaysSchedule?.length === 0 ? (
+              <Text style={styles.emptyText}>No classes scheduled for today.</Text>
+            ) : (
+              dashboardData?.todaysSchedule?.map((item: any, index: number) => (
+                <ScheduleCard
+                  key={index}
+                  time={`${item.start_time} - ${item.end_time}`}
+                  title={item.subject_name || item.type}
+                  classSection={`${item.class_name} - Sec ${item.section}`}
+                  room={item.room_name || 'Classroom'}
+                  color={index % 2 === 0 ? "#059669" : "#D946EF"}
+                  isOngoing={item.status === 'Ongoing'}
+                  status={item.status}
+                  bgStyleColor={item.status === 'Ongoing' ? "#F0FDF4" : undefined}
+                  borderStyleColor={item.status === 'Ongoing' ? "#86EFAC" : undefined}
+                />
+              ))
+            )}
           </View>
         </View>
 
@@ -255,9 +296,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40, 
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF', 
+    backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -275,7 +316,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
   },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  
+
   avatar: {
     width: 34,
     height: 34,
@@ -396,7 +437,14 @@ const styles = StyleSheet.create({
   scheduleBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   scheduleRoom: { fontSize: 10, color: '#9CA3AF' },
   joinClassBtn: { paddingHorizontal: 10, paddingVertical: 14, borderRadius: 8, borderWidth: 1 },
-  joinClassBtnText: { fontSize: 10, fontWeight: '600' }
+  joinClassBtnText: { fontSize: 10, fontWeight: '600' },
+  emptyText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 20,
+    fontWeight: '500',
+  },
 });
 
 export default TeacherDashboard;

@@ -15,6 +15,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { useAuth } from '../../store/AuthContext';
 
 const dummyStaff = [
   { id: '1', name: 'John Dwivedi', initial: 'j' },
@@ -24,6 +25,7 @@ const dummyStaff = [
 ];
 
 const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
+  const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [searchStaff, setSearchStaff] = useState('');
   const [searchLogs, setSearchLogs] = useState('');
@@ -55,7 +57,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
       {/* Header */}
       <View style={styles.globalHeader}>
         <View style={styles.headerRight}>
-          <Text style={styles.headerTitle}>Welcome back, Anurag</Text>
+          <Text style={styles.headerTitle}>Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}</Text>
           <TouchableOpacity style={styles.iconBtnTransparent}>
             <Ionicons name="notifications-outline" size={22} color="#111827" />
           </TouchableOpacity>
@@ -74,7 +76,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
           >
             <View style={styles.avatarContainer}>
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>A</Text>
+                <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text>
               </View>
             </View>
           </TouchableOpacity>
@@ -221,7 +223,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
         </View>
       </ScrollView>
 
-      <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
+      <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="Principal" />
 
       {/* Manual Attendance Modal */}
       <Modal visible={isManualModalOpen} transparent animationType="fade">

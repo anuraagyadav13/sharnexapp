@@ -14,6 +14,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
+import { useAuth } from '../../store/AuthContext';
 
 const TOP_TABS = ['Weekly Dashboard', 'Timetable Builder', 'Leave Management', 'Academic Setup', 'Period Settings'];
 
@@ -36,6 +37,7 @@ const PERIODS = [
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
 
 const PrincipalTimetableScreen = ({ navigation }: any) => {
+  const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('Weekly Dashboard');
   const [activeWeek, setActiveWeek] = useState('This Week');
@@ -525,11 +527,11 @@ const PrincipalTimetableScreen = ({ navigation }: any) => {
         >
           <Ionicons name="menu" size={26} color="#111827" />
         </ScaleButton>
-        <Text style={styles.topHeaderTitle} numberOfLines={1}>Welcome back, Anurag</Text>
+        <Text style={styles.topHeaderTitle} numberOfLines={1}>Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.iconBtnTransparent}><Ionicons name="notifications-outline" size={20} color="#111827" /></TouchableOpacity>
           <TouchableOpacity style={styles.iconBtnTransparent} onPress={() => navigation.navigate('AccountSettings')}><Ionicons name="settings-outline" size={20} color="#111827" /></TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}><View style={styles.avatar}><Text style={styles.avatarText}>A</Text></View></TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}><View style={styles.avatar}><Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text></View></TouchableOpacity>
         </View>
       </View>
 
@@ -634,7 +636,7 @@ const PrincipalTimetableScreen = ({ navigation }: any) => {
 
       </ScrollView>
 
-      <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
+      <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="Principal" />
     </View>
   );
 };

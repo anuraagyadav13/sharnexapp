@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,22 +6,44 @@ import {
   StatusBar,
   ScrollView,
   TouchableOpacity,
-  Platform
+  Platform,
+  Alert
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../App';
+import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useAuth } from '../../store/AuthContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherCreateQuizStep2'>;
 
-const MOCK_QUESTIONS = [
-  { id: 1, text: 'What is the value of pi ?', correctAnswer: 'A', options: [ { letter: 'A', value: '3.14' }, { letter: 'B', value: '3.15' }, { letter: 'C', value: '3.13' }, { letter: 'D', value: '3.18' } ] },
-  { id: 2, text: 'What is the value of pi ?', correctAnswer: 'A', options: [ { letter: 'A', value: '3.14' }, { letter: 'B', value: '3.15' }, { letter: 'C', value: '3.13' }, { letter: 'D', value: '3.18' } ] },
-  { id: 3, text: 'What is the value of pi ?', correctAnswer: 'A', options: [ { letter: 'A', value: '3.14' }, { letter: 'B', value: '3.15' }, { letter: 'C', value: '3.13' }, { letter: 'D', value: '3.18' } ] },
-];
+const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation, route }) => {
+  const { authState } = useAuth();
+  const { quizData } = route.params;
+  const [questions, setQuestions] = useState<any[]>([]);
 
-const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation }) => {
+  // Listen for new questions from TeacherAddQuestion
+  useEffect(() => {
+    if ((route.params as any)?.newQuestion) {
+      setQuestions(prev => [...prev, (route.params as any).newQuestion]);
+      // Clear the param after taking it
+      navigation.setParams({ newQuestion: undefined } as any);
+    }
+  }, [(route.params as any)?.newQuestion]);
+
+  const handleNext = () => {
+    if (questions.length === 0) {
+      Alert.alert('Error', 'Please add at least one question');
+      return;
+    }
+    navigation.navigate('TeacherCreateQuizStep3', {
+      quizData: {
+        ...quizData,
+        questions
+      }
+    });
+  };
+
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
@@ -29,13 +51,13 @@ const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation }) => {
       {/* Global Header */}
       <View style={styles.globalHeader}>
         <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={22} color="#1F2937" />
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
           </View>
         </View>
       </View>
@@ -87,14 +109,14 @@ const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation }) => {
             </View>
 
             {/* Questions List */}
-            {MOCK_QUESTIONS.map((q, qIndex) => (
-               <View key={q.id} style={styles.questionBlock}>
-                  <Text style={styles.questionNumLabel}>Question # {q.id}</Text>
+            {questions.map((q, qIndex) => (
+               <View key={qIndex} style={styles.questionBlock}>
+                  <Text style={styles.questionNumLabel}>Question # {qIndex + 1}</Text>
                   <Text style={styles.questionText}>{q.text}</Text>
 
                   {/* Options */}
                   <View style={styles.optionsContainer}>
-                     {q.options.map((opt, optIndex) => {
+                     {(q.options || []).map((opt: any, optIndex: number) => {
                         const isCorrect = opt.letter === q.correctAnswer;
                         return (
                            <View key={optIndex} style={[styles.optionRow, isCorrect ? styles.optionRowCorrect : null]}>
@@ -112,6 +134,14 @@ const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation }) => {
                </View>
             ))}
 
+            {questions.length === 0 && (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="documents-outline" size={48} color="#D1D5DB" />
+                <Text style={styles.emptyText}>No questions added yet</Text>
+                <Text style={styles.emptySubtext}>Click the button above to add your first question</Text>
+              </View>
+            )}
+
          </Animated.View>
 
       </ScrollView>
@@ -122,7 +152,7 @@ const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation }) => {
             <Ionicons name="arrow-back" size={16} color="#111827" style={{marginRight: 6}} />
             <Text style={styles.cancelBtnText}>Previous</Text>
          </TouchableOpacity>
-         <TouchableOpacity style={styles.nextBtn} activeOpacity={0.8} onPress={() => navigation.navigate('TeacherCreateQuizStep3')}>
+         <TouchableOpacity style={styles.nextBtn} activeOpacity={0.8} onPress={handleNext}>
             <Text style={styles.nextBtnText}>Next Step</Text>
             <Ionicons name="arrow-forward" size={16} color="#FFFFFF" style={{marginLeft: 6}} />
          </TouchableOpacity>
@@ -402,6 +432,29 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderStyle: 'dashed',
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#374151',
+    marginTop: 16,
+    marginBottom: 4,
+  },
+  emptySubtext: {
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
+    paddingHorizontal: 40,
   },
 });
 

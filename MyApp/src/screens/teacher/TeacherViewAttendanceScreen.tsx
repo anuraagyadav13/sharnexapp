@@ -6,13 +6,18 @@ import {
   StatusBar,
   ScrollView,
   TouchableOpacity,
-  Platform
+  Platform,
+  Dimensions,
+  ActivityIndicator
 } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherViewAttendance'>;
 
@@ -28,7 +33,36 @@ const MOCK_STUDENTS = [
   { id: 9, name: 'Alex Johnson', stdId: 'STU-2025-001', status: 'Present' },
 ];
 
-const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation }) => {
+const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { classId } = route.params;
+  const { authState } = useAuth();
+  const [attendance, setAttendance] = React.useState<any[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [stats, setStats] = React.useState({ total: 0, present: 0, absent: 0 });
+
+  React.useEffect(() => {
+    const fetchAttendance = async () => {
+      try {
+        setIsLoading(true);
+        const date = new Date().toISOString().split('T')[0];
+        const res = await apiClient.get(`${ENDPOINTS.TEACHER.ATTENDANCE(classId)}?date=${date}`);
+        const data = res.data.attendance || [];
+        setAttendance(data);
+        
+        setStats({
+          total: data.length,
+          present: data.filter((a: any) => a.status === 'present' || a.status === 'late').length,
+          absent: data.filter((a: any) => a.status === 'absent').length,
+        });
+      } catch (error) {
+        console.error('Failed to fetch attendance:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchAttendance();
+  }, [classId]);
+
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
@@ -36,13 +70,13 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation }) => {
       {/* Global Header */}
       <View style={styles.globalHeader}>
         <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={22} color="#1F2937" />
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
           </View>
         </View>
       </View>
@@ -52,8 +86,8 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation }) => {
          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
          </TouchableOpacity>
-         <Text style={styles.blueTitle}>Attendance Details - Class - 1</Text>
-         <Text style={styles.blueSubtitle}>Class Teacher - Mr. John • 35 Students • December 15, 2025</Text>
+         <Text style={styles.blueTitle}>Attendance Details</Text>
+         <Text style={styles.blueSubtitle}>{stats.total} Students Recorded • {new Date().toLocaleDateString()}</Text>
       </Animated.View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -64,15 +98,15 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation }) => {
            {/* Summary Stats Grid */}
            <View style={styles.statsRow}>
               <View style={[styles.statBox, { borderTopColor: '#4F46E5' }]}>
-                 <Text style={styles.statNumber}>32</Text>
+                 <Text style={styles.statNumber}>{stats.total}</Text>
                  <Text style={styles.statLabel}>Students</Text>
               </View>
               <View style={[styles.statBox, { borderTopColor: '#EF4444' }]}>
-                 <Text style={styles.statNumber}>2</Text>
+                 <Text style={styles.statNumber}>{stats.absent}</Text>
                  <Text style={styles.statLabel}>Absent</Text>
               </View>
               <View style={[styles.statBox, { borderTopColor: '#22C55E' }]}>
-                 <Text style={styles.statNumber}>30</Text>
+                 <Text style={styles.statNumber}>{stats.present}</Text>
                  <Text style={styles.statLabel}>Present</Text>
               </View>
            </View>
@@ -81,29 +115,35 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation }) => {
            <Text style={styles.sectionTitle}>Student Attendance</Text>
 
            {/* List */}
-           {MOCK_STUDENTS.map((student, index) => {
-             const initials = student.name.split(' ').map(n => n[0]).join('');
-             const isPresent = student.status === 'Present';
-             
-             return (
-               <Animated.View key={index} entering={FadeInUp.delay(150 + index * 50).springify()} style={styles.studentRow}>
-                  <View style={styles.studentInfoLeft}>
-                     <View style={styles.avatarCircle}>
-                        <Text style={styles.avatarInitials}>{initials}</Text>
-                     </View>
-                     <View>
-                        <Text style={styles.studentName}>{student.name}</Text>
-                        <Text style={styles.studentId}>ID: {student.stdId}</Text>
-                     </View>
-                  </View>
-                  <View style={[styles.statusPill, isPresent ? styles.statusPillPresent : styles.statusPillAbsent]}>
-                     <Text style={[styles.statusText, isPresent ? styles.statusTextPresent : styles.statusTextAbsent]}>
-                        {student.status}
-                     </Text>
-                  </View>
-               </Animated.View>
-             );
-           })}
+           {isLoading ? (
+             <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 20 }} />
+           ) : attendance.length === 0 ? (
+             <Text style={styles.emptyText}>No attendance records found for today.</Text>
+           ) : (
+             attendance.map((student, index) => {
+               const initials = student.studentName ? student.studentName.split(' ').map((n: string) => n[0]).join('') : 'S';
+               const isPresent = student.status === 'present' || student.status === 'late';
+               
+               return (
+                 <Animated.View key={index} entering={FadeInUp.delay(150 + index * 50).springify()} style={styles.studentRow}>
+                    <View style={styles.studentInfoLeft}>
+                       <View style={styles.avatarCircle}>
+                          <Text style={styles.avatarInitials}>{initials}</Text>
+                       </View>
+                       <View>
+                          <Text style={styles.studentName}>{student.studentName}</Text>
+                          <Text style={styles.studentId}>ID: {student.rollNo || student.studentId.slice(0, 8)}</Text>
+                       </View>
+                    </View>
+                    <View style={[styles.statusPill, isPresent ? styles.statusPillPresent : styles.statusPillAbsent]}>
+                       <Text style={[styles.statusText, isPresent ? styles.statusTextPresent : styles.statusTextAbsent]}>
+                          {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
+                       </Text>
+                    </View>
+                 </Animated.View>
+               );
+             })
+           )}
 
         </Animated.View>
       </ScrollView>
@@ -358,6 +398,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 20,
+    fontWeight: '500',
   },
 });
 

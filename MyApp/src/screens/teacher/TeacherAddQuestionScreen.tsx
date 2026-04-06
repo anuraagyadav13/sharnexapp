@@ -7,12 +7,14 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Platform
+  Platform,
+  Alert
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../App';
+import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useAuth } from '../../store/AuthContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherAddQuestion'>;
 
@@ -23,6 +25,51 @@ const MOCK_EXISTING_QUESTIONS = [
 ];
 
 const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation }) => {
+  const { authState } = useAuth();
+  const [questionText, setQuestionText] = useState('');
+  const [options, setOptions] = useState([
+    { letter: 'A', value: '' },
+    { letter: 'B', value: '' },
+    { letter: 'C', value: '' },
+    { letter: 'D', value: '' }
+  ]);
+  const [correctAnswer, setCorrectAnswer] = useState('A');
+
+  const handleAddOption = () => {
+    if (options.length >= 6) {
+      Alert.alert('Info', 'Maximum 6 options allowed');
+      return;
+    }
+    const nextLetter = String.fromCharCode(65 + options.length);
+    setOptions([...options, { letter: nextLetter, value: '' }]);
+  };
+
+  const handleOptionChange = (text: string, index: number) => {
+    const newOptions = [...options];
+    newOptions[index].value = text;
+    setOptions(newOptions);
+  };
+
+  const handleSave = () => {
+    if (!questionText.trim()) {
+      Alert.alert('Error', 'Please enter question text');
+      return;
+    }
+    if (options.some(opt => !opt.value.trim())) {
+      Alert.alert('Error', 'Please fill all option values');
+      return;
+    }
+
+    const newQuestion = {
+      text: questionText,
+      options,
+      correctAnswer
+    };
+
+    // Go back to Step 2 with the new question
+    navigation.navigate('TeacherCreateQuizStep2', { newQuestion } as any);
+  };
+
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
@@ -30,13 +77,13 @@ const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation }) => {
       {/* Global Header */}
       <View style={styles.globalHeader}>
         <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={22} color="#1F2937" />
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
           </View>
         </View>
       </View>
@@ -47,82 +94,89 @@ const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation }) => {
             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
          </TouchableOpacity>
          <Text style={styles.blueTitle}>Add New Question</Text>
-         <Text style={styles.blueSubtitle}>Mid-Term Mathematics Examination</Text>
+         <Text style={styles.blueSubtitle}>Design your question and options</Text>
       </Animated.View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
          
          {/* Form Card */}
          <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.mainCard}>
-            <Text style={styles.cardTitle}>Create new questions</Text>
+            <Text style={styles.cardTitle}>Question Details</Text>
             
             {/* Question Text Area */}
             <View style={styles.inputGroup}>
-               <Text style={styles.inputLabel}>Question</Text>
+               <Text style={styles.inputLabel}>Question Text</Text>
                <TextInput 
                   style={styles.textArea} 
                   placeholder="Enter your question here" 
                   placeholderTextColor="#9CA3AF"
                   multiline={true}
                   textAlignVertical="top"
+                  value={questionText}
+                  onChangeText={setQuestionText}
                />
-            </View>
-
-            {/* Points & Difficulty Row */}
-            <View style={styles.rowInputsWrapper}>
-               <View style={[styles.inputGroup, {flex: 1, marginRight: 16}]}>
-                  <Text style={styles.inputLabel}>Points</Text>
-                  <TextInput style={styles.textInput} placeholder="2" placeholderTextColor="#9CA3AF" keyboardType="numeric" />
-               </View>
-               <View style={[styles.inputGroup, {flex: 1}]}>
-                  <Text style={styles.inputLabel}>Difficulty</Text>
-                  <TouchableOpacity style={styles.dropdownInput} activeOpacity={0.8}>
-                     <Text style={styles.dropdownTextPlaceholder}>Select Difficulty</Text>
-                     <Ionicons name="chevron-down" size={16} color="#4B5563" />
-                  </TouchableOpacity>
-               </View>
             </View>
 
             {/* Answer Options Box */}
             <View style={styles.answerBox}>
                <View style={styles.answerBoxHeader}>
                   <Text style={styles.answerBoxTitle}>Answer Options</Text>
-                  <TouchableOpacity style={styles.addOptionBtn} activeOpacity={0.8}>
+                  <TouchableOpacity 
+                    style={styles.addOptionBtn} 
+                    activeOpacity={0.8}
+                    onPress={handleAddOption}
+                  >
                      <Text style={styles.addOptionBtnText}>+ Add option</Text>
                   </TouchableOpacity>
                </View>
 
-               {/* Option 1 (Selected) */}
-               <View style={[styles.optionInputRow, styles.optionInputRowSelected]}>
-                  <Ionicons name="checkbox" size={20} color="#111827" style={styles.checkboxIcon} />
-                  <TextInput 
-                     style={styles.optionInputText}
-                     placeholder="Enter Option....."
-                     placeholderTextColor="#111827"
-                     value="Enter Option....."
-                  />
-               </View>
-
-               {/* Option 2 (Unselected) */}
-               <View style={styles.optionInputRow}>
-                  <View style={styles.checkboxOutline} />
-                  <TextInput 
-                     style={styles.optionInputText}
-                     placeholder="Enter Option...."
-                     placeholderTextColor="#6B7280"
-                  />
-               </View>
+               {/* Options List */}
+               {options.map((opt, index) => {
+                 const isCorrect = opt.letter === correctAnswer;
+                 return (
+                   <View key={index} style={[styles.optionInputRow, isCorrect ? styles.optionInputRowSelected : null]}>
+                      <TouchableOpacity onPress={() => setCorrectAnswer(opt.letter)}>
+                        {isCorrect ? (
+                          <Ionicons name="checkbox" size={20} color="#059669" style={styles.checkboxIcon} />
+                        ) : (
+                          <View style={styles.checkboxOutline} />
+                        )}
+                      </TouchableOpacity>
+                      <TextInput 
+                         style={[styles.optionInputText, isCorrect ? {color: '#065F46'} : null]}
+                         placeholder={`Option ${opt.letter}`}
+                         placeholderTextColor={isCorrect ? '#065F46' : '#9CA3AF'}
+                         value={opt.value}
+                         onChangeText={(text) => handleOptionChange(text, index)}
+                      />
+                      <Text style={[styles.optionBadge, isCorrect ? styles.optionBadgeCorrect : null]}>{opt.letter}</Text>
+                   </View>
+                 );
+               })}
 
                <Text style={styles.answerBoxFooterHint}>Check the box next to correct answer</Text>
             </View>
 
             {/* Form Action Buttons */}
             <View style={styles.formActionRow}>
-               <TouchableOpacity style={styles.clearFormBtn} activeOpacity={0.8}>
+               <TouchableOpacity 
+                 style={styles.clearFormBtn} 
+                 activeOpacity={0.8}
+                 onPress={() => {
+                   setQuestionText('');
+                   setOptions([
+                    { letter: 'A', value: '' },
+                    { letter: 'B', value: '' },
+                    { letter: 'C', value: '' },
+                    { letter: 'D', value: '' }
+                  ]);
+                  setCorrectAnswer('A');
+                 }}
+               >
                   <Text style={styles.clearFormBtnText}>Clear Form</Text>
                </TouchableOpacity>
-               <TouchableOpacity style={styles.addQuesBtn} activeOpacity={0.8}>
-                  <Text style={styles.addQuesBtnText}>+ Add Question</Text>
+               <TouchableOpacity style={styles.addQuesBtn} activeOpacity={0.8} onPress={handleSave}>
+                  <Text style={styles.addQuesBtnText}>Save Question</Text>
                </TouchableOpacity>
             </View>
          </Animated.View>
@@ -516,6 +570,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  optionBadge: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#9CA3AF',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  optionBadgeCorrect: {
+    color: '#FFFFFF',
+    backgroundColor: '#10B981',
   },
 });
 

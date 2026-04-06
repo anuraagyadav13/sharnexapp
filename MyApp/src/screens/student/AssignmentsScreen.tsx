@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -6,7 +6,8 @@ import {
   StyleSheet,
   StatusBar,
   TouchableOpacity,
-  Dimensions
+  Dimensions,
+  ActivityIndicator
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -15,6 +16,9 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 const { width } = Dimensions.get('window');
 
@@ -91,6 +95,46 @@ const AssignmentCard = ({ category, status, title, subtitle, dueDate, deadlineRe
 
 const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const { authState } = useAuth();
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [summary, setSummary] = useState({
+    pending: 0,
+    submitted: 0,
+    graded: 0,
+    upcoming: 0
+  });
+
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      try {
+        setIsLoading(true);
+        // 1. Get student profile to find ID
+        const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+        const studentId = profileRes.data.id;
+
+        // 2. Fetch assignments
+        const res = await apiClient.get(ENDPOINTS.STUDENT.ASSIGNMENTS(studentId));
+        const data = res.data.data;
+        setAssignments(data);
+
+        // 3. Compute summary
+        const stats = {
+          pending: data.filter((a: any) => a.status === 'pending' || a.status === 'overdue').length,
+          submitted: data.filter((a: any) => a.submissionId).length,
+          graded: data.filter((a: any) => a.gradedAt).length,
+          upcoming: data.filter((a: any) => a.status === 'upcoming').length,
+        };
+        setSummary(stats);
+      } catch (error) {
+        console.error('Failed to fetch assignments:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAssignments();
+  }, []);
 
   return (
     <View style={styles.mainContainer}>
@@ -107,13 +151,13 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
         >
           <Ionicons name="menu" size={28} color="#1F2937" />
         </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={22} color="#1F2937" />
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>A</Text>
+            <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
           </View>
         </View>
       </View>
@@ -128,10 +172,10 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* Top Summaries Grid 2x2 */}
         <View style={styles.summaryGrid}>
-          <SummaryCard delay={100} number="4" label="Pending" bgColor="#F97316" lineColor="#3B82F6" iconName="clock-outline" />
-          <SummaryCard delay={150} number="4" label="Submitted" bgColor="#10B981" lineColor="#10B981" iconName="check-decagram" />
-          <SummaryCard delay={200} number="4" label="Graded" bgColor="#8B5CF6" lineColor="#F59E0B" iconName="star" />
-          <SummaryCard delay={250} number="4" label="Upcoming" bgColor="#3B82F6" lineColor="#8B5CF6" iconName="calendar-plus" />
+          <SummaryCard delay={100} number={summary.pending} label="Pending" bgColor="#F97316" lineColor="#3B82F6" iconName="clock-outline" />
+          <SummaryCard delay={150} number={summary.submitted} label="Submitted" bgColor="#10B981" lineColor="#10B981" iconName="check-decagram" />
+          <SummaryCard delay={200} number={summary.graded} label="Graded" bgColor="#8B5CF6" lineColor="#F59E0B" iconName="star" />
+          <SummaryCard delay={250} number={summary.upcoming} label="Upcoming" bgColor="#3B82F6" lineColor="#8B5CF6" iconName="calendar-plus" />
         </View>
 
         <View style={styles.sectionHeader}>
@@ -140,41 +184,30 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* Assignment Cards List */}
         <View style={styles.listContainer}>
-          <AssignmentCard 
-            delay={300}
-            category="Data Structures"
-            status="Pending"
-            title="Binary Search Tree"
-            subtitle="Implement BST with all operations and testing"
-            dueDate="May 20, 2023"
-            deadlineRelative="Tomorrow"
-            isDelayed={true}
-            onPressView={() => navigation.navigate('AssignmentDetails', { assignmentId: '1' })}
-            onPressSubmit={() => navigation.navigate('AssignmentSubmit', { assignmentId: '1' })}
-          />
-          <AssignmentCard 
-            delay={350}
-            category="Data Structures"
-            status="Pending"
-            title="Binary Search Tree"
-            subtitle="Implement BST with all operations and testing"
-            dueDate="May 20, 2023"
-            deadlineRelative="Tomorrow"
-            isDelayed={true}
-            onPressView={() => navigation.navigate('AssignmentDetails', { assignmentId: '2' })}
-            onPressSubmit={() => navigation.navigate('AssignmentSubmit', { assignmentId: '2' })}
-          />
-          <AssignmentCard 
-            delay={400}
-            category="Data Structures"
-            status="Submitted"
-            title="Binary Search Tree"
-            subtitle="Implement BST with all operations and testing"
-            dueDate="May 20, 2023"
-            deadlineRelative="3 Days ago"
-            isDelayed={false}
-            onPressView={() => navigation.navigate('AssignmentDetails', { assignmentId: '3' })}
-          />
+          {isLoading ? (
+            <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
+          ) : assignments.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="clipboard-outline" size={60} color="#E5E7EB" />
+              <Text style={styles.emptyText}>No assignments found</Text>
+            </View>
+          ) : (
+            assignments.map((item, index) => (
+              <AssignmentCard 
+                key={item.id}
+                delay={300 + index * 50}
+                category={item.subject}
+                status={item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                title={item.title}
+                subtitle={item.description}
+                dueDate={item.dueDate}
+                deadlineRelative={item.isOverdue ? 'Overdue' : 'Due'}
+                isDelayed={item.isOverdue}
+                onPressView={() => navigation.navigate('AssignmentDetails', { assignmentId: item.id })}
+                onPressSubmit={() => navigation.navigate('AssignmentSubmit', { assignmentId: item.id })}
+              />
+            ))
+          )}
         </View>
 
       </ScrollView>
@@ -435,6 +468,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 60,
+    opacity: 0.5,
+  },
+  emptyText: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
   },
 });
 

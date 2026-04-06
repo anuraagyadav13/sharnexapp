@@ -12,6 +12,7 @@ import { RootStackParamList } from '../../../App';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useAuth } from '../../store/AuthContext';
 
 type QuizResultNavigationProp = NativeStackNavigationProp<RootStackParamList, 'QuizResult'>;
 
@@ -20,6 +21,7 @@ interface Props {
 }
 
 const QuizResultScreen: React.FC<Props> = ({ navigation }) => {
+  const { authState } = useAuth();
 
   const OptionRow = ({ letter, text, state }: { letter: string, text: string, state: 'normal' | 'correct-selected' | 'right-answer' | 'wrong-selected' }) => {
     let boxStyle: any = styles.optionItem;
@@ -63,13 +65,13 @@ const QuizResultScreen: React.FC<Props> = ({ navigation }) => {
          <ScaleButton style={styles.menuHandle} onPress={() => {}}>
            <View style={{width: 28}} /> 
          </ScaleButton>
-         <Text style={styles.headerTitle} numberOfLines={1}>Welcome back, Anurag</Text>
+         <Text style={styles.headerTitle} numberOfLines={1}>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
          <View style={styles.headerRight}>
            <Ionicons name="notifications-outline" size={20} color="#1F2937" />
            <Ionicons name="settings-outline" size={20} color="#1F2937" />
            <Ionicons name="moon-outline" size={20} color="#1F2937" />
            <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
            </View>
          </View>
       </View>

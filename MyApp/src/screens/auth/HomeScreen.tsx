@@ -138,6 +138,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           <TouchableOpacity style={styles.iconButton}>
             <Text style={styles.moonIcon}>☾</Text>
           </TouchableOpacity>
+          {/* Removed Login button from header as requested */}
           <ScaleButton 
             style={styles.menuButton} 
             onPress={() => toggleMenu(true)}
@@ -167,17 +168,19 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
         <TouchableOpacity
           style={styles.primaryButton}
           activeOpacity={0.8}
-          onPress={() => navigation.navigate('Register')}
+          onPress={() => navigation.navigate('Login')}
         >
-          <Text style={styles.primaryButtonText}>Start Free Trial</Text>
+          <Text style={styles.primaryButtonText}>Get Started ➔</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.secondaryButton}
           activeOpacity={0.8}
-          onPress={() => navigation.navigate('Login')}
+          onPress={() => {
+            // Scroll to contact section
+          }}
         >
-          <Text style={styles.secondaryButtonText}>Book a Demo</Text>
+          <Text style={styles.secondaryButtonText}>Contact Sales</Text>
         </TouchableOpacity>
 
         {/* Dashboard Image */}
@@ -293,12 +296,12 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.pricingFeatureItem}>✓  WhatsApp support</Text>
           </View>
 
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={styles.getStartedButton}
             onPress={() => navigation.navigate('Register')}
           >
             <Text style={styles.getStartedButtonText}>Get Started</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
         
         <View style={styles.pricingDotsContainer}>
@@ -499,6 +502,18 @@ const styles = StyleSheet.create({
   pageNumberButtonActive: { backgroundColor: '#7C3AED', borderColor: '#7C3AED' },
   pageNumberText: { color: '#475569', fontSize: 16, fontWeight: '600' },
   pageNumberTextActive: { color: '#FFFFFF' },
+  headerLoginButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#EEF2FF',
+    marginRight: 8,
+  },
+  headerLoginText: {
+    color: '#4F46E5',
+    fontWeight: '700',
+    fontSize: 14,
+  },
 
   pricingSection: { paddingHorizontal: 24, paddingVertical: 40, alignItems: 'center' },
   pricingBadgeContainer: { backgroundColor: '#F3E8FF', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, marginBottom: 20 },

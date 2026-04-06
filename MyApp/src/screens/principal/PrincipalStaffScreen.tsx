@@ -13,6 +13,8 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { useAuth } from '../../store/AuthContext';
+import ScaleButton from '../../components/animations/ScaleButton';
 
 const StatCard = React.memo(({ iconBg, iconColor, icon, value, label }: any) => (
   <View style={styles.statCard}>
@@ -104,6 +106,7 @@ const DUMMY_ASSIGNMENTS = Array(4).fill({
 });
 
 const PrincipalStaffScreen = ({ navigation }: any) => {
+  const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAssignModalOpen, setAssignModalOpen] = useState(false);
@@ -121,14 +124,14 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
         </TouchableOpacity>
 
         <Text style={styles.headerTitle} numberOfLines={1}>
-          Welcome back, Anurag
+          Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}
         </Text>
 
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.iconBtnTransparent}><Ionicons name="notifications-outline" size={20} color="#4B5563" /></TouchableOpacity>
           <TouchableOpacity style={styles.iconBtnTransparent} onPress={() => navigation.navigate('AccountSettings')}><Ionicons name="settings-outline" size={20} color="#4B5563" /></TouchableOpacity>
           <TouchableOpacity style={styles.iconBtnTransparent}><Ionicons name="moon-outline" size={20} color="#4B5563" /></TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}><View style={styles.avatar}><Text style={styles.avatarText}>A</Text></View></TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}><View style={styles.avatar}><Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text></View></TouchableOpacity>
         </View>
       </View>
 
@@ -202,7 +205,7 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
       </ScrollView>
 
       {/* Navigation Drawer */}
-      <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
+      <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="Principal" />
 
       {/* Assign Class Teacher Modal */}
       <Modal visible={isAssignModalOpen} transparent animationType="fade">

@@ -47,6 +47,11 @@ const EyeIcon = ({ show }: { show: boolean }) => (
   </Svg>
 );
 
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
+import { Alert } from 'react-native';
+
 type RegisterScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Register'>;
 
 interface Props {
@@ -59,14 +64,43 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login } = useAuth();
 
-  const handleRegister = () => {
-    if (password !== confirmPassword) {
-      console.log('Passwords do not match');
+  const handleRegister = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-    console.log('Register pressed', { email, password });
-    navigation?.navigate('Home');
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await apiClient.post(ENDPOINTS.AUTH.REGISTER, {
+        name: email.split('@')[0], // Extract name from email
+        email: email.trim(),
+        password,
+        role: 'STUDENT', // Default to student for mobile registration
+      });
+
+      const { data, message } = response.data;
+      if (data && data.tokens) {
+        Alert.alert('Success', 'Account created successfully!');
+        login(data.tokens.accessToken, 'student', data.user);
+        navigation.reset({ index: 0, routes: [{ name: 'StudentDashboard' as any }] });
+      } else {
+        throw new Error(message || 'Failed to create account');
+      }
+    } catch (error: any) {
+      console.error('Registration Error:', error);
+      const message = error.response?.data?.message || 'Something went wrong. Please try again.';
+      Alert.alert('Registration Failed', message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -161,8 +195,12 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
               </FadeInView>
 
               <FadeInView delay={700}>
-                <ScaleButton style={styles.registerButton} onPress={handleRegister} activeOpacity={0.85}>
-                  <Text style={styles.registerButtonText}>Sign Up</Text>
+                <ScaleButton 
+                  style={[styles.registerButton, isSubmitting && { opacity: 0.7 }]} 
+                  onPress={handleRegister} 
+                  disabled={isSubmitting}
+                  activeOpacity={0.85}>
+                  <Text style={styles.registerButtonText}>{isSubmitting ? 'Loading...' : 'Sign Up'}</Text>
                 </ScaleButton>
               </FadeInView>
 
@@ -289,14 +327,14 @@ const styles = StyleSheet.create({
   registerButton: {
     width: '100%',
     height: 56,
-    backgroundColor: 'transparent',
+    backgroundColor: '#6366F1',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
   },
   registerButtonText: {
-    color: '#9333EA',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
   },
@@ -351,7 +389,7 @@ const styles = StyleSheet.create({
   },
   signInText: {
     fontSize: 14,
-    color: '#9333EA',
+    color: '#6366F1',
     fontWeight: '700',
   },
   inputContainerBottom: {

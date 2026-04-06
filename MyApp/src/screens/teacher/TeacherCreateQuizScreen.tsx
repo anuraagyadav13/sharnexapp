@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,70 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Platform
+  Platform,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  FlatList
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../App';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
+import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherCreateQuiz'>;
 
 const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation }) => {
+  const { authState } = useAuth();
+  const [classes, setClasses] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const [title, setTitle] = useState('');
+  const [selectedClass, setSelectedClass] = useState<any>(null);
+  const [subject, setSubject] = useState('');
+  const [totalMarks, setTotalMarks] = useState('');
+  const [duration, setDuration] = useState('');
+  
+  const [isClassModalVisible, setClassModalVisible] = useState(false);
+
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const teacherId = authState.user?.id;
+        if (!teacherId) return;
+        const res = await apiClient.get(ENDPOINTS.TEACHER.CLASSES(teacherId));
+        setClasses(res.data.classes || []);
+      } catch (error) {
+        console.error('Failed to fetch classes:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchClasses();
+  }, [authState.user?.id]);
+
+  const handleNext = () => {
+    if (!title || !selectedClass || !subject || !totalMarks || !duration) {
+      Alert.alert('Error', 'Please fill all fields');
+      return;
+    }
+    navigation.navigate('TeacherCreateQuizStep2', {
+      quizData: {
+        title,
+        classId: selectedClass.id,
+        className: selectedClass.name,
+        subject,
+        totalMarks: parseInt(totalMarks),
+        duration: parseInt(duration),
+        teacherId: authState.user?.id as string,
+        institutionId: authState.user?.institutionId as string
+      }
+    });
+  };
+
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
@@ -24,13 +78,13 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation }) => {
       {/* Global Header */}
       <View style={styles.globalHeader}>
         <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={22} color="#1F2937" />
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
           </View>
         </View>
       </View>
@@ -76,84 +130,113 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation }) => {
             {/* Quiz Title */}
             <View style={styles.inputGroup}>
                <Text style={styles.inputLabel}>Quiz Title</Text>
-               <TextInput style={styles.textInput} placeholder="e.g. Mid- term Exam" placeholderTextColor="#9CA3AF" />
+               <TextInput 
+                 style={styles.textInput} 
+                 placeholder="e.g. Mid-term Exam" 
+                 placeholderTextColor="#9CA3AF"
+                 value={title}
+                 onChangeText={setTitle}
+               />
+            </View>
+
+            {/* Class Selection */}
+            <View style={styles.inputGroup}>
+               <Text style={styles.inputLabel}>Class</Text>
+               <TouchableOpacity 
+                 style={styles.dropdownInput} 
+                 activeOpacity={0.8}
+                 onPress={() => setClassModalVisible(true)}
+               >
+                  <Text style={selectedClass ? styles.dropdownTextValue : styles.dropdownTextPlaceholder}>
+                    {selectedClass ? `${selectedClass.name} - ${selectedClass.section}` : 'Select a class'}
+                  </Text>
+                  {isLoading ? (
+                    <ActivityIndicator size="small" color="#4F46E5" />
+                  ) : (
+                    <Ionicons name="caret-down" size={14} color="#111827" />
+                  )}
+               </TouchableOpacity>
             </View>
 
             {/* Subject */}
             <View style={styles.inputGroup}>
                <Text style={styles.inputLabel}>Subject</Text>
-               <TouchableOpacity style={styles.dropdownInput} activeOpacity={0.8}>
-                  <Text style={styles.dropdownTextPlaceholder}>Select a subject</Text>
-                  <Ionicons name="caret-down" size={14} color="#111827" />
-               </TouchableOpacity>
-            </View>
-
-            {/* Classes */}
-            <View style={styles.inputGroup}>
-               <Text style={styles.inputLabel}>Classes</Text>
-               <TouchableOpacity style={styles.dropdownInput} activeOpacity={0.8}>
-                  <Text style={styles.dropdownTextPlaceholder}>Select Classes</Text>
-                  <Ionicons name="caret-down" size={14} color="#111827" />
-               </TouchableOpacity>
+               <TextInput 
+                 style={styles.textInput} 
+                 placeholder="e.g. Mathematics" 
+                 placeholderTextColor="#9CA3AF"
+                 value={subject}
+                 onChangeText={setSubject}
+               />
             </View>
 
             {/* Total Marks */}
             <View style={styles.inputGroup}>
                <Text style={styles.inputLabel}>Total Marks</Text>
-               <TextInput style={styles.textInput} placeholder="100" placeholderTextColor="#9CA3AF" keyboardType="numeric" />
+               <TextInput 
+                 style={styles.textInput} 
+                 placeholder="100" 
+                 placeholderTextColor="#9CA3AF" 
+                 keyboardType="numeric"
+                 value={totalMarks}
+                 onChangeText={setTotalMarks}
+               />
             </View>
 
             {/* Duration */}
             <View style={styles.inputGroup}>
-               <Text style={styles.inputLabel}>Duration</Text>
-               <TextInput style={styles.textInput} placeholder="90 min" placeholderTextColor="#9CA3AF" />
-            </View>
-
-            {/* Schedule */}
-            <View style={styles.inputGroup}>
-               <Text style={styles.inputLabel}>Schedule</Text>
-               <View style={styles.rowInputs}>
-                  <TextInput style={[styles.textInput, {flex: 1, marginRight: 12}]} placeholder="dd - mm - yy" placeholderTextColor="#9CA3AF" />
-                  <TextInput style={[styles.textInput, {flex: 1}]} placeholder="-- : --" placeholderTextColor="#9CA3AF" />
-               </View>
-            </View>
-
-            {/* Auto-submit when time ends */}
-            <View style={styles.inputGroup}>
-               <Text style={styles.inputLabel}>Auto-submit when time ends</Text>
-               <TouchableOpacity style={styles.dropdownInput} activeOpacity={0.8}>
-                  <Text style={styles.dropdownTextValue}>Yes</Text>
-                  <Ionicons name="chevron-down" size={16} color="#111827" />
-               </TouchableOpacity>
-            </View>
-
-            {/* Allow late submission */}
-            <View style={styles.inputGroup}>
-               <Text style={styles.inputLabel}>Allow late submission</Text>
-               <TouchableOpacity style={styles.dropdownInput} activeOpacity={0.8}>
-                  <Text style={styles.dropdownTextValue}>No</Text>
-                  <Ionicons name="chevron-down" size={16} color="#111827" />
-               </TouchableOpacity>
-            </View>
-
-            {/* Show result after submission */}
-            <View style={[styles.inputGroup, { marginBottom: 0 }]}>
-               <Text style={styles.inputLabel}>Show result after submission</Text>
-               <TouchableOpacity style={styles.dropdownInput} activeOpacity={0.8}>
-                  <Text style={styles.dropdownTextValue}>Immediately</Text>
-                  <Ionicons name="chevron-down" size={16} color="#111827" />
-               </TouchableOpacity>
+               <Text style={styles.inputLabel}>Duration (minutes)</Text>
+               <TextInput 
+                 style={styles.textInput} 
+                 placeholder="90" 
+                 placeholderTextColor="#9CA3AF" 
+                 keyboardType="numeric"
+                 value={duration}
+                 onChangeText={setDuration}
+               />
             </View>
 
          </Animated.View>
       </ScrollView>
+
+      {/* Class Selection Modal */}
+      <Modal visible={isClassModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Class</Text>
+              <TouchableOpacity onPress={() => setClassModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#111827" />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={classes}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity 
+                  style={styles.classSelectItem}
+                  onPress={() => {
+                    setSelectedClass(item);
+                    setSubject(item.subject || '');
+                    setClassModalVisible(false);
+                  }}
+                >
+                  <Text style={styles.classSelectText}>{item.name} - {item.section}</Text>
+                  <Text style={styles.classSelectSubtext}>{item.subject || 'No subject assigned'}</Text>
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={<Text style={styles.emptyText}>No classes found</Text>}
+            />
+          </View>
+        </View>
+      </Modal>
 
       {/* Bottom Fixed Action Bar */}
       <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.bottomBar}>
          <TouchableOpacity style={styles.cancelBtn} activeOpacity={0.8} onPress={() => navigation.goBack()}>
             <Text style={styles.cancelBtnText}>Cancel</Text>
          </TouchableOpacity>
-         <TouchableOpacity style={styles.nextBtn} activeOpacity={0.8} onPress={() => navigation.navigate('TeacherCreateQuizStep2')}>
+         <TouchableOpacity style={styles.nextBtn} activeOpacity={0.8} onPress={handleNext}>
             <Text style={styles.nextBtnText}>Next Step</Text>
             <Ionicons name="arrow-forward" size={16} color="#FFFFFF" style={{marginLeft: 6}} />
          </TouchableOpacity>
@@ -387,6 +470,50 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  classSelectItem: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  classSelectText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  classSelectSubtext: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 40,
+    fontSize: 14,
+    color: '#9CA3AF',
   },
 });
 

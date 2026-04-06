@@ -14,6 +14,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
+import { useAuth } from '../store/AuthContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DRAWER_WIDTH = SCREEN_WIDTH * 0.75;
@@ -51,7 +52,7 @@ const STUDENT_MENU: MenuItem[] = [
 
 const PRINCIPAL_MENU: MenuItem[] = [
   { id: '1', label: 'Home', icon: 'grid-outline' },
-  { id: '2', label: 'Classes', icon: 'layers-out  line' },
+  { id: '2', label: 'Classes', icon: 'layers-outline' },
   { id: '3', label: 'Subjects', icon: 'pie-chart-outline' },
   { id: '4', label: 'Staff Management', icon: 'trending-up-outline' },
   { id: '5', label: 'Staff Details', icon: 'person-outline' },
@@ -79,6 +80,7 @@ const TEACHER_MENU: MenuItem[] = [
 
 export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onClose, role = 'student' }) => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { logout } = useAuth();
   const route = useRoute();
   const currentRouteName = route.name;
   
@@ -234,8 +236,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
               } else if (item.label === 'Account Settings') {
                 navigation.navigate('AccountSettings');
               } else if (item.label === 'Logout') {
-                // Return to login for now
-                navigation.reset({ index: 0, routes: [{name: 'Login'}] });
+                logout();
               }
             }, 250);
           }}
