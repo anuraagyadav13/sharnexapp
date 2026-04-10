@@ -26,7 +26,6 @@ type Props = NativeStackScreenProps<RootStackParamList, 'TeacherCreateQuiz'>;
 const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation }) => {
   const { authState } = useAuth();
   const [classes, setClasses] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   
   const [title, setTitle] = useState('');
   const [selectedClass, setSelectedClass] = useState<any>(null);
@@ -35,6 +34,7 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation }) => {
   const [duration, setDuration] = useState('');
   
   const [isClassModalVisible, setClassModalVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -42,11 +42,9 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation }) => {
         const teacherId = authState.user?.id;
         if (!teacherId) return;
         const res = await apiClient.get(ENDPOINTS.TEACHER.CLASSES(teacherId));
-        setClasses(res.data.classes || []);
+        setClasses(res.normalized?.data?.classes || res.data?.classes || []);
       } catch (error) {
         console.error('Failed to fetch classes:', error);
-      } finally {
-        setIsLoading(false);
       }
     };
     fetchClasses();

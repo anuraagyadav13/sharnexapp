@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   StatusBar,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -14,11 +15,14 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type AssignmentDetailsNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AssignmentDetails'>;
 
 interface Props {
   navigation: AssignmentDetailsNavigationProp;
+  route?: any;
 }
 
 const BulletPoint = ({ text }: { text: string }) => (
@@ -43,8 +47,34 @@ const AttachmentItem = ({ title, meta }: { title: string, meta: string }) => (
   </ScaleButton>
 );
 
-const AssignmentDetailsScreen: React.FC<Props> = ({ navigation }) => {
+const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   const { authState } = useAuth();
+  const assignmentId = route?.params?.assignmentId;
+  const [assignmentData, setAssignmentData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchAssignmentDetails = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        // @ts-ignore
+        const res = await apiClient.get(ENDPOINTS.STUDENT.ASSIGNMENT_DETAIL(assignmentId));
+        const data = res.data.data || res.data;
+        setAssignmentData(data);
+      } catch (error: any) {
+        console.error('Failed to fetch assignment details:', error);
+        setError('Failed to load assignment details. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (assignmentId) {
+      fetchAssignmentDetails();
+    }
+  }, [assignmentId]);
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -81,6 +111,17 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation }) => {
 
         <View style={styles.cardsContainer}>
 
+          {isLoading ? (
+            <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
+          ) : error ? (
+            <View style={{ padding: 16, backgroundColor: '#FEE2E2', borderRadius: 12, marginHorizontal: 16 }}>
+              <Text style={{ color: '#DC2626', fontWeight: '500' }}>{error}</Text>
+            </View>
+          ) : !assignmentData ? (
+            <Text style={{ textAlign: 'center', marginTop: 40, color: '#9CA3AF' }}>No assignment data found</Text>
+          ) : (
+            <>
+
           {/* Card 1: Assignment Information */}
           <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.card}>
             <View style={styles.cardHeader}>
@@ -92,25 +133,31 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.separator} />
 
             <View style={styles.cardBody}>
-              <Text style={styles.assignmentTitle}>Binary Search</Text>
-              <Text style={styles.assignmentMeta}>Subject: Data Structure | Teacher: Dr. Jake Sully</Text>
+              <Text style={styles.assignmentTitle}>{assignmentData?.title || 'Assignment'}</Text>
+              <Text style={styles.assignmentMeta}>
+                Subject: {assignmentData?.subject || 'N/A'} | Teacher: {assignmentData?.teacherName || 'N/A'}
+              </Text>
 
               <View style={styles.infoGrid}>
                 <View style={styles.infoCol}>
                   <Text style={styles.infoLabel}>Assigned Date</Text>
-                  <Text style={styles.infoValue}>May 5, 2023</Text>
+                  <Text style={styles.infoValue}>
+                    {assignmentData?.createdAt ? new Date(assignmentData.createdAt).toLocaleDateString() : 'N/A'}
+                  </Text>
                 </View>
                 <View style={styles.infoCol}>
                   <Text style={styles.infoLabel}>Due Date</Text>
-                  <Text style={styles.infoValue}>May 20, 2023 (11:59 PM)</Text>
+                  <Text style={styles.infoValue}>
+                    {assignmentData?.dueDate ? new Date(assignmentData.dueDate).toLocaleDateString() : 'N/A'}
+                  </Text>
                 </View>
                 <View style={styles.infoCol}>
                   <Text style={styles.infoLabel}>Grade/Marks</Text>
-                  <Text style={styles.infoValue}>50</Text>
+                  <Text style={styles.infoValue}>{assignmentData?.maxMarks || 'N/A'}</Text>
                 </View>
                 <View style={styles.infoCol}>
                   <Text style={styles.infoLabel}>Status</Text>
-                  <Text style={styles.infoValue}>Pending</Text>
+                  <Text style={styles.infoValue}>{assignmentData?.status || 'Pending'}</Text>
                 </View>
               </View>
             </View>
@@ -127,19 +174,24 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.separator} />
 
             <View style={styles.cardBody}>
-              <Text style={styles.sectionSubtitle}>Instructions</Text>
-              <BulletPoint text="Choose your answer from the provided options in the multiple-choice questions." />
-              <BulletPoint text="Choose your answer from the provided options in the multiple-choice questions." />
-              <BulletPoint text="Choose your answer from the provided option in the multiple-choice questions." />
-              <BulletPoint text="Choose your answer from the provided options in the multiple-choice question." />
+              {assignmentData?.instructions ? (
+                <>
+                  <Text style={styles.sectionSubtitle}>Instructions</Text>
+                  {(assignmentData.instructions || []).map((instruction: string, idx: number) => (
+                    <BulletPoint key={idx} text={instruction} />
+                  ))}
+                </>
+              ) : null}
 
-              <View style={{ height: 16 }} />
-
-              <Text style={styles.sectionSubtitle}>Learning Objectives</Text>
-              <BulletPoint text="Choose your answer from the provided options in the multiple-choice questions." />
-              <BulletPoint text="Choose your answer from the provided options in the multiple-choice questions." />
-              <BulletPoint text="Choose your answer from the provided option in the multiple-choice questions." />
-              <BulletPoint text="Choose your answer from the provided options in the multiple-choice question." />
+              {assignmentData?.description ? (
+                <>
+                  <View style={{ height: 16 }} />
+                  <Text style={styles.sectionSubtitle}>Description</Text>
+                  <Text style={{ fontSize: 11, color: '#6B7280', lineHeight: 16 }}>
+                    {assignmentData.description}
+                  </Text>
+                </>
+              ) : null}
             </View>
           </Animated.View>
 
@@ -155,11 +207,24 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation }) => {
             <View style={{ height: 12 }} />
 
             <View style={styles.attachmentsContainer}>
-              <AttachmentItem title="Assignments Problems.pdf" meta="PDF • 2.4 MB" />
-              <AttachmentItem title="Assignments Problems.pdf" meta="PDF • 2.4 MB" />
+              {assignmentData?.attachments && assignmentData.attachments.length > 0 ? (
+                assignmentData.attachments.map((attachment: any, idx: number) => (
+                  <AttachmentItem
+                    key={idx}
+                    title={attachment.name || attachment.fileName}
+                    meta={attachment.type || 'PDF'} 
+                  />
+                ))
+              ) : (
+                <Text style={{ textAlign: 'center', color: '#9CA3AF', paddingVertical: 20 }}>
+                  No attachments available
+                </Text>
+              )}
             </View>
           </Animated.View>
 
+            </>
+          )}
         </View>
       </ScrollView>
     </View>

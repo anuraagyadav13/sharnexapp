@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,45 +6,86 @@ import {
   StatusBar,
   ScrollView,
   TouchableOpacity,
-  Platform
+  Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../../App';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 // Navigation type
 export type OfficialResultScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'OfficialResult'>;
+export type OfficialResultScreenRouteProp = RouteProp<RootStackParamList, 'OfficialResult'>;
 
 interface Props {
   navigation: OfficialResultScreenNavigationProp;
+  route: OfficialResultScreenRouteProp;
 }
 
-const studentResult = {
-  name: 'Shubham Mangal',
-  roll: '4340349034',
-  term: '2026',
-  class: 'Class 8-A',
-  exam: 'MIDTERM',
-  totalScore: 85,
-  grade: 'B',
-  subjects: [
-    {
-      name: 'ENGLISH',
-      marks: 85,
-      max: 100,
-      grade: 'N/A',
-      progress: 85
-    }
-  ],
-  status: 'PASSED TERM',
-  totalSubjects: 1
-};
-
-const OfficialResultScreen: React.FC<Props> = ({ navigation }) => {
+const OfficialResultScreen: React.FC<Props> = ({ navigation, route }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [resultData, setResultData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch result data on mount
+  useEffect(() => {
+    fetchResultData();
+  }, []);
+
+  const fetchResultData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const resultId = route?.params?.resultId as string;
+      if (!resultId) {
+        throw new Error('Result ID is required');
+      }
+
+      const response = await apiClient.get(ENDPOINTS.STUDENT.OFFICIAL_RESULT(resultId));
+      const data = response.data.data || response.data;
+
+      setResultData(data);
+    } catch (err: any) {
+      console.error('Error fetching result:', err);
+      setError(err.message || 'Failed to load result');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+        <Text style={styles.loadingText}>Loading official result...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+        <Text style={styles.errorText}>{error}</Text>
+        <ScaleButton
+          style={styles.retryButton}
+          activeOpacity={0.8}
+          scaleTo={0.95}
+          onPress={fetchResultData}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </ScaleButton>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.mainContainer}>
@@ -72,14 +113,18 @@ const OfficialResultScreen: React.FC<Props> = ({ navigation }) => {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.resultCard}>
           <View style={styles.profileRow}>
-            <View style={styles.profileCircle}><Text style={styles.profileInitials}>SM</Text></View>
+            <View style={styles.profileCircle}><Text style={styles.profileInitials}>
+              {resultData?.studentName?.charAt(0) || 'S'}
+            </Text></View>
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{studentResult.name}</Text>
-              <Text style={styles.profileMeta}>ROLL: {studentResult.roll}   TERM: {studentResult.term}   CLASS: {studentResult.class}   <Text style={styles.examBadge}>{studentResult.exam}</Text></Text>
+              <Text style={styles.profileName}>{resultData?.studentName || 'Student'}</Text>
+              <Text style={styles.profileMeta}>
+                ROLL: {resultData?.rollNumber || 'N/A'}   TERM: {resultData?.term || 'N/A'}   CLASS: {resultData?.className || 'N/A'}   <Text style={styles.examBadge}>{resultData?.examType || 'EXAM'}</Text>
+              </Text>
             </View>
             <View style={styles.scoreBox}>
-              <Text style={styles.scorePercent}>{studentResult.totalScore}%</Text>
-              <Text style={styles.scoreGrade}>GRADE {studentResult.grade}</Text>
+              <Text style={styles.scorePercent}>{resultData?.totalPercentage || 0}%</Text>
+              <Text style={styles.scoreGrade}>GRADE {resultData?.overallGrade || 'N/A'}</Text>
             </View>
           </View>
         </Animated.View>
@@ -92,20 +137,32 @@ const OfficialResultScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.subjectColGrade}>GRADE</Text>
             <Text style={styles.subjectColProgress}>PROGRESS</Text>
           </View>
-          {studentResult.subjects.map((sub, idx) => (
-            <View style={styles.subjectRow} key={idx}>
-              <Text style={styles.subjectColSubjectLink}>{sub.name}</Text>
-              <Text style={styles.subjectColMarks}>{sub.marks.toFixed(2)}</Text>
-              <Text style={styles.subjectColMax}>{sub.max.toFixed(2)}</Text>
-              <Text style={styles.subjectColGrade}>{sub.grade}</Text>
-              <View style={styles.subjectColProgressBar}><View style={[styles.progressBar, {width: `${sub.progress}%`}]} /></View>
-              <Text style={styles.subjectColProgressText}>{sub.progress}%</Text>
+          {(resultData?.subjects || []).map((subject: any, idx: number) => (
+            <View style={styles.subjectRow} key={subject.id || idx}>
+              <Text style={styles.subjectColSubjectLink}>{subject.name || subject.subjectName}</Text>
+              <Text style={styles.subjectColMarks}>{(subject.marks || subject.obtainedMarks || 0).toFixed(2)}</Text>
+              <Text style={styles.subjectColMax}>{(subject.maxMarks || subject.totalMarks || 100).toFixed(2)}</Text>
+              <Text style={styles.subjectColGrade}>{subject.grade || 'N/A'}</Text>
+              <View style={styles.subjectColProgressBar}>
+                <View style={[styles.progressBar, {
+                  width: `${Math.min(100, ((subject.marks || subject.obtainedMarks || 0) / (subject.maxMarks || subject.totalMarks || 100)) * 100)}%`
+                }]} />
+              </View>
+              <Text style={styles.subjectColProgressText}>
+                {Math.round(((subject.marks || subject.obtainedMarks || 0) / (subject.maxMarks || subject.totalMarks || 100)) * 100)}%
+              </Text>
             </View>
           ))}
         </Animated.View>
         <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.statusRow}>
-          <View style={styles.statusBox}><Text style={styles.statusLabel}>STATUS</Text><Text style={styles.statusValue}>{studentResult.status}</Text></View>
-          <View style={styles.statusBox}><Text style={styles.statusLabel}>TOTAL SUBJECTS</Text><Text style={styles.statusValue}>{studentResult.totalSubjects} Subjects Evaluated</Text></View>
+          <View style={styles.statusBox}>
+            <Text style={styles.statusLabel}>STATUS</Text>
+            <Text style={styles.statusValue}>{resultData?.status || 'PENDING'}</Text>
+          </View>
+          <View style={styles.statusBox}>
+            <Text style={styles.statusLabel}>TOTAL SUBJECTS</Text>
+            <Text style={styles.statusValue}>{(resultData?.subjects || []).length} Subjects Evaluated</Text>
+          </View>
         </Animated.View>
       </ScrollView>
       <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="student" />
@@ -150,6 +207,46 @@ const styles = StyleSheet.create({
   statusBox: { backgroundColor: '#fff', borderRadius: 12, padding: 16, flex: 1, marginHorizontal: 4, alignItems: 'center', shadowColor: '#1E293B', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.06, shadowRadius: 20, elevation: 6 },
   statusLabel: { color: '#6B7280', fontSize: 13, fontWeight: 'bold', marginBottom: 4 },
   statusValue: { color: '#10B981', fontWeight: 'bold', fontSize: 15 },
+
+  // Loading and Error States
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FAF9F9',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FAF9F9',
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#EF4444',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#4F46E5',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 });
 
 export default OfficialResultScreen;

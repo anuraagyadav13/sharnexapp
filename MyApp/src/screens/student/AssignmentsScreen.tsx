@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   StatusBar,
-  TouchableOpacity,
   Dimensions,
   ActivityIndicator
 } from 'react-native';
@@ -19,8 +18,6 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
-
-const { width } = Dimensions.get('window');
 
 type AssignmentsNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Assignments'>;
 
@@ -98,6 +95,7 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
   const { authState } = useAuth();
   const [assignments, setAssignments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState({
     pending: 0,
     submitted: 0,
@@ -109,25 +107,35 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
     const fetchAssignments = async () => {
       try {
         setIsLoading(true);
-        // 1. Get student profile to find ID
+        setError(null);
+        // 1. Get student profile to find database ID
         const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
-        const studentId = profileRes.data.id;
+        const studentId = profileRes.data?.id;
+
+        if (!studentId) {
+          throw new Error('Student ID not found in profile');
+        }
 
         // 2. Fetch assignments
         const res = await apiClient.get(ENDPOINTS.STUDENT.ASSIGNMENTS(studentId));
-        const data = res.data.data;
-        setAssignments(data);
+        const data = res.data?.assignments || res.data?.data || res.data || [];
+        
+        // Ensure data is an array
+        const assignmentsArray = Array.isArray(data) ? data : [];
+        setAssignments(assignmentsArray);
 
         // 3. Compute summary
         const stats = {
-          pending: data.filter((a: any) => a.status === 'pending' || a.status === 'overdue').length,
-          submitted: data.filter((a: any) => a.submissionId).length,
-          graded: data.filter((a: any) => a.gradedAt).length,
-          upcoming: data.filter((a: any) => a.status === 'upcoming').length,
+          pending: assignmentsArray.filter((a: any) => a.status === 'pending' || a.status === 'overdue').length,
+          submitted: assignmentsArray.filter((a: any) => a.submission_id).length,
+          graded: assignmentsArray.filter((a: any) => a.graded_at).length,
+          upcoming: assignmentsArray.filter((a: any) => a.status === 'upcoming').length,
         };
         setSummary(stats);
-      } catch (error) {
-        console.error('Failed to fetch assignments:', error);
+      } catch (err: any) {
+        console.error('Failed to fetch assignments:', err);
+        setError('Failed to load assignments. Please try again.');
+        setAssignments([]);
       } finally {
         setIsLoading(false);
       }
@@ -186,6 +194,43 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
         <View style={styles.listContainer}>
           {isLoading ? (
             <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
+          ) : error ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="alert-circle" size={60} color="#EF4444" />
+              <Text style={styles.emptyText}>{error}</Text>
+              <ScaleButton 
+                style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
+                onPress={() => {
+                  setError(null);
+                  setIsLoading(true);
+                  const fetchAssignments = async () => {
+                    try {
+                      const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+                      const studentId = profileRes.data?.id;
+                      if (!studentId) throw new Error('Student ID not found');
+                      const res = await apiClient.get(ENDPOINTS.STUDENT.ASSIGNMENTS(studentId));
+                      const assignmentsArray = res.data?.assignments || res.data?.data || res.data || [];
+                      setAssignments(Array.isArray(assignmentsArray) ? assignmentsArray : []);
+                      const stats = {
+                        pending: assignmentsArray.filter((a: any) => a.status === 'pending' || a.status === 'overdue').length,
+                        submitted: assignmentsArray.filter((a: any) => a.submission_id).length,
+                        graded: assignmentsArray.filter((a: any) => a.graded_at).length,
+                        upcoming: assignmentsArray.filter((a: any) => a.status === 'upcoming').length,
+                      };
+                      setSummary(stats);
+                    } catch (err: any) {
+                      setError('Failed to load assignments. Please try again.');
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  };
+                  fetchAssignments();
+                }}
+                scaleTo={0.95}
+              >
+                <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
+              </ScaleButton>
+            </View>
           ) : assignments.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="clipboard-outline" size={60} color="#E5E7EB" />
@@ -197,10 +242,10 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
                 key={item.id}
                 delay={300 + index * 50}
                 category={item.subject}
-                status={item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-                title={item.title}
-                subtitle={item.description}
-                dueDate={item.dueDate}
+                status={item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'Unknown'}
+                title={item.title || 'Untitled assignment'}
+                subtitle={item.description || 'No description available'}
+                dueDate={item.dueDate || 'N/A'}
                 deadlineRelative={item.isOverdue ? 'Overdue' : 'Due'}
                 isDelayed={item.isOverdue}
                 onPressView={() => navigation.navigate('AssignmentDetails', { assignmentId: item.id })}

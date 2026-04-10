@@ -64,13 +64,18 @@ const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
         setIsLoading(true);
         // 1. Get profile for student ID
         const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
-        const studentId = profileRes.data.id;
+        const studentId = profileRes.data?.id;
+
+        if (!studentId) {
+          throw new Error('Student ID not found');
+        }
 
         // 2. Fetch materials
         const res = await apiClient.get(ENDPOINTS.STUDENT.STUDY_MATERIALS(studentId));
-        setMaterials(res.data.materials || []);
-      } catch (error) {
-        console.error('Failed to fetch materials:', error);
+        setMaterials(res.data?.materials || res.data?.data || []);
+      } catch (err: any) {
+        console.error('Failed to fetch materials:', err);
+        setMaterials([]);
       } finally {
         setIsLoading(false);
       }

@@ -111,7 +111,7 @@ const AssignmentGradeScreen: React.FC<Props> = ({ navigation }) => {
                 <Text style={styles.instructorAvatarText}>SJ</Text>
               </View>
               <View style={styles.instructorMeta}>
-                <Text style={styles.instructorName}>Dr. Sarah Johnson</Text>
+                <Text style={styles.instructorName}>Dr. Priya Sharma</Text>
                 <Text style={styles.instructorRole}>Data Structures Teacher</Text>
               </View>
             </View>

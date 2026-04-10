@@ -32,30 +32,10 @@ const ANNOUNCEMENTS = [
     priority: 'High priority',
     time: '2 hrs ago',
     sender: "Institution's Office",
-    description: 'The mid-term examination schedule for the Fall semester has been released. Please check the exam timetable on the school portal. All exams will be conducted in the main auditorium. Students must bring their school ID cards.',
+    description: 'The mid-term examination schedule for the current semester has been released. Please check the exam timetable on the school portal. All exams will be conducted in the main examination hall. Students must bring their school ID cards and admit cards.',
     attachments: ['Exam_Schedule.pdf', 'Guidelines.pdf'],
     theme: '#EF4444', // Red
   },
-  {
-    id: 2,
-    title: 'Mid-Term Examination Schedule',
-    priority: 'High priority',
-    time: '2 hrs ago',
-    sender: "Institution's Office",
-    description: 'The mid-term examination schedule for the Fall semester has been released. Please check the exam timetable on the school portal. All exams will be conducted in the main auditorium. Students must bring their school ID cards.',
-    attachments: ['Exam_Schedule.pdf', 'Guidelines.pdf'],
-    theme: '#3B82F6', // Blue
-  },
-  {
-    id: 3,
-    title: 'Mid-Term Examination Schedule',
-    priority: 'High priority',
-    time: '2 hrs ago',
-    sender: "Institution's Office",
-    description: 'The mid-term examination schedule for the Fall semester has been released. Please check the exam timetable on the school portal. All exams will be conducted in the main auditorium. Students must bring their school ID cards.',
-    attachments: ['Exam_Schedule.pdf', 'Guidelines.pdf'],
-    theme: '#10B981', // Green
-  }
 ];
 
 const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
@@ -63,16 +43,22 @@ const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
   const { authState } = useAuth();
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAnnouncements = async () => {
       try {
         setIsLoading(true);
+        setError(null);
         // @ts-ignore
-        const res = await apiClient.get(ENDPOINTS.ANNOUNCEMENTS);
-        setAnnouncements(res.data.announcements || []);
-      } catch (error) {
+        const res = await apiClient.get(ENDPOINTS.STUDENT.ANNOUNCEMENTS);
+        const data = res.data?.announcements || res.data?.data || res.data || [];
+        const announcementsArray = Array.isArray(data) ? data : (data.announcements ? data.announcements : []);
+        setAnnouncements(announcementsArray);
+      } catch (error: any) {
         console.error('Failed to fetch announcements:', error);
+        setError('Failed to load announcements');
+        setAnnouncements([]);
       } finally {
         setIsLoading(false);
       }
@@ -118,6 +104,11 @@ const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
         {/* Announcement List */}
         {isLoading ? (
           <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 40 }} />
+        ) : error ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="alert-circle-outline" size={60} color="#EF4444" />
+            <Text style={styles.emptyText}>{error}</Text>
+          </View>
         ) : announcements.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="notifications-off-outline" size={60} color="#E5E7EB" />
@@ -128,28 +119,32 @@ const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
             <Animated.View 
               key={item.id} 
               entering={FadeInUp.delay(100 + (index * 50)).springify()} 
-              style={[styles.card, { borderLeftColor: item.priority === 'High' ? '#EF4444' : '#3B82F6' }]}
+              style={[styles.card, { borderLeftColor: item.priority === 'URGENT' || item.priority === 'HIGH' ? '#EF4444' : '#3B82F6' }]}
             >
                <View style={styles.cardHeaderRow}>
                  <Text style={styles.cardTitle}>{item.title}</Text>
-                 <View style={[styles.priorityPill, { backgroundColor: item.priority === 'High' ? '#FEE2E2' : '#DBEAFE' }]}>
-                   <Ionicons name="alert-circle" size={13} color={item.priority === 'High' ? '#EF4444' : '#3B82F6'} style={{marginRight: 4}} />
-                   <Text style={[styles.priorityText, { color: item.priority === 'High' ? '#EF4444' : '#3B82F6' }]}>{item.priority} priority</Text>
+                 <View style={[styles.priorityPill, { backgroundColor: item.priority === 'URGENT' || item.priority === 'HIGH' ? '#FEE2E2' : '#DBEAFE' }]}>
+                   <Ionicons name="alert-circle" size={13} color={item.priority === 'URGENT' || item.priority === 'HIGH' ? '#EF4444' : '#3B82F6'} style={{marginRight: 4}} />
+                   <Text style={[styles.priorityText, { color: item.priority === 'URGENT' || item.priority === 'HIGH' ? '#EF4444' : '#3B82F6' }]}>
+                     {item.priority || 'Normal'} priority
+                   </Text>
                  </View>
                </View>
 
                <View style={styles.metaRow}>
                  <View style={styles.metaItem}>
                    <Ionicons name="calendar-outline" size={12} color="#9CA3AF" />
-                   <Text style={styles.metaText}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+                   <Text style={styles.metaText}>
+                     {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
+                   </Text>
                  </View>
                  <View style={styles.metaItem}>
                    <Ionicons name="person-outline" size={12} color="#9CA3AF" />
-                   <Text style={styles.metaText}>{item.creatorName || 'Office'}</Text>
+                   <Text style={styles.metaText}>{item.creatorName || item.sender || 'Office'}</Text>
                  </View>
                </View>
 
-               <Text style={styles.description}>{item.content}</Text>
+               <Text style={styles.description}>{item.content || item.description}</Text>
 
                {(item.attachments || []).map((attach: any, idx: number) => (
                  <TouchableOpacity key={idx} style={styles.attachmentBox} activeOpacity={0.8}>
@@ -157,7 +152,7 @@ const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
                      <Ionicons name="document" size={16} color="#EF4444" />
                      <Text style={styles.pdfIconText}>PDF</Text>
                    </View>
-                   <Text style={styles.attachmentText}>{attach.name || 'document.pdf'}</Text>
+                   <Text style={styles.attachmentText}>{typeof attach === 'string' ? attach : attach.name || 'document.pdf'}</Text>
                  </TouchableOpacity>
                ))}
             </Animated.View>

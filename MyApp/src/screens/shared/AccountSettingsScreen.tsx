@@ -68,7 +68,7 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
   const { authState } = useAuth();
   const role = authState.role;
   const isTeacher = role === 'teacher';
-  const isInstitution = role === 'institution';
+  const isInstitution = role === 'principal';
   const roleTitle = isInstitution ? 'Institution' : isTeacher ? 'Teacher' : 'Student';
   const secondaryTabTitle = isInstitution ? 'Institution Info' : isTeacher ? 'Professional Info' : 'Parent Information';
   const idLabel = isInstitution ? 'PRN2023-01X' : isTeacher ? 'EMP2023-12A' : 'CS2023-789';

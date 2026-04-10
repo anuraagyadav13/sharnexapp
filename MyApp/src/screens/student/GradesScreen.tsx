@@ -17,6 +17,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type GradesScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Grades'>;
 
@@ -24,35 +25,27 @@ interface Props {
   navigation: GradesScreenNavigationProp;
 }
 
-const SUBJECTS = [
-  { id: 1, name: 'Mathematics', teacher: 'Mr. Aman Kumar', status: 'Excellent', assignments: 25, quizzes: 25, exams: 25, grade: '91 (A)' },
-  { id: 2, name: 'Mathematics', teacher: 'Mr. Aman Kumar', status: 'Excellent', assignments: 25, quizzes: 25, exams: 25, grade: '91 (A)' },
-  { id: 3, name: 'Mathematics', teacher: 'Mr. Aman Kumar', status: 'Excellent', assignments: 25, quizzes: 25, exams: 25, grade: '91 (A)' },
-  { id: 4, name: 'Mathematics', teacher: 'Mr. Aman Kumar', status: 'Excellent', assignments: 25, quizzes: 25, exams: 25, grade: '91 (A)' },
-];
-
-const REPORTS = [
-  { id: 1, title: 'Term 2 Final Report Card', desc: 'Complete performance report with subject grades and teacher comments', date: 'May 25, 2023' },
-  { id: 2, title: 'Term 2 Final Report Card', desc: 'Complete performance report with subject grades and teacher comments', date: 'May 25, 2023' },
-  { id: 3, title: 'Term 2 Final Report Card', desc: 'Complete performance report with subject grades and teacher comments', date: 'May 25, 2023' },
-];
 
 const GradesScreen: React.FC<Props> = ({ navigation }) => {
   const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [grades, setGrades] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchGrades = async () => {
       try {
         setIsLoading(true);
-        const res = await apiClient.get('/rms/results/student');
-        if (res.data.success) {
-          setGrades(res.data.data || []);
-        }
-      } catch (error) {
-        console.error('Failed to fetch grades:', error);
+        setError(null);
+        // Get student profile first to find student ID if needed
+        const res = await apiClient.get(ENDPOINTS.STUDENT.GRADES);
+        const gradeData = res.data.subjects || res.data.data || [];
+        setGrades(Array.isArray(gradeData) ? gradeData : []);
+      } catch (err: any) {
+        console.error('Failed to fetch grades:', err);
+        setError('Failed to load grades. Please try again.');
+        setGrades([]);
       } finally {
         setIsLoading(false);
       }
@@ -97,6 +90,33 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
         {/* Subjects List */}
         {isLoading ? (
           <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 40 }} />
+        ) : error ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="alert-circle" size={60} color="#EF4444" />
+            <Text style={styles.emptyText}>{error}</Text>
+            <ScaleButton 
+              style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#3B82F6', borderRadius: 8 }}
+              onPress={() => {
+                setError(null);
+                setIsLoading(true);
+                const fetchGrades = async () => {
+                  try {
+                    const res = await apiClient.get(ENDPOINTS.STUDENT.GRADES);
+                    const gradeData = res.data.subjects || res.data.data || [];
+                    setGrades(Array.isArray(gradeData) ? gradeData : []);
+                  } catch (err: any) {
+                    setError('Failed to load grades. Please try again.');
+                  } finally {
+                    setIsLoading(false);
+                  }
+                };
+                fetchGrades();
+              }}
+              scaleTo={0.95}
+            >
+              <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
+            </ScaleButton>
+          </View>
         ) : grades.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="school-outline" size={60} color="#E5E7EB" />
@@ -148,24 +168,6 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
           ))
         )}
 
-        {/* Recent Reports Area */}
-        <Animated.View entering={FadeInUp.delay(350).springify()} style={styles.reportsWrapper}>
-          <Text style={styles.reportsHeader}>Recent Reports</Text>
-          
-          {REPORTS.map((r, idx) => (
-            <ScaleButton key={`rep-${r.id}`} activeOpacity={0.9} scaleTo={0.97} style={styles.reportItem}>
-               <View style={styles.pdfIconWrap}>
-                 <Ionicons name="document" size={20} color="#FFFFFF" />
-                 <Text style={styles.pdfIconText}>PDF</Text>
-               </View>
-               <View style={styles.reportContent}>
-                 <Text style={styles.reportTitle}>{r.title}</Text>
-                 <Text style={styles.reportDesc} numberOfLines={2}>{r.desc}</Text>
-                 <Text style={styles.reportDate}>Issued: {r.date}</Text>
-               </View>
-            </ScaleButton>
-          ))}
-        </Animated.View>
 
       </ScrollView>
 

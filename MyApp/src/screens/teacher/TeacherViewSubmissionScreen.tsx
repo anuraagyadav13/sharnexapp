@@ -21,45 +21,27 @@ import { ENDPOINTS } from '../../constants/api';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherViewSubmission'>;
 
-const MOCK_SUBMISSIONS = [
-  {
-    id: 1,
-    name: 'Aman Kumar',
-    stdId: '#0001',
-    time: 'Today 10:30 PM',
-    files: [
-      { name: 'Algebra_Solutions.pdf', size: '2.4 MB' },
-      { name: 'Algebra_Solutions.pdf', size: '2.4 MB' }
-    ]
-  },
-  {
-    id: 2,
-    name: 'Aman Kumar',
-    stdId: '#0001',
-    time: 'Today 10:30 PM',
-    files: [
-      { name: 'Algebra_Solutions.pdf', size: '2.4 MB' },
-      { name: 'Algebra_Solutions.pdf', size: '2.4 MB' }
-    ]
-  }
-];
-
 const TeacherViewSubmissionScreen: React.FC<Props> = ({ navigation, route }) => {
   // @ts-ignore
   const { assignmentId, assignmentTitle, className, dueDate, maxMarks } = route.params || {};
   const { authState } = useAuth();
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [grades, setGrades] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchSubmissions = async () => {
       try {
         setIsLoading(true);
+        setError(null);
         const res = await apiClient.get(ENDPOINTS.TEACHER.SUBMISSIONS(assignmentId));
-        setSubmissions(res.data.data || []);
-      } catch (error) {
+        const data = res.normalized?.data || {};
+        setSubmissions(Array.isArray(data) ? data : data.submissions || []);
+      } catch (error: any) {
         console.error('Failed to fetch submissions:', error);
+        setError('Failed to load submissions. Please try again.');
+        setSubmissions([]);
       } finally {
         setIsLoading(false);
       }
@@ -133,6 +115,10 @@ const TeacherViewSubmissionScreen: React.FC<Props> = ({ navigation, route }) => 
         
         {isLoading ? (
           <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
+        ) : error ? (
+          <View style={{ padding: 16, backgroundColor: '#FEE2E2', borderRadius: 12 }}>
+            <Text style={{ color: '#DC2626', fontWeight: '500' }}>{error}</Text>
+          </View>
         ) : submissions.length === 0 ? (
           <Text style={{ textAlign: 'center', marginTop: 40, color: '#9CA3AF' }}>No submissions found.</Text>
         ) : (

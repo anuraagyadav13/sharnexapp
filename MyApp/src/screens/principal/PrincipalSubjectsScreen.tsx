@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,16 @@ import {
   Platform,
   StatusBar,
   Modal,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  ActivityIndicator
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 const StatCard = React.memo(({ color, value, label, subtext }: any) => (
   <View style={[styles.statCard, { borderLeftColor: color, borderLeftWidth: 4 }]}>
@@ -50,35 +53,66 @@ const SubjectItem = ({ item, isLast }: any) => (
   </View>
 );
 
-const DUMMY_SUBJECTS = [
-  { id: '1', name: 'Chemistry', code: '--' },
-  { id: '2', name: 'Physics', code: '--' },
-  { id: '3', name: 'Biology', code: '--' },
-  { id: '4', name: 'Mathematics', code: '--' },
-  { id: '5', name: 'English', code: '--' },
-];
 
 const PrincipalSubjectsScreen = ({ navigation }: any) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  
-  const [subjects, setSubjects] = useState(DUMMY_SUBJECTS);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [newSubjectName, setNewSubjectName] = useState('');
   const [newSubjectCode, setNewSubjectCode] = useState('');
 
-  const handleAddSubject = () => {
-    if (!newSubjectName.trim()) return;
-    const newSubject = {
-      id: Date.now().toString(),
-      name: newSubjectName.trim(),
-      code: newSubjectCode.trim() || '--',
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const res = await apiClient.get(ENDPOINTS.PRINCIPAL.SUBJECTS);
+        const data = res.data.data || res.data;
+        setSubjects(data.subjects || []);
+      } catch (err: any) {
+        console.error('Failed to fetch subjects:', err);
+        setError('Failed to load subjects data');
+        setSubjects([]);
+      } finally {
+        setIsLoading(false);
+      }
     };
-    setSubjects([newSubject, ...subjects]);
-    setNewSubjectName('');
-    setNewSubjectCode('');
-    setIsAddModalOpen(false);
+    fetchSubjects();
+  }, []);
+
+  const handleAddSubject = async () => {
+    if (!newSubjectName.trim()) return;
+    
+    try {
+      const subjectData = {
+        name: newSubjectName.trim(),
+        code: newSubjectCode.trim() || undefined,
+      };
+      
+      const res = await apiClient.post(ENDPOINTS.PRINCIPAL.SUBJECTS, subjectData);
+      const newSubject = res.data.data || res.data;
+      
+      setSubjects([newSubject, ...subjects]);
+      setNewSubjectName('');
+      setNewSubjectCode('');
+      setIsAddModalOpen(false);
+    } catch (err: any) {
+      console.error('Failed to add subject:', err);
+      // For now, just add locally
+      const newSubject = {
+        id: Date.now().toString(),
+        name: newSubjectName.trim(),
+        code: newSubjectCode.trim() || '--',
+      };
+      setSubjects([newSubject, ...subjects]);
+      setNewSubjectName('');
+      setNewSubjectCode('');
+      setIsAddModalOpen(false);
+    }
   };
 
 
@@ -162,9 +196,19 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
 
           {/* Subject Cards List */}
           <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.listContainer}>
-            {subjects.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.code.toLowerCase().includes(searchQuery.toLowerCase())).map((item, index, arr) => (
-               <SubjectItem key={item.id} item={item} isLast={index === arr.length - 1} />
-            ))}
+            {isLoading ? (
+              <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
+            ) : subjects.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="book-outline" size={48} color="#D1D5DB" />
+                <Text style={styles.emptyText}>No subjects found</Text>
+                <Text style={styles.emptySubtext}>Click + button above to add your first subject</Text>
+              </View>
+            ) : (
+              subjects.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.code.toLowerCase().includes(searchQuery.toLowerCase())).map((item, index, arr) => (
+                <SubjectItem key={item.id} item={item} isLast={index === arr.length - 1} />
+              ))
+            )}
           </Animated.View>
         </View>
       </ScrollView>
@@ -173,7 +217,7 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
       <NavigationDrawer
         isOpen={isDrawerOpen}
         onClose={() => setDrawerOpen(false)}
-        role="Principal"
+        role="principal"
       />
 
       {/* Add Subject Modal */}
@@ -418,6 +462,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#999',
+  },
+  emptySubtext: {
+    fontSize: 12,
+    color: '#bbb',
   },
 });
 

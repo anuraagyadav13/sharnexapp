@@ -7,17 +7,109 @@ import {
   TouchableOpacity,
   TextInput,
   Platform,
-  StatusBar
+  StatusBar,
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 const PrincipalAddStudentScreen = ({ navigation }: any) => {
   const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Personal Information
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [dob, setDob] = useState('');
+  const [gender, setGender] = useState('');
+
+  // Contact Information
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+
+  // Parent/Guardian Information
+  const [guardianName, setGuardianName] = useState('');
+  const [guardianPhone, setGuardianPhone] = useState('');
+  const [guardianEmail, setGuardianEmail] = useState('');
+  const [guardianRelation, setGuardianRelation] = useState('');
+
+  // Academic Information
+  const [classId, setClassId] = useState('');
+  const [rollNo, setRollNo] = useState('');
+  const [admissionDate, setAdmissionDate] = useState('');
+
+  const handleClearForm = () => {
+    setFirstName('');
+    setLastName('');
+    setDob('');
+    setGender('');
+    setEmail('');
+    setPhone('');
+    setAddress('');
+    setCity('');
+    setState('');
+    setPostalCode('');
+    setGuardianName('');
+    setGuardianPhone('');
+    setGuardianEmail('');
+    setGuardianRelation('');
+    setClassId('');
+    setRollNo('');
+    setAdmissionDate('');
+  };
+
+  const handleSubmit = async () => {
+    // Validation
+    if (!firstName || !lastName || !email || !classId) {
+      Alert.alert('Error', 'Please fill in all required fields (Name, Email, Class)');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const studentData = {
+        name: `${firstName} ${lastName}`,
+        email,
+        phone,
+        dob,
+        gender,
+        address,
+        city,
+        state,
+        postalCode,
+        class: classId,
+        section: '',
+        rollNo,
+        guardianName,
+        guardianPhone,
+        guardianEmail,
+        guardianRelation,
+        admissionDate: admissionDate || new Date().toISOString().split('T')[0]
+      };
+
+      const res = await apiClient.post(ENDPOINTS.PRINCIPAL.ADD_STUDENT, studentData);
+      
+      Alert.alert('Success', `Student added successfully!\nStudent ID: ${res.data.studentId}\nTemporary Password sent to ${email}`, [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    } catch (error: any) {
+      console.error('Failed to add student:', error);
+      Alert.alert('Error', error.response?.data?.message || 'Failed to add student. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <View style={styles.mainContainer}>
@@ -69,38 +161,23 @@ const PrincipalAddStudentScreen = ({ navigation }: any) => {
           
           <View style={styles.formRow}>
             <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>First Name</Text>
-              <TextInput style={styles.textInput} placeholder="Alex" placeholderTextColor="#9CA3AF" />
+              <Text style={styles.inputLabel}>First Name *</Text>
+              <TextInput style={styles.textInput} placeholder="John" placeholderTextColor="#9CA3AF" value={firstName} onChangeText={setFirstName} />
             </View>
             <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Last name</Text>
-              <TextInput style={styles.textInput} placeholder="Johnson" placeholderTextColor="#9CA3AF" />
+              <Text style={styles.inputLabel}>Last name *</Text>
+              <TextInput style={styles.textInput} placeholder="Doe" placeholderTextColor="#9CA3AF" value={lastName} onChangeText={setLastName} />
             </View>
           </View>
 
           <View style={styles.formRow}>
             <View style={styles.formCol}>
               <Text style={styles.inputLabel}>Date of birth</Text>
-              <TextInput style={styles.textInput} placeholder="Alex" placeholderTextColor="#9CA3AF" />
+              <TextInput style={styles.textInput} placeholder="YYYY-MM-DD" placeholderTextColor="#9CA3AF" value={dob} onChangeText={setDob} />
             </View>
             <View style={styles.formCol}>
               <Text style={styles.inputLabel}>Gender</Text>
-              <TextInput style={styles.textInput} placeholder="Select Gender" placeholderTextColor="#9CA3AF" />
-            </View>
-          </View>
-
-          <View style={styles.formColFull}>
-            <Text style={styles.inputLabel}>Photo</Text>
-            <View style={styles.uploadBox}>
-              <View style={styles.uploadIconCircle}>
-                <Ionicons name="cloud-upload-outline" size={24} color="#FFF" />
-              </View>
-              <Text style={styles.uploadMainText}>Drag and Drop your files here</Text>
-              <Text style={styles.uploadSubText}>or click to browse</Text>
-              <TouchableOpacity style={styles.browseBtn} activeOpacity={0.8}>
-                <Ionicons name="push-outline" size={16} color="#FFF" style={{ marginRight: 6 }} />
-                <Text style={styles.browseBtnText}>Browse files</Text>
-              </TouchableOpacity>
+              <TextInput style={styles.textInput} placeholder="Male/Female" placeholderTextColor="#9CA3AF" value={gender} onChangeText={setGender} />
             </View>
           </View>
 
@@ -112,92 +189,63 @@ const PrincipalAddStudentScreen = ({ navigation }: any) => {
 
           <View style={styles.formRow}>
             <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Email Address</Text>
-              <TextInput style={styles.textInput} placeholder="Alex" placeholderTextColor="#9CA3AF" />
+              <Text style={styles.inputLabel}>Email Address *</Text>
+              <TextInput style={styles.textInput} placeholder="student@gmail.com" placeholderTextColor="#9CA3AF" value={email} onChangeText={setEmail} keyboardType="email-address" />
             </View>
             <View style={styles.formCol}>
               <Text style={styles.inputLabel}>Phone Number</Text>
-              <TextInput style={styles.textInput} placeholder="Johnson" placeholderTextColor="#9CA3AF" />
+              <TextInput style={styles.textInput} placeholder="+91 9XXXXXXXX" placeholderTextColor="#9CA3AF" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
             </View>
           </View>
 
           <View style={styles.formColFull}>
             <Text style={styles.inputLabel}>Address</Text>
-            <TextInput style={styles.textInput} placeholder="Alex" placeholderTextColor="#9CA3AF" />
+            <TextInput style={styles.textInput} placeholder="Street Address" placeholderTextColor="#9CA3AF" value={address} onChangeText={setAddress} />
           </View>
 
           <View style={styles.formRow}>
             <View style={styles.formCol}>
               <Text style={styles.inputLabel}>City</Text>
-              <TextInput style={styles.textInput} placeholder="Alex" placeholderTextColor="#9CA3AF" />
+              <TextInput style={styles.textInput} placeholder="City" placeholderTextColor="#9CA3AF" value={city} onChangeText={setCity} />
             </View>
             <View style={styles.formCol}>
               <Text style={styles.inputLabel}>State</Text>
-              <TextInput style={styles.textInput} placeholder="Johnson" placeholderTextColor="#9CA3AF" />
+              <TextInput style={styles.textInput} placeholder="State" placeholderTextColor="#9CA3AF" value={state} onChangeText={setState} />
             </View>
           </View>
 
           <View style={styles.formRow}>
             <View style={styles.formCol}>
               <Text style={styles.inputLabel}>Postal code</Text>
-              <TextInput style={styles.textInput} placeholder="Alex" placeholderTextColor="#9CA3AF" />
+              <TextInput style={styles.textInput} placeholder="PIN code" placeholderTextColor="#9CA3AF" value={postalCode} onChangeText={setPostalCode} />
             </View>
             <View style={styles.formCol}>
               <Text style={styles.inputLabel}>Parent/Guardian Name</Text>
-              <TextInput style={styles.textInput} placeholder="Johnson" placeholderTextColor="#9CA3AF" />
+              <TextInput style={styles.textInput} placeholder="Parents Name" placeholderTextColor="#9CA3AF" value={guardianName} onChangeText={setGuardianName} />
             </View>
           </View>
 
           <View style={styles.formRow}>
             <View style={styles.formCol}>
               <Text style={styles.inputLabel}>Parent Phone Number</Text>
-              <TextInput style={styles.textInput} placeholder="Alex" placeholderTextColor="#9CA3AF" />
+              <TextInput style={styles.textInput} placeholder="+91 9XXXXXXXX" placeholderTextColor="#9CA3AF" value={guardianPhone} onChangeText={setGuardianPhone} keyboardType="phone-pad" />
             </View>
             <View style={styles.formCol}>
               <Text style={styles.inputLabel}>Parent Email</Text>
-              <TextInput style={styles.textInput} placeholder="Johnson" placeholderTextColor="#9CA3AF" />
+              <TextInput style={styles.textInput} placeholder="parent@gmail.com" placeholderTextColor="#9CA3AF" value={guardianEmail} onChangeText={setGuardianEmail} keyboardType="email-address" />
             </View>
           </View>
 
           <View style={styles.formRow}>
             <View style={styles.formCol}>
               <Text style={styles.inputLabel}>Relationship</Text>
-              <TextInput style={styles.textInput} placeholder="Alex" placeholderTextColor="#9CA3AF" />
+              <TextInput style={styles.textInput} placeholder="Father/Mother" placeholderTextColor="#9CA3AF" value={guardianRelation} onChangeText={setGuardianRelation} />
             </View>
             <View style={styles.formCol}>
               {/* Empty col for spacing formatting as per design half width */}
             </View>
           </View>
-
-          {/* Section 3: Emergency Contact Information */}
-          <View style={[styles.sectionHeaderRow, { marginTop: 24 }]}>
-            <Ionicons name="call-outline" size={20} color="#4F46E5" style={styles.sectionIcon} />
-            <Text style={styles.sectionTitle}>Emergency Contact Information</Text>
-          </View>
-
-          <View style={styles.formRow}>
-            <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Contact Name</Text>
-              <TextInput style={styles.textInput} placeholder="Alex" placeholderTextColor="#9CA3AF" />
-            </View>
-            <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Contact Phone</Text>
-              <TextInput style={styles.textInput} placeholder="Johnson" placeholderTextColor="#9CA3AF" />
-            </View>
-          </View>
-
-          <View style={styles.formRow}>
-            <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Contact Email</Text>
-              <TextInput style={styles.textInput} placeholder="Alex" placeholderTextColor="#9CA3AF" />
-            </View>
-            <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Relationship</Text>
-              <TextInput style={styles.textInput} placeholder="Johnson" placeholderTextColor="#9CA3AF" />
-            </View>
-          </View>
-
-          {/* Section 4: Academic Information */}
+          {/* Section 3: Academic Information */}
           <View style={[styles.sectionHeaderRow, { marginTop: 24 }]}>
             <Ionicons name="school-outline" size={20} color="#4F46E5" style={styles.sectionIcon} />
             <Text style={styles.sectionTitle}>Academic Information</Text>
@@ -205,47 +253,53 @@ const PrincipalAddStudentScreen = ({ navigation }: any) => {
 
           <View style={styles.formRow}>
             <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Class</Text>
-              <TextInput style={styles.textInput} placeholder="Alex" placeholderTextColor="#9CA3AF" />
+              <Text style={styles.inputLabel}>Class *</Text>
+              <TextInput style={styles.textInput} placeholder="e.g., 10A" placeholderTextColor="#9CA3AF" value={classId} onChangeText={setClassId} />
             </View>
             <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Admission Number</Text>
-              <TextInput style={styles.textInput} placeholder="Johnson" placeholderTextColor="#9CA3AF" />
+              <Text style={styles.inputLabel}>Roll Number</Text>
+              <TextInput style={styles.textInput} placeholder="Roll Number" placeholderTextColor="#9CA3AF" value={rollNo} onChangeText={setRollNo} />
             </View>
           </View>
 
           <View style={styles.formRow}>
             <View style={styles.formCol}>
               <Text style={styles.inputLabel}>Admission Date</Text>
-              <TextInput style={styles.textInput} placeholder="Alex" placeholderTextColor="#9CA3AF" />
+              <TextInput style={styles.textInput} placeholder="YYYY-MM-DD" placeholderTextColor="#9CA3AF" value={admissionDate} onChangeText={setAdmissionDate} />
             </View>
             <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Previous School</Text>
-              <TextInput style={styles.textInput} placeholder="Johnson" placeholderTextColor="#9CA3AF" />
+              {/* Empty for layout */}
             </View>
           </View>
 
-          {/* Section 5: Account & Invite */}
+          {/* Section 4: Account & Invite */}
           <View style={[styles.sectionHeaderRow, { marginTop: 24 }]}>
             <Ionicons name="mail-outline" size={20} color="#4F46E5" style={styles.sectionIcon} />
             <Text style={styles.sectionTitle}>Account & Invite</Text>
           </View>
 
           <View style={styles.formColFull}>
-            <Text style={styles.inputLabel}>Password (Optional)</Text>
-            <TextInput style={styles.textInput} placeholder="Alex" placeholderTextColor="#9CA3AF" />
-            <Text style={styles.helperText}>If left blank, a secure temporary password will be generated.</Text>
+            <Text style={styles.helperText}>A secure temporary password will be generated and sent to the student's email address.</Text>
           </View>
 
           {/* Form Actions */}
           <View style={styles.formActionsRow}>
-            <TouchableOpacity style={styles.clearBtn} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.clearBtn} activeOpacity={0.7} onPress={handleClearForm}>
               <Ionicons name="close" size={16} color="#6B7280" style={{ marginRight: 6 }} />
               <Text style={styles.clearBtnText}>Clear Form</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.submitBtn} activeOpacity={0.8}>
-              <Text style={styles.submitBtnText}>+ Add Student</Text>
+            <TouchableOpacity 
+              style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]} 
+              activeOpacity={0.8}
+              disabled={isSubmitting}
+              onPress={handleSubmit}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Text style={styles.submitBtnText}>+ Add Student</Text>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -253,7 +307,7 @@ const PrincipalAddStudentScreen = ({ navigation }: any) => {
       </ScrollView>
 
       {/* Navigation Drawer */}
-      <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="Principal" />
+      <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
 
     </View>
   );
@@ -404,6 +458,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
+  },
+  submitBtnDisabled: {
+    backgroundColor: '#A78BFA',
+    opacity: 0.7,
   },
   submitBtnText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
 

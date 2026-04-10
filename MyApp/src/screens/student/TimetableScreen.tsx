@@ -17,50 +17,8 @@ interface Props {
 const TIMES = ['09:00', '09:45', '10:30', '11:15', '12:00', '12:45', '13:30'];
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
-const SCHEDULE_DATA = [
-  { day: 'MON', time: '09:45', subject: 'Science', teacher: 'Shubham Mangal' },
-  { day: 'MON', time: '10:30', subject: 'Maths', teacher: 'John Doe Updated' },
-  { day: 'MON', time: '12:00', subject: 'Computer', teacher: 'Manish Mangal' },
-  { day: 'MON', time: '12:45', subject: 'Computer', teacher: 'Manish Mangal' },
-  { day: 'MON', time: '13:30', subject: 'english', teacher: 'Shubham Mangal' },
-
-  { day: 'TUE', time: '09:00', subject: 'Science', teacher: 'Shubham Mangal' },
-  { day: 'TUE', time: '09:45', subject: 'Maths', teacher: 'John Doe Updated' },
-  { day: 'TUE', time: '12:00', subject: 'Hindi', teacher: 'manish chotia' },
-  { day: 'TUE', time: '12:45', subject: 'Computer', teacher: 'Manish Mangal' },
-  { day: 'TUE', time: '13:30', subject: 'english', teacher: 'Shubham Mangal' },
-
-  { day: 'WED', time: '09:00', subject: 'english', teacher: 'Shubham Mangal' },
-  { day: 'WED', time: '09:45', subject: 'english', teacher: 'Shubham Mangal' },
-  { day: 'WED', time: '10:30', subject: 'Science', teacher: 'Shubham Mangal' },
-  { day: 'WED', time: '12:45', subject: 'Hindi', teacher: 'manish chotia' },
-
-  { day: 'THU', time: '09:00', subject: 'english', teacher: 'Shubham Mangal' },
-  { day: 'THU', time: '09:45', subject: 'Computer', teacher: 'Manish Mangal' },
-  { day: 'THU', time: '10:30', subject: 'Hindi', teacher: 'manish chotia' },
-  { day: 'THU', time: '12:00', subject: 'Science', teacher: 'Shubham Mangal' },
-  { day: 'THU', time: '12:45', subject: 'Maths', teacher: 'John Doe Updated' },
-
-  { day: 'FRI', time: '09:00', subject: 'Science', teacher: 'Shubham Mangal' },
-  { day: 'FRI', time: '09:45', subject: 'Hindi', teacher: 'manish chotia' },
-  { day: 'FRI', time: '10:30', subject: 'Computer', teacher: 'Manish Mangal' },
-  { day: 'FRI', time: '12:00', subject: 'Maths', teacher: 'John Doe Updated' },
-  { day: 'FRI', time: '12:45', subject: 'Hindi', teacher: 'manish chotia' },
-  { day: 'FRI', time: '13:30', subject: 'Maths', teacher: 'John Doe Updated' },
-
-  { day: 'SAT', time: '09:00', subject: 'Hindi', teacher: 'manish chotia' },
-  { day: 'SAT', time: '09:45', subject: 'english', teacher: 'Shubham Mangal' },
-  { day: 'SAT', time: '10:30', subject: 'Maths', teacher: 'John Doe Updated' },
-  { day: 'SAT', time: '12:00', subject: 'Computer', teacher: 'Manish Mangal' },
-  { day: 'SAT', time: '13:30', subject: 'Science', teacher: 'Shubham Mangal' }
-];
-
-const getCellData = (day: string, time: string) => {
-  return SCHEDULE_DATA.find(d => d.day === day && d.time === time);
-};
-
-const getSubjectColors = (subject: string) => {
-  const norm = subject.toLowerCase().trim();
+const getSubjectColors = (subject?: string) => {
+  const norm = typeof subject === 'string' ? subject.toLowerCase().trim() : '';
   if (norm.includes('science')) return { bg: '#EEF2FF', text: '#4338CA', accent: '#6366F1' };
   if (norm.includes('maths')) return { bg: '#FFF1F2', text: '#BE123C', accent: '#F43F5E' };
   if (norm.includes('english')) return { bg: '#F0FDF4', text: '#15803D', accent: '#22C55E' };
@@ -74,42 +32,125 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [schedule, setSchedule] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const currentDayKey = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][new Date().getDay()];
+
+  const normalizeApiData = (data: any) => {
+    let result: any[] = [];
+    if (Array.isArray(data)) result = data;
+    else if (data?.schedule) result = data.schedule;
+    else if (data?.schedule?.slots) result = data.schedule.slots;
+    else if (data?.items) result = data.items;
+    else if (data?.students) result = data.students;
+    else if (data?.classes) result = data.classes;
+    else if (data?.submissions) result = data.submissions;
+    else if (data?.timetable) result = data.timetable;
+    else result = [];
+
+    return result.map((item: any) => {
+      const startTime =
+        item.startTime || item.time || item.period?.start?.slice?.(0, 5) || '';
+      const day = item.day ? item.day.toString().toUpperCase() : currentDayKey;
+      return {
+        ...item,
+        day,
+        startTime,
+      };
+    });
+  };
+
+  const fetchTimetable = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+      const profileData = profileRes.normalized?.data;
+      const studentId = profileData?.id;
+
+      if (!studentId) {
+        throw new Error('Student ID not found');
+      }
+
+      const res = await apiClient.get(ENDPOINTS.STUDENT.SCHEDULE(studentId));
+      const scheduleData = res.normalized?.data;
+      setSchedule(normalizeApiData(scheduleData));
+    } catch (err: any) {
+      console.error('Failed to fetch timetable:', err);
+      setError('Failed to load timetable. Please try again.');
+      setSchedule([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchTimetable = async () => {
-      try {
-        setIsLoading(true);
-        // 1. Get profile for student ID
-        const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
-        const studentId = profileRes.data.id;
-
-        // 2. Get schedule
-        const res = await apiClient.get(ENDPOINTS.STUDENT.SCHEDULE(studentId));
-        setSchedule(res.data.schedule || []);
-      } catch (error) {
-        console.error('Failed to fetch timetable:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchTimetable();
   }, []);
 
   const getCellData = (day: string, time: string) => {
     const dayMap: { [key: string]: string } = {
-      'MON': 'monday', 'TUE': 'tuesday', 'WED': 'wednesday', 
+      'MON': 'monday', 'TUE': 'tuesday', 'WED': 'wednesday',
       'THU': 'thursday', 'FRI': 'friday', 'SAT': 'saturday'
     };
-    return schedule.find(s => 
-      s.day.toLowerCase() === dayMap[day] && 
-      (s.startTime.startsWith(time) || s.startTime.substring(0, 5) === time)
-    );
+
+    const normalizeTime = (value: string) => {
+      const normalized = value.trim().slice(0, 5);
+      return normalized.length === 4 && normalized[1] === ':' ? `0${normalized}` : normalized;
+    };
+
+    const targetTime = normalizeTime(time);
+
+    return schedule.find(s => {
+      const itemDay = typeof s.day === 'string' ? s.day.trim().toLowerCase() : '';
+      const itemStart = typeof s.startTime === 'string' ? normalizeTime(s.startTime) : '';
+      return (
+        itemDay === dayMap[day] &&
+        itemStart === targetTime
+      );
+    });
   };
 
   if (isLoading && schedule.length === 0) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }]}>
+        <Ionicons name="alert-circle" size={64} color="#EF4444" style={{ marginBottom: 16 }} />
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', textAlign: 'center' }}>Unable to Load Timetable</Text>
+        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>{error}</Text>
+        <TouchableOpacity
+          style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
+          onPress={() => {
+            setError(null);
+            fetchTimetable();
+          }}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (!isLoading && schedule.length === 0) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }]}>
+        <Ionicons name="calendar-outline" size={64} color="#4F46E5" style={{ marginBottom: 16 }} />
+        <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', textAlign: 'center' }}>No Data Available</Text>
+        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>Your timetable is empty or not available for today.</Text>
+        <TouchableOpacity
+          style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
+          onPress={fetchTimetable}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Reload</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -144,7 +185,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
             activeOpacity={0.8}
             onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
           >
-            <View style={[styles.avatar, { marginLeft: 12 }]}><Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text></View>
+            <View style={[styles.avatar, { marginLeft: 12 }]}> <Text style={styles.avatarText}>{String(authState.user?.name ?? 'S').charAt(0)}</Text> </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -175,7 +216,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
                 {/* Header Row (Days) */}
                 <View style={styles.daysHeaderRow}>
                   {DAYS.map(day => {
-                    const isToday = day === ['SUN','MON','TUE','WED','THU','FRI','SAT'][new Date().getDay()];
+                    const isToday = day === ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][new Date().getDay()];
                     return (
                       <View key={day} style={styles.dayHeaderCell}>
                         <View style={[styles.dayBadge, isToday && styles.dayBadgeActive]}>
@@ -207,17 +248,20 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
 
                       {DAYS.map(day => {
                         const data = getCellData(day, time);
+                        const subjectLabel = typeof data?.subject === 'string' ? data.subject : 'Subject';
+                        const teacherLabel = typeof data?.teacher === 'string' ? data.teacher : '-';
+                        const colors = getSubjectColors(subjectLabel);
 
                         return (
                           <View key={day} style={styles.cellOuter}>
                             {data ? (
-                              <View style={[styles.card, { backgroundColor: getSubjectColors(data.subject).bg }]}>
-                                <View style={[styles.cardAccentLine, { backgroundColor: getSubjectColors(data.subject).accent }]} />
-                                <Text style={[styles.subjectText, { color: getSubjectColors(data.subject).text }]} numberOfLines={1}>{data.subject}</Text>
+                              <View style={[styles.card, { backgroundColor: colors.bg }]}>
+                                <View style={[styles.cardAccentLine, { backgroundColor: colors.accent }]} />
+                                <Text style={[styles.subjectText, { color: colors.text }]} numberOfLines={1}>{subjectLabel}</Text>
                                 <View style={styles.teacherRow}>
-                                  <Ionicons name="person" size={10} color={getSubjectColors(data.subject).accent} style={{ marginRight: 4, opacity: 0.6 }} />
-                                  <Text style={[styles.teacherText, { color: getSubjectColors(data.subject).text, opacity: 0.8 }]} numberOfLines={1}>
-                                    {data.teacher}
+                                  <Ionicons name="person" size={10} color={colors.accent} style={{ marginRight: 4, opacity: 0.6 }} />
+                                  <Text style={[styles.teacherText, { color: colors.text, opacity: 0.8 }]} numberOfLines={1}>
+                                    {teacherLabel}
                                   </Text>
                                 </View>
                               </View>

@@ -21,47 +21,6 @@ import { ENDPOINTS } from '../../constants/api';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherQuiz'>;
 
-const MOCK_QUIZZES = [
-  {
-    id: 1,
-    subject: 'Mathematics',
-    status: 'Completed',
-    title: 'Mid-Term Examination',
-    date: 'Oct 25, 2023',
-    duration: '90 Minutes',
-    class: 'Class 10-A',
-    questions: 30,
-    maxMarks: 60,
-    participants: '30/30',
-    avgScore: '87.3%',
-  },
-  {
-    id: 2,
-    subject: 'Mathematics',
-    status: 'Ongoing',
-    title: 'Mid-Term Examination',
-    date: 'Oct 25, 2023',
-    duration: '90 Minutes',
-    class: 'Class 10-A',
-    questions: 30,
-    maxMarks: 60,
-    participants: '30/30',
-    avgScore: '87.3%',
-  },
-  {
-    id: 3,
-    subject: 'Mathematics',
-    status: 'Upcoming',
-    title: 'Mid-Term Examination',
-    date: 'Oct 25, 2023',
-    duration: '90 Minutes',
-    class: 'Class 10-A',
-    questions: 30,
-    maxMarks: 60,
-    participants: '30/30',
-    avgScore: '87.3%',
-  },
-];
 
 const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
   const { authState } = useAuth();

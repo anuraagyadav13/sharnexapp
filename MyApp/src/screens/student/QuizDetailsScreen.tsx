@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   StatusBar,
   Platform,
+  ActivityIndicator
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -15,11 +16,14 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Svg, { Circle, G } from 'react-native-svg';
 import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type QuizDetailsNavigationProp = NativeStackNavigationProp<RootStackParamList, 'QuizDetails'>;
 
 interface Props {
   navigation: QuizDetailsNavigationProp;
+  route: any; // Add route for params
 }
 
 const ScoreRow = ({ label, value, hideBorder = false, valueColor = '#111827' }: any) => (
@@ -64,9 +68,10 @@ const LegendItem = ({ color, label }: any) => (
 
 const QuestionCard = ({ number, question, status, options }: any) => {
   const isCorrect = status === 'correct';
-  const cardBorderColor = isCorrect ? '#10B981' : '#EF4444';
-  const pillBg = isCorrect ? '#DCFCE7' : '#FEE2E2'; // light green / light red
-  const pillColor = isCorrect ? '#10B981' : '#EF4444';
+  const isSkipped = status === 'skipped';
+  const cardBorderColor = isCorrect ? '#10B981' : (isSkipped ? '#9CA3AF' : '#EF4444');
+  const pillBg = isCorrect ? '#DCFCE7' : (isSkipped ? '#F3F4F6' : '#FEE2E2'); 
+  const pillColor = isCorrect ? '#10B981' : (isSkipped ? '#6B7280' : '#EF4444');
 
   return (
     <View style={styles.questionCard}>
@@ -79,7 +84,7 @@ const QuestionCard = ({ number, question, status, options }: any) => {
         </Text>
         <View style={[styles.statusPill, { backgroundColor: pillBg }]}>
           <Text style={[styles.statusPillText, { color: pillColor }]}>
-            {isCorrect ? 'Correct' : 'Incorrect'}
+            {isCorrect ? 'Correct' : (isSkipped ? 'Skipped' : 'Incorrect')}
           </Text>
         </View>
       </View>
@@ -118,31 +123,101 @@ const QuestionCard = ({ number, question, status, options }: any) => {
   );
 };
 
-const QuizDetailsScreen: React.FC<Props> = ({ navigation }) => {
+const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   const { authState } = useAuth();
-  const [activeTab, setActiveTab] = useState('topic'); 
+  const [activeTab, setActiveTab] = useState('topic');
+  const [quizData, setQuizData] = useState<any>(null);
+  const [analysisData, setAnalysisData] = useState<any>(null);
+  const [selectedFilter, setSelectedFilter] = useState('all');
+  const [topicQuestionIndex, setTopicQuestionIndex] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchQuizDetails = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const quizId = route?.params?.quizId;
+        if (!quizId) {
+          setError('Quiz ID not found');
+          return;
+        }
+
+        const res = await apiClient.get(ENDPOINTS.STUDENT.QUIZ_DETAILS(quizId));
+        const responseData = res.normalized?.data ?? null;
+        setQuizData(responseData);
+      } catch (err: any) {
+        console.error('Failed to fetch quiz details:', err);
+        setError('Failed to load quiz details. Please try again.');
+        setQuizData(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchQuizDetails();
+  }, [route?.params?.quizId]); 
+
+  useEffect(() => {
+    const fetchQuizAnalysis = async () => {
+      if (activeTab !== 'topic' || !!analysisData) return;
+      
+      try {
+        setIsAnalysisLoading(true);
+        const quizId = route?.params?.quizId;
+        if (!quizId) return;
+
+        const res = await apiClient.get(ENDPOINTS.STUDENT.QUIZ_ANALYSIS(quizId));
+        const data = res.normalized?.data;
+        if (data) {
+          setAnalysisData(data);
+        }
+      } catch (err: any) {
+        console.error('Failed to fetch quiz analysis:', err);
+      } finally {
+        setIsAnalysisLoading(false);
+      }
+    };
+     fetchQuizAnalysis();
+  }, [activeTab, route?.params?.quizId, analysisData]);
+
+  const handleNextTopicQuestion = (total: number) => {
+    if (topicQuestionIndex < total - 1) {
+      setTopicQuestionIndex(prev => prev + 1);
+    }
+  };
+
+  const handlePrevTopicQuestion = () => {
+    if (topicQuestionIndex > 0) {
+      setTopicQuestionIndex(prev => prev - 1);
+    }
+  };
+
+  useEffect(() => {
+    setTopicQuestionIndex(0);
+  }, [selectedFilter]);
 
   const renderPerformanceTab = () => (
     <Animated.View entering={FadeIn.duration(300)} style={styles.detailsGlobalBody}>
        <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Score Breakdown</Text>
           <View style={styles.tableWrapper}>
-             <ScoreRow label="Your Score" value="85" />
-             <ScoreRow label="Class Average" value="78" />
-             <ScoreRow label="High Score" value="96" />
-             <ScoreRow label="Your Rank" value="12/85" />
-             <ScoreRow label="Percentage" value="85 %" hideBorder={true} />
+             <ScoreRow label="Your Score" value={`${quizData?.score || 0}/${quizData?.totalMarks || 100}`} />
+             <ScoreRow label="Class Average" value={`${quizData?.classAverage || 0}%`} />
+             <ScoreRow label="High Score" value={`${quizData?.highScore || 0}%`} />
+             <ScoreRow label="Your Rank" value={`${quizData?.rank || 'N/A'}/${quizData?.totalStudents || 'N/A'}`} />
+             <ScoreRow label="Percentage" value={`${quizData?.percentage || 0}%`} hideBorder={true} />
           </View>
        </View>
 
        <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Time Management</Text>
           <View style={styles.tableWrapper}>
-             <ScoreRow label="Your Score" value="85" />
-             <ScoreRow label="Class Average" value="78" />
-             <ScoreRow label="High Score" value="96" />
-             <ScoreRow label="Your Rank" value="12/85" />
-             <ScoreRow label="Percentage" value="85 %" hideBorder={true} />
+             <ScoreRow label="Time Taken" value={quizData?.timeTaken || 'N/A'} />
+             <ScoreRow label="Average Time" value={quizData?.averageTime || 'N/A'} />
+             <ScoreRow label="Time Efficiency" value={`${quizData?.timeEfficiency || 0}%`} />
+             <ScoreRow label="Questions/Minute" value={quizData?.questionsPerMinute || 'N/A'} hideBorder={true} />
           </View>
        </View>
 
@@ -159,32 +234,6 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation }) => {
   );
 
   const renderQuestionTab = () => {
-     // Pie chart Math for SVG
-     const RADIUS = 40;
-     const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-     const chartData = [
-       { color: '#3B82F6', percent: 0.30, label: 'Trees' }, 
-       { color: '#A855F7', percent: 0.15, label: 'Graphs' }, 
-       { color: '#10B981', percent: 0.20, label: 'Arrays' }, 
-       { color: '#EC4899', percent: 0.25, label: 'Linked Lists' }, 
-       { color: '#F59E0B', percent: 0.10, label: 'Stacks & Queues' }, 
-     ];
-
-     let currentDashOffset = 0;
-     const pieSegments = chartData.map((d, i) => {
-       const dash = d.percent * CIRCUMFERENCE;
-       const offset = currentDashOffset;
-       currentDashOffset -= dash;
-       return (
-         <Circle 
-           key={i} 
-           cx="60" cy="60" r={RADIUS} 
-           stroke={d.color} strokeWidth="24" fill="transparent" 
-           strokeDasharray={`${dash} ${CIRCUMFERENCE}`} 
-           strokeDashoffset={offset} 
-         />
-       );
-     });
 
      return (
        <Animated.View entering={FadeIn.duration(300)} style={styles.detailsGlobalBody}>
@@ -194,11 +243,17 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation }) => {
                 <Text style={styles.sectionTitleNoMargin}>Topic Performance</Text>
               </View>
               <View style={styles.topicList}>
-                 <TopicRow title="Arrays" percent={79} color="#10B981" />
-                 <TopicRow title="Arrays" percent={79} color="#EC4899" />
-                 <TopicRow title="Arrays" percent={79} color="#10B981" />
-                 <TopicRow title="Arrays" percent={79} color="#EC4899" />
-                 <TopicRow title="Arrays" percent={79} color="#10B981" />
+                 {(quizData?.topics || []).map((topic: any, index: number) => (
+                   <TopicRow 
+                     key={index}
+                     title={topic.name || 'Topic'} 
+                     percent={topic.percentage || 0} 
+                     color={topic.color || '#3B82F6'} 
+                   />
+                 ))}
+                 {(quizData?.topics || []).length === 0 && (
+                   <Text style={{ textAlign: 'center', color: '#6B7280', padding: 20 }}>No topic data available</Text>
+                 )}
               </View>
            </View>
 
@@ -260,16 +315,33 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation }) => {
                  <View style={styles.chartContainer}>
                     <Svg height="120" width="120" viewBox="0 0 120 120">
                       <G transform="rotate(-90 60 60)">
-                        {pieSegments}
+                        {(quizData?.topicDistribution || []).map((segment: any, index: number) => {
+                          const RADIUS = 40;
+                          const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+                          const percent = segment.percentage / 100;
+                          const dash = percent * CIRCUMFERENCE;
+                          const offset = -(index > 0 ? (quizData.topicDistribution.slice(0, index).reduce((sum: number, s: any) => sum + (s.percentage / 100), 0) * CIRCUMFERENCE) : 0);
+                          
+                          return (
+                            <Circle 
+                              key={index} 
+                              cx="60" cy="60" r={RADIUS} 
+                              stroke={segment.color || '#3B82F6'} strokeWidth="24" fill="transparent" 
+                              strokeDasharray={`${dash} ${CIRCUMFERENCE}`} 
+                              strokeDashoffset={offset} 
+                            />
+                          );
+                        })}
                       </G>
                     </Svg>
                  </View>
                  <View style={styles.chartLegend}>
-                    <LegendItem color="#10B981" label="Arrays" />
-                    <LegendItem color="#EC4899" label="Linked Lists" />
-                    <LegendItem color="#F59E0B" label="Stacks & Queues" />
-                    <LegendItem color="#3B82F6" label="Trees" />
-                    <LegendItem color="#A855F7" label="Graphs" />
+                    {(quizData?.topicDistribution || []).map((segment: any, index: number) => (
+                      <LegendItem key={index} color={segment.color || '#3B82F6'} label={segment.name || 'Topic'} />
+                    ))}
+                    {(quizData?.topicDistribution || []).length === 0 && (
+                      <Text style={{ textAlign: 'center', color: '#6B7280', padding: 20 }}>No distribution data</Text>
+                    )}
                  </View>
               </View>
            </View>
@@ -277,52 +349,153 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation }) => {
      );
   };
 
-  const renderTopicTab = () => (
+  const renderTopicTab = () => {
+    const questionsToDisplay = analysisData && analysisData[selectedFilter] ? analysisData[selectedFilter] : [];
+    const currentQuestion = questionsToDisplay[topicQuestionIndex];
+    const totalQuestions = questionsToDisplay.length;
+    
+    return (
     <Animated.View entering={FadeIn.duration(300)} style={styles.detailsGlobalBody}>
       
-      {/* Filters Row (No ScrollView, strictly fits width) */}
+      {/* Filters Row */}
       <View style={styles.filterPillsRow}>
-        <View style={styles.activeFilterPill}>
-          <Text style={styles.activeFilterPillText}>All Questions</Text>
-        </View>
-        <View style={styles.inactiveFilterPill}>
-          <Text style={styles.inactiveFilterPillText}>Correct (17)</Text>
-        </View>
-        <View style={styles.inactiveFilterPill}>
-          <Text style={styles.inactiveFilterPillText}>Incorrect (3)</Text>
-        </View>
-        <View style={styles.inactiveFilterPill}>
-          <Text style={styles.inactiveFilterPillText}>Skipped</Text>
-        </View>
+        <ScaleButton 
+          activeOpacity={0.8} 
+          style={selectedFilter === 'all' ? styles.activeFilterPill : styles.inactiveFilterPill}
+          onPress={() => setSelectedFilter('all')}
+        >
+          <Text style={selectedFilter === 'all' ? styles.activeFilterPillText : styles.inactiveFilterPillText}>
+            All ({analysisData?.all?.length || 0})
+          </Text>
+        </ScaleButton>
+        
+        <ScaleButton 
+          activeOpacity={0.8} 
+          style={selectedFilter === 'correct' ? styles.activeFilterPill : styles.inactiveFilterPill}
+          onPress={() => setSelectedFilter('correct')}
+        >
+          <Text style={selectedFilter === 'correct' ? styles.activeFilterPillText : styles.inactiveFilterPillText}>
+            Correct ({analysisData?.correct?.length || 0})
+          </Text>
+        </ScaleButton>
+
+        <ScaleButton 
+          activeOpacity={0.8} 
+          style={selectedFilter === 'incorrect' ? styles.activeFilterPill : styles.inactiveFilterPill}
+          onPress={() => setSelectedFilter('incorrect')}
+        >
+          <Text style={selectedFilter === 'incorrect' ? styles.activeFilterPillText : styles.inactiveFilterPillText}>
+            Incorrect ({analysisData?.incorrect?.length || 0})
+          </Text>
+        </ScaleButton>
+
+        <ScaleButton 
+          activeOpacity={0.8} 
+          style={selectedFilter === 'skipped' ? styles.activeFilterPill : styles.inactiveFilterPill}
+          onPress={() => setSelectedFilter('skipped')}
+        >
+          <Text style={selectedFilter === 'skipped' ? styles.activeFilterPillText : styles.inactiveFilterPillText}>
+            Skipped ({analysisData?.skipped?.length || 0})
+          </Text>
+        </ScaleButton>
       </View>
 
-      {/* Questions Stack */}
-      <QuestionCard 
-        number={1} 
-        question="What is  the  Complexity of accessing an element in an array by index?" 
-        status="correct"
-        options={[
-          { letter: 'A', text: 'O(n)', state: 'normal' },
-          { letter: 'B', text: 'O(n)', state: 'correct' },
-          { letter: 'C', text: 'O(n)', state: 'normal' },
-          { letter: 'D', text: 'O(n)', state: 'normal' },
-        ]} 
-      />
+      {/* Question Viewing Area */}
+      {isAnalysisLoading ? (
+        <ActivityIndicator size="small" color="#4F46E5" style={{ marginTop: 20 }} />
+      ) : (
+        <>
+          {currentQuestion ? (
+            <>
+              <QuestionCard 
+                key={currentQuestion.id || topicQuestionIndex}
+                number={topicQuestionIndex + 1} 
+                question={currentQuestion.text || 'Question text not available'} 
+                status={currentQuestion.status || 'unknown'}
+                options={currentQuestion.options || []} 
+              />
 
-      <QuestionCard 
-        number={1} 
-        question="What is  the  Complexity of accessing an element in an array by index?" 
-        status="incorrect"
-        options={[
-          { letter: 'A', text: 'O(n)', state: 'incorrect' },
-          { letter: 'B', text: 'O(n)', state: 'correct' },
-          { letter: 'C', text: 'O(n)', state: 'normal' },
-          { letter: 'D', text: 'O(n)', state: 'normal' },
-        ]} 
-      />
+              {/* Navigation Buttons Row */}
+              <View style={styles.analysisNavRow}>
+                <ScaleButton
+                  style={[styles.analysisNavBtn, topicQuestionIndex === 0 && styles.disabledBtn]}
+                  onPress={handlePrevTopicQuestion}
+                  disabled={topicQuestionIndex === 0}
+                >
+                  <Ionicons name="arrow-back" size={16} color={topicQuestionIndex === 0 ? "#9CA3AF" : "#4F46E5"} style={{marginRight: 6}} />
+                  <Text style={[styles.analysisNavBtnText, topicQuestionIndex === 0 && styles.disabledBtnText]}>Previous</Text>
+                </ScaleButton>
+
+                <View style={styles.analysisPageIndicator}>
+                   <Text style={styles.analysisPageText}>{topicQuestionIndex + 1} / {totalQuestions}</Text>
+                </View>
+
+                <ScaleButton
+                  style={[styles.analysisNavBtn, (topicQuestionIndex === totalQuestions - 1) && styles.disabledBtn]}
+                  onPress={() => handleNextTopicQuestion(totalQuestions)}
+                  disabled={topicQuestionIndex === totalQuestions - 1}
+                >
+                  <Text style={[styles.analysisNavBtnText, (topicQuestionIndex === totalQuestions - 1) && styles.disabledBtnText]}>Next</Text>
+                  <Ionicons name="arrow-forward" size={16} color={(topicQuestionIndex === totalQuestions - 1) ? "#9CA3AF" : "#4F46E5"} style={{marginLeft: 6}} />
+                </ScaleButton>
+              </View>
+            </>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="help-circle-outline" size={60} color="#E5E7EB" />
+              <Text style={styles.emptyText}>No questions found in this category</Text>
+            </View>
+          )}
+        </>
+      )}
 
     </Animated.View>
-  );
+  )};
+
+  if (isLoading && !quizData) {
+    return (
+      <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
+  if (error && !quizData) {
+    return (
+      <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }]}>
+        <Ionicons name="alert-circle" size={64} color="#EF4444" style={{ marginBottom: 16 }} />
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', textAlign: 'center' }}>Unable to Load Quiz Details</Text>
+        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>{error}</Text>
+        <ScaleButton
+          style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
+          onPress={() => {
+            setError(null);
+            setIsLoading(true);
+            const fetchQuizDetails = async () => {
+              try {
+                const quizId = route?.params?.quizId;
+                if (!quizId) {
+                  setError('Quiz ID not found');
+                  return;
+                }
+                const res = await apiClient.get(ENDPOINTS.STUDENT.QUIZ_DETAILS(quizId));
+                const responseData = res.normalized?.data ?? null;
+                setQuizData(responseData);
+              } catch (err: any) {
+                setError('Failed to load quiz details. Please try again.');
+              } finally {
+                setIsLoading(false);
+              }
+            };
+            fetchQuizDetails();
+          }}
+          scaleTo={0.95}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
+        </ScaleButton>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.mainContainer}>
@@ -330,8 +503,8 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation }) => {
 
       {/* Global Header */}
       <View style={styles.globalHeader}>
-         <ScaleButton style={styles.menuHandle} onPress={() => {}}>
-           <View style={{width: 28}} /> 
+         <ScaleButton style={styles.menuHandle} onPress={() => navigation.goBack()}>
+           <Ionicons name="arrow-back" size={22} color="#1F2937" />
          </ScaleButton>
          <Text style={styles.headerTitle} numberOfLines={1}>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
          <View style={styles.headerRight}>
@@ -368,28 +541,28 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation }) => {
           <Animated.View entering={FadeInUp.delay(150).springify()} style={styles.infoCard}>
              <View style={styles.infoRow}>
                 <View style={styles.infoLeft}>
-                   <Text style={styles.infoTitle}>Data Structure Quiz</Text>
+                   <Text style={styles.infoTitle}>{quizData?.title || 'Quiz Result'}</Text>
                    
                    <View style={styles.infoMetaRow}>
                      <Ionicons name="calendar-outline" size={12} color="#9CA3AF" style={{marginRight: 6}} />
-                     <Text style={styles.infoMetaText}>Completed: Dec 16, 2025 | 2:30 PM</Text>
+                     <Text style={styles.infoMetaText}>Completed: {quizData?.completedAt ? new Date(quizData.completedAt).toLocaleDateString() : 'N/A'}</Text>
                    </View>
                    <View style={styles.infoMetaRow}>
                      <Ionicons name="time-outline" size={12} color="#9CA3AF" style={{marginRight: 6}} />
-                     <Text style={styles.infoMetaText}>Time Taken: 32 Minutes 45 Seconds</Text>
+                     <Text style={styles.infoMetaText}>Time Taken: {quizData?.timeTaken || 'N/A'}</Text>
                    </View>
                    <View style={styles.infoMetaRow}>
                      <Ionicons name="help-circle-outline" size={12} color="#9CA3AF" style={{marginRight: 6}} />
-                     <Text style={styles.infoMetaText}>20 Questions | 30 Minutes Allowed</Text>
+                     <Text style={styles.infoMetaText}>{quizData?.totalQuestions || 0} Questions | {quizData?.duration || 0} Minutes Allowed</Text>
                    </View>
                 </View>
 
                 <View style={styles.infoRight}>
                    <View style={styles.scoreRing}>
-                     <Text style={styles.ringValue}>84 %</Text>
+                     <Text style={styles.ringValue}>{quizData?.percentage || 0}%</Text>
                      <Text style={styles.ringLabel}>Score</Text>
                    </View>
-                   <Text style={styles.correctAnswersText}>17/20 Correct Answers</Text>
+                   <Text style={styles.correctAnswersText}>{quizData?.correctAnswers || 0}/{quizData?.totalQuestions || 0} Correct Answers</Text>
                 </View>
              </View>
           </Animated.View>
@@ -678,7 +851,56 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#111827',
   },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  // Analysis Navigation Styles
+  analysisNavRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 12,
+  },
+  analysisNavBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  analysisNavBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4F46E5',
+  },
+  analysisPageIndicator: {
+    paddingHorizontal: 12,
+  },
+  analysisPageText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
 
+  // Disabled States
+  disabledBtn: {
+    opacity: 0.5,
+  },
+  disabledBtnText: {
+    color: '#9CA3AF',
+  },
 });
 
 export default QuizDetailsScreen;

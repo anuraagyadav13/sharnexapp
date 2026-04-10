@@ -30,20 +30,28 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [attendanceData, setAttendanceData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   React.useEffect(() => {
     const fetchAttendance = async () => {
       try {
         setIsLoading(true);
+        setError(null);
         // 1. Get profile to find studentId
         const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
-        const studentId = profileRes.data.id;
+        const studentId = profileRes.data?.id;
+
+        if (!studentId) {
+          throw new Error('Student ID not found');
+        }
 
         // 2. Fetch specific student attendance
         const res = await apiClient.get(ENDPOINTS.STUDENT.ATTENDANCE(studentId));
-        setAttendanceData(res.data);
-      } catch (error) {
-        console.error('Failed to fetch attendance:', error);
+        setAttendanceData(res.data?.data || res.data);
+      } catch (err: any) {
+        console.error('Failed to fetch attendance:', err);
+        setError('Failed to load attendance data. Please try again.');
+        setAttendanceData(null);
       } finally {
         setIsLoading(false);
       }
@@ -75,6 +83,40 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
     return (
       <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#3B82F6" />
+      </View>
+    );
+  }
+
+  if (error && !attendanceData) {
+    return (
+      <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }]}>
+        <Ionicons name="alert-circle" size={64} color="#EF4444" style={{ marginBottom: 16 }} />
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', textAlign: 'center' }}>Unable to Load Attendance</Text>
+        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>{error}</Text>
+        <ScaleButton
+          style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#3B82F6', borderRadius: 8 }}
+          onPress={() => {
+            setError(null);
+            setIsLoading(true);
+            const fetchAttendance = async () => {
+              try {
+                const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+                const studentId = profileRes.data?.id;
+                if (!studentId) throw new Error('Student ID not found');
+                const res = await apiClient.get(ENDPOINTS.STUDENT.ATTENDANCE(studentId));
+                setAttendanceData(res.data?.data || res.data);
+              } catch (err: any) {
+                setError('Failed to load attendance data. Please try again.');
+              } finally {
+                setIsLoading(false);
+              }
+            };
+            fetchAttendance();
+          }}
+          scaleTo={0.95}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
+        </ScaleButton>
       </View>
     );
   }

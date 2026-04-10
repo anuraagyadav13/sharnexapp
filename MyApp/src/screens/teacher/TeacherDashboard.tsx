@@ -119,27 +119,50 @@ const ScheduleCard = React.memo(({ time, title, classSection, room, color, statu
   );
 });
 
+const LiveSessionBanner = ({ subject, classSection, time, color }: any) => (
+  <Animated.View entering={FadeInUp.springify()} style={[styles.liveBanner, { borderLeftColor: color }]}>
+    <View style={styles.liveBannerContent}>
+      <View style={styles.liveIndicatorRow}>
+        <View style={styles.liveDot} />
+        <Text style={styles.liveText}>CLASS IN PROGRESS</Text>
+      </View>
+      <Text style={styles.liveSubject}>{subject}</Text>
+      <Text style={styles.liveClassName}>{classSection} • {time}</Text>
+    </View>
+    <TouchableOpacity style={[styles.liveJoinBtn, { backgroundColor: color }]}>
+      <Text style={styles.liveJoinBtnText}>Start Session</Text>
+    </TouchableOpacity>
+  </Animated.View>
+);
+
 const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
         setIsLoading(true);
+        setError(null);
         // Use User ID from authState directly
         const teacherId = authState.user?.id;
-        if (!teacherId) return;
+        if (!teacherId) {
+          setError('Teacher ID not found');
+          return;
+        }
 
-        // 2. Fetch dashboard summary
+        // Fetch dashboard summary and schedule
         // @ts-ignore
-        const res = await apiClient.get(ENDPOINTS.TEACHER.DASHBOARD(teacherId));
-        setDashboardData(res.data.summary);
+        const summaryRes = await apiClient.get(ENDPOINTS.TEACHER.DASHBOARD(teacherId));
+        const summaryData = summaryRes.data.data || summaryRes.data;
+        
+        setDashboardData(summaryData);
       } catch (error: any) {
         console.error('Failed to fetch teacher dashboard:', error);
-        // Auth errors handled silently to allow development with mock data
+        setError('Failed to load dashboard. Please try again.');
       } finally {
         setIsLoading(false);
       }
@@ -197,7 +220,28 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
 
         {/* Overview Stats - All in one row, student style */}
         <View style={styles.section}>
-          <View style={styles.statsRowHorizontalAligned}>
+          {/* Live Session Hot-Link */}
+          {(() => {
+            const ongoingSession = dashboardData?.todaysSchedule?.find((s: any) => s.status === 'Ongoing');
+            if (ongoingSession) {
+              return (
+                <LiveSessionBanner 
+                  subject={ongoingSession.subject_name || ongoingSession.type}
+                  classSection={ongoingSession.class_name}
+                  time={`${ongoingSession.start_time} - ${ongoingSession.end_time}`}
+                  color="#D946EF"
+                />
+              );
+            }
+            return null;
+          })()}
+
+          {error ? (
+            <View style={{ padding: 16, backgroundColor: '#FEE2E2', borderRadius: 12, marginHorizontal: 16 }}>
+              <Text style={{ color: '#DC2626', fontWeight: '500' }}>{error}</Text>
+            </View>
+          ) : (
+            <View style={styles.statsRowHorizontalAligned}>
             <StatCard
               title="Today's Classes"
               value={dashboardData?.todaysSchedule?.length || 0}
@@ -226,6 +270,7 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
               iconColor="#10B981"
             />
           </View>
+            )}
         </View>
 
         {/* Quick Actions (Similar to StudentDashboard) */}
@@ -445,6 +490,35 @@ const styles = StyleSheet.create({
     marginTop: 20,
     fontWeight: '500',
   },
+  liveBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    shadowColor: '#D946EF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#FDF4FF',
+  },
+  liveBannerContent: { flex: 1 },
+  liveIndicatorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#D946EF' },
+  liveText: { fontSize: 10, fontWeight: '800', color: '#D946EF', letterSpacing: 0.5 },
+  liveSubject: { fontSize: 16, fontWeight: '700', color: '#111827' },
+  liveClassName: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  liveJoinBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginLeft: 12,
+  },
+  liveJoinBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
 });
 
 export default TeacherDashboard;

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Platform,
   StatusBar,
   TextInput,
+  ActivityIndicator
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { FadeInUp } from 'react-native-reanimated';
@@ -16,6 +17,8 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { useAuth } from '../../store/AuthContext';
 import { RootStackParamList } from '../../types/navigation';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type PrincipalRSMNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PrincipalRSM'>;
 
@@ -25,20 +28,7 @@ interface Props {
 
 type ExamStatus = 'ACTIVE' | 'DRAFT' | 'ARCHIVED';
 
-interface ExamItem {
-  id: string;
-  name: string;
-  type: string;
-  year: string;
-  scope: string;
-  status: ExamStatus;
-}
 
-const EXAMS: ExamItem[] = [
-  { id: '1', name: 'Unit Test', type: 'UNIT_TEST', year: '2026', scope: '1 Classes', status: 'ACTIVE' },
-  { id: '2', name: 'Midterm', type: 'MIDTERM', year: '2026', scope: '1 Classes', status: 'ACTIVE' },
-  { id: '3', name: 'Final Exam', type: 'FINAL', year: '2026', scope: '1 Classes', status: 'ACTIVE' },
-];
 
 const getStatusColors = (status: ExamStatus) => {
   switch (status) {
@@ -68,21 +58,43 @@ const getStatusColors = (status: ExamStatus) => {
 const PrincipalRSMscreen: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState('');  const [reports, setReports] = useState<any[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(true);
+  const [reportsError, setReportsError] = useState<string | null>(null);
+  const [materials, setMaterials] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setReportsLoading(true);
+        setReportsError(null);
+        const reportsRes = await apiClient.get(ENDPOINTS.PRINCIPAL.REPORTS);
+        setReports(reportsRes.data.data?.reports || []);
+        // For now, set materials as empty since endpoint may not exist
+        setMaterials([]);
+      } catch (err: any) {
+        console.error('Failed to fetch reports:', err);
+        setReportsError('Failed to load reports');
+      } finally {
+        setReportsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const filteredExams = useMemo(() => {
     const normalized = searchText.trim().toLowerCase();
 
     if (!normalized) {
-      return EXAMS;
+      return reports;
     }
 
-    return EXAMS.filter((exam) =>
-      [exam.name, exam.type, exam.year].some((value) =>
-        value.toLowerCase().includes(normalized)
+    return reports.filter((report: any) =>
+      [report.title, report.type].some((value) =>
+        value?.toLowerCase().includes(normalized)
       )
     );
-  }, [searchText]);
+  }, [searchText, reports]);
 
   return (
     <View style={styles.mainContainer}>
@@ -137,7 +149,7 @@ const PrincipalRSMscreen: React.FC<Props> = ({ navigation }) => {
           <TouchableOpacity
             style={styles.addButton}
             activeOpacity={0.85}
-            onPress={() => navigation.navigate('PrincipalCreateExamScreen')}
+            onPress={() => navigation.navigate('PrincipalCreateExam')}
           >
             <Ionicons name="add" size={18} color="#FFFFFF" />
             <Text style={styles.addButtonText}>Add New Exam</Text>
@@ -162,81 +174,96 @@ const PrincipalRSMscreen: React.FC<Props> = ({ navigation }) => {
             <Text style={[styles.tableHeaderText, styles.yearCol]}>YEAR</Text>
           </View>
 
-          {filteredExams.map((exam, index) => {
-            const colors = getStatusColors(exam.status);
-
-            return (
-              <View
-                key={exam.id}
-                style={[
-                  styles.examRow,
-                  index !== filteredExams.length - 1 && styles.examRowBorder,
-                ]}
-              >
-                <View style={styles.examTopRow}>
-                  <View style={styles.examIdentityWrap}>
-                    <View style={styles.examIconBox}>
-                      <Ionicons name="document-text" size={18} color="#A855F7" />
-                    </View>
-                    <View style={styles.examIdentityTextWrap}>
-                      <Text style={styles.examName}>{exam.name}</Text>
-                      <Text style={styles.examTypeMobile}>{exam.type}</Text>
-                    </View>
-                  </View>
-
-                  <View style={[styles.statusPill, { backgroundColor: colors.bg }]}>
-                    <Text style={[styles.statusText, { color: colors.text }]}>{exam.status}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.examMetaRow}>
-                  <View style={styles.metaBlock}>
-                    <Text style={styles.metaLabel}>Type</Text>
-                    <Text style={styles.metaValue}>{exam.type}</Text>
-                  </View>
-                  <View style={styles.metaBlock}>
-                    <Text style={styles.metaLabel}>Academic Year</Text>
-                    <Text style={styles.metaValue}>{exam.year}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.examMetaRow}>
-                  <View style={styles.metaBlock}>
-                    <Text style={styles.metaLabel}>Scope</Text>
-                    <View style={styles.scopePill}>
-                      <Text style={styles.scopeText}>{exam.scope}</Text>
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.actionsRow}>
-                  <TouchableOpacity style={styles.actionButton} activeOpacity={0.75}>
-                    <Ionicons name="eye-outline" size={18} color="#64748B" />
-                    <Text style={styles.actionLabel}>View</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.actionButton} activeOpacity={0.75}>
-                    <Ionicons name="create-outline" size={18} color="#64748B" />
-                    <Text style={styles.actionLabel}>Edit</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.actionButton} activeOpacity={0.75}>
-                    <Ionicons name="trash-outline" size={18} color="#64748B" />
-                    <Text style={styles.actionLabel}>Delete</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            );
-          })}
-
-          {filteredExams.length === 0 && (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIconWrap}>
-                <Ionicons name="search-outline" size={28} color="#94A3B8" />
-              </View>
-              <Text style={styles.emptyTitle}>No exams found</Text>
-              <Text style={styles.emptySubtitle}>
-                Try searching with another exam name, type, or academic year.
-              </Text>
+          {reportsLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#4F46E5" />
+              <Text style={styles.loadingText}>Loading reports...</Text>
             </View>
+          ) : reportsError ? (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle-outline" size={28} color="#EF4444" />
+              <Text style={styles.errorTitle}>Failed to load reports</Text>
+              <Text style={styles.errorSubtitle}>{reportsError}</Text>
+            </View>
+          ) : (
+            <>
+              {filteredExams.map((exam, index) => {
+                const colors = getStatusColors(exam.status);
+
+                return (
+                  <View
+                    key={exam.id}
+                    style={[
+                      styles.examRow,
+                      index !== filteredExams.length - 1 && styles.examRowBorder,
+                    ]}
+                  >
+                    <View style={styles.examTopRow}>
+                      <View style={styles.examIdentityWrap}>
+                        <View style={styles.examIconBox}>
+                          <Ionicons name="document-text" size={18} color="#A855F7" />
+                        </View>
+                        <View style={styles.examIdentityTextWrap}>
+                          <Text style={styles.examName}>{exam.name}</Text>
+                          <Text style={styles.examTypeMobile}>{exam.type}</Text>
+                        </View>
+                      </View>
+
+                      <View style={[styles.statusPill, { backgroundColor: colors.bg }]}>
+                        <Text style={[styles.statusText, { color: colors.text }]}>{exam.status}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.examMetaRow}>
+                      <View style={styles.metaBlock}>
+                        <Text style={styles.metaLabel}>Type</Text>
+                        <Text style={styles.metaValue}>{exam.type}</Text>
+                      </View>
+                      <View style={styles.metaBlock}>
+                        <Text style={styles.metaLabel}>Academic Year</Text>
+                        <Text style={styles.metaValue}>{exam.year}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.examMetaRow}>
+                      <View style={styles.metaBlock}>
+                        <Text style={styles.metaLabel}>Scope</Text>
+                        <View style={styles.scopePill}>
+                          <Text style={styles.scopeText}>{exam.scope}</Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    <View style={styles.actionsRow}>
+                      <TouchableOpacity style={styles.actionButton} activeOpacity={0.75}>
+                        <Ionicons name="eye-outline" size={18} color="#64748B" />
+                        <Text style={styles.actionLabel}>View</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.actionButton} activeOpacity={0.75}>
+                        <Ionicons name="create-outline" size={18} color="#64748B" />
+                        <Text style={styles.actionLabel}>Edit</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.actionButton} activeOpacity={0.75}>
+                        <Ionicons name="trash-outline" size={18} color="#64748B" />
+                        <Text style={styles.actionLabel}>Delete</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })}
+
+              {filteredExams.length === 0 && (
+                <View style={styles.emptyState}>
+                  <View style={styles.emptyIconWrap}>
+                    <Ionicons name="search-outline" size={28} color="#94A3B8" />
+                  </View>
+                  <Text style={styles.emptyTitle}>No exams found</Text>
+                  <Text style={styles.emptySubtitle}>
+                    Try searching with another exam name, type, or academic year.
+                  </Text>
+                </View>
+              )}
+            </>
           )}
         </Animated.View>
       </ScrollView>
@@ -244,7 +271,7 @@ const PrincipalRSMscreen: React.FC<Props> = ({ navigation }) => {
       <NavigationDrawer
         isOpen={isDrawerOpen}
         onClose={() => setDrawerOpen(false)}
-        role="Principal"
+        role="principal"
       />
     </View>
   );
@@ -524,6 +551,37 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   emptySubtitle: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#64748B',
+    textAlign: 'center',
+  },
+
+  loadingContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+
+  errorContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#EF4444',
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  errorSubtitle: {
     fontSize: 13,
     lineHeight: 20,
     color: '#64748B',

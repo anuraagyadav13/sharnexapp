@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,17 @@ import {
   Platform,
   StatusBar,
   Modal,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 
 const StatCard = React.memo(({ color, value, label, subtext }: any) => (
@@ -71,13 +75,6 @@ const ClassCard = ({ item, delay }: any) => (
   </Animated.View>
 );
 
-const DUMMY_CLASSES = [
-  { id: '1', code: 'C1', className: 'Class 1', section: '---', grade: '--', academicYear: '2026', students: '--', teacher: 'ANURAG YADAV' },
-  { id: '2', code: 'C1', className: 'Class 1', section: '---', grade: '--', academicYear: '2026', students: '--', teacher: 'ANURAG YADAV' },
-  { id: '3', code: 'C1', className: 'Class 1', section: '---', grade: '--', academicYear: '2026', students: '--', teacher: 'ANURAG YADAV' },
-  { id: '4', code: 'C1', className: 'Class 1', section: '---', grade: '--', academicYear: '2026', students: '--', teacher: 'ANURAG YADAV' },
-  { id: '5', code: 'C1', className: 'Class 1', section: '---', grade: '--', academicYear: '2026', students: '--', teacher: 'ANURAG YADAV' },
-];
 
 const PrincipalClassesScreen = ({ navigation }: any) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
@@ -85,6 +82,36 @@ const PrincipalClassesScreen = ({ navigation }: any) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [classSubjects, setClassSubjects] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [classesData, setClassesData] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch classes data
+  useEffect(() => {
+    const fetchClassesData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const res = await apiClient.get(ENDPOINTS.PRINCIPAL.CLASSES);
+        const data = res.data.data || res.data;
+        setClassesData(data);
+      } catch (error: any) {
+        console.error('Failed to fetch classes data:', error);
+        setError('Failed to load classes data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchClassesData();
+  }, []);
+
+  const handleRetry = () => {
+    setError(null);
+    setIsLoading(true);
+    // Re-trigger useEffect
+    setClassesData(null);
+  };
 
   const handleAddSubjectToClass = () => {
     const newSubject = {
@@ -141,7 +168,31 @@ const PrincipalClassesScreen = ({ navigation }: any) => {
 
 
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.sectionPadding}>
+        
+        {/* Loading State */}
+        {isLoading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4F46E5" />
+            <Text style={styles.loadingText}>Loading classes data...</Text>
+          </View>
+        )}
+
+        {/* Error State */}
+        {error && !isLoading && (
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+            <Text style={styles.errorTitle}>Failed to Load Data</Text>
+            <Text style={styles.errorMessage}>{error}</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={handleRetry}>
+              <Ionicons name="refresh" size={16} color="#FFF" style={{ marginRight: 8 }} />
+              <Text style={styles.retryBtnText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Main Content */}
+        {!isLoading && !error && (
+          <View style={styles.sectionPadding}>
           {/* Title and Add Button */}
           <View style={styles.titleSection}>
             <View style={styles.titleRow}>
@@ -155,9 +206,21 @@ const PrincipalClassesScreen = ({ navigation }: any) => {
 
           {/* Stat Cards Row */}
           <View style={styles.statCardsRow}>
-            <StatCard color="#3B82F6" value="5" label="Total Classes" />
-            <StatCard color="#10B981" value="5" label="Total Classes" />
-            <StatCard color="#EF4444" value="5" label="Total Classes" />
+            <StatCard 
+              color="#3B82F6" 
+              value={classesData?.stats?.totalClasses || "5"} 
+              label="Total Classes" 
+            />
+            <StatCard 
+              color="#10B981" 
+              value={classesData?.stats?.activeClasses || "5"} 
+              label="Active Classes" 
+            />
+            <StatCard 
+              color="#EF4444" 
+              value={classesData?.stats?.totalStudents || "150"} 
+              label="Total Students" 
+            />
           </View>
 
           {/* Search Bar */}
@@ -177,18 +240,22 @@ const PrincipalClassesScreen = ({ navigation }: any) => {
 
           {/* Class Cards List */}
           <View style={styles.listContainer}>
-            {DUMMY_CLASSES.filter(c => c.className.toLowerCase().includes(searchQuery.toLowerCase())).map((item, index) => (
+            {(classesData?.classes || []).filter((c: any) => 
+              c.className?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              c.code?.toLowerCase().includes(searchQuery.toLowerCase())
+            ).map((item: any, index: number) => (
               <ClassCard key={item.id} item={item} delay={100 + index * 50} />
             ))}
           </View>
         </View>
+        )}
       </ScrollView>
 
       {/* Navigation Drawer */}
       <NavigationDrawer
         isOpen={isDrawerOpen}
         onClose={() => setDrawerOpen(false)}
-        role="Principal"
+        role="principal"
       />
 
       {/* Add Class Modal */}
@@ -272,6 +339,60 @@ const baseStyles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingBottom: 40 },
   sectionPadding: { paddingHorizontal: 16 },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6B7280',
+  },
+
+  errorContainer: {
+    marginHorizontal: 16,
+    marginTop: 20,
+    padding: 24,
+    borderRadius: 16,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    alignItems: 'center',
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#DC2626',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: '#7F1D1D',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4F46E5',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    shadowColor: '#4F46E5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  retryBtnText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 
   // Header 
   globalHeader: {

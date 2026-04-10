@@ -89,7 +89,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
       const { data, message } = response.data;
       if (data && data.tokens) {
         Alert.alert('Success', 'Account created successfully!');
-        login(data.tokens.accessToken, 'student', data.user);
+        login(data.tokens.accessToken, data.tokens.refreshToken, 'student', data.user);
         navigation.reset({ index: 0, routes: [{ name: 'StudentDashboard' as any }] });
       } else {
         throw new Error(message || 'Failed to create account');

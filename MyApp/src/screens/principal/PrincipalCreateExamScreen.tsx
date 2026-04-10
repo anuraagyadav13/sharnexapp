@@ -16,7 +16,7 @@ import { RootStackParamList } from '../../types/navigation';
 
 type PrincipalCreateExamNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
-  'PrincipalCreateExamScreen'
+  'PrincipalCreateExam'
 >;
 
 interface Props {

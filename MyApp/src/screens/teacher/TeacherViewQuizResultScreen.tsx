@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,27 +6,45 @@ import {
   StatusBar,
   ScrollView,
   TouchableOpacity,
-  Platform
+  Platform,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherViewQuizResult'>;
 
-const MOCK_STUDENTS = Array.from({ length: 10 }).map((_, i) => ({
-  id: i.toString(),
-  name: 'Sara Safari',
-  score: '98% (58/60)',
-  grade: 'A+',
-  time: '38 min',
-  status: 'Completed'
-}));
-
-const TeacherViewQuizResultScreen: React.FC<Props> = ({ navigation }) => {
+const TeacherViewQuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
   const { authState } = useAuth();
+  const { quizId } = route.params;
+  const [data, setData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchResults = async () => {
+      try {
+        setIsLoading(true);
+        const res = await apiClient.get(ENDPOINTS.TEACHER.QUIZ_RESULTS(quizId));
+        setData(res.data);
+      } catch (error) {
+        console.error('Failed to fetch quiz results:', error);
+        Alert.alert('Error', 'Failed to load results');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchResults();
+  }, [quizId]);
+
+  const results = data?.results || [];
+  const analytics = data?.analytics || { avg: 0, highest: 0, lowest: 0 };
+
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
@@ -50,8 +68,8 @@ const TeacherViewQuizResultScreen: React.FC<Props> = ({ navigation }) => {
          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
          </TouchableOpacity>
-         <Text style={styles.blueTitle}>Exam Result Analaysis</Text>
-         <Text style={styles.blueSubtitle}>English • Grammar Test - Tenses • Completed on Oct 20, 2023</Text>
+         <Text style={styles.blueTitle}>{data?.quiz?.title || 'Exam Result Analysis'}</Text>
+         <Text style={styles.blueSubtitle}>{data?.quiz?.subject || 'Analyze student performance'}</Text>
       </Animated.View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -66,29 +84,29 @@ const TeacherViewQuizResultScreen: React.FC<Props> = ({ navigation }) => {
                </View>
                <View style={styles.statTextCol}>
                   <Text style={styles.statLabel}>Participants</Text>
-                  <Text style={styles.statValue}>30/30</Text>
+                  <Text style={styles.statValue}>{results.length}</Text>
                </View>
             </View>
 
-            {/* Duration Card */}
-            <View style={styles.statCard}>
-               <View style={[styles.statIconBox, { backgroundColor: '#E06A6A' }]}>
-                  <Ionicons name="time" size={20} color="#FFFFFF" />
-               </View>
-               <View style={styles.statTextCol}>
-                  <Text style={styles.statLabel}>Exam Duration</Text>
-                  <Text style={styles.statValue}>60 min</Text>
-               </View>
-            </View>
-
-            {/* Questions Card */}
+            {/* Avg Score Card */}
             <View style={styles.statCard}>
                <View style={[styles.statIconBox, { backgroundColor: '#10B981' }]}>
-                  <Ionicons name="help-circle" size={20} color="#FFFFFF" />
+                  <Ionicons name="analytics" size={20} color="#FFFFFF" />
                </View>
                <View style={styles.statTextCol}>
-                  <Text style={styles.statLabel}>Questions</Text>
-                  <Text style={styles.statValue}>30</Text>
+                  <Text style={styles.statLabel}>Avg. Score</Text>
+                  <Text style={styles.statValue}>{analytics.avg}%</Text>
+               </View>
+            </View>
+
+            {/* Highest Score Card */}
+            <View style={styles.statCard}>
+               <View style={[styles.statIconBox, { backgroundColor: '#F59E0B' }]}>
+                  <Ionicons name="trophy" size={20} color="#FFFFFF" />
+               </View>
+               <View style={styles.statTextCol}>
+                  <Text style={styles.statLabel}>Highest</Text>
+                  <Text style={styles.statValue}>{analytics.highest}%</Text>
                </View>
             </View>
 
@@ -103,26 +121,30 @@ const TeacherViewQuizResultScreen: React.FC<Props> = ({ navigation }) => {
                {/* Table Header */}
                <View style={styles.tableHeader}>
                   <Text style={[styles.thText, { flex: 2 }]}>Student</Text>
-                  <Text style={[styles.thText, { flex: 2.2 }]}>Score</Text>
-                  <Text style={[styles.thText, { flex: 1.2, textAlign: 'center' }]}>Grade</Text>
+                  <Text style={[styles.thText, { flex: 1.2, textAlign: 'center' }]}>Score</Text>
                   <Text style={[styles.thText, { flex: 1.8, textAlign: 'center' }]}>Time Taken</Text>
                   <Text style={[styles.thText, { flex: 2, textAlign: 'right' }]}>Status</Text>
                </View>
 
                {/* Table Rows */}
-               {MOCK_STUDENTS.map((student, index) => (
-                  <View key={student.id} style={[styles.tableRow, index === MOCK_STUDENTS.length - 1 && styles.lastTableRow]}>
-                     <Text style={[styles.tdTextStudent, { flex: 2 }]} numberOfLines={1}>{student.name}</Text>
-                     <Text style={[styles.tdTextBase, { flex: 2.2 }]} numberOfLines={1}>{student.score}</Text>
-                     <Text style={[styles.tdTextBase, { flex: 1.2, textAlign: 'center' }]}>{student.grade}</Text>
-                     <Text style={[styles.tdTextBase, { flex: 1.8, textAlign: 'center' }]}>{student.time}</Text>
-                     <View style={[styles.tdStatusWrapper, { flex: 2, alignItems: 'flex-end' }]}>
-                        <View style={styles.statusPill}>
-                           <Text style={styles.statusPillText}>{student.status}</Text>
-                        </View>
-                     </View>
-                  </View>
-               ))}
+               {isLoading ? (
+                 <ActivityIndicator size="large" color="#4F46E5" style={{ padding: 40 }} />
+               ) : results.length === 0 ? (
+                 <Text style={{ textAlign: 'center', padding: 40, color: '#6B7280' }}>No submissions yet</Text>
+               ) : (
+                 results.map((student: any, index: number) => (
+                    <View key={student.studentId} style={[styles.tableRow, index === results.length - 1 && styles.lastTableRow]}>
+                       <Text style={[styles.tdTextStudent, { flex: 2 }]} numberOfLines={1}>{student.studentName}</Text>
+                       <Text style={[styles.tdTextBase, { flex: 1.2, textAlign: 'center' }]}>{student.score}%</Text>
+                       <Text style={[styles.tdTextBase, { flex: 1.8, textAlign: 'center' }]}>{student.timeTaken}</Text>
+                       <View style={[styles.tdStatusWrapper, { flex: 2, alignItems: 'flex-end' }]}>
+                          <View style={styles.statusPill}>
+                             <Text style={styles.statusPillText}>Completed</Text>
+                          </View>
+                       </View>
+                    </View>
+                 ))
+               )}
 
             </View>
          </Animated.View>

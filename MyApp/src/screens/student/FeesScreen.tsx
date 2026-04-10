@@ -9,7 +9,8 @@ import {
   TouchableOpacity,
   Modal,
   TouchableWithoutFeedback,
-  ActivityIndicator
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -48,26 +49,49 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>(null);
+  const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isReceiptLoading, setIsReceiptLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleReceiptPress = async (paymentId: string) => {
+    try {
+      setIsReceiptLoading(true);
+      const res = await apiClient.get(ENDPOINTS.STUDENT.PAYMENT_RECEIPT(paymentId));
+      setSelectedReceipt(res.data?.data || res.data);
+    } catch (err) {
+      console.error('Failed to fetch receipt:', err);
+      Alert.alert('Error', 'Could not load receipt details');
+    } finally {
+      setIsReceiptLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
+        setError(null);
         if (activeTab === 'Invoices') {
           const res = await apiClient.get(ENDPOINTS.STUDENT.INVOICES);
-          if (res.data.success) {
-            setInvoices(res.data.data.invoices || []);
-            setSummary(res.data.data.summary);
-          }
+          // Handle multiple response formats
+          const responseData = res.data?.data || res.data || {};
+          const invoicesArray = responseData.invoices || res.data?.invoices || [];
+          setInvoices(Array.isArray(invoicesArray) ? invoicesArray : []);
+          setSummary(responseData.summary || { totalPending: 0, pendingCount: 0, overdueCount: 0, collectionRate: 0 });
         } else {
           const res = await apiClient.get(ENDPOINTS.STUDENT.PAYMENT_HISTORY);
-          if (res.data.success) {
-            setHistory(res.data.data.payments || []);
-          }
+          // Handle multiple response formats
+          const responseData = res.data?.data || res.data || {};
+          const paymentsArray = responseData.payments || res.data?.payments || [];
+          setHistory(Array.isArray(paymentsArray) ? paymentsArray : []);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to fetch fee data:', error);
+        setError('Failed to load fee information');
+        setInvoices([]);
+        setHistory([]);
+        setSummary({ totalPending: 0, pendingCount: 0, overdueCount: 0, collectionRate: 0 });
       } finally {
         setIsLoading(false);
       }
@@ -169,6 +193,11 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
 
            {isLoading ? (
              <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 40 }} />
+           ) : error ? (
+             <View style={styles.emptyContainer}>
+               <Ionicons name="alert-circle-outline" size={60} color="#EF4444" />
+               <Text style={styles.emptyText}>{error}</Text>
+             </View>
            ) : activeTab === 'Invoices' ? (
              invoices.length === 0 ? (
                <View style={styles.emptyContainer}>
@@ -239,11 +268,22 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
                    
                    <View style={styles.invRowBeetween}>
                      <Text style={styles.historyFor}>For: <Text style={{fontWeight: '700', color: '#111827'}}>{item.invoiceNumber}</Text></Text>
-                     <TouchableOpacity style={styles.receiptPill} activeOpacity={0.8}>
-                       <Ionicons name="receipt" size={11} color="#FFFFFF" style={{marginRight: 4}} />
-                       <Text style={styles.receiptText}>Receipt</Text>
-                     </TouchableOpacity>
-                   </View>
+                      <TouchableOpacity 
+                        style={styles.receiptPill} 
+                        activeOpacity={0.8}
+                        onPress={() => handleReceiptPress(item.id)}
+                        disabled={isReceiptLoading}
+                      >
+                        {isReceiptLoading ? (
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                          <>
+                            <Ionicons name="receipt" size={11} color="#FFFFFF" style={{marginRight: 4}} />
+                            <Text style={styles.receiptText}>Receipt</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    </View>
                  </View>
                ))
              )
@@ -327,6 +367,81 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
             </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Receipt Modal */}
+      <Modal
+        visible={!!selectedReceipt}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSelectedReceipt(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <Animated.View entering={FadeInUp.springify()} style={[styles.modalContent, { padding: 0, overflow: 'hidden' }]}>
+            {selectedReceipt && (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {/* Receipt Header */}
+                <View style={[styles.receiptHeader, { backgroundColor: '#4F46E5' }]}>
+                  <View style={styles.receiptHeaderTop}>
+                    <Ionicons name="school" size={24} color="#FFFFFF" />
+                    <TouchableOpacity onPress={() => setSelectedReceipt(null)}>
+                      <Ionicons name="close" size={24} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.receiptInstName}>{selectedReceipt.institution?.name}</Text>
+                  <Text style={styles.receiptInstAddr}>{selectedReceipt.institution?.address}</Text>
+                  <View style={styles.receiptBadge}>
+                    <Text style={styles.receiptBadgeText}>OFFICIAL RECEIPT</Text>
+                  </View>
+                </View>
+
+                {/* Receipt Details */}
+                <View style={styles.receiptBody}>
+                  <View style={styles.receiptRow}>
+                    <View style={styles.receiptCol}>
+                      <Text style={styles.receiptLabel}>Receipt ID</Text>
+                      <Text style={styles.receiptValue}>{selectedReceipt.receiptId}</Text>
+                    </View>
+                    <View style={[styles.receiptCol, { alignItems: 'flex-end' }]}>
+                      <Text style={styles.receiptLabel}>Date</Text>
+                      <Text style={styles.receiptValue}>{new Date(selectedReceipt.date).toLocaleDateString()}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.receiptDivider} />
+
+                  <View style={styles.receiptCol}>
+                    <Text style={styles.receiptLabel}>Student Name</Text>
+                    <Text style={styles.receiptValueBig}>{selectedReceipt.student?.name}</Text>
+                    <Text style={styles.receiptSubValue}>Roll No: {selectedReceipt.student?.rollNo} • Class: {selectedReceipt.student?.grade}</Text>
+                  </View>
+
+                  <View style={[styles.receiptDivider, { marginVertical: 20 }]} />
+
+                  <Text style={styles.receiptLabel}>Payment Details</Text>
+                  <View style={styles.receiptDetailRow}>
+                    <Text style={styles.receiptDesc}>{selectedReceipt.description}</Text>
+                    <Text style={styles.receiptAmount}>₹ {selectedReceipt.amount}</Text>
+                  </View>
+
+                  <View style={styles.receiptTotalBox}>
+                    <Text style={styles.receiptTotalLabel}>TOTAL PAID</Text>
+                    <Text style={styles.receiptTotalValue}>₹ {selectedReceipt.amount}</Text>
+                  </View>
+
+                  <View style={styles.receiptFooter}>
+                    <Text style={styles.receiptFooterText}>Transaction ID: {selectedReceipt.transactionId}</Text>
+                    <Text style={styles.receiptFooterText}>Status: {selectedReceipt.status}</Text>
+                    <View style={styles.receiptCheckCircle}>
+                      <Ionicons name="checkmark-circle" size={40} color="#10B981" />
+                    </View>
+                    <Text style={styles.verifiedText}>Verified by Sharnex</Text>
+                  </View>
+                </View>
+              </ScrollView>
+            )}
+          </Animated.View>
+        </View>
       </Modal>
 
       {/* Navigation Drawer */}
@@ -726,6 +841,138 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#374151',
     marginTop: 16,
+  },
+  /* Receipt Modal Specific Styles */
+  receiptHeader: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  receiptHeaderTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 16,
+  },
+  receiptInstName: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  receiptInstAddr: {
+    fontSize: 11,
+    color: '#E0E7FF',
+    textAlign: 'center',
+    marginTop: 4,
+    paddingHorizontal: 20,
+  },
+  receiptBadge: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginTop: 16,
+  },
+  receiptBadgeText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 1,
+  },
+  receiptBody: {
+    padding: 24,
+  },
+  receiptRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  receiptCol: {
+    flex: 1,
+  },
+  receiptLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  receiptValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  receiptValueBig: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  receiptSubValue: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  receiptDivider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginVertical: 16,
+    borderStyle: 'dashed',
+    borderRadius: 1,
+  },
+  receiptDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  receiptDesc: {
+    fontSize: 13,
+    color: '#4B5563',
+    flex: 1,
+    paddingRight: 20,
+  },
+  receiptAmount: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  receiptTotalBox: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  receiptTotalLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#4B5563',
+  },
+  receiptTotalValue: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#4F46E5',
+  },
+  receiptFooter: {
+    alignItems: 'center',
+    marginTop: 40,
+    paddingBottom: 20,
+  },
+  receiptFooterText: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    marginBottom: 4,
+  },
+  receiptCheckCircle: {
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  verifiedText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#10B981',
+    textTransform: 'uppercase',
   },
 });
 

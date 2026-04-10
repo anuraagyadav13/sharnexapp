@@ -10,22 +10,130 @@ import {
   KeyboardAvoidingView,
   SafeAreaView,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 const PrincipalAddStaffScreen = ({ navigation }: any) => {
   const { authState } = useAuth();
   const [activeTab, setActiveTab] = useState('personal'); // personal, bank, professional, face
-  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form state
+  const [formData, setFormData] = useState({
+    // Personal Info
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    dob: '',
+    address: '',
+
+    // Bank Details
+    bankName: '',
+    accountNumber: '',
+    accountHolderName: '',
+    accountType: 'Saving',
+    ifscCode: '',
+    paymentMethod: 'Bank Transfer',
+
+    // Professional Info
+    department: '',
+    qualification: '',
+    subject: '',
+    joiningDate: '',
+    experience: '',
+    biography: '',
+  });
+
   // Calendars
   const [showDOBCalendar, setShowDOBCalendar] = useState(false);
-  const [dob, setDob] = useState('');
   const [showJoiningCalendar, setShowJoiningCalendar] = useState(false);
-  const [joiningDate, setJoiningDate] = useState('');
+
+  const updateFormData = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSubmitStaff = async () => {
+    // Validation
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone) {
+      Alert.alert('Error', 'Please fill in all required personal information fields.');
+      setActiveTab('personal');
+      return;
+    }
+
+    if (!formData.bankName || !formData.accountNumber || !formData.accountHolderName || !formData.ifscCode) {
+      Alert.alert('Error', 'Please fill in all required bank details.');
+      setActiveTab('bank');
+      return;
+    }
+
+    if (!formData.department || !formData.qualification || !formData.joiningDate) {
+      Alert.alert('Error', 'Please fill in all required professional information.');
+      setActiveTab('professional');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      const staffData = {
+        personalInfo: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          dateOfBirth: formData.dob,
+          address: formData.address,
+        },
+        bankDetails: {
+          bankName: formData.bankName,
+          accountNumber: formData.accountNumber,
+          accountHolderName: formData.accountHolderName,
+          accountType: formData.accountType,
+          ifscCode: formData.ifscCode,
+          paymentMethod: formData.paymentMethod,
+        },
+        professionalInfo: {
+          department: formData.department,
+          qualification: formData.qualification,
+          subject: formData.subject,
+          joiningDate: formData.joiningDate,
+          experience: parseInt(formData.experience) || 0,
+          biography: formData.biography,
+        },
+      };
+
+      const response = await apiClient.post(ENDPOINTS.PRINCIPAL.ADD_STAFF, staffData);
+      const data = response.data.data || response.data;
+
+      Alert.alert(
+        'Success',
+        'Staff member has been added successfully!',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack()
+          }
+        ]
+      );
+    } catch (err: any) {
+      console.error('Error adding staff:', err);
+      Alert.alert('Error', err.message || 'Failed to add staff member. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const renderCalendar = (onSelect: (date: string) => void, close: () => void) => (
     <Animated.View entering={FadeInUp.duration(200)} style={styles.calendarDropdown}>
@@ -155,40 +263,73 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
                 <View style={styles.formRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.inputLabel}>First Name</Text>
-                    <TextInput style={styles.textInput} placeholder="e.g. John" placeholderTextColor="#9CA3AF" />
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="e.g. John"
+                      placeholderTextColor="#9CA3AF"
+                      value={formData.firstName}
+                      onChangeText={(value) => updateFormData('firstName', value)}
+                    />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.inputLabel}>Last Name</Text>
-                    <TextInput style={styles.textInput} placeholder="e.g. Doe" placeholderTextColor="#9CA3AF" />
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="e.g. Doe"
+                      placeholderTextColor="#9CA3AF"
+                      value={formData.lastName}
+                      onChangeText={(value) => updateFormData('lastName', value)}
+                    />
                   </View>
                 </View>
 
                 <View style={styles.formField}>
                   <Text style={styles.inputLabel}>Email Address</Text>
-                  <TextInput style={styles.textInput} placeholder="john.doe@example.com" placeholderTextColor="#9CA3AF" />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="priya.sharma@gmail.com"
+                    placeholderTextColor="#9CA3AF"
+                    value={formData.email}
+                    onChangeText={(value) => updateFormData('email', value)}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
                 </View>
 
                 <View style={styles.formField}>
                   <Text style={styles.inputLabel}>Phone Number</Text>
-                  <TextInput style={styles.textInput} placeholder="+1 (555) 000-0000" placeholderTextColor="#9CA3AF" keyboardType="phone-pad" />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="+91 98765 43210"
+                    placeholderTextColor="#9CA3AF"
+                    value={formData.phone}
+                    onChangeText={(value) => updateFormData('phone', value)}
+                    keyboardType="phone-pad"
+                  />
                 </View>
 
                 <View style={[styles.formField, { position: 'relative', zIndex: 10 }]}>
                   <Text style={styles.inputLabel}>Date of Birth</Text>
                   <TouchableOpacity style={styles.dateInput} activeOpacity={0.7} onPress={() => setShowDOBCalendar(!showDOBCalendar)}>
-                    <Text style={[styles.dateText, !dob && {color: '#9CA3AF'}]}>{dob || 'mm/dd/yyyy'}</Text>
+                    <Text style={[styles.dateText, !formData.dob && {color: '#9CA3AF'}]}>{formData.dob || 'mm/dd/yyyy'}</Text>
                     <Ionicons name="calendar-outline" size={18} color="#4B5563" />
                   </TouchableOpacity>
                   {showDOBCalendar && (
                     <View style={{ position: 'absolute', top: 75, left: 0, right: 0, zIndex: 99 }}>
-                      {renderCalendar((d) => setDob(d), () => setShowDOBCalendar(false))}
+                      {renderCalendar((d) => updateFormData('dob', d), () => setShowDOBCalendar(false))}
                     </View>
                   )}
                 </View>
 
                 <View style={[styles.formField, { zIndex: 1 }]}>
                   <Text style={styles.inputLabel}>Residential Address</Text>
-                  <TextInput style={styles.textInput} placeholder="City, State, Country" placeholderTextColor="#9CA3AF" />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="City, State, Country"
+                    placeholderTextColor="#9CA3AF"
+                    value={formData.address}
+                    onChangeText={(value) => updateFormData('address', value)}
+                  />
                 </View>
 
                 <View style={styles.formFooter}>
@@ -214,39 +355,65 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
 
                 <View style={styles.formField}>
                   <Text style={styles.inputLabel}>Bank Name</Text>
-                  <TextInput style={styles.textInput} placeholder="e.g. HDFC Bank" placeholderTextColor="#9CA3AF" />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="e.g. HDFC Bank"
+                    placeholderTextColor="#9CA3AF"
+                    value={formData.bankName}
+                    onChangeText={(value) => updateFormData('bankName', value)}
+                  />
                 </View>
 
                 <View style={styles.formField}>
                   <Text style={styles.inputLabel}>Account Number</Text>
-                  <TextInput style={styles.textInput} placeholder="000 000 0000 0000" placeholderTextColor="#9CA3AF" keyboardType="numeric" />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="000 000 0000 0000"
+                    placeholderTextColor="#9CA3AF"
+                    value={formData.accountNumber}
+                    onChangeText={(value) => updateFormData('accountNumber', value)}
+                    keyboardType="numeric"
+                  />
                 </View>
 
                 <View style={styles.formField}>
                   <Text style={styles.inputLabel}>Account Holder Name</Text>
-                  <TextInput style={styles.textInput} placeholder="Full name as in bank" placeholderTextColor="#9CA3AF" />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="Full name as in bank"
+                    placeholderTextColor="#9CA3AF"
+                    value={formData.accountHolderName}
+                    onChangeText={(value) => updateFormData('accountHolderName', value)}
+                  />
                 </View>
 
                 <View style={styles.formRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.inputLabel}>Account Type</Text>
-                    <View style={styles.selectInput}>
-                      <Text style={styles.selectText}>Saving</Text>
+                    <TouchableOpacity style={styles.selectInput} onPress={() => {}}>
+                      <Text style={styles.selectText}>{formData.accountType}</Text>
                       <Ionicons name="chevron-down" size={16} color="#4B5563" />
-                    </View>
+                    </TouchableOpacity>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.inputLabel}>IFSC Code</Text>
-                    <TextInput style={styles.textInput} placeholder="HDFC000123" placeholderTextColor="#9CA3AF" />
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="HDFC000123"
+                      placeholderTextColor="#9CA3AF"
+                      value={formData.ifscCode}
+                      onChangeText={(value) => updateFormData('ifscCode', value)}
+                      autoCapitalize="characters"
+                    />
                   </View>
                 </View>
 
                 <View style={styles.formField}>
                   <Text style={styles.inputLabel}>Salary Payment Method</Text>
-                  <View style={styles.selectInput}>
-                    <Text style={styles.selectText}>Bank Transfer</Text>
+                  <TouchableOpacity style={styles.selectInput} onPress={() => {}}>
+                    <Text style={styles.selectText}>{formData.paymentMethod}</Text>
                     <Ionicons name="chevron-down" size={16} color="#4B5563" />
-                  </View>
+                  </TouchableOpacity>
                 </View>
 
                 <View style={styles.formFooterSpaceBetween}>
@@ -272,48 +439,71 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
 
                 <View style={styles.formField}>
                   <Text style={styles.inputLabel}>Department</Text>
-                  <View style={styles.selectInput}>
-                    <Text style={styles.selectTextPlaceholder}>Select Department</Text>
+                  <TouchableOpacity style={styles.selectInput} onPress={() => {}}>
+                    <Text style={[styles.selectText, !formData.department && styles.selectTextPlaceholder]}>
+                      {formData.department || 'Select Department'}
+                    </Text>
                     <Ionicons name="chevron-down" size={16} color="#4B5563" />
-                  </View>
+                  </TouchableOpacity>
                 </View>
 
                 <View style={styles.formField}>
                   <Text style={styles.inputLabel}>Highest Qualification</Text>
-                  <TextInput style={styles.textInput} placeholder="e.g. M.Sc Mathematics" placeholderTextColor="#9CA3AF" />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="e.g. M.Sc Mathematics"
+                    placeholderTextColor="#9CA3AF"
+                    value={formData.qualification}
+                    onChangeText={(value) => updateFormData('qualification', value)}
+                  />
                 </View>
 
                 <View style={styles.formField}>
                   <Text style={styles.inputLabel}>Subject Taught</Text>
-                  <TextInput style={styles.textInput} placeholder="e.g. Advanced Calculus" placeholderTextColor="#9CA3AF" />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="e.g. Advanced Calculus"
+                    placeholderTextColor="#9CA3AF"
+                    value={formData.subject}
+                    onChangeText={(value) => updateFormData('subject', value)}
+                  />
                 </View>
 
                 <View style={[styles.formField, { position: 'relative', zIndex: 10 }]}>
                   <Text style={styles.inputLabel}>Joining Date</Text>
                   <TouchableOpacity style={styles.dateInput} activeOpacity={0.7} onPress={() => setShowJoiningCalendar(!showJoiningCalendar)}>
-                    <Text style={[styles.dateText, !joiningDate && {color: '#9CA3AF'}]}>{joiningDate || 'mm/dd/yyyy'}</Text>
+                    <Text style={[styles.dateText, !formData.joiningDate && {color: '#9CA3AF'}]}>{formData.joiningDate || 'mm/dd/yyyy'}</Text>
                     <Ionicons name="calendar-outline" size={18} color="#4B5563" />
                   </TouchableOpacity>
                   {showJoiningCalendar && (
                     <View style={{ position: 'absolute', top: 75, left: 0, right: 0, zIndex: 99 }}>
-                      {renderCalendar((d) => setJoiningDate(d), () => setShowJoiningCalendar(false))}
+                      {renderCalendar((d) => updateFormData('joiningDate', d), () => setShowJoiningCalendar(false))}
                     </View>
                   )}
                 </View>
 
                 <View style={styles.formField}>
                   <Text style={styles.inputLabel}>Years of Experience</Text>
-                  <TextInput style={styles.textInput} placeholder="e.g. 5" placeholderTextColor="#9CA3AF" keyboardType="numeric" />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="e.g. 5"
+                    placeholderTextColor="#9CA3AF"
+                    value={formData.experience}
+                    onChangeText={(value) => updateFormData('experience', value)}
+                    keyboardType="numeric"
+                  />
                 </View>
 
                 <View style={styles.formField}>
                   <Text style={styles.inputLabel}>Professional Biography</Text>
-                  <TextInput 
-                    style={styles.textArea} 
-                    placeholder="Short description..." 
-                    placeholderTextColor="#9CA3AF" 
-                    multiline 
-                    textAlignVertical="top" 
+                  <TextInput
+                    style={styles.textArea}
+                    placeholder="Short description..."
+                    placeholderTextColor="#9CA3AF"
+                    value={formData.biography}
+                    onChangeText={(value) => updateFormData('biography', value)}
+                    multiline
+                    textAlignVertical="top"
                   />
                 </View>
 
@@ -353,8 +543,16 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
                   <TouchableOpacity style={styles.outlineBtn} onPress={() => setActiveTab('professional')}>
                     <Text style={styles.outlineBtnText}>Previous</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.disabledBtn} activeOpacity={1}>
-                    <Text style={styles.disabledBtnText}>Enroll Face</Text>
+                  <TouchableOpacity
+                    style={[styles.primaryBtn, isSubmitting && styles.disabledBtn]}
+                    onPress={handleSubmitStaff}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.primaryBtnText}>Complete Registration</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               </Animated.View>

@@ -1,6 +1,6 @@
 export type RootStackParamList = {
   Login: undefined;
-  // Register: undefined;
+  Register: undefined;
   Home: undefined;
   
   // Student Screens
@@ -22,7 +22,7 @@ export type RootStackParamList = {
   Fees: undefined;
   AccountSettings: { targetTab?: 'Personal Details' | 'Parent Information' | 'Preferences' } | undefined;
 
-  OfficialResult: undefined;
+  OfficialResult: { resultId: string };
   Timetable: undefined;
 
   // Teacher Screens

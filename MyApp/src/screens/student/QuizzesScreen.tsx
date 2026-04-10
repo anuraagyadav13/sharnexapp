@@ -113,6 +113,7 @@ const QuizzesScreen: React.FC<Props> = ({ navigation }) => {
   const { authState } = useAuth();
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({
     upcoming: 0,
     active: 0,
@@ -124,20 +125,23 @@ const QuizzesScreen: React.FC<Props> = ({ navigation }) => {
     const fetchQuizzes = async () => {
       try {
         setIsLoading(true);
-        // @ts-ignore
-        const res = await apiClient.get(ENDPOINTS.QUIZZES);
-        const data = res.data.data;
-        setQuizzes(data);
+        setError(null);
+        const res = await apiClient.get(ENDPOINTS.STUDENT.QUIZZES);
+        const data = res.normalized?.data ?? null;
+        const quizzesArray = Array.isArray(data) ? data : Array.isArray(data?.quizzes) ? data.quizzes : [];
+        setQuizzes(quizzesArray);
 
         // Compute summary
         setStats({
-          upcoming: data.filter((q: any) => q.derivedStatus === 'upcoming').length,
-          active: data.filter((q: any) => q.derivedStatus === 'started' || q.derivedStatus === 'active').length,
-          completed: data.filter((q: any) => q.hasAttempt).length,
+          upcoming: quizzesArray.filter((q: any) => q.derivedStatus === 'upcoming').length,
+          active: quizzesArray.filter((q: any) => q.derivedStatus === 'started' || q.derivedStatus === 'active').length,
+          completed: quizzesArray.filter((q: any) => q.hasAttempt).length,
           grades: 0 // Placeholder
         });
-      } catch (error) {
-        console.error('Failed to fetch quizzes:', error);
+      } catch (err: any) {
+        console.error('Failed to fetch quizzes:', err);
+        setError('Failed to load quizzes');
+        setQuizzes([]);
       } finally {
         setIsLoading(false);
       }
@@ -191,6 +195,40 @@ const QuizzesScreen: React.FC<Props> = ({ navigation }) => {
         <View style={styles.listsWrapper}>
            {isLoading ? (
              <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
+           ) : error ? (
+             <View style={styles.emptyContainer}>
+               <Ionicons name="alert-circle" size={60} color="#EF4444" />
+               <Text style={styles.emptyText}>{error}</Text>
+               <ScaleButton 
+                 style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
+                 onPress={() => {
+                   setError(null);
+                   setIsLoading(true);
+                   const fetchQuizzes = async () => {
+                     try {
+                       const res = await apiClient.get(ENDPOINTS.STUDENT.QUIZZES);
+                       const data = res.normalized?.data ?? null;
+                       const quizzesArray = Array.isArray(data) ? data : Array.isArray(data?.quizzes) ? data.quizzes : [];
+                       setQuizzes(quizzesArray);
+                       setStats({
+                         upcoming: quizzesArray.filter((q: any) => q.derivedStatus === 'upcoming').length,
+                         active: quizzesArray.filter((q: any) => q.derivedStatus === 'started' || q.derivedStatus === 'active').length,
+                         completed: quizzesArray.filter((q: any) => q.hasAttempt).length,
+                         grades: 0
+                       });
+                     } catch (err: any) {
+                       setError('Failed to load quizzes. Please try again.');
+                     } finally {
+                       setIsLoading(false);
+                     }
+                   };
+                   fetchQuizzes();
+                 }}
+                 scaleTo={0.95}
+               >
+                 <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
+               </ScaleButton>
+             </View>
            ) : quizzes.length === 0 ? (
              <View style={styles.emptyContainer}>
                <Ionicons name="time-outline" size={60} color="#E5E7EB" />

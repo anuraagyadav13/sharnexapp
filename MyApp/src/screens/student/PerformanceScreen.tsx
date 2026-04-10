@@ -30,20 +30,28 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [performance, setPerformance] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPerformance = async () => {
       try {
         setIsLoading(true);
-        // 1. Get profile for ID
+        setError(null);
+        // 1. Get profile for student ID
         const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
-        const studentId = profileRes.data.id;
+        const studentId = profileRes.data?.id;
+
+        if (!studentId) {
+          throw new Error('Student ID not found');
+        }
 
         // 2. Fetch dashboard data which has performance metrics
         const res = await apiClient.get(ENDPOINTS.STUDENT.DASHBOARD(studentId));
-        setPerformance(res.data.data);
-      } catch (error) {
-        console.error('Failed to fetch performance:', error);
+        setPerformance(res.data?.data || res.data?.stats || res.data);
+      } catch (err: any) {
+        console.error('Failed to fetch performance:', err);
+        setError('Failed to load performance data. Please try again.');
+        setPerformance(null);
       } finally {
         setIsLoading(false);
       }
@@ -51,10 +59,44 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
     fetchPerformance();
   }, []);
 
-  if (isLoading) {
+  if (isLoading && !performance) {
     return (
       <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
+  if (error && !performance) {
+    return (
+      <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }]}>
+        <Ionicons name="alert-circle" size={64} color="#EF4444" style={{ marginBottom: 16 }} />
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', textAlign: 'center' }}>Unable to Load Performance</Text>
+        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>{error}</Text>
+        <ScaleButton
+          style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
+          onPress={() => {
+            setError(null);
+            setIsLoading(true);
+            const fetchPerformance = async () => {
+              try {
+                const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+                const studentId = profileRes.data?.id;
+                if (!studentId) throw new Error('Student ID not found');
+                const res = await apiClient.get(ENDPOINTS.STUDENT.DASHBOARD(studentId));
+                setPerformance(res.data?.data || res.data?.stats || res.data);
+              } catch (err: any) {
+                setError('Failed to load performance data. Please try again.');
+              } finally {
+                setIsLoading(false);
+              }
+            };
+            fetchPerformance();
+          }}
+          scaleTo={0.95}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
+        </ScaleButton>
       </View>
     );
   }

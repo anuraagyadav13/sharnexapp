@@ -31,8 +31,8 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
   const [learningObjectives, setLearningObjectives] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [maxMarks, setMaxMarks] = useState('100');
-  const [isPublishing, setIsPublishing] = useState(false);
   const [classes, setClasses] = useState<any[]>([]);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -40,10 +40,11 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
         const teacherId = authState.user?.id;
         if (!teacherId) return;
         const res = await apiClient.get(ENDPOINTS.TEACHER.CLASSES(teacherId));
-        setClasses(res.data.classes || []);
-        if (res.data.classes?.length > 0) {
-          setClassId(res.data.classes[0].id);
-          setCourse(res.data.classes[0].subject || '');
+        const fetchedClasses = res.normalized?.data?.classes || res.data?.classes || [];
+        setClasses(fetchedClasses);
+        if (fetchedClasses.length > 0) {
+          setClassId(fetchedClasses[0].id);
+          setCourse(fetchedClasses[0].subject || '');
         }
       } catch (e) {
         console.error('Failed to fetch classes:', e);
@@ -59,23 +60,29 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
     }
 
     try {
+      const teacherId = authState.user?.id;
+      if (!teacherId) {
+        Alert.alert('Error', 'Unable to identify teacher account. Please sign in again.');
+        return;
+      }
       setIsPublishing(true);
-      await apiClient.post('/assignments', {
+      await apiClient.post(ENDPOINTS.TEACHER.CREATE_ASSIGNMENT(teacherId), {
         title,
         description: instruction,
         dueDate: dueDate || new Date(Date.now() + 86400000 * 7).toISOString(),
         classId,
         subject: course,
-        maxMarks: parseInt(maxMarks),
+        maxMarks: parseInt(maxMarks) || 100,
         type: selectedType.toLowerCase(),
-        teacherId: authState.user?.id,
+        teacherId,
         institutionId: authState.user?.institutionId
       });
       Alert.alert('Success', 'Assignment published successfully!');
       navigation.goBack();
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to publish assignment:', e);
-      Alert.alert('Error', 'Failed to publish assignment. Make sure all fields are valid.');
+      const errorMessage = e.response?.normalized?.message || e.response?.data?.message || e.message || 'Failed to publish assignment. Please try again.';
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsPublishing(false);
     }

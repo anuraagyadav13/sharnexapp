@@ -18,11 +18,6 @@ import { useAuth } from '../../store/AuthContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherAddQuestion'>;
 
-const MOCK_EXISTING_QUESTIONS = [
-  { id: 1, text: 'What is the value of pi ?', points: 5, difficulty: 'Easy', correct: 'B' },
-  { id: 2, text: 'What is the value of pi ?', points: 5, difficulty: 'Easy', correct: 'B' },
-  { id: 3, text: 'What is the value of pi ?', points: 5, difficulty: 'Easy', correct: 'B' },
-];
 
 const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation }) => {
   const { authState } = useAuth();
@@ -189,26 +184,19 @@ const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.divider} />
 
             {/* List */}
-            {MOCK_EXISTING_QUESTIONS.map((q, index) => (
-               <View key={q.id} style={styles.existingQuestionCard}>
-                  <View style={styles.existingQuesContent}>
-                     <Text style={styles.existingQuesTitle}>{q.id}. {q.text}</Text>
-                     <View style={styles.existingQuesMeta}>
-                        <Text style={styles.metaGray}>{q.points} points</Text>
-                        <Text style={styles.metaGray}>{q.difficulty}</Text>
-                        <Text style={styles.metaGray}>Correct : {q.correct}</Text>
-                     </View>
-                  </View>
-                  <View style={styles.existingQuesActions}>
-                     <TouchableOpacity style={styles.actionIconBtn} activeOpacity={0.7}>
-                        <Ionicons name="create-outline" size={20} color="#111827" />
-                     </TouchableOpacity>
-                     <TouchableOpacity style={styles.actionIconBtn} activeOpacity={0.7}>
-                        <Ionicons name="trash-outline" size={20} color="#111827" />
-                     </TouchableOpacity>
-                  </View>
-               </View>
-            ))}
+            {false ? ( // TODO: Replace with actual quiz questions from API
+              <View style={styles.emptyContainer}>
+                <Ionicons name="help-circle-outline" size={48} color="#D1D5DB" />
+                <Text style={styles.emptyText}>No questions added yet</Text>
+                <Text style={styles.emptySubtext}>Add questions using the form above</Text>
+              </View>
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="help-circle-outline" size={48} color="#D1D5DB" />
+                <Text style={styles.emptyText}>No questions added yet</Text>
+                <Text style={styles.emptySubtext}>Add questions using the form above</Text>
+              </View>
+            )}
          </Animated.View>
 
       </ScrollView>
@@ -584,6 +572,19 @@ const styles = StyleSheet.create({
   optionBadgeCorrect: {
     color: '#FFFFFF',
     backgroundColor: '#10B981',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#999',
+  },
+  emptySubtext: {
+    fontSize: 12,
+    color: '#bbb',
   },
 });
 

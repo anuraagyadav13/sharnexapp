@@ -139,6 +139,22 @@ const TopStudentCard = React.memo(({ rank, name, className, percentage }: any) =
   </View>
 ));
 
+const LiveClassBanner = ({ subject, teacher, time, color }: { subject: string, teacher: string, time: string, color: string }) => (
+  <Animated.View entering={FadeInUp.springify()} style={[styles.liveBanner, { borderLeftColor: color }]}>
+    <View style={styles.liveBannerContent}>
+      <View style={styles.liveIndicatorRow}>
+        <View style={[styles.liveDot, { backgroundColor: color }]} />
+        <Text style={[styles.liveText, { color }]}>LIVE NOW</Text>
+      </View>
+      <Text style={styles.liveSubject}>{subject}</Text>
+      <Text style={styles.liveTeacher}>{teacher} • {time}</Text>
+    </View>
+    <TouchableOpacity style={[styles.liveJoinBtn, { backgroundColor: color }]}>
+      <Text style={styles.liveJoinBtnText}>Join</Text>
+    </TouchableOpacity>
+  </Animated.View>
+);
+
   const HelpCenterCard = ({ bgColor, iconName, title, desc }: { bgColor: string, iconName: string, title: string, desc: string }) => (
     <View style={styles.helpCenterCard}>
       <View style={[styles.helpIconContainer, { backgroundColor: bgColor }]}>
@@ -177,24 +193,43 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
   const { authState } = useAuth();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [scheduleData, setScheduleData] = useState<any[]>([]);
+  const [eventsData, setEventsData] = useState<any[]>([]);
+  const [topStudentsData, setTopStudentsData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchAllData = async () => {
       try {
         setIsLoading(true);
-        // 1. Get student profile details to find the student ID
-        const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
-        const studentId = profileRes.data.id;
 
-        // 2. Fetch the dashboard summary and schedule in parallel
+        const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+        const resolvedStudentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
+
+        if (!resolvedStudentId) {
+          throw new Error('Unable to resolve student ID for dashboard data');
+        }
+
         const [dashboardRes, scheduleRes] = await Promise.all([
-          apiClient.get(ENDPOINTS.STUDENT.DASHBOARD(studentId)),
-          apiClient.get(ENDPOINTS.STUDENT.SCHEDULE(studentId))
+          apiClient.get(ENDPOINTS.STUDENT.DASHBOARD(resolvedStudentId)),
+          apiClient.get(ENDPOINTS.STUDENT.SCHEDULE(resolvedStudentId))
         ]);
-        
-        setDashboardData(dashboardRes.data);
-        setScheduleData(scheduleRes.data.schedule || []);
+
+        const dashboardPayload = dashboardRes.normalized?.data || {};
+        const schedulePayload = scheduleRes.normalized?.data || {};
+
+        const extractList = (data: any) => {
+          if (Array.isArray(data)) return data;
+          if (data?.schedule) return data.schedule;
+          if (data?.events) return data.events;
+          if (data?.students) return data.students;
+          if (data?.timetable) return data.timetable;
+          return [];
+        };
+
+        setDashboardData(dashboardPayload);
+        setScheduleData(extractList(schedulePayload));
+        setEventsData(extractList(dashboardPayload?.upcomingEvents ? { events: dashboardPayload.upcomingEvents } : {}));
+        setTopStudentsData(extractList(dashboardPayload?.topStudents ? { students: dashboardPayload.topStudents } : {}));
       } catch (error: any) {
         console.error('Failed to fetch student dashboard data:', error);
       } finally {
@@ -297,6 +332,22 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
 
         {/* Quick Actions */}
         <View style={styles.section}>
+          {/* Live Class Hot-Link */}
+          {(() => {
+            const ongoing = scheduleData.find(s => s.status === 'Ongoing');
+            if (ongoing) {
+              return (
+                <LiveClassBanner 
+                  subject={ongoing.subject}
+                  teacher={ongoing.teacher}
+                  time={`${ongoing.time} - ${ongoing.endTime}`}
+                  color="#EF4444"
+                />
+              );
+            }
+            return null;
+          })()}
+
           <View style={styles.sectionHeader}>
             <Ionicons name="flash" size={20} color="#3B82F6" style={styles.sectionIconMargin} />
             <Text style={[styles.sectionTitle, { color: '#3B82F6', fontSize: 18, fontWeight: '700' }]}>Quick Actions</Text>
@@ -350,9 +401,20 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
             <Text style={[styles.sectionTitle, { color: '#4F46E5' }]}>Upcoming Events</Text>
           </View>
           <View style={styles.eventList}>
-            <EventCard title="Annual Science Fair" date="October 15th" color="#F97316" />
-            <EventCard title="Annual Science Fair" date="October 15th" color="#10B981" />
-            <EventCard title="Annual Science Fair" date="October 15th" color="#4F46E5" />
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#4F46E5" />
+            ) : eventsData.length === 0 ? (
+              <Text style={styles.emptyText}>No upcoming events.</Text>
+            ) : (
+              eventsData.map((event, index) => (
+                <EventCard
+                  key={index}
+                  title={event.title}
+                  date={event.date}
+                  color={event.color || "#F97316"}
+                />
+              ))
+            )}
           </View>
         </View>
 
@@ -368,11 +430,21 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
             </View>
           </View>
           <View style={styles.topStudentList}>
-            <TopStudentCard rank="1" name="Aman Sharma" className="Class 12" percentage="99.9%" />
-            <TopStudentCard rank="2" name="Aman Sharma" className="Class 12" percentage="99.9%" />
-            <TopStudentCard rank="3" name="Aman Sharma" className="Class 12" percentage="99.9%" />
-            <TopStudentCard rank="4" name="Aman Sharma" className="Class 12" percentage="99.9%" />
-            <TopStudentCard rank="5" name="Aman Sharma" className="Class 12" percentage="99.9%" />
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#4F46E5" />
+            ) : topStudentsData.length === 0 ? (
+              <Text style={styles.emptyText}>No top students data available.</Text>
+            ) : (
+              topStudentsData.map((student, index) => (
+                <TopStudentCard
+                  key={index}
+                  rank={student.rank}
+                  name={student.name}
+                  className={student.className}
+                  percentage={student.percentage}
+                />
+              ))
+            )}
           </View>
         </View>
 
@@ -674,6 +746,35 @@ const styles = StyleSheet.create({
     marginTop: 20,
     fontWeight: '500',
   },
+  liveBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+  },
+  liveBannerContent: { flex: 1 },
+  liveIndicatorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  liveDot: { width: 8, height: 8, borderRadius: 4 },
+  liveText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
+  liveSubject: { fontSize: 16, fontWeight: '700', color: '#111827' },
+  liveTeacher: { fontSize: 13, color: '#6B7280', marginTop: 2 },
+  liveJoinBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginLeft: 12,
+  },
+  liveJoinBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
 });
 
 export default StudentDashboard;

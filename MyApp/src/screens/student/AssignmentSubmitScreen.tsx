@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -6,6 +6,8 @@ import {
   StyleSheet,
   StatusBar,
   Platform,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -14,15 +16,75 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type AssignmentSubmitNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AssignmentSubmit'>;
 
 interface Props {
   navigation: AssignmentSubmitNavigationProp;
+  route?: any;
 }
 
-const AssignmentSubmitScreen: React.FC<Props> = ({ navigation }) => {
+const AssignmentSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
   const { authState } = useAuth();
+  const assignmentId = route?.params?.assignmentId;
+  const [assignmentData, setAssignmentData] = useState<any>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const fetchAssignmentDetails = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        // @ts-ignore
+        const res = await apiClient.get(ENDPOINTS.STUDENT.ASSIGNMENT_DETAIL(assignmentId));
+        const data = res.normalized?.data || {};
+        setAssignmentData(data);
+      } catch (err: any) {
+        console.error('Failed to fetch assignment details:', err);
+        setError('Failed to load assignment details. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (assignmentId) {
+      fetchAssignmentDetails();
+    }
+  }, [assignmentId]);
+
+  const handleSubmitAssignment = async () => {
+    if (!uploadedFiles || uploadedFiles.length === 0) {
+      Alert.alert('Error', 'Please upload at least one file before submitting');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      // @ts-ignore
+      await apiClient.post(ENDPOINTS.STUDENT.ASSIGNMENT_SUBMIT(assignmentId), {
+        files: uploadedFiles,
+        submittedAt: new Date().toISOString()
+      });
+
+      Alert.alert('Success', 'Assignment submitted successfully!', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    } catch (err: any) {
+      console.error('Failed to submit assignment:', err);
+      const errorMessage =
+        err.response?.normalized?.message ||
+        err.response?.data?.message ||
+        'Failed to submit assignment. Please try again.';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -59,29 +121,42 @@ const AssignmentSubmitScreen: React.FC<Props> = ({ navigation }) => {
 
         <View style={styles.cardsContainer}>
 
+          {isLoading ? (
+            <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
+          ) : error ? (
+            <View style={{ padding: 16, backgroundColor: '#FEE2E2', borderRadius: 12 }}>
+              <Text style={{ color: '#DC2626', fontWeight: '500' }}>{error}</Text>
+            </View>
+          ) : !assignmentData ? (
+            <Text style={{ textAlign: 'center', marginTop: 40, color: '#9CA3AF' }}>No assignment data found</Text>
+          ) : (
+            <>
+
           {/* Card 1: Assignment Information */}
           <Animated.View entering={FadeInUp.delay(100).springify()} style={[styles.card, styles.infoCard]}>
             <View style={styles.infoCardHeader}>
               <MaterialCommunityIcons name="clipboard-text" size={20} color="#3B82F6" />
-              <Text style={styles.infoCardTitle}>Binary Search</Text>
+              <Text style={styles.infoCardTitle}>{assignmentData?.title || 'Assignment'}</Text>
             </View>
 
             <View style={styles.infoGrid}>
               <View style={styles.infoCol}>
                 <Text style={styles.infoLabel}>Due Date</Text>
-                <Text style={styles.infoValue}>May 20, 2023 (11:59 PM)</Text>
+                <Text style={styles.infoValue}>
+                  {assignmentData?.dueDate ? new Date(assignmentData.dueDate).toLocaleDateString() : 'N/A'}
+                </Text>
               </View>
               <View style={styles.infoCol}>
                 <Text style={styles.infoLabel}>Time Remaining</Text>
-                <Text style={[styles.infoValue, { color: '#EF4444' }]}>3 Days 14 Hours</Text>
+                <Text style={[styles.infoValue, { color: '#EF4444' }]}>Calculating...</Text>
               </View>
               <View style={styles.infoCol}>
                 <Text style={styles.infoLabel}>Subject</Text>
-                <Text style={styles.infoValue}>Data Structures</Text>
+                <Text style={styles.infoValue}>{assignmentData?.subject || 'N/A'}</Text>
               </View>
               <View style={styles.infoCol}>
                 <Text style={styles.infoLabel}>Status</Text>
-                <Text style={styles.infoValue}>Pending</Text>
+                <Text style={styles.infoValue}>{assignmentData?.status || 'Pending'}</Text>
               </View>
             </View>
           </Animated.View>
@@ -122,12 +197,26 @@ const AssignmentSubmitScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={styles.saveDraftText}>Save As Draft</Text>
             </ScaleButton>
 
-            <ScaleButton style={styles.submitFinalBtn} activeOpacity={0.8} scaleTo={0.95} onPress={() => navigation.navigate('AssignmentGrade')}>
-              <Ionicons name="send" size={18} color="#FFFFFF" style={{ marginRight: 8, transform: [{ rotate: '-45deg' }] }} />
-              <Text style={styles.submitFinalText}>Submit Assignment</Text>
+            <ScaleButton 
+              style={[styles.submitFinalBtn, isSubmitting && { opacity: 0.7 }]} 
+              activeOpacity={0.8} 
+              scaleTo={0.95}
+              disabled={isSubmitting}
+              onPress={handleSubmitAssignment}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <>
+                  <Ionicons name="send" size={18} color="#FFFFFF" style={{ marginRight: 8, transform: [{ rotate: '-45deg' }] }} />
+                  <Text style={styles.submitFinalText}>Submit Assignment</Text>
+                </>
+              )}
             </ScaleButton>
           </Animated.View>
 
+            </>
+          )}
         </View>
       </ScrollView>
 

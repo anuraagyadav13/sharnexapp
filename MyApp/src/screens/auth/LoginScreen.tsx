@@ -59,55 +59,57 @@ interface Props {
 }
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleQuickLogin = (role: 'student' | 'teacher' | 'principal') => {
-    // For testing/panning purposes: Mock a successful login that matches backend seed data structure
-    const mockUser = {
-      id: role === 'student' ? 'student-1' : (role === 'teacher' ? 'teacher-math' : 'principal-1'),
-      institutionId: 'inst-001',
-      name: "Test " + (role === 'principal' ? 'Principal' : role.charAt(0).toUpperCase() + role.slice(1)),
-      role: role.toUpperCase(),
-      email: role + "@sharnex.com",
-    };
-    login("mock_token_" + role, role, mockUser);
-  };
-
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
+    if (!identifier || !password) {
+      Alert.alert('Error', 'Please enter both email / student ID and password');
       return;
     }
 
     setIsSubmitting(true);
     try {
       const response = await apiClient.post(ENDPOINTS.AUTH.LOGIN, {
-        email: email.trim(),
+        identifier: identifier.trim(),
         password,
       });
 
-      const res = response.data;
-      if (res && res.data && res.data.tokens) {
-        // Map backend role string to frontend expected lowercase roles
-        let appRole: 'student' | 'teacher' | 'principal' = 'student';
-        const backendRole = res.data.user.role;
-        
-        if (backendRole === 'TEACHER' || backendRole === 'STAFF') appRole = 'teacher';
-        else if (backendRole === 'INSTITUTION_ADMIN' || backendRole === 'CENTRAL_ADMIN' || backendRole === 'PRINCIPAL') appRole = 'principal';
-        
-        login(res.data.tokens.accessToken, appRole as any, res.data.user);
-      } else {
-        throw new Error('Invalid response from server');
+      // Handle standardized response format
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Login failed');
       }
+
+      const payload = response.data.data;
+      if (!payload || !payload.tokens || !payload.tokens.accessToken) {
+        throw new Error('Invalid login response from server');
+      }
+
+      const { tokens, user } = payload;
+
+      let appRole: 'student' | 'teacher' | 'principal' = 'student';
+      const backendRole = user.role;
+      if (backendRole === 'TEACHER' || backendRole === 'STAFF') appRole = 'teacher';
+      else if (backendRole === 'INSTITUTION_ADMIN' || backendRole === 'CENTRAL_ADMIN' || backendRole === 'PRINCIPAL') appRole = 'principal';
+
+      login(tokens.accessToken, tokens.refreshToken, appRole, user);
     } catch (error: any) {
       console.error('Login Error:', error);
-      const message = error.response?.data?.message || 'Something went wrong. Please try again.';
-      Alert.alert('Login Failed', message);
+      let message = 'Something went wrong. Please try again.';
+      
+      if (error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error.message) {
+        message = error.message;
+      }
+      
+      // Only show first 100 chars to keep alert readable
+      const displayMessage = message.length > 100 ? message.substring(0, 97) + '...' : message;
+      Alert.alert('Login Failed', displayMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -156,12 +158,11 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    placeholder="Email Address"
+                    placeholder="Email or Student ID"
                     placeholderTextColor="#A0AEC0"
-                    keyboardType="email-address"
                     autoCapitalize="none"
-                    value={email}
-                    onChangeText={setEmail}
+                    value={identifier}
+                    onChangeText={setIdentifier}
                   />
                 </View>
               </FadeInView>
@@ -200,24 +201,6 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                   <Text style={styles.loginButtonText}>{isSubmitting ? 'Loading...' : 'Login'}</Text>
                 </ScaleButton>
               </FadeInView>
-
-              <FadeInView delay={650}>
-                <View style={styles.testLoginContainer}>
-                  <Text style={styles.testLoginLabel}>Quick Test Access:</Text>
-                  <View style={styles.testLoginRow}>
-                    <TouchableOpacity style={[styles.testTag, { backgroundColor: '#EEF2FF' }]} onPress={() => handleQuickLogin('student')}>
-                      <Text style={[styles.testTagText, { color: '#4F46E5' }]}>Student</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.testTag, { backgroundColor: '#ECFDF5' }]} onPress={() => handleQuickLogin('teacher')}>
-                      <Text style={[styles.testTagText, { color: '#059669' }]}>Teacher</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.testTag, { backgroundColor: '#FFF7ED' }]} onPress={() => handleQuickLogin('principal')}>
-                      <Text style={[styles.testTagText, { color: '#D97706' }]}>Principal</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </FadeInView>
-
 
               <FadeInView delay={700}>
                 <View style={styles.dividerContainer}>
@@ -413,34 +396,6 @@ const styles = StyleSheet.create({
   signUpText: {
     fontSize: 14,
     color: '#6366F1',
-    fontWeight: '700',
-  },
-  testLoginContainer: {
-    marginTop: 8,
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  testLoginLabel: {
-    fontSize: 12,
-    color: '#94A3B8',
-    marginBottom: 8,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  testLoginRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  testTag: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  testTagText: {
-    fontSize: 12,
     fontWeight: '700',
   },
 });

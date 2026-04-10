@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,31 +8,127 @@ import {
   Platform,
   StatusBar,
   Modal,
-  TextInput
+  TextInput,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useAuth } from '../../store/AuthContext';
-
-// DUMMY DATA
-const INVOICES = [
-  { id: 'INV-MLOTFCXC', student: 'Deep Urban', amount: '₹1.00', issueDate: '16 Feb 2026', dueDate: '28 Feb 2026', status: 'Pending' },
-  { id: 'INV-MKXRIHCO', student: 'Deep Urban', amount: '₹3,353.00', issueDate: '28 Jan 2026', dueDate: '5 Feb 2026', status: 'Pending' },
-  { id: 'INV-MKXQGVAW', student: 'Deep Urban', amount: '₹1.00', issueDate: '28 Jan 2026', dueDate: '30 Jan 2026', status: 'Pending' }
-];
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 const PrincipalFeesScreen = ({ navigation }: any) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [activeTab, setActiveTab] = useState('All Fees');
   const [isModalOpen, setModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>({
+    totalFees: 0,
+    totalCollected: 0,
+    collectionRate: 0,
+    pendingAmount: 0
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Create Fee Modal States
+  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  const [feeItems, setFeeItems] = useState([{ description: '', amount: '' }]);
+  const [dueDate, setDueDate] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('');
 
   // Date Picker States
   const [datePickerTarget, setDatePickerTarget] = useState<boolean>(false);
-  const [dueDate, setDueDate] = useState('');
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // Fetch Fees Data
+  useEffect(() => {
+    const fetchFees = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const res = await apiClient.get(ENDPOINTS.PRINCIPAL.FEES);
+        const data = res.data.data || res.data;
+        
+        setInvoices(data.invoices || []);
+        setSummary({
+          totalFees: data.summary?.totalFees || 0,
+          totalCollected: data.summary?.totalCollected || 0,
+          collectionRate: data.summary?.collectionRate || 0,
+          pendingAmount: data.summary?.pendingAmount || 0
+        });
+      } catch (error: any) {
+        console.error('Failed to fetch fees:', error);
+        setError('Failed to load fees data');
+        setInvoices([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchFees();
+  }, []);
+
+  // Handle Create Fee Form Submission
+  const handleCreateFee = async () => {
+    if (!selectedClass || selectedStudents.length === 0 || feeItems.some(f => !f.description || !f.amount) || !dueDate) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const totalAmount = feeItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+      
+      const feeData = {
+        class: selectedClass,
+        students: selectedStudents,
+        items: feeItems,
+        totalAmount,
+        dueDate,
+        month: selectedMonth
+      };
+
+      const res = await apiClient.post(ENDPOINTS.PRINCIPAL.CREATE_FEE, feeData);
+      
+      Alert.alert('Success', 'Fee invoice created successfully');
+      setModalOpen(false);
+      // Reset form
+      setSelectedClass('');
+      setSelectedStudents([]);
+      setFeeItems([{ description: '', amount: '' }]);
+      setDueDate('');
+      setSelectedMonth('');
+      // Refresh list
+      const refreshRes = await apiClient.get(ENDPOINTS.PRINCIPAL.FEES);
+      const data = refreshRes.data.data || refreshRes.data;
+      setInvoices(data.invoices || []);
+    } catch (error: any) {
+      console.error('Failed to create fee:', error);
+      Alert.alert('Error', error.response?.data?.message || 'Failed to create fee invoice');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const addFeeItem = () => {
+    setFeeItems([...feeItems, { description: '', amount: '' }]);
+  };
+
+  const removeFeeItem = (index: number) => {
+    setFeeItems(feeItems.filter((_, i) => i !== index));
+  };
+
+  const updateFeeItem = (index: number, field: string, value: string) => {
+    const updated = [...feeItems];
+    updated[index] = { ...updated[index], [field]: value };
+    setFeeItems(updated);
+  };
 
   const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
   const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
@@ -56,8 +152,16 @@ const PrincipalFeesScreen = ({ navigation }: any) => {
     setDatePickerTarget(false);
   };
 
-  // Filter Data based on tabs for prototype visual changes (just showing empty state for non-All to mimic screenshots)
-  const currentInvoices = activeTab === 'All Fees' ? INVOICES : [];
+  // Filter Data based on tabs
+  const getFilteredInvoices = () => {
+    if (activeTab === 'All Fees') return invoices;
+    if (activeTab === 'Pending') return invoices.filter(inv => inv.status === 'PENDING');
+    if (activeTab === 'Overdue') return invoices.filter(inv => inv.status === 'OVERDUE');
+    if (activeTab === 'Collected') return invoices.filter(inv => inv.status === 'PAID');
+    return invoices;
+  };
+
+  const currentInvoices = getFilteredInvoices();
 
   return (
     <View style={styles.mainContainer}>
@@ -106,7 +210,7 @@ const PrincipalFeesScreen = ({ navigation }: any) => {
                 <Text style={{color: '#8b5cf6', fontSize: 13, fontWeight: '800'}}>₹</Text>
               </View>
               <View style={{marginLeft: 10}}>
-                <Text style={styles.statValue}>₹3,355</Text>
+                <Text style={styles.statValue}>₹{summary.totalFees?.toLocaleString() || 0}</Text>
                 <Text style={styles.statLabel}>Total Fees This Month</Text>
               </View>
             </View>
@@ -118,7 +222,7 @@ const PrincipalFeesScreen = ({ navigation }: any) => {
                 <Ionicons name="cash-outline" size={16} color="#3b82f6" />
               </View>
               <View style={{marginLeft: 10}}>
-                <Text style={styles.statValue}>₹0</Text>
+                <Text style={styles.statValue}>₹{summary.totalCollected?.toLocaleString() || 0}</Text>
                 <Text style={styles.statLabel}>Total Collected</Text>
               </View>
             </View>
@@ -130,7 +234,7 @@ const PrincipalFeesScreen = ({ navigation }: any) => {
                 <Ionicons name="bar-chart-outline" size={16} color="#22c55e" />
               </View>
               <View style={{marginLeft: 10}}>
-                <Text style={styles.statValue}>0%</Text>
+                <Text style={styles.statValue}>{summary.collectionRate?.toFixed(0) || 0}%</Text>
                 <Text style={styles.statLabel}>Fees Collection Rate</Text>
               </View>
             </View>
@@ -142,7 +246,7 @@ const PrincipalFeesScreen = ({ navigation }: any) => {
                 <Ionicons name="time-outline" size={16} color="#ef4444" />
               </View>
               <View style={{marginLeft: 10}}>
-                <Text style={styles.statValue}>₹3,355</Text>
+                <Text style={styles.statValue}>₹{summary.pendingAmount?.toLocaleString() || 0}</Text>
                 <Text style={styles.statLabel}>Pending Payments</Text>
               </View>
             </View>
@@ -185,7 +289,15 @@ const PrincipalFeesScreen = ({ navigation }: any) => {
 
            {/* List / Empty State */}
            <View style={styles.listContainer}>
-              {currentInvoices.length > 0 ? (
+              {isLoading ? (
+                <ActivityIndicator size="large" color="#8B5CF6" style={{ marginTop: 40 }} />
+              ) : error ? (
+                <View style={styles.emptyStateBox}>
+                  <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+                  <Text style={styles.emptyStateTitle}>Error Loading Fees</Text>
+                  <Text style={styles.emptyStateSub}>{error}</Text>
+                </View>
+              ) : currentInvoices.length > 0 ? (
                 currentInvoices.map((inv, idx) => (
                   <View key={idx} style={styles.invoiceCardRow}>
                     
@@ -284,15 +396,30 @@ const PrincipalFeesScreen = ({ navigation }: any) => {
                         <Text style={[styles.feeTableHeadText, {flex: 1}]}>AMOUNT (₹)</Text>
                       </View>
                       
-                      <View style={styles.feeItemRow}>
-                        <TextInput style={[styles.feeTextInput, {flex: 2, marginRight: 8}]} placeholder="e.g., Tuition Fee" placeholderTextColor="#9CA3AF" />
-                        <TextInput style={[styles.feeTextInput, {flex: 1}]} placeholder="0" keyboardType="numeric" placeholderTextColor="#9CA3AF" />
-                        <TouchableOpacity style={{marginLeft: 10, padding: 4}}>
-                           <Ionicons name="trash" size={18} color="#CBD5E1" />
-                        </TouchableOpacity>
-                      </View>
+                      {feeItems.map((item, index) => (
+                        <View key={index} style={styles.feeItemRow}>
+                          <TextInput 
+                            style={[styles.feeTextInput, {flex: 2, marginRight: 8}]} 
+                            placeholder="e.g., Tuition Fee" 
+                            placeholderTextColor="#9CA3AF" 
+                            value={item.description}
+                            onChangeText={(text) => updateFeeItem(index, 'description', text)}
+                          />
+                          <TextInput 
+                            style={[styles.feeTextInput, {flex: 1}]} 
+                            placeholder="0" 
+                            keyboardType="numeric" 
+                            placeholderTextColor="#9CA3AF"
+                            value={item.amount}
+                            onChangeText={(text) => updateFeeItem(index, 'amount', text)}
+                          />
+                          <TouchableOpacity style={{marginLeft: 10, padding: 4}} onPress={() => removeFeeItem(index)}>
+                             <Ionicons name="trash" size={18} color="#EF4444" />
+                          </TouchableOpacity>
+                        </View>
+                      ))}
 
-                      <TouchableOpacity style={styles.addFeeItemBtn}>
+                      <TouchableOpacity style={styles.addFeeItemBtn} onPress={addFeeItem}>
                         <Ionicons name="add" size={14} color="#8B5CF6" />
                         <Text style={styles.addFeeItemBtnText}>Add Fee Item</Text>
                       </TouchableOpacity>
@@ -320,8 +447,16 @@ const PrincipalFeesScreen = ({ navigation }: any) => {
                    <TouchableOpacity style={styles.modalBtnOutline} onPress={() => setModalOpen(false)}>
                      <Text style={styles.modalBtnOutlineText}>Cancel</Text>
                    </TouchableOpacity>
-                   <TouchableOpacity style={styles.modalBtnSolid} onPress={() => setModalOpen(false)}>
-                     <Text style={styles.modalBtnSolidText}>Review & Preview</Text>
+                   <TouchableOpacity 
+                     style={[styles.modalBtnSolid, isSubmitting && {opacity: 0.7}]} 
+                     disabled={isSubmitting}
+                     onPress={handleCreateFee}
+                   >
+                     {isSubmitting ? (
+                       <ActivityIndicator size="small" color="#FFF" />
+                     ) : (
+                       <Text style={styles.modalBtnSolidText}>Create Invoice</Text>
+                     )}
                    </TouchableOpacity>
                  </View>
 
@@ -367,7 +502,7 @@ const PrincipalFeesScreen = ({ navigation }: any) => {
       </Modal>
 
       {/* Navigation Drawer */}
-      <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="Principal" />
+      <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
     </View>
   );
 };

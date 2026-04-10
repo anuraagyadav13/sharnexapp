@@ -21,17 +21,6 @@ import { ENDPOINTS } from '../../constants/api';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherViewAttendance'>;
 
-const MOCK_STUDENTS = [
-  { id: 1, name: 'Alex Johnson', stdId: 'STU-2025-001', status: 'Present' },
-  { id: 2, name: 'Alex Johnson', stdId: 'STU-2025-001', status: 'Present' },
-  { id: 3, name: 'Alex Johnson', stdId: 'STU-2025-001', status: 'Absent' },
-  { id: 4, name: 'Alex Johnson', stdId: 'STU-2025-001', status: 'Absent' },
-  { id: 5, name: 'Alex Johnson', stdId: 'STU-2025-001', status: 'Present' },
-  { id: 6, name: 'Alex Johnson', stdId: 'STU-2025-001', status: 'Present' },
-  { id: 7, name: 'Alex Johnson', stdId: 'STU-2025-001', status: 'Present' },
-  { id: 8, name: 'Alex Johnson', stdId: 'STU-2025-001', status: 'Present' },
-  { id: 9, name: 'Alex Johnson', stdId: 'STU-2025-001', status: 'Present' },
-];
 
 const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation, route }) => {
   const { classId } = route.params;

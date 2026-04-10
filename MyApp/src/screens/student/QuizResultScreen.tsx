@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   StatusBar,
   Platform,
+  ActivityIndicator
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -13,15 +14,46 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type QuizResultNavigationProp = NativeStackNavigationProp<RootStackParamList, 'QuizResult'>;
 
 interface Props {
   navigation: QuizResultNavigationProp;
+  route: any; // Add route for params
 }
 
-const QuizResultScreen: React.FC<Props> = ({ navigation }) => {
+const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
   const { authState } = useAuth();
+  const [quizResult, setQuizResult] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchQuizResult = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const quizId = route?.params?.quizId;
+        if (!quizId) {
+          setError('Quiz ID not found');
+          return;
+        }
+
+        const res = await apiClient.get(ENDPOINTS.STUDENT.QUIZ_RESULT(quizId));
+        const responseData = res.normalized?.data ?? null;
+        setQuizResult(responseData);
+      } catch (err: any) {
+        console.error('Failed to fetch quiz result:', err);
+        setError('Failed to load quiz results. Please try again.');
+        setQuizResult(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchQuizResult();
+  }, [route?.params?.quizId]);
 
   const OptionRow = ({ letter, text, state }: { letter: string, text: string, state: 'normal' | 'correct-selected' | 'right-answer' | 'wrong-selected' }) => {
     let boxStyle: any = styles.optionItem;
@@ -56,14 +88,59 @@ const QuizResultScreen: React.FC<Props> = ({ navigation }) => {
     );
   };
 
+  if (isLoading && !quizResult) {
+    return (
+      <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
+  if (error && !quizResult) {
+    return (
+      <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }]}>
+        <Ionicons name="alert-circle" size={64} color="#EF4444" style={{ marginBottom: 16 }} />
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', textAlign: 'center' }}>Unable to Load Quiz Results</Text>
+        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>{error}</Text>
+        <ScaleButton
+          style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
+          onPress={() => {
+            setError(null);
+            setIsLoading(true);
+            const fetchQuizResult = async () => {
+              try {
+                const quizId = route?.params?.quizId;
+                if (!quizId) {
+                  setError('Quiz ID not found');
+                  return;
+                }
+                const res = await apiClient.get(ENDPOINTS.STUDENT.QUIZ_RESULT(quizId));
+                const responseData = res.normalized?.data ?? null;
+                setQuizResult(responseData);
+              } catch (err: any) {
+                setError('Failed to load quiz results. Please try again.');
+              } finally {
+                setIsLoading(false);
+              }
+            };
+            fetchQuizResult();
+          }}
+          scaleTo={0.95}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
+        </ScaleButton>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFAFF" />
 
       {/* Global Header */}
       <View style={styles.globalHeader}>
-         <ScaleButton style={styles.menuHandle} onPress={() => {}}>
-           <View style={{width: 28}} /> 
+         <ScaleButton style={styles.menuHandle} onPress={() => navigation.goBack()}>
+           <Ionicons name="arrow-back" size={22} color="#1F2937" />
          </ScaleButton>
          <Text style={styles.headerTitle} numberOfLines={1}>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
          <View style={styles.headerRight}>
@@ -88,9 +165,9 @@ const QuizResultScreen: React.FC<Props> = ({ navigation }) => {
           >
              <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </ScaleButton>
-          <Text style={styles.heroTitle}>Data Structures - Weekly Quiz</Text>
+          <Text style={styles.heroTitle}>{quizResult?.title || 'Quiz Result'}</Text>
           <View style={styles.heroRow}>
-             <Text style={styles.heroSubtitle}>Instructor: Mrs. Sarah</Text>
+             <Text style={styles.heroSubtitle}>Instructor: {quizResult?.teacherName || 'N/A'}</Text>
              <View style={styles.completedBadge}>
                 <Text style={styles.completedBadgeText}>Quiz Completed</Text>
              </View>
@@ -106,34 +183,34 @@ const QuizResultScreen: React.FC<Props> = ({ navigation }) => {
             {/* Circle Progress */}
             <View style={styles.ringWrapper}>
                <View style={styles.scoreRing}>
-                 <Text style={styles.scoreNumberMain}>100 %</Text>
+                 <Text style={styles.scoreNumberMain}>{quizResult?.percentage || 0}%</Text>
                  <Text style={styles.scoreNumberSub}>Score</Text>
                </View>
             </View>
 
             {/* Performance Pill */}
             <View style={styles.performancePill}>
-               <Text style={styles.performancePillText}>Good Performance</Text>
+               <Text style={styles.performancePillText}>{quizResult?.performance || 'Performance'}</Text>
             </View>
 
             {/* Stats Grid */}
             <View style={styles.statsGridRow}>
                <View style={styles.statsGridCol}>
-                  <Text style={[styles.statsGridVal, {color: '#05D59A'}]}>15/20</Text>
+                  <Text style={[styles.statsGridVal, {color: '#05D59A'}]}>{quizResult?.correctAnswers || 0}/{quizResult?.totalQuestions || 0}</Text>
                   <Text style={styles.statsGridLbl}>Correct Answers</Text>
                </View>
                <View style={styles.statsGridCol}>
-                  <Text style={[styles.statsGridVal, {color: '#F43F5E'}]}>5/20</Text>
+                  <Text style={[styles.statsGridVal, {color: '#F43F5E'}]}>{quizResult?.wrongAnswers || 0}/{quizResult?.totalQuestions || 0}</Text>
                   <Text style={styles.statsGridLbl}>Wrong Answers</Text>
                </View>
             </View>
             <View style={styles.statsGridRow}>
                <View style={styles.statsGridCol}>
-                  <Text style={[styles.statsGridVal, {color: '#3B82F6'}]}>28:45</Text>
+                  <Text style={[styles.statsGridVal, {color: '#3B82F6'}]}>{quizResult?.timeTaken || 'N/A'}</Text>
                   <Text style={styles.statsGridLbl}>Time Used</Text>
                </View>
                <View style={styles.statsGridCol}>
-                  <Text style={[styles.statsGridVal, {color: '#9333EA'}]}>June 12</Text>
+                  <Text style={[styles.statsGridVal, {color: '#9333EA'}]}>{quizResult?.completedAt ? new Date(quizResult.completedAt).toLocaleDateString() : 'N/A'}</Text>
                   <Text style={styles.statsGridLbl}>Date Completed</Text>
                </View>
             </View>
@@ -146,67 +223,66 @@ const QuizResultScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.sectionTitleText}>Question Review</Text>
           </Animated.View>
 
-          {/* Question 1: Correct Answer Variation */}
-          <Animated.View entering={FadeInUp.delay(200).springify()} style={[styles.questionCard, styles.cardBorderCorrect]}>
-            <View style={styles.questionHeader}>
-              <View style={styles.questionNumberCircle}>
-                <Text style={styles.questionNumberText}>1</Text>
+          {/* Dynamic Question Cards */}
+          {(quizResult?.questions || []).map((question: any, index: number) => (
+            <Animated.View 
+              key={question.id || index}
+              entering={FadeInUp.delay(200 + index * 50).springify()} 
+              style={[styles.questionCard, question.isCorrect ? styles.cardBorderCorrect : styles.cardBorderIncorrect]}
+            >
+              <View style={styles.questionHeader}>
+                <View style={styles.questionNumberCircle}>
+                  <Text style={styles.questionNumberText}>{index + 1}</Text>
+                </View>
+                <Text style={styles.questionMainText}>
+                  {question.text || 'Question text not available'}
+                </Text>
+                <View style={styles.pointsBadge}>
+                  <Text style={styles.pointsBadgeText}>{question.points || 0} Points</Text>
+                </View>
               </View>
-              <Text style={styles.questionMainText}>
-                What is the time complexity of accessing an element in an array by index?
-              </Text>
-              <View style={styles.pointsBadge}>
-                <Text style={styles.pointsBadgeText}>2 Points</Text>
+
+              <View style={styles.optionsList}>
+                {(question.options || []).map((option: any, optIndex: number) => {
+                  let state: 'normal' | 'correct-selected' | 'right-answer' | 'wrong-selected' = 'normal';
+                  
+                  if (option.isSelected && option.isCorrect) state = 'correct-selected';
+                  else if (option.isCorrect) state = 'right-answer';
+                  else if (option.isSelected && !option.isCorrect) state = 'wrong-selected';
+                  
+                  return (
+                    <OptionRow 
+                      key={optIndex} 
+                      letter={option.letter || String.fromCharCode(65 + optIndex)} 
+                      text={option.text || 'Option text'} 
+                      state={state} 
+                    />
+                  );
+                })}
               </View>
-            </View>
 
-            <View style={styles.optionsList}>
-               <OptionRow letter="A" text="O(1) - Constant Time" state="normal" />
-               <OptionRow letter="B" text="O(n) - Linear Time" state="correct-selected" />
-               <OptionRow letter="C" text="O(log n) - Logarithmic Time" state="normal" />
-               <OptionRow letter="D" text="O(n²) - Quadratic Time" state="normal" />
-            </View>
-
-            {/* Result Tag - Correct */}
-            <View style={[styles.resultFeedbackPill, {backgroundColor: '#D1FAE5'}]}>
-               <Ionicons name="checkmark-circle" size={14} color="#10B981" style={{marginRight: 4}} />
-               <Text style={[styles.resultFeedbackText, {color: '#10B981'}]}>Your Answer: Option B - Correct!</Text>
-            </View>
-          </Animated.View>
-
-          {/* Question 2: Incorrect Answer Variation */}
-          <Animated.View entering={FadeInUp.delay(250).springify()} style={[styles.questionCard, styles.cardBorderIncorrect]}>
-            <View style={styles.questionHeader}>
-              <View style={styles.questionNumberCircle}>
-                <Text style={styles.questionNumberText}>2</Text>
+              {/* Result Tag */}
+              <View style={[styles.resultFeedbackPill, {backgroundColor: question.isCorrect ? '#D1FAE5' : '#FFE4E6'}]}>
+                 <Ionicons name={question.isCorrect ? "checkmark-circle" : "close-circle"} size={14} color={question.isCorrect ? "#10B981" : "#F43F5E"} style={{marginRight: 4}} />
+                 <Text style={[styles.resultFeedbackText, {color: question.isCorrect ? '#10B981' : '#F43F5E'}]}>
+                   Your Answer: {question.selectedAnswer || 'N/A'} - {question.isCorrect ? 'Correct!' : 'Incorrect!'}
+                 </Text>
               </View>
-              <Text style={styles.questionMainText}>
-                What is the time complexity of accessing an element in an array by index?
-              </Text>
-              <View style={styles.pointsBadge}>
-                <Text style={styles.pointsBadgeText}>2 Points</Text>
-              </View>
-            </View>
+            </Animated.View>
+          ))}
 
-            <View style={styles.optionsList}>
-               <OptionRow letter="A" text="O(1) - Constant Time" state="right-answer" />
-               <OptionRow letter="B" text="O(n) - Linear Time" state="wrong-selected" />
-               <OptionRow letter="C" text="O(log n) - Logarithmic Time" state="normal" />
-               <OptionRow letter="D" text="O(n²) - Quadratic Time" state="normal" />
+          {(quizResult?.questions || []).length === 0 && (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="help-circle-outline" size={60} color="#E5E7EB" />
+              <Text style={styles.emptyText}>No question details available</Text>
             </View>
-
-            {/* Result Tag - Incorrect */}
-            <View style={[styles.resultFeedbackPill, {backgroundColor: '#FFE4E6'}]}>
-               <Ionicons name="close-circle" size={14} color="#F43F5E" style={{marginRight: 4}} />
-               <Text style={[styles.resultFeedbackText, {color: '#F43F5E'}]}>Your Answer: Option B - Incorrect!</Text>
-            </View>
-          </Animated.View>
+          )}
 
           {/* Action Footer Container */}
           <Animated.View entering={FadeInUp.delay(350).springify()} style={styles.actionFooter}>
              
              <View style={styles.splitButtonsRow}>
-                <ScaleButton style={[styles.footerBtnHalf, {backgroundColor: '#4F46E5'}]} activeOpacity={0.8} scaleTo={0.95} onPress={() => navigation.navigate('QuizDetails', { quizId: '1' })}>
+                <ScaleButton style={[styles.footerBtnHalf, {backgroundColor: '#4F46E5'}]} activeOpacity={0.8} scaleTo={0.95} onPress={() => navigation.navigate('QuizDetails', { quizId: route?.params?.quizId })}>
                    <Ionicons name="bar-chart-outline" size={16} color="#FFFFFF" style={{marginRight: 6}} />
                    <Text style={styles.footerBtnHalfText}>View Analytics</Text>
                 </ScaleButton>
@@ -344,6 +420,15 @@ const styles = StyleSheet.create({
      borderWidth: 1, borderColor: '#4F46E5', borderRadius: 6, paddingVertical: 12, backgroundColor: '#FFFFFF'
   },
   backBtnFullText: { color: '#4F46E5', fontSize: 14, fontWeight: '700' },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#999',
+  },
 
 });
 

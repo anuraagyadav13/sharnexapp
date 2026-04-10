@@ -100,7 +100,7 @@ const ViewQuizDetailScreen: React.FC<Props> = ({ navigation }) => {
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoRowLeft}>Teacher</Text>
-              <Text style={styles.infoRowRight}>Dr. Sarah Johnson</Text>
+              <Text style={styles.infoRowRight}>Dr. Priya Sharma</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoRowLeft}>Marks</Text>
