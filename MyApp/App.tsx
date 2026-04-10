@@ -185,10 +185,11 @@ function App(): React.JSX.Element {
   );
 }
 
-export default App;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
 });
+
+export default App;
+
