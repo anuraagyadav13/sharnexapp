@@ -64,16 +64,19 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
 
   const getDayStyle = (day: number | null) => {
     if (day === null) return null;
-    // 1st column is Sunday (Mock-ish check for weekends based on 2025 Dec)
-    if ([7, 14, 21, 28].includes(day)) return 'weekend';
+    
+    // Get current month/year for matching
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
     
     if (attendanceData?.records) {
-      // Find record for this day (Dec 2025 mock display)
-      const dateStr = `2025-12-${day.toString().padStart(2, '0')}`;
-      const record = attendanceData.records.find((r: any) => r.date.startsWith(dateStr));
+      const dateStr = `${currentYear}-${currentMonth}-${day.toString().padStart(2, '0')}`;
+      const record = attendanceData.records.find((r: any) => r.date && r.date.startsWith(dateStr));
       if (record) {
-        if (record.status.toLowerCase() === 'present' || record.status.toLowerCase() === 'late') return 'present';
-        if (record.status.toLowerCase() === 'absent') return 'absent';
+        const status = record.status?.toLowerCase();
+        if (status === 'present' || status === 'late') return 'present';
+        if (status === 'absent') return 'absent';
       }
     }
     return 'none';
@@ -191,7 +194,9 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
            <View style={styles.cardRowBetween}>
               <View style={{flexDirection: 'row', alignItems: 'center'}}>
                  <Ionicons name="calendar-outline" size={18} color="#111827" style={{marginRight: 6}} />
-                 <Text style={styles.cardHeader}>Dec 2025</Text>
+                 <Text style={styles.cardHeader}>
+                    {new Date().toLocaleString('en-US', { month: 'short', year: 'numeric' })}
+                 </Text>
               </View>
               <View style={styles.calArrows}>
                  <TouchableOpacity style={styles.calBtn}>

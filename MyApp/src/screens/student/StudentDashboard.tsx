@@ -13,7 +13,15 @@ import {
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import Animated, { 
+  FadeInUp, 
+  useAnimatedStyle, 
+  withRepeat, 
+  withTiming, 
+  withSequence,
+  interpolate,
+  useSharedValue
+} from 'react-native-reanimated';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -139,21 +147,72 @@ const TopStudentCard = React.memo(({ rank, name, className, percentage }: any) =
   </View>
 ));
 
-const LiveClassBanner = ({ subject, teacher, time, color }: { subject: string, teacher: string, time: string, color: string }) => (
-  <Animated.View entering={FadeInUp.springify()} style={[styles.liveBanner, { borderLeftColor: color }]}>
-    <View style={styles.liveBannerContent}>
-      <View style={styles.liveIndicatorRow}>
-        <View style={[styles.liveDot, { backgroundColor: color }]} />
-        <Text style={[styles.liveText, { color }]}>LIVE NOW</Text>
+const LiveClassBanner = ({ subject, teacher, time, startTime, endTime, color }: { subject: string, teacher: string, time: string, startTime: string, endTime: string, color: string }) => {
+  const [progress, setProgress] = useState(0);
+  const shimmerValue = useSharedValue(0);
+
+  useEffect(() => {
+    shimmerValue.value = withRepeat(
+      withTiming(1, { duration: 2000 }),
+      -1,
+      false
+    );
+
+    const calculateProgress = () => {
+      try {
+        const now = new Date();
+        const [sH, sM] = startTime.split(':').map(Number);
+        const [eH, eM] = endTime.split(':').map(Number);
+        const start = new Date(); start.setHours(sH, sM, 0);
+        const end = new Date(); end.setHours(eH, eM, 0);
+        const total = end.getTime() - start.getTime();
+        const elapsed = now.getTime() - start.getTime();
+        const percent = Math.min(Math.max(elapsed / total, 0), 1);
+        setProgress(percent);
+      } catch (e) { setProgress(0.5); }
+    };
+
+    calculateProgress();
+    const timer = setInterval(calculateProgress, 60000);
+    return () => clearInterval(timer);
+  }, [startTime, endTime]);
+
+  const animatedShimmerStyle = useAnimatedStyle(() => {
+    const translateX = interpolate(shimmerValue.value, [0, 1], [-100, 200]);
+    return {
+      transform: [{ translateX }],
+      opacity: interpolate(shimmerValue.value, [0, 0.5, 1], [0.3, 1, 0.3]),
+    };
+  });
+
+  const animatedPulseStyle = useAnimatedStyle(() => {
+    return {
+      opacity: interpolate(shimmerValue.value, [0, 0.5, 1], [0.8, 1, 0.8]),
+      transform: [{ scaleY: interpolate(shimmerValue.value, [0, 0.5, 1], [1, 1.2, 1]) }],
+    };
+  });
+
+  return (
+    <Animated.View entering={FadeInUp.springify()} style={[styles.liveBanner, { borderLeftColor: color }]}>
+      <View style={styles.liveBannerContent}>
+        <View style={styles.liveIndicatorRow}>
+          <View style={[styles.liveDot, { backgroundColor: color }]} />
+          <Text style={[styles.liveText, { color }]}>LIVE NOW</Text>
+        </View>
+        <Text style={styles.liveSubject}>{subject}</Text>
+        <View style={styles.liveTrackingContainer}>
+          <Animated.View style={[styles.liveTrackingLine, { width: `${progress * 100}%` }, animatedPulseStyle]}>
+             <Animated.View style={[styles.shimmerStreak, animatedShimmerStyle]} />
+          </Animated.View>
+        </View>
+        <Text style={styles.liveTeacher}>{teacher} • {time}</Text>
       </View>
-      <Text style={styles.liveSubject}>{subject}</Text>
-      <Text style={styles.liveTeacher}>{teacher} • {time}</Text>
-    </View>
-    <TouchableOpacity style={[styles.liveJoinBtn, { backgroundColor: color }]}>
-      <Text style={styles.liveJoinBtnText}>Join</Text>
-    </TouchableOpacity>
-  </Animated.View>
-);
+      <TouchableOpacity style={[styles.liveJoinBtn, { backgroundColor: color }]}>
+        <Text style={styles.liveJoinBtnText}>Join</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
 
   const HelpCenterCard = ({ bgColor, iconName, title, desc }: { bgColor: string, iconName: string, title: string, desc: string }) => (
     <View style={styles.helpCenterCard}>
@@ -179,10 +238,16 @@ const FAQItem = React.memo(({ question }: { question: string }) => (
 const StatCard = ({ title, value, color, icon }: { title: string, value: string | number, color: string, icon: string }) => (
   <View style={styles.statCard}>
     <View style={[styles.statIconCircle, { backgroundColor: `${color}15` }]}>
-      <Ionicons name={icon} size={20} color={color} />
+      <Ionicons name={icon} size={18} color={color} />
     </View>
     <Text style={styles.statValue}>{value}</Text>
-    <Text style={styles.statTitle}>{title}</Text>
+    <Text 
+      style={styles.statTitle} 
+      numberOfLines={1} 
+      adjustsFontSizeToFit
+    >
+      {title}
+    </Text>
   </View>
 );
 
@@ -239,6 +304,11 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
 
     fetchAllData();
   }, []);
+
+  const ongoingClass = React.useMemo(() => 
+    scheduleData.find(s => s.status === 'Ongoing'),
+    [scheduleData]
+  );
 
   return (
     <View style={styles.mainContainer}>
@@ -333,20 +403,16 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
         {/* Quick Actions */}
         <View style={styles.section}>
           {/* Live Class Hot-Link */}
-          {(() => {
-            const ongoing = scheduleData.find(s => s.status === 'Ongoing');
-            if (ongoing) {
-              return (
-                <LiveClassBanner 
-                  subject={ongoing.subject}
-                  teacher={ongoing.teacher}
-                  time={`${ongoing.time} - ${ongoing.endTime}`}
-                  color="#EF4444"
-                />
-              );
-            }
-            return null;
-          })()}
+          {ongoingClass && (
+            <LiveClassBanner 
+              subject={ongoingClass.subject}
+              teacher={ongoingClass.teacher}
+              time={`${ongoingClass.time} - ${ongoingClass.endTime}`}
+              startTime={ongoingClass.time}
+              endTime={ongoingClass.endTime}
+              color="#EF4444"
+            />
+          )}
 
           <View style={styles.sectionHeader}>
             <Ionicons name="flash" size={20} color="#3B82F6" style={styles.sectionIconMargin} />
@@ -646,9 +712,24 @@ const styles = StyleSheet.create({
   quickActionTitle: { fontSize: 11, fontWeight: '600', color: '#374151', marginTop: 10, textAlign: 'center' },
 
   statsGrid: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 20 },
-  statCard: { alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0', width: '30%' },
-  statTitle: { fontSize: 12, fontWeight: '600', color: '#6B7280', marginTop: 10, textAlign: 'center' },
-  statValue: { fontSize: 16, fontWeight: '700', color: '#1F2937', marginTop: 4 },
+  statCard: { 
+    alignItems: 'center', 
+    backgroundColor: '#FFFFFF', 
+    borderRadius: 16, 
+    paddingVertical: 12, 
+    paddingHorizontal: 8, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.03, 
+    shadowRadius: 8, 
+    elevation: 2, 
+    borderWidth: 1, 
+    borderColor: '#E2E8F0', 
+    width: '31%',
+    minHeight: 110,
+  },
+  statTitle: { fontSize: 10, fontWeight: '700', color: '#6B7280', marginTop: 6, textAlign: 'center', width: '100%' },
+  statValue: { fontSize: 16, fontWeight: '800', color: '#1F2937', marginTop: 2 },
 
   scheduleList: { gap: 12 },
   scheduleCard: {
@@ -732,12 +813,12 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   statIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   emptyText: {
     fontSize: 14,
@@ -775,6 +856,34 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   liveJoinBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
+  liveTrackingContainer: {
+    height: 8,
+    width: '100%',
+    backgroundColor: '#FEE2E2',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginTop: 10,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  liveTrackingLine: {
+    height: '100%',
+    backgroundColor: '#EF4444', 
+    borderRadius: 4,
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+  },
+  shimmerStreak: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 60,
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    zIndex: 2,
+  },
 });
 
 export default StudentDashboard;

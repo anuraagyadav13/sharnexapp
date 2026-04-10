@@ -165,9 +165,9 @@ const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
           >
              <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </ScaleButton>
-          <Text style={styles.heroTitle}>{quizResult?.title || 'Quiz Result'}</Text>
+          <Text style={styles.heroTitle}>{quizResult?.quiz?.title || 'Quiz Result'}</Text>
           <View style={styles.heroRow}>
-             <Text style={styles.heroSubtitle}>Instructor: {quizResult?.teacherName || 'N/A'}</Text>
+             <Text style={styles.heroSubtitle}>Subject: {quizResult?.quiz?.subject || 'N/A'}</Text>
              <View style={styles.completedBadge}>
                 <Text style={styles.completedBadgeText}>Quiz Completed</Text>
              </View>
@@ -183,34 +183,36 @@ const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
             {/* Circle Progress */}
             <View style={styles.ringWrapper}>
                <View style={styles.scoreRing}>
-                 <Text style={styles.scoreNumberMain}>{quizResult?.percentage || 0}%</Text>
+                 <Text style={styles.scoreNumberMain}>{quizResult?.statistics?.percentage || 0}%</Text>
                  <Text style={styles.scoreNumberSub}>Score</Text>
                </View>
             </View>
-
-            {/* Performance Pill */}
+            
             <View style={styles.performancePill}>
-               <Text style={styles.performancePillText}>{quizResult?.performance || 'Performance'}</Text>
+               <Text style={styles.performancePillText}>
+                 {(quizResult?.statistics?.percentage || 0) >= 80 ? 'Outstanding' : (quizResult?.statistics?.percentage || 0) >= 50 ? 'Good' : 'Needs Review'}
+               </Text>
             </View>
 
-            {/* Stats Grid */}
             <View style={styles.statsGridRow}>
                <View style={styles.statsGridCol}>
-                  <Text style={[styles.statsGridVal, {color: '#05D59A'}]}>{quizResult?.correctAnswers || 0}/{quizResult?.totalQuestions || 0}</Text>
+                  <Text style={[styles.statsGridVal, {color: '#05D59A'}]}>{quizResult?.statistics?.correctCount || 0}/{quizResult?.statistics?.totalQuestions || 0}</Text>
                   <Text style={styles.statsGridLbl}>Correct Answers</Text>
                </View>
                <View style={styles.statsGridCol}>
-                  <Text style={[styles.statsGridVal, {color: '#F43F5E'}]}>{quizResult?.wrongAnswers || 0}/{quizResult?.totalQuestions || 0}</Text>
+                  <Text style={[styles.statsGridVal, {color: '#F43F5E'}]}>{quizResult?.statistics?.incorrectCount || 0}/{quizResult?.statistics?.totalQuestions || 0}</Text>
                   <Text style={styles.statsGridLbl}>Wrong Answers</Text>
                </View>
             </View>
             <View style={styles.statsGridRow}>
                <View style={styles.statsGridCol}>
-                  <Text style={[styles.statsGridVal, {color: '#3B82F6'}]}>{quizResult?.timeTaken || 'N/A'}</Text>
+                  <Text style={[styles.statsGridVal, {color: '#3B82F6'}]}>
+                    {quizResult?.attempt?.timeTakenSeconds ? `${Math.floor(quizResult.attempt.timeTakenSeconds / 60)}m ${quizResult.attempt.timeTakenSeconds % 60}s` : 'N/A'}
+                  </Text>
                   <Text style={styles.statsGridLbl}>Time Used</Text>
                </View>
                <View style={styles.statsGridCol}>
-                  <Text style={[styles.statsGridVal, {color: '#9333EA'}]}>{quizResult?.completedAt ? new Date(quizResult.completedAt).toLocaleDateString() : 'N/A'}</Text>
+                  <Text style={[styles.statsGridVal, {color: '#9333EA'}]}>{quizResult?.attempt?.submittedAt ? new Date(quizResult.attempt.submittedAt).toLocaleDateString() : 'N/A'}</Text>
                   <Text style={styles.statsGridLbl}>Date Completed</Text>
                </View>
             </View>
@@ -224,7 +226,7 @@ const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
           </Animated.View>
 
           {/* Dynamic Question Cards */}
-          {(quizResult?.questions || []).map((question: any, index: number) => (
+          {(quizResult?.questionReview || []).map((question: any, index: number) => (
             <Animated.View 
               key={question.id || index}
               entering={FadeInUp.delay(200 + index * 50).springify()} 
@@ -235,26 +237,27 @@ const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
                   <Text style={styles.questionNumberText}>{index + 1}</Text>
                 </View>
                 <Text style={styles.questionMainText}>
-                  {question.text || 'Question text not available'}
+                  {question.questionText || 'Question text not available'}
                 </Text>
                 <View style={styles.pointsBadge}>
-                  <Text style={styles.pointsBadgeText}>{question.points || 0} Points</Text>
+                  <Text style={styles.pointsBadgeText}>{question.marks || 0}/{question.maxMarks || 1} Points</Text>
                 </View>
               </View>
 
               <View style={styles.optionsList}>
                 {(question.options || []).map((option: any, optIndex: number) => {
                   let state: 'normal' | 'correct-selected' | 'right-answer' | 'wrong-selected' = 'normal';
+                  const optText = typeof option === 'string' ? option : option.text || option.id;
                   
-                  if (option.isSelected && option.isCorrect) state = 'correct-selected';
-                  else if (option.isCorrect) state = 'right-answer';
-                  else if (option.isSelected && !option.isCorrect) state = 'wrong-selected';
+                  if (question.submittedAnswer === optText && question.isCorrect) state = 'correct-selected';
+                  else if (question.correctAnswer === optText) state = 'right-answer';
+                  else if (question.submittedAnswer === optText && !question.isCorrect) state = 'wrong-selected';
                   
                   return (
                     <OptionRow 
                       key={optIndex} 
-                      letter={option.letter || String.fromCharCode(65 + optIndex)} 
-                      text={option.text || 'Option text'} 
+                      letter={String.fromCharCode(65 + optIndex)} 
+                      text={optText} 
                       state={state} 
                     />
                   );
@@ -265,13 +268,13 @@ const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
               <View style={[styles.resultFeedbackPill, {backgroundColor: question.isCorrect ? '#D1FAE5' : '#FFE4E6'}]}>
                  <Ionicons name={question.isCorrect ? "checkmark-circle" : "close-circle"} size={14} color={question.isCorrect ? "#10B981" : "#F43F5E"} style={{marginRight: 4}} />
                  <Text style={[styles.resultFeedbackText, {color: question.isCorrect ? '#10B981' : '#F43F5E'}]}>
-                   Your Answer: {question.selectedAnswer || 'N/A'} - {question.isCorrect ? 'Correct!' : 'Incorrect!'}
+                   Your Answer: {question.submittedAnswer || 'Skipped'} - {question.isCorrect ? 'Correct!' : 'Incorrect!'}
                  </Text>
               </View>
             </Animated.View>
           ))}
 
-          {(quizResult?.questions || []).length === 0 && (
+          {(quizResult?.questionReview || []).length === 0 && (
             <View style={styles.emptyContainer}>
               <Ionicons name="help-circle-outline" size={60} color="#E5E7EB" />
               <Text style={styles.emptyText}>No question details available</Text>

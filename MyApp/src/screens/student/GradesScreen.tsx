@@ -40,7 +40,7 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
         setError(null);
         // Get student profile first to find student ID if needed
         const res = await apiClient.get(ENDPOINTS.STUDENT.GRADES);
-        const gradeData = res.data.subjects || res.data.data || [];
+        const gradeData = res.data.grades?.subjects || res.data.subjects || res.data.data || [];
         setGrades(Array.isArray(gradeData) ? gradeData : []);
       } catch (err: any) {
         console.error('Failed to fetch grades:', err);
@@ -131,8 +131,8 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
             >
                <View style={styles.cardHeaderRow}>
                  <View>
-                   <Text style={styles.subjectName}>{item.exam_name || 'Exam Result'}</Text>
-                   <Text style={styles.teacherName}>{item.subject_name || 'Term Exam'}</Text>
+                   <Text style={styles.subjectName}>{item.name || item.subject_name || 'Subject'}</Text>
+                   <Text style={styles.teacherName}>{item.exam_name || 'Annual Examination'}</Text>
                  </View>
                  <View style={[styles.statusPill, { backgroundColor: item.grade?.startsWith('A') ? '#D1FAE5' : '#FEF3C7' }]}>
                    <Text style={[styles.statusText, { color: item.grade?.startsWith('A') ? '#059669' : '#D97706' }]}>{item.grade || 'N/A'}</Text>
@@ -143,8 +143,8 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
 
                <View style={styles.statsRow}>
                  <View style={styles.statCol}>
-                   <Text style={styles.statLabel}>Score</Text>
-                   <Text style={styles.statValue}>{item.score || 0}</Text>
+                   <Text style={styles.statLabel}>Marks</Text>
+                   <Text style={styles.statValue}>{item.score || item.percentage || 0}</Text>
                  </View>
                  <View style={styles.statCol}>
                    <Text style={styles.statLabel}>Total Marks</Text>
@@ -153,7 +153,7 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
                  <View style={styles.statCol}>
                    <Text style={styles.statLabel}>Percentage</Text>
                    <Text style={styles.statValue}>
-                     {item.total_marks ? Math.round((item.score / item.total_marks) * 100) : 0}%
+                     {item.percentage || (item.total_marks ? Math.round((item.score / item.total_marks) * 100) : 0)}%
                    </Text>
                  </View>
                </View>

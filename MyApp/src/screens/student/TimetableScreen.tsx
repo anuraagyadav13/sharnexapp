@@ -89,28 +89,42 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
     fetchTimetable();
   }, []);
 
-  const getCellData = (day: string, time: string) => {
+  const normalizeTime = React.useCallback((value: string) => {
+    if (!value) return '';
+    // Extract numbers and colon only (handles "9:00 AM", "09:00:00", etc.)
+    const match = value.match(/(\d{1,2}):(\d{2})/);
+    if (!match) return value.trim().slice(0, 5);
+    
+    let [_, hours, minutes] = match;
+    // Pad hours with leading zero if needed
+    if (hours.length === 1) hours = `0${hours}`;
+    return `${hours}:${minutes}`;
+  }, []);
+
+  const scheduleMap = React.useMemo(() => {
     const dayMap: { [key: string]: string } = {
-      'MON': 'monday', 'TUE': 'tuesday', 'WED': 'wednesday',
-      'THU': 'thursday', 'FRI': 'friday', 'SAT': 'saturday'
+      'monday': 'MON', 'tuesday': 'TUE', 'wednesday': 'WED',
+      'thursday': 'THU', 'friday': 'FRI', 'saturday': 'SAT',
+      'mon': 'MON', 'tue': 'TUE', 'wed': 'WED', 'thu': 'THU', 'fri': 'FRI', 'sat': 'SAT'
     };
 
-    const normalizeTime = (value: string) => {
-      const normalized = value.trim().slice(0, 5);
-      return normalized.length === 4 && normalized[1] === ':' ? `0${normalized}` : normalized;
-    };
-
-    const targetTime = normalizeTime(time);
-
-    return schedule.find(s => {
-      const itemDay = typeof s.day === 'string' ? s.day.trim().toLowerCase() : '';
-      const itemStart = typeof s.startTime === 'string' ? normalizeTime(s.startTime) : '';
-      return (
-        itemDay === dayMap[day] &&
-        itemStart === targetTime
-      );
+    const map: Record<string, any> = {};
+    schedule.forEach(item => {
+      let itemDay = typeof item.day === 'string' ? item.day.trim().toLowerCase() : '';
+      // Convert "monday" -> "MON" or keep "MON" -> "MON"
+      const normalizedDay = dayMap[itemDay] || itemDay.toUpperCase();
+      const itemStart = typeof item.startTime === 'string' ? normalizeTime(item.startTime) : '';
+      
+      const key = `${normalizedDay}-${itemStart}`;
+      map[key] = item;
     });
-  };
+    return map;
+  }, [schedule, normalizeTime]);
+
+  const getCellData = React.useCallback((day: string, time: string) => {
+    const targetTime = normalizeTime(time);
+    return scheduleMap[`${day}-${targetTime}`];
+  }, [scheduleMap, normalizeTime]);
 
   if (isLoading && schedule.length === 0) {
     return (
@@ -184,9 +198,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
-          >
-            <View style={[styles.avatar, { marginLeft: 12 }]}> <Text style={styles.avatarText}>{String(authState.user?.name ?? 'S').charAt(0)}</Text> </View>
-          </TouchableOpacity>
+          ><View style={[styles.avatar, { marginLeft: 12 }]}><Text style={styles.avatarText}>{String(authState.user?.name ?? 'S').charAt(0)}</Text></View></TouchableOpacity>
         </View>
       </View>
 
@@ -197,7 +209,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
           <View style={{ flexDirection: 'row', paddingTop: 10 }}>
             {/* Left Time Column Fixed */}
             <View style={styles.timeColumn}>
-              <View style={{ height: 40 }} /> {/* Top left corner offset for Day Headers */}
+              <View style={{ height: 40 }} />{/* Top left corner offset for Day Headers */}
               {TIMES.map(time => {
                 if (time === '11:15') {
                   return <View key={time} style={styles.lunchTimeCell}><Text style={styles.timeText}>{time}</Text></View>;

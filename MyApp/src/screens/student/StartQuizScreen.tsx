@@ -37,6 +37,7 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [startedAt, setStartedAt] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch quiz data on mount
@@ -76,11 +77,18 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
         throw new Error('Quiz ID is required');
       }
 
-      const response = await apiClient.get(ENDPOINTS.STUDENT.START_QUIZ(quizId));
-      const data = response.data.data || response.data;
+      // 1. Validate and start attempt on server to get verified timestamp
+      const startRes = await apiClient.post(ENDPOINTS.STUDENT.START_QUIZ(quizId));
+      const startData = startRes.normalized?.data || startRes.data;
+      const verifiedStart = startData?.startedAt;
+      setStartedAt(verifiedStart);
 
+      // 2. Fetch quiz questions and content
+      const response = await apiClient.get(ENDPOINTS.STUDENT.START_QUIZ(quizId));
+      const data = response.normalized?.data || response.data;
+      
       setQuizData(data);
-      setTimeRemaining(data.duration * 60); // Convert minutes to seconds
+      setTimeRemaining((data.duration || data.timeLimit || 0) * 60); 
     } catch (err: any) {
       console.error('Error fetching quiz:', err);
       setError(err.message || 'Failed to load quiz');
@@ -115,14 +123,20 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
       setIsSubmitting(true);
 
       const quizId = route?.params?.quizId;
-      const answers = Object.entries(selectedAnswers).map(([questionId, optionId]) => ({
-        questionId: parseInt(questionId),
-        selectedOption: optionId
-      }));
+      const questions = quizData?.questions || [];
+      
+      const answers = Object.entries(selectedAnswers).map(([questionId, optionId]) => {
+        const qIndex = questions.findIndex((q: any) => q.id.toString() === questionId.toString());
+        return {
+          questionIndex: qIndex !== -1 ? qIndex : 0,
+          selectedOption: optionId
+        };
+      }).filter(a => a.questionIndex !== -1);
 
       await apiClient.post(ENDPOINTS.STUDENT.SUBMIT_QUIZ(quizId), {
         answers,
-        timeSpent: (quizData?.duration * 60) - timeRemaining
+        startedAt,
+        timeSpent: ((quizData?.duration || quizData?.timeLimit || 0) * 60) - timeRemaining
       });
 
       // Clear timer

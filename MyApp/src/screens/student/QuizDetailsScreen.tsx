@@ -146,7 +146,27 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
         }
 
         const res = await apiClient.get(ENDPOINTS.STUDENT.QUIZ_DETAILS(quizId));
-        const responseData = res.normalized?.data ?? null;
+        const responseData = res.normalized?.data ?? res.data?.data ?? null;
+        
+        // If the student has already attempted, get the result as well
+        if (responseData?.hasAttempt || responseData?.derivedStatus === 'completed') {
+           try {
+             const resultRes = await apiClient.get(ENDPOINTS.STUDENT.QUIZ_RESULT(quizId));
+             const resultData = resultRes.normalized?.data;
+             if (resultData) {
+               // Merge result statistics into quiz data for rendering
+               setQuizData({
+                 ...responseData,
+                 ...resultData.statistics,
+                 attempt: resultData.attempt
+               });
+               return;
+             }
+           } catch (resErr) {
+             console.error('Could not fetch quiz result for details:', resErr);
+           }
+        }
+        
         setQuizData(responseData);
       } catch (err: any) {
         console.error('Failed to fetch quiz details:', err);
@@ -221,13 +241,27 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           </View>
        </View>
 
-       <View style={styles.sectionCard}>
+        <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Improvement Areas</Text>
           <View style={styles.tableWrapper}>
-             <ImprovementRow label="Compared to Last Quiz" valueText="+ 8%" diffSign={true} diffColor="#10B981" iconName="arrow-up" />
-             <ImprovementRow label="Accuracy Improvement" labelColor="#10B981" valueText="+ 8%" diffSign={true} diffColor="#10B981" iconName="arrow-up" />
-             <ImprovementRow label="Time Efficiency" labelColor="#10B981" valueText="+ 8%" diffSign={true} diffColor="#EF4444" iconName="arrow-down" />
-             <ImprovementRow label="Recommendation" valueText="Focus on Linked List" hideBorder={true} />
+             <ImprovementRow 
+                label="Result Analysis" 
+                valueText={quizData?.percentage >= 80 ? "Excellent Mastery" : quizData?.percentage >= 50 ? "Good Progress" : "Needs Review"} 
+                diffSign={false} 
+             />
+             <ImprovementRow 
+                label="Accuracy" 
+                labelColor={quizData?.percentage >= 70 ? "#10B981" : "#EF4444"} 
+                valueText={`${quizData?.percentage || 0}% Accuracy`} 
+                diffSign={true} 
+                diffColor={quizData?.percentage >= 70 ? "#10B981" : "#EF4444"} 
+                iconName={quizData?.percentage >= 70 ? "checkmark-circle" : "alert-circle"} 
+             />
+             <ImprovementRow 
+                label="Recommendation" 
+                valueText={quizData?.percentage < 70 ? `Re-read ${quizData?.subject || 'subject'} materials` : "Ready for advanced topics"} 
+                hideBorder={true} 
+             />
           </View>
        </View>
     </Animated.View>
@@ -260,28 +294,19 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
            <View style={styles.sectionCard}>
               <View style={styles.sectionTitleRow}>
                 <MaterialCommunityIcons name="scale-balance" size={16} color="#3B82F6" style={{marginRight: 6}} />
-                <Text style={styles.sectionTitleNoMargin}>Strengths & Weaknesses</Text>
+                <Text style={styles.sectionTitleNoMargin}>Performance Summary</Text>
               </View>
               <View style={styles.strengthsWrapper}>
-                 <View style={[styles.strengthBox, { backgroundColor: '#F0FDF4' }]}>
+                 <View style={[styles.strengthBox, { backgroundColor: quizData?.percentage >= 70 ? '#F0FDF4' : '#FEF2F2', flex: 1 }]}>
                     <View style={styles.strengthBoxHeader}>
-                       <Ionicons name="checkmark-circle" size={12} color="#10B981" />
-                       <Text style={[styles.strengthBoxTitle, { color: '#10B981' }]}>Strong Areas</Text>
+                       <Ionicons name={quizData?.percentage >= 70 ? "checkmark-circle" : "alert-circle"} size={14} color={quizData?.percentage >= 70 ? "#10B981" : "#EF4444"} />
+                       <Text style={[styles.strengthBoxTitle, { color: quizData?.percentage >= 70 ? '#10B981' : '#EF4444' }]}>
+                         {quizData?.percentage >= 70 ? 'Key Strengths' : 'Critical Gaps'}
+                       </Text>
                     </View>
-                    <Text style={styles.strengthBullet}>• Array operation and manipulation</Text>
-                    <Text style={styles.strengthBullet}>• Stack and queue implementation</Text>
-                    <Text style={styles.strengthBullet}>• Graph traversal algorithms</Text>
-                    <Text style={styles.strengthBullet}>• Array operation and manipulation</Text>
-                 </View>
-                 <View style={[styles.strengthBox, { backgroundColor: '#FEF2F2' }]}>
-                    <View style={styles.strengthBoxHeader}>
-                       <Ionicons name="alert-circle" size={14} color="#EF4444" />
-                       <Text style={[styles.strengthBoxTitle, { color: '#EF4444' }]}>Areas Needing Improvement</Text>
-                    </View>
-                    <Text style={styles.strengthBullet}>• Array operation and manipulation</Text>
-                    <Text style={styles.strengthBullet}>• Stack and queue implementation</Text>
-                    <Text style={styles.strengthBullet}>• Graph traversal algorithms</Text>
-                    <Text style={styles.strengthBullet}>• Array operation and manipulation</Text>
+                    <Text style={styles.strengthBullet}>• {quizData?.percentage >= 70 ? 'High accuracy in attempted questions' : 'Review fundamental concepts'}</Text>
+                    <Text style={styles.strengthBullet}>• {quizData?.percentage >= 70 ? 'Good speed management' : 'Practice more time-bound tests'}</Text>
+                    <Text style={styles.strengthBullet}>• {quizData?.subject} - Current focus area</Text>
                  </View>
               </View>
            </View>

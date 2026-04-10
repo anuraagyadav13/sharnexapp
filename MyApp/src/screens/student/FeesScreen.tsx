@@ -51,19 +51,20 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
   const [summary, setSummary] = useState<any>(null);
   const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isReceiptLoading, setIsReceiptLoading] = useState(false);
+  const [activeReceiptId, setActiveReceiptId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleReceiptPress = async (paymentId: string) => {
     try {
-      setIsReceiptLoading(true);
+      setActiveReceiptId(paymentId);
       const res = await apiClient.get(ENDPOINTS.STUDENT.PAYMENT_RECEIPT(paymentId));
-      setSelectedReceipt(res.data?.data || res.data);
+      const receiptData = res.originalData?.data || res.data?.data || res.data;
+      setSelectedReceipt(receiptData);
     } catch (err) {
       console.error('Failed to fetch receipt:', err);
       Alert.alert('Error', 'Could not load receipt details');
     } finally {
-      setIsReceiptLoading(false);
+      setActiveReceiptId(null);
     }
   };
 
@@ -99,7 +100,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
     fetchData();
   }, [activeTab]);
 
-  const getStatusDisplay = (item: any) => {
+  const getStatusDisplay = React.useCallback((item: any) => {
     if (item.status === 'PAID') return 'Paid';
     if (item.status === 'PENDING') {
       const now = new Date();
@@ -107,7 +108,21 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
       return 'Pending';
     }
     return item.status;
-  };
+  }, []);
+
+  const processedInvoices = React.useMemo(() => {
+    return invoices.map(item => ({
+      ...item,
+      displayStatus: getStatusDisplay(item)
+    }));
+  }, [invoices, getStatusDisplay]);
+
+  const processedHistory = React.useMemo(() => {
+    return history.map(item => ({
+      ...item,
+      displayDate: new Date(item.completedAt || item.createdAt).toLocaleDateString()
+    }));
+  }, [history]);
 
   return (
     <View style={styles.mainContainer}>
@@ -272,9 +287,9 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
                         style={styles.receiptPill} 
                         activeOpacity={0.8}
                         onPress={() => handleReceiptPress(item.id)}
-                        disabled={isReceiptLoading}
+                        disabled={!!activeReceiptId}
                       >
-                        {isReceiptLoading ? (
+                        {activeReceiptId === item.id ? (
                           <ActivityIndicator size="small" color="#FFFFFF" />
                         ) : (
                           <>
@@ -377,7 +392,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
         onRequestClose={() => setSelectedReceipt(null)}
       >
         <View style={styles.modalOverlay}>
-          <Animated.View entering={FadeInUp.springify()} style={[styles.modalContent, { padding: 0, overflow: 'hidden' }]}>
+          <Animated.View entering={FadeIn.duration(300)} style={[styles.modalContent, { padding: 0, overflow: 'hidden' }]}>
             {selectedReceipt && (
               <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Receipt Header */}
@@ -735,8 +750,9 @@ const styles = StyleSheet.create({
 
   /* Modal Popup Styles */
   modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,

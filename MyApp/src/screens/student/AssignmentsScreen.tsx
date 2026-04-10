@@ -6,7 +6,9 @@ import {
   StyleSheet,
   StatusBar,
   Dimensions,
-  ActivityIndicator
+  ActivityIndicator,
+  Linking,
+  Alert
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -43,7 +45,7 @@ const SummaryCard = ({ number, label, bgColor, iconName, lineColor, delay, libra
   );
 };
 
-const AssignmentCard = ({ category, status, title, subtitle, dueDate, deadlineRelative, isDelayed, delay, onPressView, onPressSubmit }: any) => {
+const AssignmentCard = ({ category, status, title, subtitle, dueDate, deadlineRelative, isDelayed, delay, onPressView, onPressSubmit, onPressDownload }: any) => {
   const isPending = status === 'Pending';
   return (
     <Animated.View entering={FadeInUp.delay(delay).springify()} style={styles.assignmentCard}>
@@ -79,7 +81,7 @@ const AssignmentCard = ({ category, status, title, subtitle, dueDate, deadlineRe
                <Text style={styles.btnSubmitText}>Submit</Text>
              </ScaleButton>
            ) : (
-             <ScaleButton style={[styles.btnSubmit, {backgroundColor: '#10B981'}]} activeOpacity={0.8} scaleTo={0.95}>
+             <ScaleButton style={[styles.btnSubmit, {backgroundColor: '#10B981'}]} activeOpacity={0.8} scaleTo={0.95} onPress={onPressDownload}>
                <Ionicons name="download-outline" size={14} color="#FFFFFF" style={styles.btnIconLayout} />
                <Text style={styles.btnSubmitText}>Download</Text>
              </ScaleButton>
@@ -110,7 +112,7 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
         setError(null);
         // 1. Get student profile to find database ID
         const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
-        const studentId = profileRes.data?.id;
+        const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
 
         if (!studentId) {
           throw new Error('Student ID not found in profile');
@@ -126,10 +128,10 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
 
         // 3. Compute summary
         const stats = {
-          pending: assignmentsArray.filter((a: any) => a.status === 'pending' || a.status === 'overdue').length,
-          submitted: assignmentsArray.filter((a: any) => a.submission_id).length,
-          graded: assignmentsArray.filter((a: any) => a.graded_at).length,
-          upcoming: assignmentsArray.filter((a: any) => a.status === 'upcoming').length,
+          pending: assignmentsArray.filter((a: any) => a.status?.toLowerCase() === 'pending' || a.status?.toLowerCase() === 'overdue').length,
+          submitted: assignmentsArray.filter((a: any) => a.submission_id || a.is_submitted).length,
+          graded: assignmentsArray.filter((a: any) => a.graded_at || a.grade).length,
+          upcoming: assignmentsArray.filter((a: any) => a.status?.toLowerCase() === 'upcoming').length,
         };
         setSummary(stats);
       } catch (err: any) {
@@ -241,15 +243,25 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
               <AssignmentCard 
                 key={item.id}
                 delay={300 + index * 50}
-                category={item.subject}
-                status={item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'Unknown'}
+                category={item.subject || 'General'}
+                status={item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1).toLowerCase() : 'Unknown'}
                 title={item.title || 'Untitled assignment'}
                 subtitle={item.description || 'No description available'}
-                dueDate={item.dueDate || 'N/A'}
-                deadlineRelative={item.isOverdue ? 'Overdue' : 'Due'}
-                isDelayed={item.isOverdue}
+                dueDate={item.due_date || item.dueDate || 'N/A'}
+                deadlineRelative={item.is_overdue || item.isOverdue ? 'Overdue' : 'Due'}
+                isDelayed={item.is_overdue || item.isOverdue}
                 onPressView={() => navigation.navigate('AssignmentDetails', { assignmentId: item.id })}
                 onPressSubmit={() => navigation.navigate('AssignmentSubmit', { assignmentId: item.id })}
+                onPressDownload={() => {
+                  const url = item.file_url || item.submission_file_url;
+                  if (url) {
+                    Linking.openURL(url).catch(() => {
+                      Alert.alert('Error', 'Could not open the download link.');
+                    });
+                  } else {
+                    Alert.alert('Coming Soon', 'The download link for this assignment is currently being processed by the school system.');
+                  }
+                }}
               />
             ))
           )}

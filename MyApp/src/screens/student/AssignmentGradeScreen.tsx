@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   StatusBar,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -13,15 +14,72 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type AssignmentGradeNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AssignmentGrade'>;
 
 interface Props {
   navigation: AssignmentGradeNavigationProp;
+  route?: any;
 }
 
-const AssignmentGradeScreen: React.FC<Props> = ({ navigation }) => {
+const AssignmentGradeScreen: React.FC<Props> = ({ navigation, route }) => {
   const { authState } = useAuth();
+  const assignmentId = route?.params?.assignmentId;
+  const [gradeData, setGradeData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchGradeData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        // Use student assignments list to find the specific grade info
+        const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+        const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
+        
+        if (!studentId) throw new Error('Student ID not found');
+        
+        const res = await apiClient.get(ENDPOINTS.STUDENT.ASSIGNMENTS(studentId));
+        const assignments = res.normalized?.data || res.data?.assignments || res.data?.data || [];
+        
+        const currentAssignment = assignments.find((a: any) => a.id === assignmentId);
+        
+        if (!currentAssignment) {
+          throw new Error('Grade information not found');
+        }
+        
+        setGradeData(currentAssignment);
+      } catch (err: any) {
+        console.error('Failed to fetch grade details:', err);
+        setError('Failed to load grade details. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (assignmentId) {
+      fetchGradeData();
+    }
+  }, [assignmentId]);
+
+  const getMarksPercentage = () => {
+    if (!gradeData?.marksObtained || !gradeData?.maxPoints) return 0;
+    return (gradeData.marksObtained / gradeData.maxPoints) * 100;
+  };
+
+  const getGradeLetter = () => {
+    const p = getMarksPercentage();
+    if (p >= 90) return 'A+';
+    if (p >= 80) return 'A';
+    if (p >= 70) return 'B';
+    if (p >= 60) return 'C';
+    return 'D';
+  };
+
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -58,64 +116,76 @@ const AssignmentGradeScreen: React.FC<Props> = ({ navigation }) => {
 
         <View style={styles.cardsContainer}>
           
-          {/* Header Info Section inside body */}
-          <Animated.View entering={FadeInUp.delay(50).springify()} style={styles.headerInfoSection}>
-            <View style={styles.badgeContainer}>
-              <View style={styles.gradedBadge}>
-                <Ionicons name="checkmark-circle" size={14} color="#00C48C" />
-                <Text style={styles.gradedBadgeText}>Completed & Graded</Text>
-              </View>
+          {isLoading ? (
+            <ActivityIndicator size="large" color="#4361EE" style={{ marginTop: 40 }} />
+          ) : error ? (
+            <View style={{ padding: 20, backgroundColor: '#FEE2E2', borderRadius: 12 }}>
+              <Text style={{ color: '#DC2626', textAlign: 'center' }}>{error}</Text>
             </View>
-            
-            <View style={styles.submittedDateContainer}>
-              <Ionicons name="calendar-outline" size={14} color="#6B7280" />
-              <Text style={styles.submittedDateText}>Submitted on Sep 12, 2024</Text>
-            </View>
+          ) : (
+            <>
+              {/* Header Info Section inside body */}
+              <Animated.View entering={FadeInUp.delay(50).springify()} style={styles.headerInfoSection}>
+                <View style={styles.badgeContainer}>
+                  <View style={styles.gradedBadge}>
+                    <Ionicons name="checkmark-circle" size={14} color="#00C48C" />
+                    <Text style={styles.gradedBadgeText}>Completed & Graded</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.submittedDateContainer}>
+                  <Ionicons name="calendar-outline" size={14} color="#6B7280" />
+                  <Text style={styles.submittedDateText}>
+                    Submitted on {gradeData?.submittedAt ? new Date(gradeData.submittedAt).toLocaleDateString() : 'N/A'}
+                  </Text>
+                </View>
 
-            <Text style={styles.assignmentMainTitle}>Binary Search Tree Assignment</Text>
-          </Animated.View>
+                <Text style={styles.assignmentMainTitle}>{gradeData?.title || 'Assignment Results'}</Text>
+              </Animated.View>
 
-          {/* Card 1: Assignment Grade */}
-          <Animated.View entering={FadeInUp.delay(100).springify()} style={[styles.card, styles.gradeCard]}>
-            <View style={styles.cardRibbonHeader}>
-              <Ionicons name="ribbon-outline" size={18} color="#00C48C" />
-              <Text style={styles.cardHeaderTitle}>Assignment Grade</Text>
-            </View>
+              {/* Card 1: Assignment Grade */}
+              <Animated.View entering={FadeInUp.delay(100).springify()} style={[styles.card, styles.gradeCard]}>
+                <View style={styles.cardRibbonHeader}>
+                  <Ionicons name="ribbon-outline" size={18} color="#00C48C" />
+                  <Text style={styles.cardHeaderTitle}>Assignment Grade</Text>
+                </View>
 
-            <View style={styles.gradeCenterCol}>
-              <Text style={styles.gradeLetter}>A+</Text>
-              <Text style={styles.marksWrapper}>
-                <Text style={styles.marksObtained}>90 </Text>
-                <Text style={styles.marksTotal}>/ 100 Marks</Text>
-              </Text>
-            </View>
-          </Animated.View>
+                <View style={styles.gradeCenterCol}>
+                  <Text style={styles.gradeLetter}>{getGradeLetter()}</Text>
+                  <Text style={styles.marksWrapper}>
+                    <Text style={styles.marksObtained}>{gradeData?.marksObtained || 0} </Text>
+                    <Text style={styles.marksTotal}>/ {gradeData?.maxPoints || 0} Marks</Text>
+                  </Text>
+                </View>
+              </Animated.View>
 
-          {/* Card 2: Instructor Feedback */}
-          <Animated.View entering={FadeInUp.delay(200).springify()} style={[styles.card, styles.feedbackCard]}>
-            <View style={styles.cardFeedbackHeader}>
-              <Ionicons name="chatbubble-ellipses-outline" size={18} color="#3B82F6" />
-              <Text style={styles.cardHeaderTitleFeed}>Instructor Feedback</Text>
-            </View>
+              {/* Card 2: Instructor Feedback */}
+              <Animated.View entering={FadeInUp.delay(200).springify()} style={[styles.card, styles.feedbackCard]}>
+                <View style={styles.cardFeedbackHeader}>
+                  <Ionicons name="chatbubble-ellipses-outline" size={18} color="#3B82F6" />
+                  <Text style={styles.cardHeaderTitleFeed}>Instructor Feedback</Text>
+                </View>
 
-            <View style={styles.feedbackBox}>
-              <Text style={styles.feedbackText}>
-                "Outstanding work! Your BST implementation is both efficient and well-documented. The recursive and iterative approaches are correctly implemented, and your test coverage is comprehensive. The time complexity analysis shows deep understanding of the data structure. Keep up the excellent work!"
-              </Text>
-            </View>
-            
-            <View style={styles.divider} />
+                <View style={styles.feedbackBox}>
+                  <Text style={styles.feedbackText}>
+                    {gradeData?.feedback ? `"${gradeData.feedback}"` : '"No specific feedback provided by the instructor."'}
+                  </Text>
+                </View>
+                
+                <View style={styles.divider} />
 
-            <View style={styles.instructorProfile}>
-              <View style={styles.instructorAvatar}>
-                <Text style={styles.instructorAvatarText}>SJ</Text>
-              </View>
-              <View style={styles.instructorMeta}>
-                <Text style={styles.instructorName}>Dr. Priya Sharma</Text>
-                <Text style={styles.instructorRole}>Data Structures Teacher</Text>
-              </View>
-            </View>
-          </Animated.View>
+                <View style={styles.instructorProfile}>
+                  <View style={styles.instructorAvatar}>
+                    <Text style={styles.instructorAvatarText}>{gradeData?.teacherName?.charAt(0) || 'T'}</Text>
+                  </View>
+                  <View style={styles.instructorMeta}>
+                    <Text style={styles.instructorName}>{gradeData?.teacherName || 'Instructor'}</Text>
+                    <Text style={styles.instructorRole}>Subject Expert</Text>
+                  </View>
+                </View>
+              </Animated.View>
+            </>
+          )}
 
         </View>
       </ScrollView>
@@ -159,7 +229,7 @@ const styles = StyleSheet.create({
   },
 
   heroSection: {
-    backgroundColor: '#4361EE', // matches the vibrant screenshot blue
+    backgroundColor: '#4361EE', 
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 32,
@@ -209,7 +279,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#34D399', 
-    backgroundColor: '#ECFDF5', // subtle transparent green background
+    backgroundColor: '#ECFDF5', 
   },
   gradedBadgeText: {
     fontSize: 12,
@@ -239,24 +309,19 @@ const styles = StyleSheet.create({
     borderRadius: 16, 
     paddingVertical: 24,
     paddingHorizontal: 20,
-    // Peak detailing premium shadow as requested
     shadowColor: '#1E293B', 
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08, 
     shadowRadius: 20,
     elevation: 8,
     borderWidth: 1,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderBottomWidth: 1,
     borderColor: 'rgba(226, 232, 240, 0.6)', 
   },
   
-  // Card 1 Grade
   gradeCard: {
     borderTopWidth: 5,
-    borderTopColor: '#00C48C', // rich standard bright teal/green
-    alignItems: 'center', // Centers the content within this card
+    borderTopColor: '#00C48C', 
+    alignItems: 'center',
   },
   cardRibbonHeader: {
     flexDirection: 'row',
@@ -294,10 +359,9 @@ const styles = StyleSheet.create({
     color: '#4B5563',
   },
   
-  // Card 2 Feedback
   feedbackCard: {
     borderTopWidth: 5,
-    borderTopColor: '#4361EE', // matches hero section blue
+    borderTopColor: '#4361EE', 
     paddingBottom: 24, 
   },
   cardFeedbackHeader: {
@@ -322,7 +386,7 @@ const styles = StyleSheet.create({
     color: '#374151',
     lineHeight: 24,
     fontWeight: '400',
-    letterSpacing: 0.2, // Makes reading longer feedback text more premium
+    letterSpacing: 0.2,
   },
   divider: {
     height: 1,
@@ -338,7 +402,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#6366F1', // beautiful blue-violet
+    backgroundColor: '#6366F1', 
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,

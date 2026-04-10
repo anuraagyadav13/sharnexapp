@@ -59,9 +59,8 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
       try {
         setIsLoading(true);
         setError(null);
-        // @ts-ignore
         const res = await apiClient.get(ENDPOINTS.STUDENT.ASSIGNMENT_DETAIL(assignmentId));
-        const data = res.data.data || res.data;
+        const data = res.data.assignment || res.data.data || res.data;
         setAssignmentData(data);
       } catch (error: any) {
         console.error('Failed to fetch assignment details:', error);
@@ -148,7 +147,7 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
                 <View style={styles.infoCol}>
                   <Text style={styles.infoLabel}>Due Date</Text>
                   <Text style={styles.infoValue}>
-                    {assignmentData?.dueDate ? new Date(assignmentData.dueDate).toLocaleDateString() : 'N/A'}
+                    {assignmentData?.due_date || assignmentData?.dueDate ? new Date(assignmentData.due_date || assignmentData.dueDate).toLocaleDateString() : 'N/A'}
                   </Text>
                 </View>
                 <View style={styles.infoCol}>
@@ -221,7 +220,33 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
                 </Text>
               )}
             </View>
-          </Animated.View>
+            </Animated.View>
+
+            {/* Action Button: View Grade */}
+            {assignmentData?.status?.toLowerCase() === 'graded' && (
+              <Animated.View entering={FadeInUp.delay(400).springify()} style={{ paddingBottom: 10 }}>
+                <ScaleButton 
+                  style={styles.viewGradeBtn}
+                  onPress={() => navigation.navigate('AssignmentGrade', { assignmentId: assignmentData.id })}
+                >
+                  <Ionicons name="ribbon" size={20} color="#FFFFFF" style={{ marginRight: 10 }} />
+                  <Text style={styles.viewGradeBtnText}>View My Grade Result</Text>
+                </ScaleButton>
+              </Animated.View>
+            )}
+
+            {/* Action Button: Submit */}
+            {(assignmentData?.status?.toLowerCase() === 'pending' || assignmentData?.status?.toLowerCase() === 'overdue' || assignmentData?.status?.toLowerCase() === 'upcoming') && (
+              <Animated.View entering={FadeInUp.delay(450).springify()} style={{ paddingBottom: 20 }}>
+                <ScaleButton 
+                  style={[styles.viewGradeBtn, { backgroundColor: '#4F46E5', shadowColor: '#4F46E5' }]}
+                  onPress={() => navigation.navigate('AssignmentSubmit', { assignmentId: assignmentData.id })}
+                >
+                  <Ionicons name="send" size={18} color="#FFFFFF" style={{ marginRight: 10, transform: [{ rotate: '-45deg' }] }} />
+                  <Text style={styles.viewGradeBtnText}>Submit Assignment</Text>
+                </ScaleButton>
+              </Animated.View>
+            )}
 
             </>
           )}
@@ -428,6 +453,25 @@ const styles = StyleSheet.create({
   attachmentMeta: {
     fontSize: 11,
     color: '#9CA3AF',
+  },
+  viewGradeBtn: {
+    backgroundColor: '#00C48C',
+    marginHorizontal: 16,
+    paddingVertical: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#00C48C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  viewGradeBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
 

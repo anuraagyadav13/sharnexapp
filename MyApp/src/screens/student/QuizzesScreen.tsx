@@ -133,10 +133,10 @@ const QuizzesScreen: React.FC<Props> = ({ navigation }) => {
 
         // Compute summary
         setStats({
-          upcoming: quizzesArray.filter((q: any) => q.derivedStatus === 'upcoming').length,
-          active: quizzesArray.filter((q: any) => q.derivedStatus === 'started' || q.derivedStatus === 'active').length,
+          upcoming: quizzesArray.filter((q: any) => q.derivedStatus === 'upcoming' || q.derivedStatus === 'available').length,
+          active: quizzesArray.filter((q: any) => q.derivedStatus === 'started' || q.derivedStatus === 'active' || q.derivedStatus === 'open').length,
           completed: quizzesArray.filter((q: any) => q.hasAttempt).length,
-          grades: 0 // Placeholder
+          grades: quizzesArray.filter((q: any) => q.hasAttempt && (q.score !== undefined || q.percentage !== undefined)).length
         });
       } catch (err: any) {
         console.error('Failed to fetch quizzes:', err);

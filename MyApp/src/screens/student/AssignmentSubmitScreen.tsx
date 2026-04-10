@@ -40,9 +40,8 @@ const AssignmentSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
       try {
         setIsLoading(true);
         setError(null);
-        // @ts-ignore
         const res = await apiClient.get(ENDPOINTS.STUDENT.ASSIGNMENT_DETAIL(assignmentId));
-        const data = res.normalized?.data || {};
+        const data = res.data.assignment || res.data.data || res.data || {};
         setAssignmentData(data);
       } catch (err: any) {
         console.error('Failed to fetch assignment details:', err);
@@ -65,9 +64,12 @@ const AssignmentSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
 
     try {
       setIsSubmitting(true);
+      const submissionFileUrl = uploadedFiles && uploadedFiles.length > 0 ? uploadedFiles[0].uri || uploadedFiles[0].url : null;
+      
       // @ts-ignore
       await apiClient.post(ENDPOINTS.STUDENT.ASSIGNMENT_SUBMIT(assignmentId), {
-        files: uploadedFiles,
+        submissionFileUrl,
+        submissionText: `Submitted via Mobile App at ${new Date().toLocaleString()}`,
         submittedAt: new Date().toISOString()
       });
 
@@ -143,7 +145,7 @@ const AssignmentSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
               <View style={styles.infoCol}>
                 <Text style={styles.infoLabel}>Due Date</Text>
                 <Text style={styles.infoValue}>
-                  {assignmentData?.dueDate ? new Date(assignmentData.dueDate).toLocaleDateString() : 'N/A'}
+                  {assignmentData?.due_date || assignmentData?.dueDate ? new Date(assignmentData.due_date || assignmentData.dueDate).toLocaleDateString() : 'N/A'}
                 </Text>
               </View>
               <View style={styles.infoCol}>
