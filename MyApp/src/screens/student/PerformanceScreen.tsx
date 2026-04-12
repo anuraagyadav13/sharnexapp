@@ -37,24 +37,21 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
       try {
         setIsLoading(true);
         setError(null);
-        // 1. Get profile for student ID
+
+        // Resolve absolute Student ID
         const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
-        const studentId = profileRes.data?.id;
+        const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
 
-        if (!studentId) {
-          throw new Error('Student ID not found');
-        }
+        if (!studentId) throw new Error('Student ID not found');
 
-        // 2. Fetch dashboard data which has attendance & basic stats
-        const dashRes = await apiClient.get(ENDPOINTS.STUDENT.DASHBOARD(studentId));
+        const [dashRes, perfRes, gradesRes] = await Promise.all([
+          apiClient.get(ENDPOINTS.STUDENT.DASHBOARD(studentId)),
+          apiClient.get(ENDPOINTS.STUDENT.PERFORMANCE(studentId)),
+          apiClient.get(ENDPOINTS.STUDENT.GRADES)
+        ]);
+
         const dashData = dashRes.normalized?.data || dashRes.data;
-        
-        // 3. Fetch specialized performance trend data
-        const perfRes = await apiClient.get(ENDPOINTS.STUDENT.PERFORMANCE(studentId));
         const perfData = perfRes.normalized?.data?.performance || perfRes.data?.performance;
-
-        // 4. Fetch Grades for subject-wise performance
-        const gradesRes = await apiClient.get(ENDPOINTS.STUDENT.GRADES);
         const gradesData = gradesRes.normalized?.data?.grades || gradesRes.data?.grades;
 
         setPerformance({
@@ -64,14 +61,13 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
         });
       } catch (err: any) {
         console.error('Failed to fetch performance:', err);
-        setError('Failed to load performance data. Please try again.');
-        setPerformance(null);
+        setError('Failed to load performance data.');
       } finally {
         setIsLoading(false);
       }
     };
     fetchPerformance();
-  }, []);
+  }, [authState.user?.id]);
 
   if (isLoading && !performance) {
     return (
@@ -305,23 +301,25 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
            <Text style={styles.cardHeader}>Academic Growth Analysis</Text>
            <View style={styles.cardDivider} />
            
-           <View style={styles.chartContainer}>
-              {(perfMetrics.monthlyScores || []).slice(0, 5).map((item: any, idx: number) => (
-                <View key={idx} style={styles.chartCol}>
-                   <Text style={styles.chartTopLabel}>{item.score}%</Text>
-                   <View style={styles.chartBarWrapper}>
-                      <View style={{height: `${100 - item.score}%`, backgroundColor: '#F3F4F6'}} />
-                      <View style={{height: `${item.score}%`, backgroundColor: '#4F46E5'}} />
-                   </View>
-                   <Text style={styles.chartBotLabel}>{item.month}</Text>
-                </View>
-              ))}
-              {(!perfMetrics.monthlyScores || perfMetrics.monthlyScores.length === 0) && (
-                <Text style={{ textAlign: 'center', width: '100%', color: '#6B7280', fontSize: 12 }}>
-                  Analyzing historical data for trends...
-                </Text>
-              )}
-           </View>
+           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
+              <View style={[styles.chartContainer, { minWidth: (perfMetrics.monthlyScores || []).length * 80 }]}>
+                {(perfMetrics.monthlyScores || []).map((item: any, idx: number) => (
+                  <View key={idx} style={styles.chartCol}>
+                    <Text style={styles.chartTopLabel}>{item.score}%</Text>
+                    <View style={styles.chartBarWrapper}>
+                       <View style={{height: `${100 - item.score}%`, backgroundColor: '#F3F4F6'}} />
+                       <View style={{height: `${item.score}%`, backgroundColor: '#4F46E5'}} />
+                    </View>
+                    <Text style={styles.chartBotLabel}>{item.month}</Text>
+                  </View>
+                ))}
+                {(!perfMetrics.monthlyScores || perfMetrics.monthlyScores.length === 0) && (
+                  <Text style={{ textAlign: 'center', width: '100%', color: '#6B7280', fontSize: 12 }}>
+                    Analyzing historical data for trends...
+                  </Text>
+                )}
+              </View>
+           </ScrollView>
         </Animated.View>
 
       </ScrollView>

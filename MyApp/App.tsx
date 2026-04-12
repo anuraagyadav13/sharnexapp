@@ -5,6 +5,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from './src/store/AuthContext';
+import { ThemeProvider, useTheme } from './src/store/ThemeContext';
 import { RootStackParamList } from './src/types/navigation';
 export type { RootStackParamList };
 
@@ -30,6 +31,7 @@ import FeesScreen from './src/screens/student/FeesScreen';
 import AccountSettingsScreen from './src/screens/shared/AccountSettingsScreen';
 import TimetableScreen from './src/screens/student/TimetableScreen';
 import OfficialResultScreen from './src/screens/student/OfficialResultScreen';
+import ResultManagementScreen from './src/screens/student/ResultManagementScreen';
 import TeacherAttendanceScreen from './src/screens/teacher/TeacherAttendanceScreen';
 import TeacherViewAttendanceScreen from './src/screens/teacher/TeacherViewAttendanceScreen';
 import TeacherMarkAttendanceScreen from './src/screens/teacher/TeacherMarkAttendanceScreen';
@@ -114,6 +116,7 @@ function RootNavigator() {
               <Stack.Screen name="Announcements" component={AnnouncementScreen} />
               <Stack.Screen name="Grades" component={GradesScreen} />
               <Stack.Screen name="Fees" component={FeesScreen} />
+              <Stack.Screen name="ResultManagement" component={ResultManagementScreen} />
               <Stack.Screen name="OfficialResult" component={OfficialResultScreen} />
               <Stack.Screen name="Timetable" component={TimetableScreen} />
             </>
@@ -168,19 +171,48 @@ function RootNavigator() {
   );
 }
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+function ThemedApp() {
+  const { isDarkMode } = useTheme();
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <StatusBar 
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'} 
+        backgroundColor="transparent" 
+        translucent 
+      />
+      <NavigationContainer theme={isDarkMode ? DarkNavigationTheme : undefined}>
+        <RootNavigator />
+      </NavigationContainer>
+    </GestureHandlerRootView>
+  );
+}
 
+const DarkNavigationTheme = {
+  dark: true,
+  colors: {
+    primary: '#818CF8',
+    background: '#0F172A',
+    card: '#1E293B',
+    text: '#F8FAFC',
+    border: '#334155',
+    notification: '#818CF8',
+  },
+  fonts: {
+    regular: { fontFamily: 'System', fontWeight: '400' as const },
+    medium: { fontFamily: 'System', fontWeight: '500' as const },
+    bold: { fontFamily: 'System', fontWeight: '700' as const },
+    heavy: { fontFamily: 'System', fontWeight: '900' as const },
+  },
+};
+
+function App(): React.JSX.Element {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
-          <NavigationContainer>
-            <RootNavigator />
-          </NavigationContainer>
-        </GestureHandlerRootView>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <ThemedApp />
+        </AuthProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

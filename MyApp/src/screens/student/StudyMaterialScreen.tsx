@@ -62,17 +62,19 @@ const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
     const fetchMaterials = async () => {
       try {
         setIsLoading(true);
-        // 1. Get profile for student ID
+        // 1. Resolve student ID reliably
         const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
-        const studentId = profileRes.data?.id;
+        const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
 
         if (!studentId) {
           throw new Error('Student ID not found');
         }
 
-        // 2. Fetch materials
+        // 2. Fetch materials using the the resolved ID
         const res = await apiClient.get(ENDPOINTS.STUDENT.STUDY_MATERIALS(studentId));
-        setMaterials(res.data?.materials || res.data?.data || []);
+        // Handle various response types including normalized
+        const materialData = res.normalized?.data?.materials || res.normalized?.data || res.data?.materials || res.data?.data || [];
+        setMaterials(Array.isArray(materialData) ? materialData : []);
       } catch (err: any) {
         console.error('Failed to fetch materials:', err);
         setMaterials([]);
@@ -81,7 +83,7 @@ const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
       }
     };
     fetchMaterials();
-  }, []);
+  }, [authState.user?.id]);
 
   if (isLoading && materials.length === 0) {
     return (
@@ -91,7 +93,7 @@ const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
     );
   }
 
-  const firstMaterialSubject = materials.length > 0 ? materials[0].subject : 'Applied Subjects';
+  const firstMaterialSubject = materials.length > 0 ? (materials[0].subject || 'Applied Subjects') : 'Applied Subjects';
 
   return (
     <View style={styles.mainContainer}>
@@ -110,12 +112,9 @@ const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
         </ScaleButton>
         <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
         <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-           <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
-           </View>
+             <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
+             </View>
         </View>
       </View>
 
@@ -143,12 +142,12 @@ const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
         ) : (
           materials.map((item, index) => (
             <MaterialCard 
-              key={item.id}
+              key={item.id || index}
               delay={150 + index * 50}
-              type={item.type || 'PDF Notes'}
+              type={item.file_type || 'PDF'}
               title={item.title}
               desc={item.description}
-              tags={[item.subject || 'General', item.category || 'Reference']}
+              tags={[item.subject || 'General', item.teacher_name || 'Staff']}
             />
           ))
         )}

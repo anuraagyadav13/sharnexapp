@@ -58,7 +58,8 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
     try {
       setActiveReceiptId(paymentId);
       const res = await apiClient.get(ENDPOINTS.STUDENT.PAYMENT_RECEIPT(paymentId));
-      const receiptData = res.originalData?.data || res.data?.data || res.data;
+      // Target the 'data' field inside the response
+      const receiptData = res.normalized?.data?.data || res.data?.data || res.data;
       setSelectedReceipt(receiptData);
     } catch (err) {
       console.error('Failed to fetch receipt:', err);

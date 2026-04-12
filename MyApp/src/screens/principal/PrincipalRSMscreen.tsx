@@ -68,8 +68,8 @@ const PrincipalRSMscreen: React.FC<Props> = ({ navigation }) => {
       try {
         setReportsLoading(true);
         setReportsError(null);
-        const reportsRes = await apiClient.get(ENDPOINTS.PRINCIPAL.REPORTS);
-        setReports(reportsRes.data.data?.reports || []);
+        const reportsRes = await apiClient.get(ENDPOINTS.PRINCIPAL.EXAMS);
+        setReports(reportsRes.data.data || reportsRes.data || []);
         // For now, set materials as empty since endpoint may not exist
         setMaterials([]);
       } catch (err: any) {

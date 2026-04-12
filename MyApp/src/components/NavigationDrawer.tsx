@@ -44,6 +44,7 @@ const STUDENT_MENU: MenuItem[] = [
   { id: '6', label: 'Attendance', icon: 'calendar-outline' },
   { id: '7', label: 'Announcements', icon: 'chatbox-ellipses-outline' },
   { id: '8', label: 'Grades & Reports', icon: 'document-text-outline' },
+  { id: 'result-mgmt', label: 'Result Management', icon: 'reader-outline' },
   { id: '9', label: 'Fees Portal', icon: 'receipt-outline' },
   { id: 'div2', label: '', icon: '', isDivider: true },
   { id: '10', label: 'Account Settings', icon: 'settings-outline' },
@@ -163,7 +164,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
         case 'Performance': return currentRouteName === 'PrincipalPerformance' || currentRouteName === 'Performance';
         case 'Announcements': return currentRouteName === 'PrincipalAnnouncements' || currentRouteName === 'Announcements';
         case 'Fees & Payments': case 'Fees Portal': return currentRouteName === 'PrincipalFees' || currentRouteName === 'Fees';
-        case 'Result Management': return currentRouteName === 'PrincipalRSM';
+        case 'Result Management': return currentRouteName === 'PrincipalRSM' || currentRouteName === 'ResultManagement';
         case 'Account Settings': return currentRouteName === 'AccountSettings';
         case 'Attendance': return currentRouteName === 'TeacherAttendance' || currentRouteName === 'Attendance';
         case 'Assignments': return currentRouteName === 'TeacherAssignment' || currentRouteName === 'Assignments';
@@ -232,7 +233,8 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
                 if (role === 'principal') navigation.navigate('PrincipalTimetable');
                 else navigation.navigate('Timetable');
               } else if (item.label === 'Result Management') {
-                navigation.navigate('PrincipalRSM');
+                if (role === 'principal') navigation.navigate('PrincipalRSM');
+                else navigation.navigate('ResultManagement');
               } else if (item.label === 'Account Settings') {
                 navigation.navigate('AccountSettings');
               } else if (item.label === 'Logout') {

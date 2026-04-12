@@ -31,15 +31,16 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
   const [attendanceData, setAttendanceData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAllRecords, setShowAllRecords] = useState(false);
 
   React.useEffect(() => {
     const fetchAttendance = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        // 1. Get profile to find studentId
+        // 1. Resolve student ID reliably
         const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
-        const studentId = profileRes.data?.id;
+        const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
 
         if (!studentId) {
           throw new Error('Student ID not found');
@@ -47,7 +48,9 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
 
         // 2. Fetch specific student attendance
         const res = await apiClient.get(ENDPOINTS.STUDENT.ATTENDANCE(studentId));
-        setAttendanceData(res.data?.data || res.data);
+        // Handle various response types including normalized
+        const attendancePayload = res.normalized?.data || res.data?.data || res.data;
+        setAttendanceData(attendancePayload);
       } catch (err: any) {
         console.error('Failed to fetch attendance:', err);
         setError('Failed to load attendance data. Please try again.');
@@ -57,7 +60,7 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
       }
     };
     fetchAttendance();
-  }, []);
+  }, [authState.user?.id]);
 
   // Calendar data starting 1 on Sunday, padded to 35 slots to prevent flex wrap spreading
   const daysInMonth = Array.from({ length: 35 }, (_, i) => i < 31 ? i + 1 : null);
@@ -104,10 +107,11 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
             const fetchAttendance = async () => {
               try {
                 const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
-                const studentId = profileRes.data?.id;
+                const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
                 if (!studentId) throw new Error('Student ID not found');
                 const res = await apiClient.get(ENDPOINTS.STUDENT.ATTENDANCE(studentId));
-                setAttendanceData(res.data?.data || res.data);
+                const attendancePayload = res.normalized?.data || res.data?.data || res.data;
+                setAttendanceData(attendancePayload);
               } catch (err: any) {
                 setError('Failed to load attendance data. Please try again.');
               } finally {
@@ -124,8 +128,17 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
     );
   }
 
+  const formatDate = (dateVal: any) => {
+    if (!dateVal) return '----';
+    try {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return '----';
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (e) { return '----'; }
+  };
+
   const stats = attendanceData || {};
-  const recentRecords = attendanceData?.records?.slice(0, 5) || [];
+  const recentRecords = showAllRecords ? (attendanceData?.records || []) : (attendanceData?.records?.slice(0, 5) || []);
 
   return (
     <View style={styles.mainContainer}>
@@ -174,13 +187,13 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
                  <Text style={styles.statBoxTitle} numberOfLines={1} adjustsFontSizeToFit>Attendance Rate</Text>
                  <Text style={styles.statBoxVal} adjustsFontSizeToFit numberOfLines={1}>{stats.attendancePercentage?.toFixed(1) || '0.0'} %</Text>
               </View>
-
+ 
               <View style={[styles.statBox, styles.statBoxMid, {borderLeftColor: '#10B981'}]}>
                  <Text style={styles.statBoxTitle} numberOfLines={1} adjustsFontSizeToFit>Days Present</Text>
                  <Text style={styles.statBoxSub} numberOfLines={2}>Academic Session</Text>
                  <Text style={styles.statBoxVal} adjustsFontSizeToFit numberOfLines={1}>{stats.presentDays || 0}</Text>
               </View>
-
+ 
               <View style={[styles.statBox, {borderLeftColor: '#EF4444'}]}>
                  <Text style={styles.statBoxTitle} numberOfLines={1} adjustsFontSizeToFit>Days Absent</Text>
                  <Text style={styles.statBoxSub} numberOfLines={2}>Requires Attention</Text>
@@ -188,7 +201,7 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
               </View>
            </View>
         </Animated.View>
-
+ 
         {/* Card 2: Calendar */}
         <Animated.View entering={FadeInUp.delay(150).springify()} style={styles.card}>
            <View style={styles.cardRowBetween}>
@@ -207,14 +220,14 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
                  </TouchableOpacity>
               </View>
            </View>
-
+ 
            {/* Days of week */}
            <View style={styles.calDaysHeader}>
              {['SUN','MON','TUE','WED','THU','FRI','SAT'].map(d => (
                <Text key={d} style={styles.calDayText}>{d}</Text>
              ))}
            </View>
-
+ 
            {/* Grid */}
            <View style={styles.calGrid}>
              {daysInMonth.map((day, index) => {
@@ -238,7 +251,7 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
                )
              })}
            </View>
-
+ 
            <View style={styles.calDivider} />
            
            <View style={styles.calLegend}>
@@ -252,19 +265,22 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
              </View>
            </View>
         </Animated.View>
-
+ 
         {/* Card 3: Recent Records */}
         <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.card}>
            <View style={styles.cardRowBetween}>
               <View style={{flexDirection: 'row', alignItems: 'center'}}>
                  <Ionicons name="time-outline" size={18} color="#111827" style={{marginRight: 6}} />
-                 <Text style={styles.cardHeader}>Recent Attendance Records</Text>
+                 <Text style={styles.cardHeader}>{showAllRecords ? 'Full Attendance History' : 'Recent Attendance Records'}</Text>
               </View>
-              <TouchableOpacity style={styles.viewAllBtn}>
-                 <Text style={styles.viewAllText}>View all</Text>
+              <TouchableOpacity 
+                style={styles.viewAllBtn}
+                onPress={() => setShowAllRecords(!showAllRecords)}
+              >
+                 <Text style={styles.viewAllText}>{showAllRecords ? 'Show less' : 'View all'}</Text>
               </TouchableOpacity>
            </View>
-
+ 
            <View style={styles.table}>
               {/* Header */}
               <View style={styles.tableHeaderRow}>
@@ -279,7 +295,7 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
               ) : (
                 recentRecords.map((row: any, idx: number) => (
                   <View key={idx} style={styles.tableRow}>
-                    <Text style={[styles.tdTextBold, {flex: 1.5}]}>{new Date(row.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</Text>
+                    <Text style={[styles.tdTextBold, {flex: 1.5}]}>{formatDate(row.date)}</Text>
                     <View style={[{flex: 1.2}, styles.tdPillWrap]}>
                       <View style={row.status.toLowerCase() === 'present' ? styles.statusPresent : styles.statusAbsent}>
                         <Text style={row.status.toLowerCase() === 'present' ? styles.statusTextPresent : styles.statusTextAbsent}>{row.status}</Text>

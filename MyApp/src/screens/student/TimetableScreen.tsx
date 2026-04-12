@@ -14,7 +14,6 @@ interface Props {
   navigation: TimetableNavigationProp;
 }
 
-const TIMES = ['09:00', '09:45', '10:30', '11:15', '12:00', '12:45', '13:30'];
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 const getSubjectColors = (subject?: string) => {
@@ -36,28 +35,63 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
 
   const currentDayKey = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][new Date().getDay()];
 
-  const normalizeApiData = (data: any) => {
-    let result: any[] = [];
-    if (Array.isArray(data)) result = data;
-    else if (data?.schedule) result = data.schedule;
-    else if (data?.schedule?.slots) result = data.schedule.slots;
-    else if (data?.items) result = data.items;
-    else if (data?.students) result = data.students;
-    else if (data?.classes) result = data.classes;
-    else if (data?.submissions) result = data.submissions;
-    else if (data?.timetable) result = data.timetable;
-    else result = [];
+  const normalizeTime = React.useCallback((value: string) => {
+    if (!value) return '';
+    const match = value.match(/(\d{1,2}):(\d{2})/);
+    if (!match) return value.trim().slice(0, 5);
+    let [_, hours, minutes] = match;
+    if (hours.length === 1) hours = `0${hours}`;
+    return `${hours}:${minutes}`;
+  }, []);
 
-    return result.map((item: any) => {
-      const startTime =
-        item.startTime || item.time || item.period?.start?.slice?.(0, 5) || '';
-      const day = item.day ? item.day.toString().toUpperCase() : currentDayKey;
-      return {
-        ...item,
-        day,
-        startTime,
-      };
+  const calculateStatus = (startTime: string, endTime: string) => {
+    try {
+      if (!startTime || !endTime) return 'Upcoming';
+      const now = new Date();
+      const nStart = normalizeTime(startTime);
+      const nEnd = normalizeTime(endTime);
+      const [startH, startM] = nStart.split(':').map(Number);
+      const [endH, endM] = nEnd.split(':').map(Number);
+      
+      const start = new Date(now); start.setHours(startH, startM, 0);
+      const end = new Date(now); end.setHours(endH, endM, 0);
+      
+      if (now >= start && now <= end) return 'Ongoing';
+      if (now > end) return 'Completed';
+      return 'Upcoming';
+    } catch (e) { return 'Upcoming'; }
+  };
+
+  const normalizeApiData = (data: any) => {
+    let rawDailySchedules: any[] = [];
+    if (Array.isArray(data)) rawDailySchedules = data;
+    else if (data?.schedule && Array.isArray(data.schedule)) rawDailySchedules = data.schedule;
+    else if (data?.timetable) rawDailySchedules = [{ slots: data.timetable }];
+    else rawDailySchedules = [];
+
+    const flattenedSlots: any[] = [];
+    rawDailySchedules.forEach((dayData: any) => {
+      const slots = dayData.slots || [];
+      const dateStr = dayData.date || '';
+      const dayKey = dateStr ? ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][new Date(dateStr).getDay()] : '';
+      
+      slots.forEach((slot: any) => {
+        const start = slot.startTime || slot.time || slot.period?.start || '';
+        const end = slot.endTime || slot.period?.end || '';
+        const slotDay = slot.dayOfWeek || dayKey || currentDayKey;
+        const status = (slotDay === currentDayKey) ? calculateStatus(start, end) : 'Upcoming';
+
+        flattenedSlots.push({
+          ...slot,
+          day: slotDay,
+          startTime: start,
+          endTime: end,
+          status: slot.status || status
+        });
+      });
     });
+
+    return flattenedSlots;
   };
 
   const fetchTimetable = async () => {
@@ -65,41 +99,49 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
       setIsLoading(true);
       setError(null);
 
+      // Resolve studentId from Profile
       const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
-      const profileData = profileRes.normalized?.data;
-      const studentId = profileData?.id;
+      const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id || '';
 
-      if (!studentId) {
-        throw new Error('Student ID not found');
+      if (!studentId) throw new Error('Could not identify student account.');
+
+      const dashRes = await apiClient.get(ENDPOINTS.STUDENT.DASHBOARD(studentId));
+      const classId = dashRes.normalized?.data?.student?.classId;
+
+      if (classId) {
+        try {
+          const now = new Date();
+          const day = now.getDay();
+          const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+          const monday = new Date(now.setDate(diff)).toISOString().split('T')[0];
+          const res = await apiClient.get(`${ENDPOINTS.STUDENT.CLASS_SCHEDULE(classId)}?week=${monday}`);
+          setSchedule(normalizeApiData(res.normalized?.data));
+          return;
+        } catch (weekErr) { console.warn('Weekly fetch failed, using fallback.'); }
       }
 
       const res = await apiClient.get(ENDPOINTS.STUDENT.SCHEDULE(studentId));
-      const scheduleData = res.normalized?.data;
-      setSchedule(normalizeApiData(scheduleData));
+      setSchedule(normalizeApiData(res.normalized?.data));
+
     } catch (err: any) {
       console.error('Failed to fetch timetable:', err);
-      setError('Failed to load timetable. Please try again.');
-      setSchedule([]);
+      setError(err.message || 'Failed to load timetable.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchTimetable();
-  }, []);
+  useEffect(() => { fetchTimetable(); }, []);
 
-  const normalizeTime = React.useCallback((value: string) => {
-    if (!value) return '';
-    // Extract numbers and colon only (handles "9:00 AM", "09:00:00", etc.)
-    const match = value.match(/(\d{1,2}):(\d{2})/);
-    if (!match) return value.trim().slice(0, 5);
-    
-    let [_, hours, minutes] = match;
-    // Pad hours with leading zero if needed
-    if (hours.length === 1) hours = `0${hours}`;
-    return `${hours}:${minutes}`;
-  }, []);
+  const dynamicTimes = React.useMemo(() => {
+    const times = new Set<string>();
+    schedule.forEach(item => {
+      if (item.startTime) times.add(normalizeTime(item.startTime));
+    });
+    // Add lunch break as a special marker if you have one, or just sort them
+    const sorted = Array.from(times).sort();
+    return sorted.length > 0 ? sorted : ['09:00', '10:00', '11:00', '12:00'];
+  }, [schedule, normalizeTime]);
 
   const scheduleMap = React.useMemo(() => {
     const dayMap: { [key: string]: string } = {
@@ -111,20 +153,16 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
     const map: Record<string, any> = {};
     schedule.forEach(item => {
       let itemDay = typeof item.day === 'string' ? item.day.trim().toLowerCase() : '';
-      // Convert "monday" -> "MON" or keep "MON" -> "MON"
       const normalizedDay = dayMap[itemDay] || itemDay.toUpperCase();
       const itemStart = typeof item.startTime === 'string' ? normalizeTime(item.startTime) : '';
-      
-      const key = `${normalizedDay}-${itemStart}`;
-      map[key] = item;
+      map[`${normalizedDay}-${itemStart}`] = item;
     });
     return map;
   }, [schedule, normalizeTime]);
 
   const getCellData = React.useCallback((day: string, time: string) => {
-    const targetTime = normalizeTime(time);
-    return scheduleMap[`${day}-${targetTime}`];
-  }, [scheduleMap, normalizeTime]);
+    return scheduleMap[`${day}-${time}`];
+  }, [scheduleMap]);
 
   if (isLoading && schedule.length === 0) {
     return (
@@ -210,10 +248,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
             {/* Left Time Column Fixed */}
             <View style={styles.timeColumn}>
               <View style={{ height: 40 }} />{/* Top left corner offset for Day Headers */}
-              {TIMES.map(time => {
-                if (time === '11:15') {
-                  return <View key={time} style={styles.lunchTimeCell}><Text style={styles.timeText}>{time}</Text></View>;
-                }
+              {dynamicTimes.map(time => {
                 return (
                   <View key={time} style={styles.timeCell}>
                     <Text style={styles.timeText}>{time}</Text>
@@ -232,7 +267,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
                     return (
                       <View key={day} style={styles.dayHeaderCell}>
                         <View style={[styles.dayBadge, isToday && styles.dayBadgeActive]}>
-                          <Text style={[styles.dayHeaderText, isToday && styles.dayHeaderTextActive]}>{day}</Text>
+                          <Text style={[styles.dayHeaderText, isToday && styles.dayBadgeActive && {color: '#FFF'}]}>{day}</Text>
                         </View>
                       </View>
                     )
@@ -240,19 +275,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
                 </View>
 
                 {/* Schedule Rows */}
-                {TIMES.map(time => {
-                  if (time === '11:15') {
-                    return (
-                      <View key={time} style={styles.lunchRowOuter}>
-                        <View style={styles.lunchLineIndicator} />
-                        <View style={styles.lunchBarWrapper}>
-                          <Ionicons name="fast-food-outline" size={14} color="#6B7280" style={{ marginRight: 6 }} />
-                          <Text style={styles.lunchText}>LUNCH BREAK</Text>
-                        </View>
-                      </View>
-                    );
-                  }
-
+                {dynamicTimes.map(time => {
                   return (
                     <View key={time} style={styles.gridRow}>
                       {/* Dashed background row line */}
@@ -261,18 +284,54 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
                       {DAYS.map(day => {
                         const data = getCellData(day, time);
                         const subjectLabel = typeof data?.subject === 'string' ? data.subject : 'Subject';
-                        const teacherLabel = typeof data?.teacher === 'string' ? data.teacher : '-';
-                        const colors = getSubjectColors(subjectLabel);
+                        
+                        // Handle Teacher Object + Substitution Logic
+                        const teacherObj = data?.teacher;
+                        const substitutionObj = data?.substitution;
+                        const teacherLabel = substitutionObj ? substitutionObj.name : (teacherObj?.name || '-');
+                        const isSubstituted = !!substitutionObj;
+                        
+                        // Live Status tracking
+                        const isOngoing = data?.status === 'Ongoing';
+                        const isCompleted = data?.status === 'Completed';
+
+                        const colors = isOngoing 
+                           ? { bg: '#ECFDF5', accent: '#10B981', text: '#064E3B' } // Vibrant Green for Ongoing
+                           : getSubjectColors(subjectLabel);
 
                         return (
                           <View key={day} style={styles.cellOuter}>
                             {data ? (
-                              <View style={[styles.card, { backgroundColor: colors.bg }]}>
+                              <View style={[
+                                styles.card, 
+                                { backgroundColor: colors.bg },
+                                isOngoing && { borderColor: '#10B981', borderWidth: 2, shadowColor: '#10B981', shadowOpacity: 0.3 }
+                              ]}>
                                 <View style={[styles.cardAccentLine, { backgroundColor: colors.accent }]} />
-                                <Text style={[styles.subjectText, { color: colors.text }]} numberOfLines={1}>{subjectLabel}</Text>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                  <Text style={[
+                                    styles.subjectText, 
+                                    { color: colors.text, flex: 1 },
+                                    isCompleted && { textDecorationLine: 'line-through', opacity: 0.6 }
+                                  ]} numberOfLines={1}>
+                                    {subjectLabel}
+                                  </Text>
+                                  <View style={{ flexDirection: 'row', gap: 2 }}>
+                                    {isOngoing && (
+                                      <View style={{ backgroundColor: '#10B981', borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 }}>
+                                        <Text style={{ fontSize: 7, fontWeight: '900', color: '#FFF' }}>LIVE</Text>
+                                      </View>
+                                    )}
+                                    {isSubstituted && (
+                                      <View style={{ backgroundColor: '#F59E0B', borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 }}>
+                                        <Text style={{ fontSize: 7, fontWeight: '900', color: '#FFF' }}>SUB</Text>
+                                      </View>
+                                    )}
+                                  </View>
+                                </View>
                                 <View style={styles.teacherRow}>
                                   <Ionicons name="person" size={10} color={colors.accent} style={{ marginRight: 4, opacity: 0.6 }} />
-                                  <Text style={[styles.teacherText, { color: colors.text, opacity: 0.8 }]} numberOfLines={1}>
+                                  <Text style={[styles.teacherText, { color: colors.text, opacity: isCompleted ? 0.4 : 0.8 }]} numberOfLines={1}>
                                     {teacherLabel}
                                   </Text>
                                 </View>

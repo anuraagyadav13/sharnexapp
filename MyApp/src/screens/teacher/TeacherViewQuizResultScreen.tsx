@@ -58,96 +58,96 @@ const TeacherViewQuizResultScreen: React.FC<Props> = ({ navigation, route }) => 
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
+            <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
           </View>
         </View>
       </View>
 
       {/* Blue Header Section */}
       <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
-         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
-         </TouchableOpacity>
-         <Text style={styles.blueTitle}>{data?.quiz?.title || 'Exam Result Analysis'}</Text>
-         <Text style={styles.blueSubtitle}>{data?.quiz?.subject || 'Analyze student performance'}</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+          <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.blueTitle}>{data?.quiz?.title || 'Exam Result Analysis'}</Text>
+        <Text style={styles.blueSubtitle}>{data?.quiz?.subject || 'Analyze student performance'}</Text>
       </Animated.View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-         
-         {/* Stats Cards Row */}
-         <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.statsRow}>
-            
-            {/* Participants Card */}
-            <View style={styles.statCard}>
-               <View style={[styles.statIconBox, { backgroundColor: '#4F46E5' }]}>
-                  <Ionicons name="person" size={20} color="#FFFFFF" />
-               </View>
-               <View style={styles.statTextCol}>
-                  <Text style={styles.statLabel}>Participants</Text>
-                  <Text style={styles.statValue}>{results.length}</Text>
-               </View>
+
+        {/* Stats Cards Row */}
+        <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.statsRow}>
+
+          {/* Participants Card */}
+          <View style={styles.statCard}>
+            <View style={[styles.statIconBox, { backgroundColor: '#4F46E5' }]}>
+              <Ionicons name="person" size={20} color="#FFFFFF" />
+            </View>
+            <View style={styles.statTextCol}>
+              <Text style={styles.statLabel}>Participants</Text>
+              <Text style={styles.statValue}>{results.length}</Text>
+            </View>
+          </View>
+
+          {/* Avg Score Card */}
+          <View style={styles.statCard}>
+            <View style={[styles.statIconBox, { backgroundColor: '#10B981' }]}>
+              <Ionicons name="analytics" size={20} color="#FFFFFF" />
+            </View>
+            <View style={styles.statTextCol}>
+              <Text style={styles.statLabel}>Avg. Score</Text>
+              <Text style={styles.statValue}>{analytics.avg}%</Text>
+            </View>
+          </View>
+
+          {/* Highest Score Card */}
+          <View style={styles.statCard}>
+            <View style={[styles.statIconBox, { backgroundColor: '#F59E0B' }]}>
+              <Ionicons name="trophy" size={20} color="#FFFFFF" />
+            </View>
+            <View style={styles.statTextCol}>
+              <Text style={styles.statLabel}>Highest</Text>
+              <Text style={styles.statValue}>{analytics.highest}%</Text>
+            </View>
+          </View>
+
+        </Animated.View>
+
+        <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.contentWrapper}>
+          <Text style={styles.sectionTitle}>Students Performance</Text>
+
+          {/* Table Container */}
+          <View style={styles.tableContainer}>
+
+            {/* Table Header */}
+            <View style={styles.tableHeader}>
+              <Text style={[styles.thText, { flex: 2 }]}>Student</Text>
+              <Text style={[styles.thText, { flex: 1.2, textAlign: 'center' }]}>Score</Text>
+              <Text style={[styles.thText, { flex: 1.8, textAlign: 'center' }]}>Time Taken</Text>
+              <Text style={[styles.thText, { flex: 2, textAlign: 'right' }]}>Status</Text>
             </View>
 
-            {/* Avg Score Card */}
-            <View style={styles.statCard}>
-               <View style={[styles.statIconBox, { backgroundColor: '#10B981' }]}>
-                  <Ionicons name="analytics" size={20} color="#FFFFFF" />
-               </View>
-               <View style={styles.statTextCol}>
-                  <Text style={styles.statLabel}>Avg. Score</Text>
-                  <Text style={styles.statValue}>{analytics.avg}%</Text>
-               </View>
-            </View>
-
-            {/* Highest Score Card */}
-            <View style={styles.statCard}>
-               <View style={[styles.statIconBox, { backgroundColor: '#F59E0B' }]}>
-                  <Ionicons name="trophy" size={20} color="#FFFFFF" />
-               </View>
-               <View style={styles.statTextCol}>
-                  <Text style={styles.statLabel}>Highest</Text>
-                  <Text style={styles.statValue}>{analytics.highest}%</Text>
-               </View>
-            </View>
-
-         </Animated.View>
-
-         <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.contentWrapper}>
-            <Text style={styles.sectionTitle}>Students Performance</Text>
-
-            {/* Table Container */}
-            <View style={styles.tableContainer}>
-               
-               {/* Table Header */}
-               <View style={styles.tableHeader}>
-                  <Text style={[styles.thText, { flex: 2 }]}>Student</Text>
-                  <Text style={[styles.thText, { flex: 1.2, textAlign: 'center' }]}>Score</Text>
-                  <Text style={[styles.thText, { flex: 1.8, textAlign: 'center' }]}>Time Taken</Text>
-                  <Text style={[styles.thText, { flex: 2, textAlign: 'right' }]}>Status</Text>
-               </View>
-
-               {/* Table Rows */}
-               {isLoading ? (
-                 <ActivityIndicator size="large" color="#4F46E5" style={{ padding: 40 }} />
-               ) : results.length === 0 ? (
-                 <Text style={{ textAlign: 'center', padding: 40, color: '#6B7280' }}>No submissions yet</Text>
-               ) : (
-                 results.map((student: any, index: number) => (
-                    <View key={student.studentId} style={[styles.tableRow, index === results.length - 1 && styles.lastTableRow]}>
-                       <Text style={[styles.tdTextStudent, { flex: 2 }]} numberOfLines={1}>{student.studentName}</Text>
-                       <Text style={[styles.tdTextBase, { flex: 1.2, textAlign: 'center' }]}>{student.score}%</Text>
-                       <Text style={[styles.tdTextBase, { flex: 1.8, textAlign: 'center' }]}>{student.timeTaken}</Text>
-                       <View style={[styles.tdStatusWrapper, { flex: 2, alignItems: 'flex-end' }]}>
-                          <View style={styles.statusPill}>
-                             <Text style={styles.statusPillText}>Completed</Text>
-                          </View>
-                       </View>
+            {/* Table Rows */}
+            {isLoading ? (
+              <ActivityIndicator size="large" color="#4F46E5" style={{ padding: 40 }} />
+            ) : results.length === 0 ? (
+              <Text style={{ textAlign: 'center', padding: 40, color: '#6B7280' }}>No submissions yet</Text>
+            ) : (
+              results.map((student: any, index: number) => (
+                <View key={student.studentId} style={[styles.tableRow, index === results.length - 1 && styles.lastTableRow]}>
+                  <Text style={[styles.tdTextStudent, { flex: 2 }]} numberOfLines={1}>{student.studentName}</Text>
+                  <Text style={[styles.tdTextBase, { flex: 1.2, textAlign: 'center' }]}>{student.score}%</Text>
+                  <Text style={[styles.tdTextBase, { flex: 1.8, textAlign: 'center' }]}>{student.timeTaken}</Text>
+                  <View style={[styles.tdStatusWrapper, { flex: 2, alignItems: 'flex-end' }]}>
+                    <View style={styles.statusPill}>
+                      <Text style={styles.statusPillText}>Completed</Text>
                     </View>
-                 ))
-               )}
+                  </View>
+                </View>
+              ))
+            )}
 
-            </View>
-         </Animated.View>
+          </View>
+        </Animated.View>
 
       </ScrollView>
 
@@ -175,9 +175,10 @@ const styles = StyleSheet.create({
     zIndex: 10
   },
   menuHandle: { paddingRight: 10, paddingVertical: 10, width: 28 },
-  headerTitle: { fontSize: 16,
+  headerTitle: {
+    fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5', 
+    color: '#4F46E5',
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -284,7 +285,7 @@ const styles = StyleSheet.create({
     color: '#000',
     marginBottom: 20,
   },
-  
+
   tableContainer: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,

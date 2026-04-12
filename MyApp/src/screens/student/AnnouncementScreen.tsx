@@ -50,9 +50,17 @@ const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
       try {
         setIsLoading(true);
         setError(null);
-        // @ts-ignore
+        
+        // 1. Resolve student ID reliably (not always needed for global announcements, but good for context)
+        const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+        const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
+
+        // 2. Fetch announcements
+        // The backend handles filtering based on user role from token
         const res = await apiClient.get(ENDPOINTS.STUDENT.ANNOUNCEMENTS);
-        const data = res.data?.announcements || res.data?.data || res.data || [];
+        
+        // Handle various response types including normalized
+        const data = res.normalized?.data?.announcements || res.normalized?.data || res.data?.announcements || res.data?.data || res.data || [];
         const announcementsArray = Array.isArray(data) ? data : (data.announcements ? data.announcements : []);
         setAnnouncements(announcementsArray);
       } catch (error: any) {
@@ -65,7 +73,7 @@ const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
     };
 
     fetchAnnouncements();
-  }, []);
+  }, [authState.user?.id]);
 
   return (
     <View style={styles.mainContainer}>

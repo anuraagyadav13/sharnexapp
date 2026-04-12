@@ -30,28 +30,51 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
   const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [grades, setGrades] = useState<any[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchGradesData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // 1. Resolve student ID reliably
+      const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+      const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
+
+      // 2. Fetch grades and reports
+      const res = await apiClient.get(ENDPOINTS.STUDENT.GRADES);
+      
+      // Handle various response types including normalized
+      const data = res.normalized?.data || res.data?.data || res.data;
+      const gradeItems = data?.grades?.subjects || data?.subjects || data?.grades || [];
+      setGrades(Array.isArray(gradeItems) ? gradeItems : []);
+      
+      // reports might be in the same payload or separate
+      const reportItems = data?.reports || data?.official_results || [];
+      setReports(Array.isArray(reportItems) ? reportItems : []);
+    } catch (err: any) {
+      console.error('Failed to fetch grades:', err);
+      setError('Failed to load academic records. Please try again.');
+      setGrades([]);
+      setReports([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchGrades = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        // Get student profile first to find student ID if needed
-        const res = await apiClient.get(ENDPOINTS.STUDENT.GRADES);
-        const gradeData = res.data.grades?.subjects || res.data.subjects || res.data.data || [];
-        setGrades(Array.isArray(gradeData) ? gradeData : []);
-      } catch (err: any) {
-        console.error('Failed to fetch grades:', err);
-        setError('Failed to load grades. Please try again.');
-        setGrades([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchGrades();
-  }, []);
+    fetchGradesData();
+  }, [authState.user?.id]);
+
+  if (isLoading && grades.length === 0 && reports.length === 0) {
+    return (
+      <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#3B82F6" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.mainContainer}>
@@ -70,12 +93,9 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
         </ScaleButton>
         <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
         <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
-          </View>
+             <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
+             </View>
         </View>
       </View>
 
@@ -88,84 +108,103 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
         </Animated.View>
 
         {/* Subjects List */}
-        {isLoading ? (
-          <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 40 }} />
-        ) : error ? (
+        {error ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="alert-circle" size={60} color="#EF4444" />
             <Text style={styles.emptyText}>{error}</Text>
             <ScaleButton 
               style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#3B82F6', borderRadius: 8 }}
-              onPress={() => {
-                setError(null);
-                setIsLoading(true);
-                const fetchGrades = async () => {
-                  try {
-                    const res = await apiClient.get(ENDPOINTS.STUDENT.GRADES);
-                    const gradeData = res.data.subjects || res.data.data || [];
-                    setGrades(Array.isArray(gradeData) ? gradeData : []);
-                  } catch (err: any) {
-                    setError('Failed to load grades. Please try again.');
-                  } finally {
-                    setIsLoading(false);
-                  }
-                };
-                fetchGrades();
-              }}
+              onPress={fetchGradesData}
               scaleTo={0.95}
             >
               <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
             </ScaleButton>
           </View>
-        ) : grades.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="school-outline" size={60} color="#E5E7EB" />
-            <Text style={styles.emptyText}>No grade records found</Text>
-          </View>
         ) : (
-          grades.map((item, index) => (
-            <Animated.View 
-              key={item.id || index} 
-              entering={FadeInUp.delay(100 + (index * 50)).springify()} 
-              style={styles.subjectCard}
-            >
-               <View style={styles.cardHeaderRow}>
-                 <View>
-                   <Text style={styles.subjectName}>{item.name || item.subject_name || 'Subject'}</Text>
-                   <Text style={styles.teacherName}>{item.exam_name || 'Annual Examination'}</Text>
-                 </View>
-                 <View style={[styles.statusPill, { backgroundColor: item.grade?.startsWith('A') ? '#D1FAE5' : '#FEF3C7' }]}>
-                   <Text style={[styles.statusText, { color: item.grade?.startsWith('A') ? '#059669' : '#D97706' }]}>{item.grade || 'N/A'}</Text>
-                 </View>
-               </View>
+          <>
+            {grades.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="school-outline" size={60} color="#E5E7EB" />
+                <Text style={styles.emptyText}>No grade records found</Text>
+              </View>
+            ) : (
+              grades.map((item, index) => {
+                const subjectName = typeof item.name === 'object' ? (item.name?.name || 'Subject') : (item.name || item.subject_name || 'Subject');
+                const gradeStr = typeof item.grade === 'object' ? (item.grade?.name || item.grade?.label || 'N/A') : String(item.grade || 'N/A');
+                const isGradeA = gradeStr.startsWith('A');
+                const score = parseFloat(item.score || item.percentage || 0);
+                const totalMarks = parseFloat(item.total_marks || 100);
+                const percentage = item.percentage || (totalMarks > 0 ? Math.round((score / totalMarks) * 100) : 0);
+                const passed = percentage >= 40 || !percentage;
 
-               <View style={styles.divider} />
+                return (
+                  <Animated.View 
+                    key={item.id || index} 
+                    entering={FadeInUp.delay(100 + (index * 50)).springify()} 
+                    style={styles.subjectCard}
+                  >
+                     <View style={styles.cardHeaderRow}>
+                       <View>
+                         <Text style={styles.subjectName}>{subjectName}</Text>
+                         <Text style={styles.teacherName}>{item.exam_name || 'Annual Examination'}</Text>
+                       </View>
+                       <View style={[styles.statusPill, { backgroundColor: isGradeA ? '#D1FAE5' : '#FEF3C7' }]}>
+                         <Text style={[styles.statusText, { color: isGradeA ? '#059669' : '#D97706' }]}>{gradeStr}</Text>
+                       </View>
+                     </View>
+      
+                     <View style={styles.divider} />
+      
+                     <View style={styles.statsRow}>
+                       <View style={styles.statCol}>
+                         <Text style={styles.statLabel}>Marks</Text>
+                         <Text style={styles.statValue}>{score}</Text>
+                       </View>
+                       <View style={styles.statCol}>
+                         <Text style={styles.statLabel}>Total Marks</Text>
+                         <Text style={styles.statValue}>{totalMarks}</Text>
+                       </View>
+                       <View style={styles.statCol}>
+                         <Text style={styles.statLabel}>Percentage</Text>
+                         <Text style={styles.statValue}>{percentage}%</Text>
+                       </View>
+                     </View>
+      
+                     <View style={styles.gradeBox}>
+                       <Text style={styles.gradeLabel}>Result Status</Text>
+                       <Text style={[styles.gradeValue, { color: passed ? '#059669' : '#EF4444' }]}>
+                         {passed ? 'PASSED' : 'RE-EXAM'}
+                       </Text>
+                     </View>
+                  </Animated.View>
+                );
+              })
+            )}
 
-               <View style={styles.statsRow}>
-                 <View style={styles.statCol}>
-                   <Text style={styles.statLabel}>Marks</Text>
-                   <Text style={styles.statValue}>{item.score || item.percentage || 0}</Text>
-                 </View>
-                 <View style={styles.statCol}>
-                   <Text style={styles.statLabel}>Total Marks</Text>
-                   <Text style={styles.statValue}>{item.total_marks || 100}</Text>
-                 </View>
-                 <View style={styles.statCol}>
-                   <Text style={styles.statLabel}>Percentage</Text>
-                   <Text style={styles.statValue}>
-                     {item.percentage || (item.total_marks ? Math.round((item.score / item.total_marks) * 100) : 0)}%
-                   </Text>
-                 </View>
-               </View>
-
-               <View style={styles.gradeBox}>
-                 <Text style={styles.gradeLabel}>Result Status</Text>
-                 <Text style={[styles.gradeValue, { color: item.percentage >= 40 || !item.percentage ? '#059669' : '#EF4444' }]}>
-                   {item.percentage >= 40 || !item.percentage ? 'PASSED' : 'RE-EXAM'}
-                 </Text>
-               </View>
+            {/* Official Reports Section */}
+            <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.reportsWrapper}>
+               <Text style={styles.reportsHeader}>Official Report Cards</Text>
+               
+               {reports.length === 0 ? (
+                 <Text style={[styles.emptyText, { fontSize: 13, marginTop: 0 }]}>No official report cards available yet.</Text>
+               ) : (
+                 reports.map((report, idx) => (
+                   <TouchableOpacity key={report.id || idx} style={styles.reportItem} activeOpacity={0.7}>
+                      <View style={styles.pdfIconWrap}>
+                         <Ionicons name="document-text" size={18} color="#FFFFFF" />
+                         <Text style={styles.pdfIconText}>PDF</Text>
+                      </View>
+                      <View style={styles.reportContent}>
+                         <Text style={styles.reportTitle}>{report.title || 'Academic Report Card'}</Text>
+                         <Text style={styles.reportDesc}>{report.description || 'Full term academic performance summary'}</Text>
+                         <Text style={styles.reportDate}>{report.date || new Date().toLocaleDateString()}</Text>
+                      </View>
+                      <Ionicons name="download-outline" size={20} color="#3B82F6" />
+                   </TouchableOpacity>
+                 ))
+               )}
             </Animated.View>
-          ))
+          </>
         )}
 
 

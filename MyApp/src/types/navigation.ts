@@ -23,6 +23,7 @@ export type RootStackParamList = {
   AccountSettings: { targetTab?: 'Personal Details' | 'Parent Information' | 'Preferences' } | undefined;
 
   OfficialResult: { resultId: string };
+  ResultManagement: undefined;
   Timetable: undefined;
 
   // Teacher Screens
