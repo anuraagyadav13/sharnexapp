@@ -29,18 +29,35 @@ const TeacherMarkAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
   const [attendanceState, setAttendanceState] = useState<Record<string, 'P' | 'A' | 'L'>>({});
 
   useEffect(() => {
-    const fetchStudents = async () => {
+    const fetchInitialData = async () => {
       try {
         setIsLoading(true);
-        const res = await apiClient.get(ENDPOINTS.TEACHER.CLASS_STUDENTS(classId));
-        setStudents(res.data.data || []);
+        const dateStr = new Date().toISOString().split('T')[0];
+        
+        const [studentsRes, attendanceRes] = await Promise.all([
+          apiClient.get(ENDPOINTS.TEACHER.CLASS_STUDENTS(classId)),
+          apiClient.get(`${ENDPOINTS.TEACHER.ATTENDANCE(classId)}?date=${dateStr}`)
+        ]);
+        
+        const studentsData = studentsRes.data.data || [];
+        setStudents(studentsData);
+
+        // Pre-fill attendance state if records exist
+        const existingRecords = attendanceRes.data.attendance || [];
+        if (existingRecords.length > 0) {
+          const prevState: Record<string, 'P' | 'A' | 'L'> = {};
+          existingRecords.forEach((rec: any) => {
+            prevState[rec.studentId] = rec.status === 'present' ? 'P' : rec.status === 'absent' ? 'A' : 'L';
+          });
+          setAttendanceState(prevState);
+        }
       } catch (error) {
-        console.error('Failed to fetch students:', error);
+        console.error('Failed to fetch initial marking data:', error);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchStudents();
+    fetchInitialData();
   }, [classId]);
 
   const markAll = (status: 'P' | 'A') => {

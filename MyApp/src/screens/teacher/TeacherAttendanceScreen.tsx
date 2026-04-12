@@ -25,24 +25,33 @@ const TeacherAttendanceScreen: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [classes, setClasses] = useState<any[]>([]);
+  const [myAttendance, setMyAttendance] = useState<any>(null);
+  const [summary, setSummary] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchClasses = async () => {
+    const fetchData = async () => {
       try {
         const teacherId = authState.user?.id;
         if (!teacherId) return;
 
-        const res = await apiClient.get(ENDPOINTS.TEACHER.CLASSES(teacherId));
-        setClasses(res.data.classes || []);
+        const [classesRes, meRes, summaryRes] = await Promise.all([
+          apiClient.get(ENDPOINTS.TEACHER.CLASSES(teacherId)),
+          apiClient.get(ENDPOINTS.TEACHER.MY_ATTENDANCE),
+          apiClient.get(ENDPOINTS.TEACHER.DASHBOARD(teacherId))
+        ]);
+        
+        setClasses(classesRes.data.classes || []);
+        setMyAttendance(meRes.data?.data || meRes.data || null);
+        setSummary(summaryRes.data?.summary || null);
       } catch (error) {
-        console.error('Failed to fetch teacher classes:', error);
+        console.error('Failed to fetch attendance portal data:', error);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchClasses();
-  }, []);
+    fetchData();
+  }, [authState.user?.id]);
 
   return (
     <View style={styles.mainContainer}>
@@ -75,8 +84,36 @@ const TeacherAttendanceScreen: React.FC<Props> = ({ navigation }) => {
         {/* Page Title Wrapper */}
         <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
           <Text style={styles.pageTitle}>Attendance Portal</Text>
-          <Text style={styles.pageSubtitle}>Monday, December 15, 2025</Text>
+          <Text style={styles.pageSubtitle}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</Text>
         </Animated.View>
+
+        {/* My Attendance Summary Card */}
+        {myAttendance && (
+          <Animated.View entering={FadeInUp.delay(50).springify()} style={styles.meCard}>
+             <View style={styles.meInfo}>
+                <View>
+                   <Text style={styles.meTitle}>My Attendance</Text>
+                   <Text style={styles.meSubtitle}>Current Month Performance</Text>
+                </View>
+                   <View style={styles.meStatRow}>
+                      <View style={styles.meStat}>
+                         <Text style={styles.meStatVal}>{myAttendance.percentage || 0}%</Text>
+                         <Text style={styles.meStatLab}>Attendance</Text>
+                      </View>
+                      <TouchableOpacity 
+                         style={styles.historyLink} 
+                         onPress={() => navigation.navigate('TeacherSelfAttendance')}
+                      >
+                         <Text style={styles.historyLinkText}>View Detailed Logs</Text>
+                         <Ionicons name="arrow-forward" size={12} color="#FFF" />
+                      </TouchableOpacity>
+                   </View>
+                   <View style={styles.meProgressBase}>
+                      <View style={[styles.meProgressFill, { width: `${myAttendance.percentage || 0}%` }]} />
+                   </View>
+             </View>
+          </Animated.View>
+        )}
 
         {/* Big White Main Card */}
         <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.mainCard}>
@@ -344,6 +381,29 @@ const styles = StyleSheet.create({
     marginTop: 20,
     fontWeight: '500',
   },
+  meCard: {
+    backgroundColor: '#4F46E5',
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 16,
+    marginBottom: 20,
+    shadowColor: '#4F46E5',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  meInfo: { gap: 15 },
+  meTitle: { color: '#FFF', fontSize: 18, fontWeight: '800' },
+  meSubtitle: { color: '#E0E7FF', fontSize: 11, fontWeight: '500' },
+  meStatRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  meStat: { alignItems: 'flex-start' },
+  meStatVal: { color: '#FFF', fontSize: 24, fontWeight: '900' },
+  meStatLab: { color: '#E0E7FF', fontSize: 10, fontWeight: '700' },
+  historyLink: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, gap: 6 },
+  historyLinkText: { color: '#FFF', fontSize: 10, fontWeight: '700' },
+  meProgressBase: { flex: 1, height: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 4, marginTop: 15 },
+  meProgressFill: { height: 8, backgroundColor: '#FFF', borderRadius: 4 },
 });
 
 export default TeacherAttendanceScreen;

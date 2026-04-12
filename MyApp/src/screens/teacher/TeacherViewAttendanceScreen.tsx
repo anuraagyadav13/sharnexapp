@@ -8,7 +8,8 @@ import {
   TouchableOpacity,
   Platform,
   Dimensions,
-  ActivityIndicator
+  ActivityIndicator,
+  Modal,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -18,23 +19,70 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
+import { NavigationDrawer } from '../../components/NavigationDrawer';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherViewAttendance'>;
 
+const CustomCalendarPickerOverlay = ({ visible, onClose, onSelect, selectedDate }: any) => {
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const [currentDate, setCurrentDate] = React.useState(new Date(selectedDate));
+
+  const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+  const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
+
+  const handlePrevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  const handleNextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+
+  const daysInMonth = getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth());
+  const firstDay = getFirstDayOfMonth(currentDate.getFullYear(), currentDate.getMonth());
+
+  const calendarDays = [];
+  for (let i = 0; i < firstDay; i++) calendarDays.push(null);
+  for (let i = 1; i <= daysInMonth; i++) calendarDays.push(i);
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} />
+        <Animated.View entering={FadeIn.duration(300)} style={{ backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, width: '100%', maxWidth: 400, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 15 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <TouchableOpacity onPress={handlePrevMonth} style={{ padding: 10 }}><Ionicons name="chevron-back" size={20} color="#4F46E5" /></TouchableOpacity>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E293B' }}>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</Text>
+            <TouchableOpacity onPress={handleNextMonth} style={{ padding: 10 }}><Ionicons name="chevron-forward" size={20} color="#4F46E5" /></TouchableOpacity>
+          </View>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10 }}>
+            {days.map(d => <Text key={d} style={{ width: `${100 / 7}%`, textAlign: 'center', fontSize: 12, fontWeight: '700', color: '#94A3B8', marginBottom: 10 }}>{d}</Text>)}
+            {calendarDays.map((d, i) => {
+              const isToday = d && new Date().toDateString() === new Date(currentDate.getFullYear(), currentDate.getMonth(), d).toDateString();
+              const isSelected = d && new Date(selectedDate).toDateString() === new Date(currentDate.getFullYear(), currentDate.getMonth(), d).toDateString();
+              return (
+                <TouchableOpacity key={i} disabled={!d} onPress={() => { if (d) { onSelect(new Date(currentDate.getFullYear(), currentDate.getMonth(), d)); onClose(); } }} style={{ width: `${100 / 7}%`, height: 45, justifyContent: 'center', alignItems: 'center', borderRadius: 12, backgroundColor: isSelected ? '#4F46E5' : 'transparent', borderWidth: isToday ? 1 : 0, borderColor: '#4F46E5' }}>
+                  {d && <Text style={{ fontSize: 14, fontWeight: isSelected || isToday ? '900' : '500', color: isSelected ? '#FFFFFF' : isToday ? '#4F46E5' : '#1E293B' }}>{d}</Text>}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <TouchableOpacity onPress={onClose} style={{ marginTop: 10, padding: 15, backgroundColor: '#F1F5F9', borderRadius: 16, alignItems: 'center' }}><Text style={{ color: '#64748B', fontWeight: '800' }}>Cancel</Text></TouchableOpacity>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+};
 
 const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation, route }) => {
   const { classId } = route.params;
   const { authState } = useAuth();
+  const [selectedDate, setSelectedDate] = React.useState(new Date());
+  const [isCalendarVisible, setIsCalendarVisible] = React.useState(false);
   const [attendance, setAttendance] = React.useState<any[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [stats, setStats] = React.useState({ total: 0, present: 0, absent: 0 });
 
-  React.useEffect(() => {
-    const fetchAttendance = async () => {
-      try {
-        setIsLoading(true);
-        const date = new Date().toISOString().split('T')[0];
-        const res = await apiClient.get(`${ENDPOINTS.TEACHER.ATTENDANCE(classId)}?date=${date}`);
+  const fetchAttendance = async () => {
+    try {
+      setIsLoading(true);
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      const res = await apiClient.get(`${ENDPOINTS.TEACHER.ATTENDANCE(classId)}?date=${dateStr}`);
         const data = res.data.attendance || [];
         setAttendance(data);
         
@@ -43,14 +91,14 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
           present: data.filter((a: any) => a.status === 'present' || a.status === 'late').length,
           absent: data.filter((a: any) => a.status === 'absent').length,
         });
-      } catch (error) {
-        console.error('Failed to fetch attendance:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
     fetchAttendance();
-  }, [classId]);
+  }, [classId, selectedDate]);
 
   return (
     <View style={styles.mainContainer}>
@@ -70,14 +118,22 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
         </View>
       </View>
 
-      {/* Blue Header Section */}
-      <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
-         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
-         </TouchableOpacity>
-         <Text style={styles.blueTitle}>Attendance Details</Text>
-         <Text style={styles.blueSubtitle}>{stats.total} Students Recorded • {new Date().toLocaleDateString()}</Text>
-      </Animated.View>
+       {/* Blue Header Section */}
+       <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+             <View>
+                <Text style={styles.blueTitle}>Attendance Details</Text>
+                <Text style={styles.blueSubtitle}>{stats.total} Students Recorded • {selectedDate.toLocaleDateString()}</Text>
+             </View>
+             <TouchableOpacity style={styles.dateSelector} onPress={() => setIsCalendarVisible(true)}>
+                <Ionicons name="calendar" size={18} color="#FFF" />
+                <Text style={styles.dateSelectorText}>Select Date</Text>
+             </TouchableOpacity>
+          </View>
+       </Animated.View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
@@ -148,6 +204,13 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
             <Text style={styles.doneBtnText}>Done</Text>
          </TouchableOpacity>
       </Animated.View>
+
+      <CustomCalendarPickerOverlay 
+         visible={isCalendarVisible} 
+         onClose={() => setIsCalendarVisible(false)} 
+         onSelect={setSelectedDate} 
+         selectedDate={selectedDate}
+      />
 
     </View>
   );
@@ -223,6 +286,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     color: '#E0E7FF',
+  },
+  dateSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 8,
+  },
+  dateSelectorText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
 
   mainCard: {

@@ -56,6 +56,8 @@ export type RootStackParamList = {
     examName: string;
     className: string;
   };
+  TeacherTimetable: undefined;
+  TeacherSelfAttendance: undefined;
 
   // Principal Screens
   PrincipalDashboard: undefined;

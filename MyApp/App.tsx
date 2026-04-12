@@ -49,6 +49,8 @@ import TeacherResultManagementScreen from './src/screens/teacher/TeacherResultMa
 import TeacherMarksEntryScreen from './src/screens/teacher/TeacherMarksEntryScreen';
 import TeacherReviewSubmissionScreen from './src/screens/teacher/TeacherReviewSubmissionScreen';
 import TeacherDashboard from './src/screens/teacher/TeacherDashboard';
+import TeacherTimetableScreen from './src/screens/teacher/TeacherTimetableScreen';
+import TeacherSelfAttendanceScreen from './src/screens/teacher/TeacherSelfAttendanceScreen';
 import PrincipalDashboard from './src/screens/principal/PrincipalDashboard';
 import PrincipalClasses from './src/screens/principal/PrincipalClassesScreen';
 import PrincipalSubjects from './src/screens/principal/PrincipalSubjectsScreen';
@@ -145,6 +147,8 @@ function RootNavigator() {
               <Stack.Screen name="TeacherResultManagement" component={TeacherResultManagementScreen} />
               <Stack.Screen name="TeacherMarksEntry" component={TeacherMarksEntryScreen} />
               <Stack.Screen name="TeacherReviewSubmission" component={TeacherReviewSubmissionScreen} />
+              <Stack.Screen name="TeacherTimetable" component={TeacherTimetableScreen} />
+              <Stack.Screen name="TeacherSelfAttendance" component={TeacherSelfAttendanceScreen} />
             </>
           )}
 

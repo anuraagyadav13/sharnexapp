@@ -73,6 +73,7 @@ const TEACHER_MENU: MenuItem[] = [
   { id: '2', label: 'Attendance', icon: 'checkmark-circle-outline' },
   { id: '3', label: 'Assignments', icon: 'document-text-outline' },
   { id: '4', label: 'Quizzes', icon: 'time-outline' },
+  { id: 'timetable', label: 'Timetable', icon: 'calendar-clear-outline' },
   { id: '5', label: 'Live Monitor', icon: 'pulse-outline' },
   { id: 'result-mgmt', label: 'Result Management', icon: 'reader-outline' },
   { id: 'div1', label: '', icon: '', isDivider: true },
@@ -170,6 +171,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
         case 'Attendance': return currentRouteName === 'TeacherAttendance' || currentRouteName === 'Attendance';
         case 'Assignments': return currentRouteName === 'TeacherAssignment' || currentRouteName === 'Assignments';
         case 'Quizzes': case 'Quizzes & Tests': return currentRouteName === 'TeacherQuiz' || currentRouteName === 'Quizzes';
+        case 'Time Table': case 'Timetable': return currentRouteName === 'PrincipalTimetable' || currentRouteName === 'Timetable' || currentRouteName === 'TeacherTimetable';
         case 'Live Monitor': return currentRouteName === 'TeacherMonitorLive';
         default: return false;
       }
@@ -232,6 +234,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
                 else navigation.navigate('Fees');
               } else if (item.label === 'Time Table' || item.label === 'Timetable') {
                 if (role === 'principal') navigation.navigate('PrincipalTimetable');
+                else if (role === 'teacher') navigation.navigate('TeacherTimetable');
                 else navigation.navigate('Timetable');
               } else if (item.label === 'Result Management') {
                 if (role === 'principal') navigation.navigate('PrincipalRSM');
