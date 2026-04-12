@@ -13,7 +13,7 @@ import { Gesture, GestureDetector, TouchableOpacity } from 'react-native-gesture
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../App';
+import { RootStackParamList } from '../types/navigation';
 import { useAuth } from '../store/AuthContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -44,7 +44,7 @@ const STUDENT_MENU: MenuItem[] = [
   { id: '6', label: 'Attendance', icon: 'calendar-outline' },
   { id: '7', label: 'Announcements', icon: 'chatbox-ellipses-outline' },
   { id: '8', label: 'Grades & Reports', icon: 'document-text-outline' },
-  { id: 'result-mgmt', label: 'Result Management', icon: 'reader-outline' },
+  { id: 'result-mgmt', label: 'Official Result', icon: 'reader-outline' },
   { id: '9', label: 'Fees Portal', icon: 'receipt-outline' },
   { id: 'div2', label: '', icon: '', isDivider: true },
   { id: '10', label: 'Account Settings', icon: 'settings-outline' },
@@ -74,6 +74,7 @@ const TEACHER_MENU: MenuItem[] = [
   { id: '3', label: 'Assignments', icon: 'document-text-outline' },
   { id: '4', label: 'Quizzes', icon: 'time-outline' },
   { id: '5', label: 'Live Monitor', icon: 'pulse-outline' },
+  { id: 'result-mgmt', label: 'Result Management', icon: 'reader-outline' },
   { id: 'div1', label: '', icon: '', isDivider: true },
   { id: '6', label: 'Account Settings', icon: 'settings-outline' },
   { id: '7', label: 'Logout', icon: 'log-out-outline' },
@@ -84,7 +85,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
   const { logout } = useAuth();
   const route = useRoute();
   const currentRouteName = route.name;
-  
+
   const [isRendered, setIsRendered] = useState(false);
   const translateX = useSharedValue(-DRAWER_WIDTH);
 
@@ -159,12 +160,12 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
         case 'Subjects': return currentRouteName === 'PrincipalSubjects';
         case 'Staff Management': return currentRouteName === 'PrincipalStaff';
         case 'Staff Details': case 'Students details': return currentRouteName === 'PrincipalStudentDetails';
-        case 'Academic Calendar': return currentRouteName === 'PrincipalCalendar' || currentRouteName === 'Calendar'; 
+        case 'Academic Calendar': return currentRouteName === 'PrincipalCalendar' || currentRouteName === 'Calendar';
         case 'Time Table': case 'Timetable': return currentRouteName === 'PrincipalTimetable' || currentRouteName === 'Timetable';
         case 'Performance': return currentRouteName === 'PrincipalPerformance' || currentRouteName === 'Performance';
         case 'Announcements': return currentRouteName === 'PrincipalAnnouncements' || currentRouteName === 'Announcements';
         case 'Fees & Payments': case 'Fees Portal': return currentRouteName === 'PrincipalFees' || currentRouteName === 'Fees';
-        case 'Result Management': return currentRouteName === 'PrincipalRSM' || currentRouteName === 'ResultManagement';
+        case 'Result Management': return currentRouteName === 'PrincipalRSM' || currentRouteName === 'ResultManagement' || currentRouteName === 'TeacherResultManagement';
         case 'Account Settings': return currentRouteName === 'AccountSettings';
         case 'Attendance': return currentRouteName === 'TeacherAttendance' || currentRouteName === 'Attendance';
         case 'Assignments': return currentRouteName === 'TeacherAssignment' || currentRouteName === 'Assignments';
@@ -188,7 +189,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
           style={[styles.menuItem, isActive && styles.menuItemActive]}
           onPress={() => {
             onClose();
-            
+
             setTimeout(() => {
               if (item.label === 'Home' || item.label === 'Student Dashboard' || item.label === 'Dashboard') {
                 if (role === 'principal') navigation.navigate('PrincipalDashboard');
@@ -234,6 +235,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
                 else navigation.navigate('Timetable');
               } else if (item.label === 'Result Management') {
                 if (role === 'principal') navigation.navigate('PrincipalRSM');
+                else if (role === 'teacher') navigation.navigate('TeacherResultManagement');
                 else navigation.navigate('ResultManagement');
               } else if (item.label === 'Account Settings') {
                 navigation.navigate('AccountSettings');
@@ -288,7 +290,7 @@ const styles = StyleSheet.create({
     left: 0,
     width: DRAWER_WIDTH,
     // Base transparent, relying on the pseudo gradient
-    backgroundColor: 'transparent', 
+    backgroundColor: 'transparent',
     zIndex: 100,
     paddingTop: 50,
   },

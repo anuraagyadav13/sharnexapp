@@ -11,7 +11,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../App';
+import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';

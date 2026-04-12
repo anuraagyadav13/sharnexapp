@@ -41,6 +41,21 @@ export type RootStackParamList = {
   TeacherCreateQuizStep3: { quizData: any };
   TeacherViewQuizResult: { quizId: string };
   TeacherMonitorLive: { quizId: string };
+  TeacherResultManagement: undefined;
+  TeacherMarksEntry: { 
+    examId: string; 
+    classId: string; 
+    subjectId: string;
+    examName: string;
+    className: string;
+    subjectName: string;
+  };
+  TeacherReviewSubmission: { 
+    examId: string; 
+    classId: string; 
+    examName: string;
+    className: string;
+  };
 
   // Principal Screens
   PrincipalDashboard: undefined;

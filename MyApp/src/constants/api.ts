@@ -85,6 +85,12 @@ export const ENDPOINTS = {
     CREATE_QUIZ: '/teacher/quizzes',
     CREATE_ASSIGNMENT: (teacherId: string) => `/teachers/${teacherId}/assignments`,
     PROFILE: '/account/teacher/profile',
+    RMS_WORK_ITEMS: '/rms/marks/work-items',
+    RMS_REVIEW_ITEMS: '/rms/marks/review/work-items',
+    RMS_SUBMIT_MARKS: '/rms/marks/submit',
+    RMS_BULK_SAVE: '/rms/marks/bulk-save',
+    RMS_MARKS_SHEET: (examId: string, classId: string, subjectId: string) => `/rms/marks/sheet?examId=${examId}&classId=${classId}&subjectId=${subjectId}`,
+    RMS_REVIEW_SUMMARY: (examId: string, classId: string) => `/rms/marks/review/summary?examId=${examId}&classId=${classId}`,
   },
   PRINCIPAL: {
     DASHBOARD: '/principal/dashboard',

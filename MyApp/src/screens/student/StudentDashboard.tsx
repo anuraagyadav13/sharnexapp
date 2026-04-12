@@ -16,7 +16,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../App';
+import { RootStackParamList } from '../../types/navigation';
 import Animated, { 
   FadeInUp, 
   FadeInDown,
