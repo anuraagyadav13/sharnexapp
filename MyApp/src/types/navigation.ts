@@ -35,7 +35,7 @@ export type RootStackParamList = {
   TeacherViewSubmission: { assignmentId: string };
   TeacherCreateAssignment: undefined;
   TeacherQuiz: undefined;
-  TeacherCreateQuiz: undefined;
+  TeacherCreateQuiz: { initialQuiz?: any };
   TeacherCreateQuizStep2: { quizData: any };
   TeacherAddQuestion: undefined;
   TeacherCreateQuizStep3: { quizData: any };
@@ -58,6 +58,7 @@ export type RootStackParamList = {
   };
   TeacherTimetable: undefined;
   TeacherSelfAttendance: undefined;
+  TeacherEditAssignment: { assignmentId: string };
 
   // Principal Screens
   PrincipalDashboard: undefined;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,409 +7,345 @@ import {
   ScrollView,
   TouchableOpacity,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  TextInput,
+  RefreshControl,
+  Alert
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
-import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
+import Animated, { FadeInUp, FadeIn, Layout, ZoomIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
+import { useTheme } from '../../store/ThemeContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherAssignment'>;
 
 const TeacherAssignmentScreen: React.FC<Props> = ({ navigation }) => {
+  const { theme, isDark } = useTheme();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [assignments, setAssignments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const fetchAssignments = async (silent = false) => {
+    try {
+      if (!silent) setIsLoading(true);
+      const teacherId = authState.user?.id;
+      if (!teacherId) return;
+
+      const res = await apiClient.get(ENDPOINTS.TEACHER.ASSIGNMENTS(teacherId));
+      setAssignments(res.data.assignments || []);
+    } catch (error) {
+      console.error('Failed to fetch teacher assignments:', error);
+      Alert.alert('Error', 'Failed to synchronize assignments.');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchAssignments = async () => {
-      try {
-        const teacherId = authState.user?.id;
-        if (!teacherId) return;
-
-        const res = await apiClient.get(ENDPOINTS.TEACHER.ASSIGNMENTS(teacherId));
-        setAssignments(res.data.assignments || []);
-      } catch (error) {
-        console.error('Failed to fetch teacher assignments:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchAssignments();
   }, []);
 
+  const onRefresh = () => {
+    setIsRefreshing(true);
+    fetchAssignments(true);
+  };
+
+  const handleDelete = (id: string, title: string) => {
+    Alert.alert(
+      'Delete Assignment',
+      `Are you sure you want to delete "${title}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiClient.delete(ENDPOINTS.TEACHER.DELETE_ASSIGNMENT(id));
+              setAssignments(prev => prev.filter(a => a.id !== id));
+            } catch (err) {
+              Alert.alert('Error', 'Failed to delete assignment');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const filteredAssignments = useMemo(() => {
+    return assignments.filter(a => 
+      a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      a.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      a.class.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [assignments, searchQuery]);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return '#10B981';
+      case 'pending': return '#EF4444';
+      default: return '#4F46E5';
+    }
+  };
+
   return (
-    <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+    <View style={[styles.mainContainer, { backgroundColor: theme.background }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
+      <View style={[styles.globalHeader, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <ScaleButton 
           style={styles.menuHandle} 
           onPress={() => setDrawerOpen(true)}
-          hitSlop={{top: 20, bottom: 20, left: 20, right: 20}}
-          activeOpacity={0.7}
-          scaleTo={0.85}
         >
-          <Ionicons name="menu" size={28} color="#1F2937" />
+          <Ionicons name="menu" size={28} color={theme.text} />
         </ScaleButton>
-          <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
-          <View style={styles.headerRight}>
-            <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-            <Ionicons name="settings-outline" size={22} color="#1F2937" />
-            <Ionicons name="moon-outline" size={22} color="#1F2937" />
-            <View style={styles.avatar}>
-               <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
-            </View>
+        <Text style={[styles.headerTitle, { color: theme.primary }]} numberOfLines={1}>
+          Assignments
+        </Text>
+        <View style={styles.headerRight}>
+          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.background }]}>
+            <Ionicons name="notifications-outline" size={20} color={theme.text} />
+          </TouchableOpacity>
+          <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
           </View>
         </View>
+      </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          
-          {/* Page Title & Add Button */}
-          <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
-             <View style={{flex: 1}}>
-                <Text style={styles.pageTitle}>Assignments</Text>
-                <Text style={styles.pageSubtitle}>Manage and grade students submission</Text>
-             </View>
-             <TouchableOpacity style={styles.newAssignmentBtn} activeOpacity={0.8} onPress={() => navigation.navigate('TeacherCreateAssignment')}>
-                <Text style={styles.newAssignmentText}>+ New Assignment</Text>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={theme.primary} />
+        }
+      >
+        {/* Welcome Section */}
+        <Animated.View entering={FadeIn.duration(600)} style={styles.topSection}>
+          <Text style={[styles.welcomeText, { color: theme.subtext }]}>Manage your tasks</Text>
+          <View style={styles.titleRow}>
+             <Text style={[styles.pageTitle, { color: theme.text }]}>Class Assignments</Text>
+             <TouchableOpacity 
+               style={[styles.addBtn, { backgroundColor: theme.primary }]} 
+               onPress={() => navigation.navigate('TeacherCreateAssignment')}
+             >
+               <Ionicons name="add" size={20} color="#FFF" />
+               <Text style={styles.addBtnText}>Create New</Text>
              </TouchableOpacity>
-          </Animated.View>
-
-          {/* Assignment Cards List */}
-          <View style={styles.listContainer}>
-            {isLoading ? (
-              <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
-            ) : assignments.length === 0 ? (
-              <Text style={styles.emptyText}>No assignments posted yet.</Text>
-            ) : (
-              assignments.map((item: any, index: number) => {
-                const submittedCount = item.submissions || 0;
-                const totalStudents = item.total || 0;
-                const progressPercent = totalStudents > 0 ? (submittedCount / totalStudents) * 100 : 0;
-
-                return (
-                  <Animated.View 
-                     key={item.id} 
-                     entering={FadeInUp.delay(100 + index * 100).springify()} 
-                     style={[styles.assignmentCard, { borderLeftColor: index % 2 === 0 ? '#EF4444' : '#F97316' }]}
-                  >
-                     {/* Top Tags */}
-                     <View style={styles.tagsContainer}>
-                        <View style={styles.dueBadge}>
-                           <Ionicons name="alarm-outline" size={13} color="#EF4444" style={{marginRight: 4}} />
-                           <Text style={styles.dueBadgeText}>Due {item.dueDate ? new Date(item.dueDate).toLocaleDateString() : 'N/A'}</Text>
-                        </View>
-                     </View>
-                     <View style={styles.subjectBadge}>
-                        <Text style={styles.subjectBadgeText}>{item.subject}</Text>
-                     </View>
-
-                     {/* Title */}
-                     <Text style={styles.cardTitle}>{item.title}</Text>
-
-                     {/* Info Row */}
-                     <View style={styles.infoRow}>
-                        <View style={styles.infoItem}>
-                           <Ionicons name="people-outline" size={13} color="#9CA3AF" style={{marginRight: 4}}/>
-                           <Text style={styles.infoText}>{item.class}</Text>
-                        </View>
-                        <View style={styles.infoItem}>
-                           <Ionicons name="calendar-outline" size={13} color="#9CA3AF" style={{marginRight: 4}}/>
-                           <Text style={styles.infoText}>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}</Text>
-                        </View>
-                        <View style={styles.infoItem}>
-                           <Ionicons name="school-outline" size={13} color="#9CA3AF" style={{marginRight: 4}}/>
-                           <Text style={styles.infoText}>Max: {item.maxPoints}</Text>
-                        </View>
-                     </View>
-
-                     {/* Progress Section */}
-                     <View style={styles.progressContainer}>
-                        <View style={styles.progressHeader}>
-                           <Text style={styles.progressLabel}>Submission Progress</Text>
-                           <Text style={styles.progressValue}>{submittedCount}/{totalStudents} Submitted</Text>
-                        </View>
-                        <View style={styles.progressBarBg}>
-                           <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
-                        </View>
-                     </View>
-
-                     {/* Action Buttons Row */}
-                     <View style={styles.cardActionsRow}>
-                        <TouchableOpacity style={styles.actionBtnView} activeOpacity={0.8} onPress={() => navigation.navigate('TeacherViewSubmission', { assignmentId: item.id })}>
-                           <Ionicons name="eye-outline" size={15} color="#FFFFFF" style={{marginRight: 6}} />
-                           <Text style={styles.actionBtnViewText}>View All Submission</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.actionBtnEdit} activeOpacity={0.8}>
-                           <Ionicons name="create-outline" size={15} color="#1F2937" style={{marginRight: 4}} />
-                           <Text style={styles.actionBtnEditText}>Edit</Text>
-                        </TouchableOpacity>
-                     </View>
-
-                  </Animated.View>
-                );
-              })
-            )}
           </View>
 
+          {/* Search Bar */}
+          <View style={[styles.searchContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Ionicons name="search-outline" size={20} color={theme.subtext} />
+            <TextInput
+              style={[styles.searchInput, { color: theme.text }]}
+              placeholder="Search by title, subject or class..."
+              placeholderTextColor={theme.subtext + '80'}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={18} color={theme.subtext} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </Animated.View>
 
+        {/* Assignment List */}
+        <View style={styles.listContainer}>
+          {isLoading ? (
+            <View style={styles.loaderContainer}>
+              <ActivityIndicator size="large" color={theme.primary} />
+              <Text style={[styles.loadingText, { color: theme.subtext }]}>Fetching assignments...</Text>
+            </View>
+          ) : filteredAssignments.length === 0 ? (
+            <Animated.View entering={ZoomIn.duration(400)} style={styles.emptyContainer}>
+               <View style={[styles.emptyIconCircle, { backgroundColor: theme.primary + '10' }]}>
+                  <MaterialCommunityIcons name="clipboard-text-outline" size={60} color={theme.primary} />
+               </View>
+               <Text style={[styles.emptyTitle, { color: theme.text }]}>No assignments found</Text>
+               <Text style={[styles.emptyDesc, { color: theme.subtext }]}>
+                 {searchQuery ? "Try a different search term." : "Start by creating your first assignment for your students."}
+               </Text>
+            </Animated.View>
+          ) : (
+            filteredAssignments.map((item: any, index: number) => {
+              const progressPercent = item.total > 0 ? (item.submissions / item.total) * 100 : 0;
+              const statusColor = getStatusColor(item.status);
+
+              return (
+                <Animated.View 
+                   key={item.id} 
+                   entering={FadeInUp.delay(index * 50).springify().damping(15)}
+                   layout={Layout.springify()}
+                   style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                >
+                   {/* Card Header */}
+                   <View style={styles.cardHeader}>
+                      <View style={[styles.subjectTag, { backgroundColor: theme.primary + '15' }]}>
+                        <Text style={[styles.subjectTagText, { color: theme.primary }]}>{item.subject}</Text>
+                      </View>
+                      <View style={[styles.statusBadge, { backgroundColor: statusColor + '15' }]}>
+                        <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+                        <Text style={[styles.statusText, { color: statusColor }]}>{item.status.toUpperCase()}</Text>
+                      </View>
+                   </View>
+
+                   <Text style={[styles.cardTitle, { color: theme.text }]}>{item.title}</Text>
+                   
+                   <View style={styles.metaRow}>
+                      <View style={styles.metaItem}>
+                        <Ionicons name="people-outline" size={14} color={theme.subtext} />
+                        <Text style={[styles.metaText, { color: theme.subtext }]}>{item.class}</Text>
+                      </View>
+                      <View style={[styles.metaDivider, { backgroundColor: theme.border }]} />
+                      <View style={styles.metaItem}>
+                        <Ionicons name="calendar-outline" size={14} color={theme.subtext} />
+                        <Text style={[styles.metaText, { color: theme.subtext }]}>Due: {item.dueDate}</Text>
+                      </View>
+                   </View>
+
+                   {/* Progress Section */}
+                   <View style={styles.progressBox}>
+                      <View style={styles.progressHeader}>
+                        <Text style={[styles.progressLabel, { color: theme.subtext }]}>Submissions</Text>
+                        <Text style={[styles.progressValue, { color: theme.text }]}>{item.submissions}/{item.total}</Text>
+                      </View>
+                      <View style={[styles.progressTrack, { backgroundColor: theme.background }]}>
+                        <Animated.View 
+                          style={[styles.progressFill, { width: `${progressPercent}%`, backgroundColor: statusColor }]} 
+                        />
+                      </View>
+                   </View>
+
+                   {/* Footer Actions */}
+                   <View style={[styles.cardFooter, { borderTopColor: theme.border }]}>
+                      <TouchableOpacity 
+                        style={[styles.actionBtn, { backgroundColor: theme.primary }]}
+                        onPress={() => navigation.navigate('TeacherViewSubmission', { 
+                          assignmentId: item.id,
+                          assignmentTitle: item.title,
+                          className: item.class,
+                          dueDate: item.dueDate,
+                          maxMarks: item.maxPoints
+                        })}
+                      >
+                         <Ionicons name="eye-outline" size={16} color="#FFF" />
+                         <Text style={styles.actionTextMain}>View Submissions</Text>
+                      </TouchableOpacity>
+                      
+                      <View style={styles.footerRight}>
+                        <TouchableOpacity 
+                          style={[styles.iconActionBtn, { backgroundColor: theme.background }]}
+                          onPress={() => navigation.navigate('TeacherEditAssignment', { assignmentId: item.id })}
+                        >
+                           <Ionicons name="create-outline" size={18} color={theme.text} />
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={[styles.iconActionBtn, { backgroundColor: '#FEE2E2' }]} 
+                          onPress={() => handleDelete(item.id, item.title)}
+                        >
+                           <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                        </TouchableOpacity>
+                      </View>
+                   </View>
+                </Animated.View>
+              );
+            })
+          )}
+        </View>
       </ScrollView>
 
-      {/* Navigation Drawer */}
-      <NavigationDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        role="teacher"
-      />
+      <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="teacher" />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
-  scrollContent: { paddingBottom: 40 },
-
+  mainContainer: { flex: 1 },
+  scrollContent: { paddingBottom: 100 },
+  
   globalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 8,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
     zIndex: 10
   },
-  menuHandle: { paddingRight: 10, paddingVertical: 10 },
-  headerTitle: { fontSize: 16,
-    fontWeight: '500',
-    color: '#4F46E5', 
-    flex: 1,
-    textAlign: 'center',
-    marginHorizontal: 10,
-  },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 20 },
-  avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#A855F7',
-    justifyContent: 'center',
+  menuHandle: { width: 40, height: 40, justifyContent: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '800', flex: 1, textAlign: 'center' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  iconBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+  avatar: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center' },
+  avatarText: { color: '#FFF', fontWeight: 'bold' },
+
+  topSection: { padding: 20 },
+  welcomeText: { fontSize: 13, fontWeight: '600', marginBottom: 4 },
+  pageTitle: { fontSize: 24, fontWeight: '900', letterSpacing: -0.5 },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, marginBottom: 20 },
+  addBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
+  addBtnText: { color: '#FFF', fontSize: 13, fontWeight: '800', marginLeft: 6 },
+
+  searchContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-  },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
-
-  pageTitleWrapper: { 
-     flexDirection: 'row',
-     alignItems: 'center',
-     justifyContent: 'space-between',
-     paddingHorizontal: 16, 
-     marginTop: 10,
-     marginBottom: 20 
-  },
-  pageTitle: { fontSize: 22, fontWeight: '800', color: '#4F46E5', marginBottom: 4 },
-  pageSubtitle: { fontSize: 11, color: '#828282', fontWeight: '500' },
-  newAssignmentBtn: {
-     backgroundColor: '#4F46E5',
-     paddingVertical: 14,
-     paddingHorizontal: 12,
-     borderRadius: 8,
-     shadowColor: '#1E293B',
-     shadowOffset: { width: 0, height: 10 },
-     shadowOpacity: 0.06,
-     shadowRadius: 20,
-     elevation: 6,
-  },
-  newAssignmentText: {
-     color: '#FFFFFF',
-     fontSize: 11,
-     fontWeight: '700',
-  },
-
-  listContainer: {
-     paddingHorizontal: 16,
-  },
-  assignmentCard: {
-     backgroundColor: '#FFFFFF',
-     borderRadius: 16,
+    paddingHorizontal: 16,
+    height: 50,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-     borderLeftWidth: 4,
-     padding: 24,
-     marginBottom: 20,
-     shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
   },
-  tagsContainer: {
-     flexDirection: 'row',
-     marginBottom: 8,
-  },
-  dueBadge: {
-     flexDirection: 'row',
-     alignItems: 'center',
-     backgroundColor: '#FEE2E2',
-     paddingHorizontal: 8,
-     paddingVertical: 4,
-     borderRadius: 6,
-  },
-  dueBadgeText: {
-     color: '#EF4444',
-     fontSize: 10,
-     fontWeight: '600',
-  },
-  subjectBadge: {
-     alignSelf: 'flex-start',
-     backgroundColor: '#E0E7FF',
-     paddingHorizontal: 8,
-     paddingVertical: 4,
-     borderRadius: 10,
-     marginBottom: 12,
-  },
-  subjectBadgeText: {
-     color: '#4F46E5',
-     fontSize: 10,
-     fontWeight: '700',
-  },
-  cardTitle: {
-     fontSize: 15,
-     fontWeight: '800',
-     color: '#111827',
-     marginBottom: 6,
-  },
-  infoRow: {
-     flexDirection: 'row',
-     alignItems: 'center',
-     marginBottom: 20,
-     gap: 12,
-  },
-  infoItem: {
-     flexDirection: 'row',
-     alignItems: 'center',
-  },
-  infoText: {
-     fontSize: 10,
-     color: '#9CA3AF',
-     fontWeight: '500',
-  },
+  searchInput: { flex: 1, fontSize: 14, fontWeight: '500', marginLeft: 10 },
 
-  progressContainer: {
-     marginBottom: 20,
-  },
-  progressHeader: {
-     flexDirection: 'row',
-     justifyContent: 'space-between',
-     alignItems: 'center',
-     marginBottom: 6,
-  },
-  progressLabel: {
-     fontSize: 11,
-     color: '#9CA3AF',
-     fontWeight: '500',
-  },
-  progressValue: {
-     fontSize: 11,
-     fontWeight: '800',
-     color: '#111827',
-  },
-  progressBarBg: {
-     width: '100%',
-     height: 8,
-     backgroundColor: '#E5E7EB',
-     borderRadius: 4,
-     overflow: 'hidden',
-  },
-  progressBarFill: {
-     height: '100%',
-     backgroundColor: '#4F46E5',
-     borderRadius: 4,
-  },
+  listContainer: { paddingHorizontal: 20 },
+  loaderContainer: { marginTop: 60, alignItems: 'center' },
+  loadingText: { marginTop: 12, fontSize: 14, fontWeight: '500' },
 
-  cardActionsRow: {
-     flexDirection: 'row',
-     alignItems: 'center',
-     justifyContent: 'space-between',
-  },
-  actionBtnView: {
-     flex: 1.5,
-     flexDirection: 'row',
-     alignItems: 'center',
-     justifyContent: 'center',
-     backgroundColor: '#4F46E5',
-     paddingVertical: 14,
-    paddingHorizontal: 20,
-     borderRadius: 8,
-     marginRight: 8,
+  card: { borderRadius: 20, padding: 18, marginBottom: 16, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  subjectTag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  subjectTagText: { fontSize: 11, fontWeight: '800' },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  statusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 6 },
+  statusText: { fontSize: 10, fontWeight: '900' },
   
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,},
-  actionBtnViewText: {
-     color: '#FFFFFF',
-     fontSize: 11,
-     fontWeight: '600',
-  },
-  actionBtnEdit: {
-     flex: 0.9,
-     flexDirection: 'row',
-     alignItems: 'center',
-     justifyContent: 'center',
-     backgroundColor: '#F3F4F6',
-     paddingVertical: 14,
-    paddingHorizontal: 20,
-     borderRadius: 8,
-     borderWidth: 1,
-    borderColor: '#E5E7EB',
-     marginRight: 8,
-  },
-  actionBtnEditText: {
-     color: '#1F2937',
-     fontSize: 11,
-     fontWeight: '700',
-  },
-  actionBtnRemind: {
-     flex: 1.1,
-     flexDirection: 'row',
-     alignItems: 'center',
-     justifyContent: 'center',
-     backgroundColor: '#F97316',
-     paddingVertical: 14,
-    paddingHorizontal: 20,
-     borderRadius: 8,
-  },
-  actionBtnRemindText: {
-     color: '#FFFFFF',
-     fontSize: 11,
-     fontWeight: '700',
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginTop: 40,
-    fontWeight: '500',
-  },
+  cardTitle: { fontSize: 17, fontWeight: '800', marginBottom: 10, lineHeight: 22 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  metaText: { fontSize: 12, fontWeight: '600' },
+  metaDivider: { width: 1, height: 12 },
+
+  progressBox: { marginBottom: 20 },
+  progressHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  progressLabel: { fontSize: 12, fontWeight: '600' },
+  progressValue: { fontSize: 12, fontWeight: '800' },
+  progressTrack: { height: 8, borderRadius: 4, width: '100%', overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 4 },
+
+  cardFooter: { flexDirection: 'row', alignItems: 'center', paddingTop: 16, borderTopWidth: 1 },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, gap: 8 },
+  actionTextMain: { color: '#FFF', fontSize: 13, fontWeight: '800' },
+  footerRight: { flexDirection: 'row', alignItems: 'center', gap: 10, marginLeft: 12 },
+  iconActionBtn: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+
+  emptyContainer: { marginTop: 40, alignItems: 'center', padding: 20 },
+  emptyIconCircle: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  emptyTitle: { fontSize: 20, fontWeight: '800', marginBottom: 8 },
+  emptyDesc: { fontSize: 14, textAlign: 'center', lineHeight: 22 }
 });
 
 export default TeacherAssignmentScreen;

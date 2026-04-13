@@ -138,41 +138,41 @@ const LiveSessionBanner = ({ subject, classSection, time, color }: any) => (
 
 
 const HELP_CENTER_DATA = [
-  { 
-    title: 'Getting Started', 
-    desc: 'Learn the basics of Sharnex and how to navigate the dashboard.', 
-    icon: 'rocket-launch-outline', 
-    color: '#3B82F6' 
+  {
+    title: 'Getting Started',
+    desc: 'Learn the basics of Sharnex and how to navigate the dashboard.',
+    icon: 'rocket-launch-outline',
+    color: '#3B82F6'
   },
-  { 
-    title: 'Managing Grades', 
-    desc: 'Learn how to add, edit, and manage student grades and report cards.', 
-    icon: 'chart-bar', 
-    color: '#10B981' 
+  {
+    title: 'Managing Grades',
+    desc: 'Learn how to add, edit, and manage student grades and report cards.',
+    icon: 'chart-bar',
+    color: '#10B981'
   },
-  { 
-    title: 'Attendance Tracking', 
-    desc: 'Learn how to mark attendance, generate reports, and manage absences.', 
-    icon: 'calendar-check', 
-    color: '#F59E0B' 
+  {
+    title: 'Attendance Tracking',
+    desc: 'Learn how to mark attendance, generate reports, and manage absences.',
+    icon: 'calendar-check',
+    color: '#F59E0B'
   },
-  { 
-    title: 'Assignment & Homework', 
-    desc: 'Create, assign, and track assignments and homework for students.', 
-    icon: 'clipboard-text-outline', 
-    color: '#8B5CF6' 
+  {
+    title: 'Assignment & Homework',
+    desc: 'Create, assign, and track assignments and homework for students.',
+    icon: 'clipboard-text-outline',
+    color: '#8B5CF6'
   },
-  { 
-    title: 'Report & Analytics', 
-    desc: 'Generate performance reports and analyze student data.', 
-    icon: 'chart-pie', 
-    color: '#06B6D4' 
+  {
+    title: 'Report & Analytics',
+    desc: 'Generate performance reports and analyze student data.',
+    icon: 'chart-pie',
+    color: '#06B6D4'
   },
-  { 
-    title: 'Technical Support', 
-    desc: 'Troubleshooting login issues, app problems, and technical questions.', 
-    icon: 'monitor-cellphone', 
-    color: '#EF4444' 
+  {
+    title: 'Technical Support',
+    desc: 'Troubleshooting login issues, app problems, and technical questions.',
+    icon: 'monitor-cellphone',
+    color: '#EF4444'
   },
 ];
 
@@ -206,20 +206,22 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
         }
 
         // Fetch dashboard summary, work items, and review items in parallel
-        const [summaryRes, workRes, reviewRes] = await Promise.all([
+        const [summaryRes, workRes, reviewRes, assignmentRes] = await Promise.all([
           // @ts-ignore
           apiClient.get(ENDPOINTS.TEACHER.DASHBOARD(teacherId)),
           apiClient.get(ENDPOINTS.TEACHER.RMS_WORK_ITEMS).catch(() => ({ data: { items: [] } })),
-          apiClient.get(ENDPOINTS.TEACHER.RMS_REVIEW_ITEMS).catch(() => ({ data: { items: [] } }))
+          apiClient.get(ENDPOINTS.TEACHER.RMS_REVIEW_ITEMS).catch(() => ({ data: { items: [] } })),
+          apiClient.get(ENDPOINTS.TEACHER.ASSIGNMENTS(teacherId)).catch(() => ({ data: { assignments: [] } }))
         ]);
-        
+
         // Handle normalized response appropriately
         const payload = summaryRes.normalized?.data?.summary || summaryRes.data?.summary || summaryRes.data?.data || summaryRes.data;
         setDashboardData(payload);
 
-        // Process Pending Tasks from RMS
+        // Process Pending Tasks from RMS and Assignments
         const workItems = workRes.data?.data || workRes.data?.items || [];
         const reviewItems = reviewRes.data?.data || reviewRes.data?.items || [];
+        const assignments = assignmentRes.data?.assignments || [];
 
         const tasks: any[] = [];
 
@@ -247,6 +249,20 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
               icon: 'rate-review',
               color: '#F59E0B',
               type: 'review',
+              data: item
+            });
+          });
+
+        // Add Assignment Tasks (Ungraded submissions)
+        assignments.filter((item: any) => (item.submissions || 0) > (item.graded || 0))
+          .forEach((item: any) => {
+            tasks.push({
+              id: `assignment-${item.id}`,
+              title: `Grade: ${item.title}`,
+              subtitle: `${item.class} • ${item.submissions - item.graded} New Submissions`,
+              icon: 'file-document-edit-outline',
+              color: '#10B981',
+              type: 'assignment',
               data: item
             });
           });
@@ -317,7 +333,7 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
             const ongoingSession = dashboardData?.todaysSchedule?.find((s: any) => s.status === 'Ongoing');
             if (ongoingSession) {
               return (
-                <LiveSessionBanner 
+                <LiveSessionBanner
                   subject={ongoingSession.subject_name || ongoingSession.type}
                   classSection={ongoingSession.class_name}
                   time={`${ongoingSession.start_time} - ${ongoingSession.end_time}`}
@@ -334,35 +350,35 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
             </View>
           ) : (
             <View style={styles.statsRowHorizontalAligned}>
-            <StatCard
-              title="Today's Classes"
-              value={dashboardData?.todaysSchedule?.length || 0}
-              subtext1={`${dashboardData?.todaysSchedule?.filter((s: any) => s.status === 'Completed').length || 0} Completed`}
-              subtext2={`${dashboardData?.todaysSchedule?.filter((s: any) => s.status !== 'Completed').length || 0} Remaining`}
-              subtextColor="#3B82F6"
-              iconName="calendar"
-              iconColor="#3B82F6"
-            />
-            <StatCard
-              title="Pending Grading"
-              value={dashboardData?.stats?.pendingGrading || 0}
-              subtext1="Assignments"
-              subtext2="Needs Review"
-              subtextColor="#F59E0B"
-              iconName="clipboard"
-              iconColor="#F59E0B"
-            />
-            <StatCard
-              title="Total Students"
-              value={dashboardData?.stats?.totalStudents || 84}
-              subtext1="Active"
-              subtext2="Enrolled"
-              subtextColor="#10B981"
-              iconName="people"
-              iconColor="#10B981"
-            />
-          </View>
-            )}
+              <StatCard
+                title="Today's Classes"
+                value={dashboardData?.todaysSchedule?.length || 0}
+                subtext1={`${(dashboardData?.todaysSchedule || []).filter((s: any) => s.status === 'Completed').length} Completed`}
+                subtext2={`${(dashboardData?.todaysSchedule || []).filter((s: any) => s.status !== 'Completed').length} Remaining`}
+                subtextColor="#3B82F6"
+                iconName="calendar"
+                iconColor="#3B82F6"
+              />
+              <StatCard
+                title="Pending Grading"
+                value={dashboardData?.stats?.pendingGrading || 0}
+                subtext1="Assignments"
+                subtext2="Needs Review"
+                subtextColor="#F59E0B"
+                iconName="clipboard"
+                iconColor="#F59E0B"
+              />
+              <StatCard
+                title="Total Students"
+                value={dashboardData?.stats?.totalStudents || 84}
+                subtext1="Active"
+                subtext2="Enrolled"
+                subtextColor="#10B981"
+                iconName="people"
+                iconColor="#10B981"
+              />
+            </View>
+          )}
         </View>
 
         {/* Quick Actions (Similar to StudentDashboard) */}
@@ -424,8 +440,8 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
               </View>
             ) : (
               pendingTasks.map((task, index) => (
-                <TouchableOpacity 
-                  key={task.id} 
+                <TouchableOpacity
+                  key={task.id}
                   onPress={() => {
                     if (task.type === 'marking') {
                       navigation.navigate('TeacherMarksEntry', {
@@ -443,10 +459,17 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
                         examName: task.data.exam_name,
                         className: task.data.class_name
                       });
+                    } else if (task.type === 'assignment') {
+                      navigation.navigate('TeacherViewSubmission', {
+                        assignmentId: task.data.id,
+                        classId: task.data.classId,
+                        title: task.data.title,
+                        className: task.data.class
+                      });
                     }
                   }}
                 >
-                  <Animated.View 
+                  <Animated.View
                     entering={FadeInUp.delay(index * 100).springify()}
                     style={styles.taskCard}
                   >
@@ -471,7 +494,7 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
             <MaterialCommunityIcons name="bullhorn-outline" size={20} color="#F97316" style={styles.sectionIconMargin} />
             <Text style={styles.sectionTitle}>Announcements & Deadlines</Text>
           </View>
-          
+
           <View style={styles.announcementCard}>
             <View style={StyleSheet.absoluteFill}>
               <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
@@ -484,13 +507,13 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
                 <Rect x="0" y="0" width="100%" height="100%" fill="url(#announcementGrad)" />
               </Svg>
             </View>
-            
+
             <View style={styles.announcementContent}>
               <View style={styles.announcementList}>
                 {dashboardData?.upcomingEvents?.length > 0 ? (
                   dashboardData.upcomingEvents.map((event: any, index: number) => (
-                    <Animated.View 
-                      key={index} 
+                    <Animated.View
+                      key={index}
                       entering={FadeInUp.delay(index * 150).springify()}
                       style={styles.announcementItem}
                     >
@@ -517,7 +540,7 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
             <MaterialCommunityIcons name="school-outline" size={20} color="#4F46E5" style={styles.sectionIconMargin} />
             <Text style={styles.sectionTitle}>Teacher Help Center</Text>
           </View>
-          
+
           <View style={styles.helpGrid}>
             {HELP_CENTER_DATA.map((item, index) => (
               <TouchableOpacity key={index} style={styles.helpCard}>
@@ -543,22 +566,22 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
           </View>
           <View style={styles.faqList}>
             {FAQ_DATA.map((item, index) => (
-              <TouchableOpacity 
-                key={index} 
+              <TouchableOpacity
+                key={index}
                 style={[styles.faqItem, index === FAQ_DATA.length - 1 && { borderBottomWidth: 0 }]}
                 onPress={() => setExpandedFaq(expandedFaq === index ? null : index)}
                 activeOpacity={0.7}
               >
                 <View style={styles.faqHeader}>
                   <Text style={styles.faqQuestion}>{item.question}</Text>
-                  <MaterialCommunityIcons 
-                    name={expandedFaq === index ? "chevron-up" : "chevron-down"} 
-                    size={20} 
-                    color="#9CA3AF" 
+                  <MaterialCommunityIcons
+                    name={expandedFaq === index ? "chevron-up" : "chevron-down"}
+                    size={20}
+                    color="#9CA3AF"
                   />
                 </View>
                 {expandedFaq === index && (
-                  <Animated.View 
+                  <Animated.View
                     entering={FadeInUp.duration(300)}
                     style={styles.faqAnswerContainer}
                   >

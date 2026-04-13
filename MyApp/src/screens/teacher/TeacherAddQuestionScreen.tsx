@@ -19,16 +19,18 @@ import { useAuth } from '../../store/AuthContext';
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherAddQuestion'>;
 
 
-const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation }) => {
+const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation, route }) => {
   const { authState } = useAuth();
-  const [questionText, setQuestionText] = useState('');
-  const [options, setOptions] = useState([
+  const editQuestion = route.params?.editQuestion;
+  
+  const [questionText, setQuestionText] = useState(editQuestion?.text || '');
+  const [options, setOptions] = useState(editQuestion?.options || [
     { letter: 'A', value: '' },
     { letter: 'B', value: '' },
     { letter: 'C', value: '' },
     { letter: 'D', value: '' }
   ]);
-  const [correctAnswer, setCorrectAnswer] = useState('A');
+  const [correctAnswer, setCorrectAnswer] = useState(editQuestion?.correctAnswer || 'A');
 
   const handleAddOption = () => {
     if (options.length >= 6) {
@@ -61,8 +63,15 @@ const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation }) => {
       correctAnswer
     };
 
-    // Go back to Step 2 with the new question
-    navigation.navigate('TeacherCreateQuizStep2', { newQuestion } as any);
+    // Go back to Step 2 with the new question while preserving existing quiz data
+    const existingParams = (route.params as any) || {};
+    const existingQuizData = existingParams.quizData || {};
+    
+    navigation.navigate('TeacherCreateQuizStep2', { 
+      quizData: { ...existingQuizData },
+      newQuestion,
+      editIndex: existingParams.editIndex // Pass back the index if we were editing
+    } as any);
   };
 
   return (
@@ -88,8 +97,8 @@ const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation }) => {
          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
          </TouchableOpacity>
-         <Text style={styles.blueTitle}>Add New Question</Text>
-         <Text style={styles.blueSubtitle}>Design your question and options</Text>
+         <Text style={styles.blueTitle}>{editQuestion ? 'Edit Question' : 'Add New Question'}</Text>
+         <Text style={styles.blueSubtitle}>{editQuestion ? 'Modify your question and options' : 'Design your question and options'}</Text>
       </Animated.View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -171,7 +180,7 @@ const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation }) => {
                   <Text style={styles.clearFormBtnText}>Clear Form</Text>
                </TouchableOpacity>
                <TouchableOpacity style={styles.addQuesBtn} activeOpacity={0.8} onPress={handleSave}>
-                  <Text style={styles.addQuesBtnText}>Save Question</Text>
+                  <Text style={styles.addQuesBtnText}>{editQuestion ? 'Update Question' : 'Save Question'}</Text>
                </TouchableOpacity>
             </View>
          </Animated.View>
@@ -289,15 +298,15 @@ const styles = StyleSheet.create({
 
   mainCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: 8,
+    padding: 16,
     marginHorizontal: 16,
-    marginTop: 20,
+    marginTop: 16,
     shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.02)',
   },
@@ -319,13 +328,14 @@ const styles = StyleSheet.create({
   },
   textArea: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
     borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     fontSize: 13,
-    color: '#111827',
-    height: 100,
+    color: '#1E293B',
+    backgroundColor: '#F8FAFC',
+    height: 80,
   },
   rowInputsWrapper: {
     flexDirection: 'row',
@@ -371,15 +381,15 @@ const styles = StyleSheet.create({
   },
   addOptionBtn: {
     backgroundColor: '#4F46E5',
-    paddingVertical: 14,
+    paddingVertical: 10,
     paddingHorizontal: 10,
-    borderRadius: 8,
-  
+    borderRadius: 6,
     shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,},
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
   addOptionBtnText: {
     color: '#FFFFFF',
     fontSize: 11,
@@ -389,10 +399,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     borderRadius: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 10,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   optionInputRowSelected: {
     backgroundColor: '#D1FAE5',
@@ -447,15 +459,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#4F46E5',
-    borderRadius: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   
     shadowColor: '#4F46E5',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,},
   addQuesBtnText: {
     fontSize: 12,
     fontWeight: '700',
@@ -545,15 +557,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#4F46E5',
-    borderRadius: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   
     shadowColor: '#4F46E5',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,},
   saveBtnText: {
     fontSize: 13,
     fontWeight: '700',

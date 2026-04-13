@@ -38,6 +38,7 @@ import TeacherMarkAttendanceScreen from './src/screens/teacher/TeacherMarkAttend
 import TeacherAssignmentScreen from './src/screens/teacher/TeacherAssignmentScreen';
 import TeacherViewSubmissionScreen from './src/screens/teacher/TeacherViewSubmissionScreen';
 import TeacherCreateAssignmentScreen from './src/screens/teacher/TeacherCreateAssignmentScreen';
+import TeacherEditAssignmentScreen from './src/screens/teacher/TeacherEditAssignmentScreen';
 import TeacherQuizScreen from './src/screens/teacher/TeacherQuizScreen';
 import TeacherCreateQuizScreen from './src/screens/teacher/TeacherCreateQuizScreen';
 import TeacherCreateQuizStep2Screen from './src/screens/teacher/TeacherCreateQuizStep2Screen';
@@ -137,6 +138,7 @@ function RootNavigator() {
               <Stack.Screen name="TeacherAssignment" component={TeacherAssignmentScreen} />
               <Stack.Screen name="TeacherViewSubmission" component={TeacherViewSubmissionScreen} />
               <Stack.Screen name="TeacherCreateAssignment" component={TeacherCreateAssignmentScreen} />
+              <Stack.Screen name="TeacherEditAssignment" component={TeacherEditAssignmentScreen} />
               <Stack.Screen name="TeacherQuiz" component={TeacherQuizScreen} />
               <Stack.Screen name="TeacherCreateQuiz" component={TeacherCreateQuizScreen} />
               <Stack.Screen name="TeacherCreateQuizStep2" component={TeacherCreateQuizStep2Screen} />

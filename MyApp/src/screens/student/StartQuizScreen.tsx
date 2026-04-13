@@ -52,7 +52,7 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
         setTimeRemaining(prev => {
           if (prev <= 1) {
             // Auto-submit when time runs out
-            handleSubmitQuiz();
+            handleSubmitQuiz(true);
             return 0;
           }
           return prev - 1;
@@ -88,7 +88,9 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
       const data = response.normalized?.data || response.data;
       
       setQuizData(data);
-      setTimeRemaining((data.duration || data.timeLimit || 0) * 60); 
+      // Ensure we have a valid duration (default to 60 mins if missing or invalid)
+      const duration = Number(data.duration) || Number(data.timeLimit) || 60;
+      setTimeRemaining(duration * 60); 
     } catch (err: any) {
       console.error('Error fetching quiz:', err);
       setError(err.message || 'Failed to load quiz');
@@ -97,10 +99,10 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   };
 
-  const handleAnswerSelect = (questionId: number, optionId: number) => {
+  const handleAnswerSelect = (questionId: number, optionId: number | string) => {
     setSelectedAnswers(prev => ({
       ...prev,
-      [questionId]: optionId
+      [questionId]: optionId as any
     }));
   };
 
@@ -116,27 +118,35 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   };
 
-  const handleSubmitQuiz = async () => {
+  const handleSubmitQuiz = async (isAutoSubmit = false) => {
     if (isSubmitting) return;
+
+    const questions = quizData?.questions || [];
+    const answers = Object.entries(selectedAnswers).map(([questionId, optionId]) => {
+      const qIndex = questions.findIndex((q: any) => q.id?.toString() === questionId.toString());
+      return {
+        questionIndex: qIndex !== -1 ? qIndex : 0,
+        selectedOption: optionId
+      };
+    }).filter(a => a.questionIndex !== -1);
+
+    // If it's a manual submit, we require at least one answer.
+    // If it's an auto-submit (timer out), we submit whatever they have (even if empty).
+    if (!isAutoSubmit && answers.length === 0) {
+      Alert.alert('Info', 'Please answer at least one question before submitting');
+      return;
+    }
 
     try {
       setIsSubmitting(true);
 
       const quizId = route?.params?.quizId;
-      const questions = quizData?.questions || [];
       
-      const answers = Object.entries(selectedAnswers).map(([questionId, optionId]) => {
-        const qIndex = questions.findIndex((q: any) => q.id.toString() === questionId.toString());
-        return {
-          questionIndex: qIndex !== -1 ? qIndex : 0,
-          selectedOption: optionId
-        };
-      }).filter(a => a.questionIndex !== -1);
-
       await apiClient.post(ENDPOINTS.STUDENT.SUBMIT_QUIZ(quizId), {
         answers,
         startedAt,
-        timeSpent: ((quizData?.duration || quizData?.timeLimit || 0) * 60) - timeRemaining
+        timeSpent: ((Number(quizData?.duration) || 60) * 60) - timeRemaining,
+        isAutoSubmitted: isAutoSubmit
       });
 
       // Clear timer
@@ -147,7 +157,13 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
       navigation.navigate('QuizResult', { quizId: route?.params?.quizId, timestamp: Date.now() });
     } catch (err: any) {
       console.error('Error submitting quiz:', err);
-      Alert.alert('Error', 'Failed to submit quiz. Please try again.');
+      // For auto-submit, we might want to retry or at least show a specific error
+      Alert.alert('Error', isAutoSubmit ? 'Time is up but submission failed. Retrying...' : 'Failed to submit quiz. Please try again.');
+      
+      if (isAutoSubmit) {
+        // Simple retry logic for auto-submit
+        setTimeout(() => handleSubmitQuiz(true), 3000);
+      }
     } finally {
       setIsSubmitting(false);
     }

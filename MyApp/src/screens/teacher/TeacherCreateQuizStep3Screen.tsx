@@ -38,28 +38,56 @@ const TeacherCreateQuizStep3Screen: React.FC<Props> = ({ navigation, route }) =>
         }))
       }));
 
-      // Calculate dates
+      // ALIGN WITH BACKEND: Backend enforces DueDateTime - StartDateTime === Duration
+      const duration = Number(quizData.duration) || 60; 
+      let startDoc = quizData.startDate ? new Date(quizData.startDate) : new Date();
+      
       const now = new Date();
-      const startDateTime = new Date(now.getTime() + 10 * 60000); // 10 mins from now
-      const dueDateTime = new Date(startDateTime.getTime() + quizData.duration * 60000);
+      // BACKEND PROTECTION: If start time is in the past (even by seconds), the backend rejects it.
+      // If the selected start time is older than the current time, we bump it to 'Now' + 1 minute
+      // to ensure the backend accepts it.
+      if (startDoc < now) {
+        console.log('Start time was in the past, buffering to current time');
+        startDoc = new Date(now.getTime() + 60000); // Set to 1 minute from now
+      }
+
+      const startDateTime = startDoc;
+      const dueDateTime = new Date(startDateTime.getTime() + duration * 60000);
+
+      // Final validation before sending
+      if (isNaN(startDateTime.getTime()) || isNaN(dueDateTime.getTime())) {
+        throw new Error('Invalid timing calculation. Please check your quiz duration and start date.');
+      }
 
       const payload = {
         title: quizData.title,
+        description: quizData.description,
         subject: quizData.subject,
-        classes: [quizData.classId],
-        duration: quizData.duration,
+        duration: duration,
         questions: mappedQuestions,
-        status: 'published',
+        totalMarks: mappedQuestions.length * 5,
+        status: quizData.status || 'published',
         startDateTime: startDateTime.toISOString(),
         dueDateTime: dueDateTime.toISOString(),
-        description: `Quiz for ${quizData.className} - ${quizData.subject}`
+        maxAttempts: quizData.maxAttempts || 1,
+        classes: quizData.classes || [],
+        teacherId: authState.user?.id,
+        institutionId: authState.user?.institutionId
       };
 
-      await apiClient.post(ENDPOINTS.TEACHER.QUIZZES, payload);
-      
-      Alert.alert('Success', 'Quiz published successfully!', [
-        { text: 'OK', onPress: () => navigation.navigate('TeacherQuiz') }
-      ]);
+      if (quizData.id) {
+        // Update existing quiz - Backend uses PATCH for updates
+        await apiClient.patch(ENDPOINTS.TEACHER.UPDATE_QUIZ(quizData.id), payload);
+        Alert.alert('Success', 'Quiz updated successfully!', [
+          { text: 'OK', onPress: () => navigation.navigate('TeacherQuiz') }
+        ]);
+      } else {
+        // Create new quiz
+        await apiClient.post(ENDPOINTS.TEACHER.CREATE_QUIZ, payload);
+        Alert.alert('Success', 'Quiz published successfully!', [
+          { text: 'OK', onPress: () => navigation.navigate('TeacherQuiz') }
+        ]);
+      }
     } catch (error: any) {
       console.error('Failed to publish quiz:', error);
       Alert.alert('Error', error.response?.data?.message || 'Failed to publish quiz');
@@ -91,7 +119,7 @@ const TeacherCreateQuizStep3Screen: React.FC<Props> = ({ navigation, route }) =>
          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
          </TouchableOpacity>
-         <Text style={styles.blueTitle}>Create New Quiz</Text>
+         <Text style={styles.blueTitle}>{quizData?.id ? 'Edit Quiz' : 'Create New Quiz'}</Text>
          <Text style={styles.blueSubtitle}>Review and Publish your Quiz</Text>
       </Animated.View>
 
@@ -148,8 +176,21 @@ const TeacherCreateQuizStep3Screen: React.FC<Props> = ({ navigation, route }) =>
                </View>
 
                <View style={styles.gridItemFull}>
-                  <Text style={styles.gridLabel}>Class</Text>
-                  <Text style={styles.gridValue}>{quizData.className}</Text>
+                  <Text style={styles.gridLabel}>Target Classes</Text>
+                  <Text style={styles.gridValue}>{quizData.classes?.length || 0} Classes Selected</Text>
+               </View>
+
+               <View style={styles.gridItemHalf}>
+                  <Text style={styles.gridLabel}>Start Schedule</Text>
+                  <Text style={styles.gridValue}>
+                    {new Date(quizData.startDate).toLocaleDateString()} {new Date(quizData.startDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </Text>
+               </View>
+               <View style={styles.gridItemHalf}>
+                  <Text style={styles.gridLabel}>Due Schedule</Text>
+                  <Text style={styles.gridValue}>
+                    {new Date(quizData.dueDate).toLocaleDateString()} {new Date(quizData.dueDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </Text>
                </View>
 
             </View>
@@ -160,8 +201,7 @@ const TeacherCreateQuizStep3Screen: React.FC<Props> = ({ navigation, route }) =>
             <View style={styles.descSection}>
                <Text style={styles.gridLabel}>Description</Text>
                <Text style={styles.descValue}>
-                  This quiz for {quizData.className} covers the subject {quizData.subject}. 
-                  Total questions: {quizData.questions.length}. Total time: {quizData.duration} minutes.
+                  {quizData.description || `No description provided.`}
                </Text>
             </View>
 
@@ -169,7 +209,7 @@ const TeacherCreateQuizStep3Screen: React.FC<Props> = ({ navigation, route }) =>
             <View style={styles.infoBox}>
                <Text style={styles.infoBoxTitle}>Ready To Publish ?</Text>
                <Text style={styles.infoBoxSub}>
-                  Once published, students of {quizData.className} will be able to attempt this quiz.
+                  Once published, students in the selected classes will be able to attempt this quiz.
                </Text>
             </View>
 
@@ -198,7 +238,7 @@ const TeacherCreateQuizStep3Screen: React.FC<Props> = ({ navigation, route }) =>
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
-                <Text style={styles.nextBtnText}>Publish Quiz</Text>
+                <Text style={styles.nextBtnText}>{quizData?.id ? 'Update Quiz' : 'Publish Quiz'}</Text>
                 <Ionicons name="cloud-upload-outline" size={16} color="#FFFFFF" style={{marginLeft: 6}} />
               </>
             )}
@@ -331,16 +371,16 @@ const styles = StyleSheet.create({
 
   mainCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: 6,
+    padding: 20,
     marginHorizontal: 16,
     shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.02)',
+    borderColor: '#F1F5F9',
   },
   cardTitle: {
     fontSize: 18,
@@ -366,12 +406,12 @@ const styles = StyleSheet.create({
   },
   gridItemHalf: {
     width: '50%',
-    marginBottom: 20,
+    marginBottom: 12,
     paddingRight: 10,
   },
   gridItemFull: {
     width: '100%',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   gridLabel: {
     fontSize: 11,
@@ -440,10 +480,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    borderRadius: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    marginRight: 12,
+    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginRight: 10,
   },
   cancelBtnText: {
     fontSize: 13,
@@ -456,18 +496,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#4F46E5',
-    borderRadius: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   
     shadowColor: '#4F46E5',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,},
   nextBtnText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#FFFFFF',
   },
 });

@@ -40,7 +40,10 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
         const teacherId = authState.user?.id;
         if (!teacherId) return;
         const res = await apiClient.get(ENDPOINTS.TEACHER.CLASSES(teacherId));
-        const fetchedClasses = res.normalized?.data?.classes || res.data?.classes || [];
+        // More robust parsing for proxied response
+        const data = res.data || res;
+        const fetchedClasses = Array.isArray(data) ? data : (data.classes || []);
+        
         setClasses(fetchedClasses);
         if (fetchedClasses.length > 0) {
           setClassId(fetchedClasses[0].id);
@@ -214,7 +217,11 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
            {/* Due Date */}
            <View style={styles.fieldContainer}>
               <Text style={styles.fieldLabel}>Due Date (YYYY-MM-DD)</Text>
-              <View style={styles.inputWithIcon}>
+              <TouchableOpacity 
+                style={styles.inputWithIcon} 
+                activeOpacity={0.7} 
+                onPress={() => Alert.alert('Date Picker', 'Date picker implementation coming soon. For now, please enter the date in YYYY-MM-DD format.')}
+              >
                  <TextInput 
                     style={[styles.textInput, { flex: 1, borderWidth: 0, paddingHorizontal: 0 }]}
                     placeholder="2025-10-15"
@@ -223,7 +230,7 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
                     onChangeText={setDueDate}
                  />
                  <Ionicons name="calendar-outline" size={18} color="#111827" />
-              </View>
+              </TouchableOpacity>
            </View>
 
            {/* Total Points */}

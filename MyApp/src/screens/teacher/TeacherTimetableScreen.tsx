@@ -260,6 +260,20 @@ const TeacherTimetableScreen = () => {
       return;
     }
 
+    if (!leaveData.type) {
+      Alert.alert('Incomplete Form', 'Please select a leave type.');
+      return;
+    }
+
+    // Validation: End date cannot be before start date
+    const start = new Date(leaveData.startDate.setHours(0,0,0,0));
+    const end = new Date(leaveData.endDate.setHours(0,0,0,0));
+    
+    if (end < start) {
+      Alert.alert('Invalid Date Range', 'The end date cannot be earlier than the start date.');
+      return;
+    }
+
     try {
       setIsSubmittingLeave(true);
       const teacherId = authState.user?.id;

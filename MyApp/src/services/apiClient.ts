@@ -169,6 +169,7 @@ export const clearStoredTokens = async () => {
     await Promise.all([
       AsyncStorage.removeItem(ACCESS_TOKEN_KEY),
       AsyncStorage.removeItem(REFRESH_TOKEN_KEY),
+      AsyncStorage.removeItem('@auth_state'),
     ]);
   } catch (error) {
     console.error('[apiClient] Error clearing tokens:', error);

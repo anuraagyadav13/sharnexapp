@@ -152,6 +152,8 @@ invoices.map((item, index) => (
 | 6 | TeacherQuizScreen | `GET /teacher/quizzes` or `GET /quizzes?teacherId={id}` | Filter by teacher | HIGH |
 | 7 | TeacherCreateQuizScreen* | `POST /teacher/quizzes` (multi-step) | Multi-step form | HIGH |
 | 8 | TeacherViewQuizResultScreen | `GET /teacher/quizzes/{id}/results` | Get by params | MEDIUM |
+
+> Note: Question import in teacher quiz creation is currently handled client-side from the app. No backend `POST /teacher/quizzes/import/json` or `/teacher/quizzes/import/excel` endpoint is available in the current API contract.
 | 9 | TeacherMonitorLiveScreen | `GET /teacher/quizzes/{id}/live` (polling) | Realtime/polling | LOW |
 | 10 | TeacherViewAttendanceScreen | `GET /classes/{id}/attendance?month=MM&year=YYYY` | Filter by month | MEDIUM |
 | 11 | TeacherCreateQuizStep2-3Screen* | Part of multi-step flow | Multi-step | MEDIUM |

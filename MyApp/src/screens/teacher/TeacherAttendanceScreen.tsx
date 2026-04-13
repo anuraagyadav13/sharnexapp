@@ -41,7 +41,11 @@ const TeacherAttendanceScreen: React.FC<Props> = ({ navigation }) => {
           apiClient.get(ENDPOINTS.TEACHER.DASHBOARD(teacherId))
         ]);
         
-        setClasses(classesRes.data.classes || []);
+        // Handle both wrapped and unwrapped (normalized) formats for classes
+        const classData = classesRes.data || classesRes;
+        const fetchedClasses = Array.isArray(classData) ? classData : (classData.classes || []);
+        
+        setClasses(fetchedClasses);
         setMyAttendance(meRes.data?.data || meRes.data || null);
         setSummary(summaryRes.data?.summary || null);
       } catch (error) {
