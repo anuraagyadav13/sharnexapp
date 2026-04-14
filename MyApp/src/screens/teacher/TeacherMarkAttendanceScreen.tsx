@@ -459,8 +459,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   toggleBtn: {
-    width: 26,
-    height: 26,
+    width: 36,
+    height: 36,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',

@@ -57,6 +57,27 @@ const TeacherSelfAttendanceScreen: React.FC<Props> = ({ navigation }) => {
     fetchData(true);
   };
 
+  const handleMarkAttendance = async (type: 'IN' | 'OUT') => {
+    try {
+      setIsLoading(true);
+      const res = await apiClient.post(ENDPOINTS.TEACHER.MY_ATTENDANCE_MANUAL, {
+        teacherId: authState.user?.id,
+        type,
+        notes: 'Marked via Mobile Portal'
+      });
+      fetchData();
+    } catch (error) {
+      console.error('Failed to mark attendance:', error);
+      alert('Failed to mark attendance. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const todayRecord = records.find(r => new Date(r.date).toDateString() === new Date().toDateString());
+  const canClockIn = !todayRecord;
+  const canClockOut = todayRecord && !todayRecord.out_time;
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent />
@@ -94,6 +115,34 @@ const TeacherSelfAttendanceScreen: React.FC<Props> = ({ navigation }) => {
                       <Text style={styles.statLab}>Late Marks</Text>
                   </View>
               </View>
+           </View>
+
+           {/* Clock In/Out Section */}
+           <View style={styles.clockActionRow}>
+              {canClockIn ? (
+                <TouchableOpacity 
+                  style={[styles.clockBtn, styles.clockInBtn]} 
+                  onPress={() => handleMarkAttendance('IN')}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="log-in-outline" size={20} color="#FFF" style={{marginRight: 8}} />
+                  <Text style={styles.clockBtnText}>Clock In Today</Text>
+                </TouchableOpacity>
+              ) : canClockOut ? (
+                <TouchableOpacity 
+                  style={[styles.clockBtn, styles.clockOutBtn]} 
+                  onPress={() => handleMarkAttendance('OUT')}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="log-out-outline" size={20} color="#FFF" style={{marginRight: 8}} />
+                  <Text style={styles.clockBtnText}>Clock Out Now</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.completedDayRow}>
+                  <Ionicons name="checkmark-done-circle" size={24} color="#10B981" />
+                  <Text style={styles.completedText}>Attendance completed for today</Text>
+                </View>
+              )}
            </View>
         </Animated.View>
 
@@ -169,6 +218,14 @@ const styles = StyleSheet.create({
   statItem: { flex: 1, alignItems: 'center' },
   statVal: { fontSize: 22, fontWeight: '900', color: '#1E293B' },
   statLab: { fontSize: 10, fontWeight: '600', color: '#64748B', marginTop: 4 },
+  
+  clockActionRow: { marginTop: 20, paddingTop: 20, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
+  clockBtn: { height: 50, borderRadius: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', shadowColor: '#1E293B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
+  clockInBtn: { backgroundColor: '#6366F1' },
+  clockOutBtn: { backgroundColor: '#F59E0B' },
+  clockBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  completedDayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 10 },
+  completedText: { fontSize: 14, fontWeight: '700', color: '#10B981' },
 
   sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B', marginTop: 30, marginBottom: 15 },
   logCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 15, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#F1F5F9' },

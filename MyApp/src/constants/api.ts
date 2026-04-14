@@ -98,9 +98,21 @@ export const ENDPOINTS = {
     RMS_BULK_SAVE: '/rms/marks/bulk-save',
     RMS_MARKS_SHEET: (examId: string, classId: string, subjectId: string) => `/rms/marks/sheet?examId=${examId}&classId=${classId}&subjectId=${subjectId}`,
     RMS_REVIEW_SUMMARY: (examId: string, classId: string) => `/rms/marks/review/summary?examId=${examId}&classId=${classId}`,
+    STUDY_MATERIALS: '/teachers/study-materials',
+    DELETE_STUDY_MATERIAL: (id: string) => `/teachers/study-materials/${id}`,
     LEAVES: '/timetable/teacher-leave',
     SUBMIT_LEAVE: '/timetable/teacher-leave',
     MY_ATTENDANCE: '/attendance/me',
+    MY_ATTENDANCE_MANUAL: '/attendance/manual',
+    EQUIPMENT: {
+      MY_REQUESTS: '/equipment/requests/my',
+      CREATE: '/equipment/requests',
+      DETAIL: (id: string) => `/equipment/requests/${id}`,
+      UPDATE: (id: string) => `/equipment/requests/${id}`,
+      SUBMIT: (id: string) => `/equipment/requests/${id}/submit`,
+      CANCEL: (id: string) => `/equipment/requests/${id}/cancel`,
+      ACKNOWLEDGE: (id: string) => `/equipment/requests/${id}/acknowledge`,
+    }
   },
   PRINCIPAL: {
     DASHBOARD: '/principal/dashboard',

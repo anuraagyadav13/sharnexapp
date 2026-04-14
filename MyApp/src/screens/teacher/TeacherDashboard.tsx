@@ -49,12 +49,12 @@ const StatCard = React.memo(({ title, value, subtext1, subtext2, subtextColor, i
   );
 });
 
-const QuickActionCard = React.memo(({ title, iconName, bgColor, delay, iconLibrary = 'Ionicons' }: any) => (
+const QuickActionCard = React.memo(({ title, iconName, bgColor, delay, onPress, iconLibrary = 'Ionicons' }: any) => (
   <Animated.View entering={FadeInUp.delay(delay).springify()} style={styles.quickActionCard}>
-    <View style={styles.quickActionTouchable}>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.quickActionTouchable}>
       <IconBox name={iconName} bgColor={bgColor} iconLibrary={iconLibrary} />
       <Text style={styles.quickActionTitle}>{title}</Text>
-    </View>
+    </TouchableOpacity>
   </Animated.View>
 ));
 
@@ -206,12 +206,13 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
         }
 
         // Fetch dashboard summary, work items, and review items in parallel
-        const [summaryRes, workRes, reviewRes, assignmentRes] = await Promise.all([
+        const [summaryRes, workRes, reviewRes, assignmentRes, quizRes] = await Promise.all([
           // @ts-ignore
           apiClient.get(ENDPOINTS.TEACHER.DASHBOARD(teacherId)),
           apiClient.get(ENDPOINTS.TEACHER.RMS_WORK_ITEMS).catch(() => ({ data: { items: [] } })),
           apiClient.get(ENDPOINTS.TEACHER.RMS_REVIEW_ITEMS).catch(() => ({ data: { items: [] } })),
-          apiClient.get(ENDPOINTS.TEACHER.ASSIGNMENTS(teacherId)).catch(() => ({ data: { assignments: [] } }))
+          apiClient.get(ENDPOINTS.TEACHER.ASSIGNMENTS(teacherId)).catch(() => ({ data: { assignments: [] } })),
+          apiClient.get(ENDPOINTS.TEACHER.TEACHER_QUIZZES(teacherId)).catch(() => ({ data: [] }))
         ]);
 
         // Handle normalized response appropriately
@@ -219,9 +220,10 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
         setDashboardData(payload);
 
         // Process Pending Tasks from RMS and Assignments
-        const workItems = workRes.data?.data || workRes.data?.items || [];
-        const reviewItems = reviewRes.data?.data || reviewRes.data?.items || [];
-        const assignments = assignmentRes.data?.assignments || [];
+        const workItems = Array.isArray(workRes.data) ? workRes.data : workRes.data?.data || workRes.data?.items || [];
+        const reviewItems = Array.isArray(reviewRes.data) ? reviewRes.data : reviewRes.data?.data || reviewRes.data?.items || [];
+        const assignments = Array.isArray(assignmentRes.data) ? assignmentRes.data : assignmentRes.data?.assignments || [];
+        const quizzes = Array.isArray(quizRes.data) ? quizRes.data : quizRes.data?.data || [];
 
         const tasks: any[] = [];
 
@@ -266,6 +268,41 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
               data: item
             });
           });
+
+        // Add Quiz Tasks (Live monitoring or Results review)
+        quizzes.forEach((quiz: any) => {
+          if (quiz.derivedStatus === 'active') {
+            tasks.push({
+              id: `quiz-live-${quiz.id}`,
+              title: `Monitor Live Quiz: ${quiz.title}`,
+              subtitle: `${quiz.className || 'Class'} • Ends at ${quiz.dueDate ? new Date(quiz.dueDate).toLocaleTimeString() : 'N/A'}`,
+              icon: 'pulse',
+              color: '#EF4444',
+              type: 'quiz-live',
+              data: quiz
+            });
+          } else if (quiz.derivedStatus === 'completed') {
+            tasks.push({
+              id: `quiz-result-${quiz.id}`,
+              title: `Review Quiz Results: ${quiz.title}`,
+              subtitle: `${quiz.className || 'Class'} • ${quiz.subject}`,
+              icon: 'chart-bar',
+              color: '#4F46E5',
+              type: 'quiz-result',
+              data: quiz
+            });
+          } else if (quiz.status === 'draft') {
+            tasks.push({
+              id: `quiz-draft-${quiz.id}`,
+              title: `Finish Quiz Draft: ${quiz.title}`,
+              subtitle: `${quiz.subject} • Incomplete`,
+              icon: 'file-edit-outline',
+              color: '#9CA3AF',
+              type: 'quiz-draft',
+              data: quiz
+            });
+          }
+        });
 
         setPendingTasks(tasks);
       } catch (error: any) {
@@ -388,10 +425,15 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.sectionTitle}>Quick Actions</Text>
           </View>
           <View style={styles.quickActionsGrid}>
-            <QuickActionCard delay={100} title="Attendance" iconName="checkmark-circle" bgColor="#10B981" />
-            <QuickActionCard delay={150} title="Assignments" iconName="document-text" bgColor="#8B5CF6" />
-            <QuickActionCard delay={200} title="Quizzes" iconName="time" bgColor="#EAB308" />
-            <QuickActionCard delay={250} title="Live Monitor" iconName="pulse" bgColor="#EC4899" />
+            <QuickActionCard delay={100} title="Attendance" iconName="checkmark-circle" bgColor="#10B981" onPress={() => navigation.navigate('TeacherAttendance')} />
+            <QuickActionCard delay={150} title="Assignments" iconName="document-text" bgColor="#8B5CF6" onPress={() => navigation.navigate('TeacherAssignment')} />
+            <QuickActionCard delay={200} title="Quizzes" iconName="time" bgColor="#EAB308" onPress={() => navigation.navigate('TeacherQuiz')} />
+            <QuickActionCard delay={250} title="Performance" iconName="bar-chart" bgColor="#3B82F6" onPress={() => navigation.navigate('TeacherPerformance')} />
+            <QuickActionCard delay={300} title="Materials" iconName="book" bgColor="#10B981" onPress={() => navigation.navigate('TeacherStudyMaterial')} />
+          </View>
+          <View style={[styles.quickActionsGrid, { marginTop: 12 }]}>
+            <QuickActionCard delay={350} title="Live Monitor" iconName="pulse" bgColor="#EC4899" onPress={() => navigation.navigate('TeacherMonitorLive', { quizId: '1' })} />
+            <QuickActionCard delay={400} title="Equipment" iconName="construct" bgColor="#F59E0B" onPress={() => navigation.navigate('TeacherEquipment')} />
           </View>
         </View>
 
@@ -466,6 +508,12 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
                         title: task.data.title,
                         className: task.data.class
                       });
+                    } else if (task.type === 'quiz-live') {
+                      navigation.navigate('TeacherMonitorLive', { quizId: task.data.id });
+                    } else if (task.type === 'quiz-result') {
+                      navigation.navigate('TeacherViewQuizResult', { quizId: task.data.id });
+                    } else if (task.type === 'quiz-draft') {
+                      navigation.navigate('TeacherCreateQuiz', { quizId: task.data.id });
                     }
                   }}
                 >

@@ -52,6 +52,11 @@ import TeacherReviewSubmissionScreen from './src/screens/teacher/TeacherReviewSu
 import TeacherDashboard from './src/screens/teacher/TeacherDashboard';
 import TeacherTimetableScreen from './src/screens/teacher/TeacherTimetableScreen';
 import TeacherSelfAttendanceScreen from './src/screens/teacher/TeacherSelfAttendanceScreen';
+import TeacherEquipmentScreen from './src/screens/teacher/TeacherEquipmentScreen';
+import TeacherAddEquipmentRequestScreen from './src/screens/teacher/TeacherAddEquipmentRequestScreen';
+import TeacherEquipmentDetailScreen from './src/screens/teacher/TeacherEquipmentDetailScreen';
+import TeacherPerformanceScreen from './src/screens/teacher/TeacherPerformanceScreen';
+import TeacherStudyMaterialScreen from './src/screens/teacher/TeacherStudyMaterialScreen';
 import PrincipalDashboard from './src/screens/principal/PrincipalDashboard';
 import PrincipalClasses from './src/screens/principal/PrincipalClassesScreen';
 import PrincipalSubjects from './src/screens/principal/PrincipalSubjectsScreen';
@@ -151,6 +156,11 @@ function RootNavigator() {
               <Stack.Screen name="TeacherReviewSubmission" component={TeacherReviewSubmissionScreen} />
               <Stack.Screen name="TeacherTimetable" component={TeacherTimetableScreen} />
               <Stack.Screen name="TeacherSelfAttendance" component={TeacherSelfAttendanceScreen} />
+              <Stack.Screen name="TeacherEquipment" component={TeacherEquipmentScreen} />
+              <Stack.Screen name="TeacherAddEquipmentRequest" component={TeacherAddEquipmentRequestScreen} />
+              <Stack.Screen name="TeacherEquipmentDetail" component={TeacherEquipmentDetailScreen} />
+              <Stack.Screen name="TeacherPerformance" component={TeacherPerformanceScreen} />
+              <Stack.Screen name="TeacherStudyMaterial" component={TeacherStudyMaterialScreen} />
             </>
           )}
 

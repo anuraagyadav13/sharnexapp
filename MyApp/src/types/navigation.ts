@@ -59,6 +59,11 @@ export type RootStackParamList = {
   TeacherTimetable: undefined;
   TeacherSelfAttendance: undefined;
   TeacherEditAssignment: { assignmentId: string };
+  TeacherEquipment: undefined;
+  TeacherAddEquipmentRequest: { requestId?: string };
+  TeacherEquipmentDetail: { requestId: string };
+  TeacherPerformance: undefined;
+  TeacherStudyMaterial: undefined;
 
   // Principal Screens
   PrincipalDashboard: undefined;
