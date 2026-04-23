@@ -112,7 +112,9 @@ export const ENDPOINTS = {
       SUBMIT: (id: string) => `/equipment/requests/${id}/submit`,
       CANCEL: (id: string) => `/equipment/requests/${id}/cancel`,
       ACKNOWLEDGE: (id: string) => `/equipment/requests/${id}/acknowledge`,
-    }
+    },
+    ANNOUNCEMENTS: '/announcements',
+    PENDING_TASKS: (id: string) => `/teachers/${id}/pending-tasks`,
   },
   PRINCIPAL: {
     DASHBOARD: '/principal/dashboard',

@@ -198,20 +198,29 @@ const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Header */}
+      {/* Standardized Global Header */}
       <View style={styles.globalHeader}>
         <ScaleButton
           style={styles.menuHandle}
           onPress={() => setDrawerOpen(true)}
           hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-          activeOpacity={0.7}
-          scaleTo={0.85}
         >
-          <Ionicons name="menu" size={28} color="#1F2937" />
+          <Ionicons name="menu" size={28} color="#111827" />
         </ScaleButton>
+
         <Text style={styles.headerTitle} numberOfLines={1}>Result Management</Text>
+
         <View style={styles.headerRight}>
-          <View style={styles.avatar}>
+          <TouchableOpacity style={styles.iconBtn}>
+            <Ionicons name="notifications-outline" size={22} color="#111827" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('AccountSettings')} style={styles.iconBtn}>
+            <Ionicons name="settings-outline" size={22} color="#111827" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => {}} style={styles.iconBtn}>
+            <Ionicons name="moon-outline" size={22} color="#111827" />
+          </TouchableOpacity>
+          <View style={[styles.avatar, { backgroundColor: '#A855F7' }]}>
             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
           </View>
         </View>
@@ -280,30 +289,37 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
     shadowRadius: 10,
-    elevation: 3,
+    elevation: 8,
     zIndex: 10,
   },
   menuHandle: { paddingRight: 10, paddingVertical: 10 },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#1F2937',
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#4F46E5',
     flex: 1,
     textAlign: 'center',
+    marginHorizontal: 10,
   },
-  headerRight: { flexDirection: 'row', alignItems: 'center' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  iconBtn: { padding: 4 },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#8B5CF6',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#A855F7',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#A855F7',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 8,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
+  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   tabBar: {
     flexDirection: 'row',

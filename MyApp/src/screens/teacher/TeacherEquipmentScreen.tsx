@@ -20,6 +20,7 @@ import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import { useAuth } from '../../store/AuthContext';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import ScaleButton from '../../components/animations/ScaleButton';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherEquipment'>;
 
@@ -95,25 +96,31 @@ const TeacherEquipmentScreen: React.FC<Props> = ({ navigation }) => {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       
-      {/* Header */}
+      {/* Attendance-Style Header */}
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity 
-            style={styles.menuBtn} 
-            onPress={() => setDrawerOpen(true)}
-          >
-            <Ionicons name="menu" size={28} color="#1E293B" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Equipment Requests</Text>
+        <ScaleButton 
+          style={styles.menuHandle} 
+          onPress={() => setDrawerOpen(true)}
+          hitSlop={{top: 20, bottom: 20, left: 20, right: 20}}
+        >
+          <Ionicons name="menu" size={28} color="#111827" />
+        </ScaleButton>
+
+        <Text style={styles.headerTitle} numberOfLines={1}>Equipment Requests</Text>
+
+        <View style={styles.headerRight}>
           <TouchableOpacity 
             style={styles.addBtn}
             onPress={() => navigation.navigate('TeacherAddEquipmentRequest', {})}
+            activeOpacity={0.8}
           >
-            <Ionicons name="add" size={24} color="#FFF" />
-            <Text style={styles.addBtnText}>New Request</Text>
+            <Ionicons name="add" size={18} color="#FFF" />
+            <Text style={styles.addBtnText}>Request</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconBtn}>
+            <Ionicons name="notifications-outline" size={22} color="#111827" />
           </TouchableOpacity>
         </View>
-        <Text style={styles.headerSubtitle}>Track and manage your classroom equipment requests.</Text>
       </View>
 
       {/* Tabs */}
@@ -179,7 +186,7 @@ const TeacherEquipmentScreen: React.FC<Props> = ({ navigation }) => {
                   <Text style={styles.requestNumber}>{item.request_number}</Text>
                   <View style={[styles.statusPill, { backgroundColor: getStatusStyle(item.status).bg }]}>
                     <Text style={[styles.statusText, { color: getStatusStyle(item.status).text }]}>
-                      {item.status.replace(/_/g, ' ')}
+                      {(item.status || '').replace(/_/g, ' ')}
                     </Text>
                   </View>
                 </View>
@@ -237,27 +244,41 @@ const TeacherEquipmentScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   header: {
-    backgroundColor: '#FFFFFF',
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 16,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 8,
+    zIndex: 10,
   },
-  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  menuBtn: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B', flex: 1, marginLeft: 12 },
+  menuHandle: { paddingRight: 10, paddingVertical: 10 },
+  headerTitle: { 
+    fontSize: 16, 
+    fontWeight: '500', 
+    color: '#4F46E5', 
+    flex: 1, 
+    textAlign: 'center',
+    marginHorizontal: 10,
+  },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  iconBtn: { padding: 4 },
   addBtn: {
     backgroundColor: '#4F46E5',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    gap: 4,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginRight: 4,
   },
-  addBtnText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
-  headerSubtitle: { fontSize: 12, color: '#64748B', marginLeft: 44 },
+  addBtnText: { color: '#FFF', fontSize: 13, fontWeight: '700', marginLeft: 4 },
 
   tabsContainer: { backgroundColor: '#FFFFFF', paddingVertical: 10 },
   tabsScrollContent: { paddingHorizontal: 20, gap: 8 },

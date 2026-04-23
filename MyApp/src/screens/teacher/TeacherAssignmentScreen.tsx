@@ -27,7 +27,7 @@ import { useTheme } from '../../store/ThemeContext';
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherAssignment'>;
 
 const TeacherAssignmentScreen: React.FC<Props> = ({ navigation }) => {
-  const { theme, isDark } = useTheme();
+  const { theme, isDarkMode, toggleDarkMode } = useTheme();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [assignments, setAssignments] = useState<any[]>([]);
@@ -101,10 +101,10 @@ const TeacherAssignmentScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={[styles.mainContainer, { backgroundColor: theme.background }]}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
 
       {/* Global Header */}
-      <View style={[styles.globalHeader, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+      <View style={[styles.globalHeader, { backgroundColor: theme.surface }]}>
         <ScaleButton 
           style={styles.menuHandle} 
           onPress={() => setDrawerOpen(true)}
@@ -115,10 +115,16 @@ const TeacherAssignmentScreen: React.FC<Props> = ({ navigation }) => {
           Assignments
         </Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.background }]}>
-            <Ionicons name="notifications-outline" size={20} color={theme.text} />
+          <TouchableOpacity style={styles.iconBtn}>
+            <Ionicons name="notifications-outline" size={22} color={theme.text} />
           </TouchableOpacity>
-          <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
+          <TouchableOpacity onPress={() => navigation.navigate('AccountSettings')} style={styles.iconBtn}>
+            <Ionicons name="settings-outline" size={22} color={theme.text} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={toggleDarkMode} style={styles.iconBtn}>
+            <Ionicons name={isDarkMode ? "sunny-outline" : "moon-outline"} size={22} color={theme.text} />
+          </TouchableOpacity>
+          <View style={[styles.avatar, { backgroundColor: '#A855F7' }]}>
              <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
           </View>
         </View>
@@ -281,35 +287,56 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    zIndex: 10
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 8,
+    zIndex: 10,
   },
-  menuHandle: { width: 40, height: 40, justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '800', flex: 1, textAlign: 'center' },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  avatar: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center' },
+  menuHandle: { paddingRight: 10, paddingVertical: 10 },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 10,
+  },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  iconBtn: { padding: 4 },
+  avatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#A855F7',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 8,
+  },
   avatarText: { color: '#FFF', fontWeight: 'bold' },
 
-  topSection: { padding: 20 },
-  welcomeText: { fontSize: 13, fontWeight: '600', marginBottom: 4 },
-  pageTitle: { fontSize: 24, fontWeight: '900', letterSpacing: -0.5 },
-  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, marginBottom: 20 },
-  addBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
-  addBtnText: { color: '#FFF', fontSize: 13, fontWeight: '800', marginLeft: 6 },
+  topSection: { padding: 16 },
+  welcomeText: { fontSize: 12, fontWeight: '600', marginBottom: 2 },
+  pageTitle: { fontSize: 22, fontWeight: '900', letterSpacing: -0.5 },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 2, marginBottom: 12 },
+  addBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
+  addBtnText: { color: '#FFF', fontSize: 12, fontWeight: '800', marginLeft: 4 },
 
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    height: 50,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 44,
+    borderRadius: 10,
     borderWidth: 1,
   },
-  searchInput: { flex: 1, fontSize: 14, fontWeight: '500', marginLeft: 10 },
+  searchInput: { flex: 1, fontSize: 13, fontWeight: '500', marginLeft: 8 },
 
   listContainer: { paddingHorizontal: 20 },
   loaderContainer: { marginTop: 60, alignItems: 'center' },

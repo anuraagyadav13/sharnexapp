@@ -83,6 +83,46 @@ const TopStudentCard = React.memo(({ rank, name, className, percentage }: any) =
   </View>
 ));
 
+import Skeleton from '../../components/common/Skeleton';
+
+const DashboardSkeleton = () => (
+  <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <View style={styles.globalHeader}>
+       <Skeleton width={30} height={30} borderRadius={6} />
+       <Skeleton width="40%" height={24} borderRadius={6} />
+       <View style={{flexDirection: 'row', gap: 10}}>
+          <Skeleton width={24} height={24} borderRadius={12} />
+          <Skeleton width={24} height={24} borderRadius={12} />
+          <Skeleton width={32} height={32} borderRadius={16} />
+       </View>
+    </View>
+
+    <View style={styles.sectionPadding}>
+      <Skeleton width="100%" height={150} borderRadius={16} />
+    </View>
+
+    <View style={styles.sectionPadding}>
+       <View style={styles.fullScreenBox}>
+          <Skeleton width={120} height={20} style={{marginBottom: 16}} />
+          <View style={styles.quickActionsGrid}>
+            {[1,2,3,4].map(i => <Skeleton key={i} width="48%" height={80} borderRadius={12} />)}
+          </View>
+       </View>
+    </View>
+
+    <View style={styles.sectionPadding}>
+       <View style={{flexDirection: 'row', gap: 16}}>
+          <View style={{flex: 1}}>
+             <Skeleton width="100%" height={200} borderRadius={16} />
+          </View>
+          <View style={{flex: 1}}>
+             <Skeleton width="100%" height={200} borderRadius={16} />
+          </View>
+       </View>
+    </View>
+  </ScrollView>
+);
+
 // --- Main Screen ---
 const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
@@ -98,8 +138,24 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
         setDashboardData(res.data);
       } catch (error) {
         console.error('Failed to fetch Principal dashboard:', error);
+        // TEMPORARY: Mock data fallback for dev work
+        setDashboardData({
+          schoolName: 'Sharnex Global Academy (MOCK)',
+          stats: { students: 1250, teachers: 84, classes: 32 },
+          topStudents: [
+            { rank: 1, name: 'Aditya Sharma', className: '12-A', percentage: '98.5%' },
+            { rank: 2, name: 'Priya Patel', className: '10-C', percentage: '97.2%' },
+            { rank: 3, name: 'Rahul Verma', className: '11-B', percentage: '95.8%' },
+          ],
+          upcomingEvents: [
+            { title: 'Annual Sports Day', date: '25 May 2026', color: '#EF4444' },
+            { title: 'Parent Teacher Meeting', date: '02 Jun 2026', color: '#F97316' },
+            { title: 'Summer Vacation Starts', date: '15 Jun 2026', color: '#10B981' },
+          ]
+        });
       } finally {
-        setIsLoading(false);
+        // Add a slight delay for better visual of skeleton
+        setTimeout(() => setIsLoading(false), 800);
       }
     };
 
@@ -111,10 +167,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4F46E5" />
-          <Text style={styles.loadingText}>Synchronizing school data...</Text>
-        </View>
+        <DashboardSkeleton />
       ) : (
         <ScrollView
           style={styles.container}
@@ -467,6 +520,8 @@ const styles = StyleSheet.create({
   activityContent: { flex: 1, justifyContent: 'center' },
   activityName: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 1 },
   activityAction: { fontSize: 11, color: '#6B7280', marginBottom: 1, lineHeight: 15 },
+  activityTime: { fontSize: 11, color: '#9CA3AF' },
+
   // Event Card Styles
   eventCard: {
     backgroundColor: '#FFFFFF',

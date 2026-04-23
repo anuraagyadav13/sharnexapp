@@ -6,6 +6,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from './src/store/AuthContext';
 import { ThemeProvider, useTheme } from './src/store/ThemeContext';
+import { ToastProvider } from './src/store/ToastContext';
 import { RootStackParamList } from './src/types/navigation';
 export type { RootStackParamList };
 
@@ -88,10 +89,14 @@ function RootNavigator() {
 
   const getInitialRoute = () => {
     if (!authState.token) return 'Home';
+    if (authState.role === 'student') return 'StudentDashboard';
     if (authState.role === 'teacher') return 'TeacherDashboard';
     if (authState.role === 'principal') return 'PrincipalDashboard';
-    return 'StudentDashboard';
+    return 'Home';
   };
+
+  const effectiveToken = authState.token;
+  const effectiveRole = authState.role;
 
   return (
     <Stack.Navigator
@@ -101,7 +106,7 @@ function RootNavigator() {
         animation: 'fade_from_bottom',
       }}
     >
-      {!authState.token ? (
+      {!effectiveToken ? (
         <>
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
@@ -109,7 +114,7 @@ function RootNavigator() {
       ) : (
         <>
           {/* Student Case */}
-          {authState.role === 'student' && (
+          {effectiveRole === 'student' && (
             <>
               <Stack.Screen name="StudentDashboard" component={StudentDashboard} />
               <Stack.Screen name="Quizzes" component={QuizzesScreen} />
@@ -134,7 +139,7 @@ function RootNavigator() {
           )}
 
           {/* Teacher Case */}
-          {authState.role === 'teacher' && (
+          {effectiveRole === 'teacher' && (
             <>
               <Stack.Screen name="TeacherDashboard" component={TeacherDashboard} />
               <Stack.Screen name="TeacherAttendance" component={TeacherAttendanceScreen} />
@@ -161,11 +166,12 @@ function RootNavigator() {
               <Stack.Screen name="TeacherEquipmentDetail" component={TeacherEquipmentDetailScreen} />
               <Stack.Screen name="TeacherPerformance" component={TeacherPerformanceScreen} />
               <Stack.Screen name="TeacherStudyMaterial" component={TeacherStudyMaterialScreen} />
+              <Stack.Screen name="Announcements" component={AnnouncementScreen} />
             </>
           )}
 
           {/* Principal Case */}
-          {authState.role === 'principal' && (
+          {effectiveRole === 'principal' && (
             <>
               <Stack.Screen name="PrincipalDashboard" component={PrincipalDashboard} />
               <Stack.Screen name="PrincipalClasses" component={PrincipalClasses} />
@@ -231,9 +237,11 @@ function App(): React.JSX.Element {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <AuthProvider>
-          <ThemedApp />
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <ThemedApp />
+          </AuthProvider>
+        </ToastProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

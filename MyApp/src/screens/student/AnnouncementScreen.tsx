@@ -51,13 +51,14 @@ const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
         setIsLoading(true);
         setError(null);
         
-        // 1. Resolve student ID reliably (not always needed for global announcements, but good for context)
-        const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
-        const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
-
-        // 2. Fetch announcements
-        // The backend handles filtering based on user role from token
-        const res = await apiClient.get(ENDPOINTS.STUDENT.ANNOUNCEMENTS);
+        // 1. Resolve ID reliably based on role
+        const isTeacher = authState.role === 'teacher';
+        const profileEndpoint = isTeacher ? ENDPOINTS.TEACHER.PROFILE : ENDPOINTS.STUDENT.PROFILE;
+        const profileRes = await apiClient.get(profileEndpoint);
+        
+        // 2. Fetch announcements using the appropriate endpoint
+        const announcementEndpoint = isTeacher ? ENDPOINTS.TEACHER.ANNOUNCEMENTS : ENDPOINTS.STUDENT.ANNOUNCEMENTS;
+        const res = await apiClient.get(announcementEndpoint);
         
         // Handle various response types including normalized
         const data = res.normalized?.data?.announcements || res.normalized?.data || res.data?.announcements || res.data?.data || res.data || [];
@@ -79,24 +80,30 @@ const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAF9F9" />
 
-      {/* Global Header */}
+      {/* Global Header (Attendance Standard) */}
       <View style={styles.globalHeader}>
         <ScaleButton 
           style={styles.menuHandle} 
           onPress={() => setDrawerOpen(true)}
           hitSlop={{top: 20, bottom: 20, left: 20, right: 20}}
-          activeOpacity={0.7}
-          scaleTo={0.85}
         >
-          <Ionicons name="menu" size={28} color="#1F2937" />
+          <Ionicons name="menu" size={28} color="#111827" />
         </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
+        <Text style={styles.headerTitle} numberOfLines={1}>
+          Welcome back, {authState.user?.name?.split(' ')[0] || (authState.role === 'teacher' ? 'Teacher' : 'Student')}
+        </Text>
         <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
+          <TouchableOpacity style={styles.iconBtn}>
+            <Ionicons name="notifications-outline" size={22} color="#111827" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('AccountSettings')} style={styles.iconBtn}>
+            <Ionicons name="settings-outline" size={22} color="#111827" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => {}} style={styles.iconBtn}>
+            <Ionicons name="moon-outline" size={22} color="#111827" />
+          </TouchableOpacity>
+          <View style={[styles.avatar, { backgroundColor: authState.role === 'teacher' ? '#4F46E5' : '#A855F7' }]}>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || (authState.role === 'teacher' ? 'T' : 'S')}</Text>
           </View>
         </View>
       </View>
@@ -173,7 +180,7 @@ const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
       <NavigationDrawer
         isOpen={isDrawerOpen}
         onClose={() => setDrawerOpen(false)}
-        role="student"
+        role={authState.role || 'student'}
       />
     </View>
   );
@@ -208,11 +215,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
   },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  iconBtn: { padding: 4 },
   avatar: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#A855F7',

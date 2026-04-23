@@ -96,10 +96,8 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
         style={styles.menuHandle}
         onPress={() => setDrawerOpen(true)}
         hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-        activeOpacity={0.7}
-        scaleTo={0.85}
       >
-        <Ionicons name="menu" size={26} color="#111827" />
+        <Ionicons name="menu" size={28} color="#111827" />
       </ScaleButton>
 
       <Text style={styles.topHeaderTitle} numberOfLines={1}>
@@ -107,12 +105,18 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
       </Text>
 
       <View style={styles.headerRight}>
-        <TouchableOpacity style={styles.iconBtnTransparent}>
-          <Ionicons name="notifications-outline" size={20} color="#111827" />
+        <TouchableOpacity style={styles.iconBtn}>
+          <Ionicons name="notifications-outline" size={22} color="#111827" />
         </TouchableOpacity>
-        <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}>
-          <View style={styles.avatar}><Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text></View>
+        <TouchableOpacity onPress={() => navigation.navigate('TeacherProfile')} style={styles.iconBtn}>
+          <Ionicons name="settings-outline" size={22} color="#111827" />
         </TouchableOpacity>
+        <TouchableOpacity onPress={() => {}} style={styles.iconBtn}>
+          <Ionicons name="moon-outline" size={22} color="#111827" />
+        </TouchableOpacity>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
+        </View>
       </View>
     </View>
   );
@@ -278,27 +282,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 60 : 20, 
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFF',
-    zIndex: 10,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
     shadowRadius: 10,
-    elevation: 4,
-    marginBottom: 8
+    elevation: 8,
+    zIndex: 10,
   },
-  menuHandle: { paddingRight: 4, paddingVertical: 8 }, 
-  topHeaderTitle: { fontSize: 18, fontWeight: '700', color: '#4F46E5', flex: 1, textAlign: 'center' },
-  headerRight: { flexDirection: 'row', alignItems: 'center' },
-  iconBtnTransparent: { marginRight: 12 },
+  menuHandle: { paddingRight: 10, paddingVertical: 10 },
+  topHeaderTitle: { 
+    fontSize: 16, 
+    fontWeight: '500', 
+    color: '#4F46E5', 
+    flex: 1, 
+    textAlign: 'center',
+    marginHorizontal: 10,
+  },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  iconBtn: { padding: 4 },
   avatar: {
-    width: 32, height: 32, borderRadius: 16, backgroundColor: '#A78BFA',
-    justifyContent: 'center', alignItems: 'center',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#A855F7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#A855F7',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 8,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
+  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   loadingContainer: { flex: 1, backgroundColor: '#FAF9F9' },
   centerFill: { flex: 1, justifyContent: 'center', alignItems: 'center' },

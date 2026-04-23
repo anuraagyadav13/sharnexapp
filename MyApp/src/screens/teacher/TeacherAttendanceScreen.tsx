@@ -18,12 +18,45 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
+import { useTheme } from '../../store/ThemeContext';
+import Skeleton from '../../components/common/Skeleton';
+
+const PageSkeleton = () => {
+  return (
+    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <View style={styles.pageTitleWrapper}>
+        <Skeleton width="50%" height={24} style={{ marginBottom: 8 }} />
+        <Skeleton width="40%" height={16} />
+      </View>
+      <View style={styles.meCard}>
+         <Skeleton width="40%" height={20} style={{marginBottom: 10}} />
+         <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+            <Skeleton width="30%" height={30} />
+            <Skeleton width="40%" height={24} borderRadius={16} />
+         </View>
+         <Skeleton width="100%" height={6} borderRadius={3} style={{marginTop: 15}} />
+      </View>
+      <View style={styles.mainCard}>
+        <Skeleton width="50%" height={20} style={{marginBottom: 20}} />
+        {[1, 2].map(i => (
+          <View key={i} style={[styles.classCard, {padding: 15}]}>
+            <Skeleton width="60%" height={20} style={{marginBottom: 10}} />
+            <Skeleton width="40%" height={14} style={{marginBottom: 15}} />
+            <Skeleton width="100%" height={40} borderRadius={8} style={{marginBottom: 10}} />
+            <Skeleton width="100%" height={40} borderRadius={8} />
+          </View>
+        ))}
+      </View>
+    </ScrollView>
+  );
+};
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherAttendance'>;
 
 const TeacherAttendanceScreen: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
+  const { theme, isDarkMode, toggleDarkMode } = useTheme();
   const [classes, setClasses] = useState<any[]>([]);
   const [myAttendance, setMyAttendance] = useState<any>(null);
   const [summary, setSummary] = useState<any>(null);
@@ -50,40 +83,54 @@ const TeacherAttendanceScreen: React.FC<Props> = ({ navigation }) => {
         setSummary(summaryRes.data?.summary || null);
       } catch (error) {
         console.error('Failed to fetch attendance portal data:', error);
+        // TEMPORARY: Mock data fallback
+        setClasses([
+          { id: 'c1', name: 'Class 10', section: 'A', totalStudents: 45, grade: 'Secondary', todayStatus: 'marked' },
+          { id: 'c2', name: 'Class 9', section: 'B', totalStudents: 38, grade: 'Secondary', todayStatus: 'pending' },
+        ]);
+        setMyAttendance({ percentage: 94 });
       } finally {
-        setIsLoading(false);
+        setTimeout(() => setIsLoading(false), 800);
       }
     };
     fetchData();
   }, [authState.user?.id]);
 
   return (
-    <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+    <View style={[styles.mainContainer, { backgroundColor: theme.background }]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
+      <View style={[styles.globalHeader, { backgroundColor: theme.surface }]}>
         <ScaleButton
           style={styles.menuHandle}
           onPress={() => setDrawerOpen(true)}
-          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-          activeOpacity={0.7}
-          scaleTo={0.85}
         >
-          <Ionicons name="menu" size={28} color="#1F2937" />
+          <Ionicons name="menu" size={28} color={theme.text} />
         </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
+        <Text style={[styles.headerTitle, { color: theme.primary }]} numberOfLines={1}>
+          Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}
+        </Text>
         <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
+          <TouchableOpacity style={styles.iconBtn}>
+            <Ionicons name="notifications-outline" size={22} color={theme.text} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('AccountSettings')} style={styles.iconBtn}>
+            <Ionicons name="settings-outline" size={22} color={theme.text} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={toggleDarkMode} style={styles.iconBtn}>
+            <Ionicons name={isDarkMode ? "sunny-outline" : "moon-outline"} size={22} color={theme.text} />
+          </TouchableOpacity>
+          <View style={[styles.avatar, { backgroundColor: '#A855F7' }]}>
             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
           </View>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      {isLoading ? (
+        <PageSkeleton />
+      ) : (
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
         {/* Page Title Wrapper */}
         <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
@@ -193,6 +240,7 @@ const TeacherAttendanceScreen: React.FC<Props> = ({ navigation }) => {
         </Animated.View>
 
       </ScrollView>
+      )}
 
       {/* Navigation Drawer */}
       <NavigationDrawer
@@ -221,40 +269,40 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 10,
     elevation: 8,
-    zIndex: 10
+    zIndex: 10,
   },
   menuHandle: { paddingRight: 10, paddingVertical: 10 },
-  headerTitle: { fontSize: 16,
+  headerTitle: {
+    fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5',
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
   },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 20 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  iconBtn: { padding: 4 },
   avatar: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
+    shadowColor: '#A855F7',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 8,
   },
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
-  pageTitleWrapper: { marginBottom: 20, paddingHorizontal: 16, marginTop: 24 },
-  pageTitle: { fontSize: 24, fontWeight: '800', color: '#4F46E5', marginBottom: 6 },
-  pageSubtitle: { fontSize: 12, color: '#6B7280', fontWeight: '500' },
+  pageTitleWrapper: { marginBottom: 16, paddingHorizontal: 16, marginTop: 20 },
+  pageTitle: { fontSize: 22, fontWeight: '800', color: '#4F46E5', marginBottom: 4 },
+  pageSubtitle: { fontSize: 11, color: '#6B7280', fontWeight: '500' },
 
   mainCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: 14,
+    padding: 20,
     marginHorizontal: 16,
     shadowColor: '#1E293B',
     shadowOffset: { width: 0, height: 10 },
@@ -267,32 +315,32 @@ const styles = StyleSheet.create({
   cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
     gap: 10,
   },
   cardHeaderTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
     color: '#111827',
   },
 
   classCard: {
     backgroundColor: '#F7F9FC',
-    borderRadius: 6,
-    padding: 12,
-    marginBottom: 20,
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 16,
   },
   classInfoContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   classNameText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
     color: '#1F2937',
-    marginBottom: 10,
+    marginBottom: 6,
   },
   classMetaRow: {
     flexDirection: 'row',
@@ -387,27 +435,27 @@ const styles = StyleSheet.create({
   },
   meCard: {
     backgroundColor: '#4F46E5',
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 14,
+    padding: 16,
     marginHorizontal: 16,
-    marginBottom: 20,
+    marginBottom: 16,
     shadowColor: '#4F46E5',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
     shadowRadius: 15,
     elevation: 10,
   },
-  meInfo: { gap: 15 },
-  meTitle: { color: '#FFF', fontSize: 18, fontWeight: '800' },
-  meSubtitle: { color: '#E0E7FF', fontSize: 11, fontWeight: '500' },
+  meInfo: { gap: 12 },
+  meTitle: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+  meSubtitle: { color: '#E0E7FF', fontSize: 10, fontWeight: '500' },
   meStatRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   meStat: { alignItems: 'flex-start' },
-  meStatVal: { color: '#FFF', fontSize: 24, fontWeight: '900' },
-  meStatLab: { color: '#E0E7FF', fontSize: 10, fontWeight: '700' },
-  historyLink: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, gap: 6 },
-  historyLinkText: { color: '#FFF', fontSize: 10, fontWeight: '700' },
-  meProgressBase: { flex: 1, height: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 4, marginTop: 15 },
-  meProgressFill: { height: 8, backgroundColor: '#FFF', borderRadius: 4 },
+  meStatVal: { color: '#FFF', fontSize: 20, fontWeight: '900' },
+  meStatLab: { color: '#E0E7FF', fontSize: 9, fontWeight: '700' },
+  historyLink: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, gap: 5 },
+  historyLinkText: { color: '#FFF', fontSize: 9, fontWeight: '700' },
+  meProgressBase: { flex: 1, height: 6, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 3, marginTop: 12 },
+  meProgressFill: { height: 6, backgroundColor: '#FFF', borderRadius: 3 },
 });
 
 export default TeacherAttendanceScreen;

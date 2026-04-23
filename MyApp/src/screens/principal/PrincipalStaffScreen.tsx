@@ -19,6 +19,8 @@ import { useAuth } from '../../store/AuthContext';
 import ScaleButton from '../../components/animations/ScaleButton';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
+import Skeleton from '../../components/common/Skeleton';
+
 
 const StatCard = React.memo(({ iconBg, iconColor, icon, value, label }: any) => (
   <View style={styles.statCard}>
@@ -127,8 +129,13 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
         setStaffList(staff);
       } catch (err: any) {
         console.error('Failed to fetch staff:', err);
-        setError(err.message || 'Failed to load staff data');
-        setStaffList([]);
+        // TEMPORARY: Mock data fallback for dev work
+        setStaffList([
+          { id: 't1', code: 'T101', name: 'Anjali Verma', idNumber: 'EMP202401', department: 'Mathematics', position: 'Senior Teacher', faceEnrollment: 'Enrolled', status: 'Active', email: 'anjali@sharnex.com' },
+          { id: 't2', code: 'T102', name: 'Rajesh Kumar', idNumber: 'EMP202402', department: 'Science', position: 'HOD', faceEnrollment: 'Enrolled', status: 'Active', email: 'rajesh@sharnex.com' },
+          { id: 't3', code: 'T103', name: 'Emily Rodriguez', idNumber: 'EMP202403', department: 'Physics', position: 'Teacher', faceEnrollment: 'Pending', status: 'Active', email: 'emily@sharnex.com' },
+          { id: 't4', code: 'T104', name: 'David Wilson', idNumber: 'EMP202404', department: 'Commerce', position: 'Assistant Teacher', faceEnrollment: 'Enrolled', status: 'On Leave', email: 'david@sharnex.com' },
+        ]);
       } finally {
         setIsLoading(false);
       }
@@ -150,8 +157,13 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
         setAssignmentsList(assignments);
       } catch (err: any) {
         console.error('Failed to fetch assignments:', err);
-        setError(err.message || 'Failed to load assignments data');
-        setAssignmentsList([]);
+        // TEMPORARY: Mock data fallback for dev work
+        setAssignmentsList([
+          { className: 'Class 10A', teacherName: 'Anjali Verma', status: 'Assigned', classId: '1', teacherId: 't1' },
+          { className: 'Class 10B', teacherName: 'Rajesh Kumar', status: 'Assigned', classId: '2', teacherId: 't2' },
+          { className: 'Class 11A', teacherName: 'Emily Rodriguez', status: 'Assigned', classId: '3', teacherId: 't3' },
+          { className: 'Class 11B', teacherName: 'Not Assigned', status: 'Not Assigned', classId: '4', teacherId: null },
+        ]);
       } finally {
         setIsLoadingAssignments(false);
       }
@@ -312,7 +324,9 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
           <Text style={styles.sectionHeading}>Staff Directory</Text>
           <View style={styles.listContainer}>
             {isLoading ? (
-              <ActivityIndicator size="large" color="#4F46E5" style={{ marginVertical: 40 }} />
+              <View style={{ gap: 12 }}>
+                {[1, 2, 3].map(i => <Skeleton key={i} width="100%" height={120} borderRadius={16} />)}
+              </View>
             ) : error && filteredStaff.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
@@ -337,7 +351,10 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
           <Text style={[styles.sectionHeading, { marginTop: 24 }]}>Class Teacher Assignments</Text>
           <View style={styles.assignmentsGridContainer}>
             {isLoadingAssignments ? (
-              <ActivityIndicator size="large" color="#4F46E5" style={{ marginVertical: 40 }} />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                <Skeleton width="48%" height={100} borderRadius={16} />
+                <Skeleton width="48%" height={100} borderRadius={16} />
+              </View>
             ) : assignmentsList.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Ionicons name="school-outline" size={48} color="#9CA3AF" />

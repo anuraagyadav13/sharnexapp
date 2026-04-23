@@ -40,6 +40,44 @@ import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
+import Skeleton from '../../components/common/Skeleton';
+
+const DashboardSkeleton = () => {
+  const { theme } = useTheme();
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <View style={styles.header}>
+         <Skeleton width={30} height={30} borderRadius={6} />
+         <Skeleton width="40%" height={24} borderRadius={6} />
+         <View style={{flexDirection: 'row', gap: 10}}>
+            <Skeleton width={24} height={24} borderRadius={12} />
+            <Skeleton width={24} height={24} borderRadius={12} />
+            <Skeleton width={32} height={32} borderRadius={16} />
+         </View>
+      </View>
+
+      <View style={styles.section}>
+        <Skeleton width="100%" height={160} borderRadius={16} />
+      </View>
+
+      <View style={styles.section}>
+         <View style={styles.statsRow}>
+            <Skeleton width="31%" height={100} borderRadius={12} />
+            <Skeleton width="31%" height={100} borderRadius={12} />
+            <Skeleton width="31%" height={100} borderRadius={12} />
+         </View>
+      </View>
+
+      <View style={styles.section}>
+         <Skeleton width={120} height={20} style={{marginBottom: 16}} />
+         <View style={styles.quickActionsGrid}>
+            {[1,2,3,4,5,6].map(i => <Skeleton key={i} width="31%" height={90} borderRadius={16} />)}
+         </View>
+      </View>
+    </ScrollView>
+  );
+};
+
 
 type DashboardNavigationProp = NativeStackNavigationProp<RootStackParamList, 'StudentDashboard'>;
 
@@ -316,7 +354,28 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
 
       } catch (error) {
         console.error('Fetch failed:', error);
-      } finally { setIsLoading(false); }
+        // TEMPORARY: Mock data fallback for dev work
+        setDashboardData({
+          attendance: { percentage: 92 },
+          stats: { upcomingAssignments: 4 },
+          upcomingEvents: [
+            { title: 'Inter-School Debate', date: '28 May 2026', color: '#8B5CF6' },
+            { title: 'Mathematics Olympiad', date: '05 Jun 2026', color: '#10B981' }
+          ],
+          topStudents: [
+            { rank: 1, name: 'Sarah J.', percentage: '98%', color: '#8B5CF6' },
+            { rank: 2, name: 'Michael C.', percentage: '96%', color: '#8B5CF6' },
+          ]
+        });
+        setScheduleData([
+          { time: '09:00', endTime: '10:00', subject: 'Advanced Mathematics', teacher: 'Dr. Sarah Smith', room: 'Lab 2', status: 'Ongoing' },
+          { time: '10:15', endTime: '11:15', subject: 'Physics Core', teacher: 'Mr. Rajesh Kumar', room: 'Hall A', status: 'Upcoming' },
+        ]);
+        setAssignmentsData([
+          { title: 'Calculus Assignment 1', subject_name: 'Mathematics', due_date: '2026-05-25' },
+          { title: 'Quantum Mechanics Lab', subject_name: 'Physics', due_date: '2026-05-26' },
+        ]);
+      } finally { setTimeout(() => setIsLoading(false), 800); }
     };
     fetchAllData();
   }, [authState.user?.id]);
@@ -364,23 +423,46 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
   return (
     <View style={[styles.mainContainer, { backgroundColor: theme.background }]}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
-      <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
-        {/* Header */}
-        <View style={styles.header}>
-          <ScaleButton style={styles.menuHandle} onPress={() => setDrawerOpen(true)}>
-            <Ionicons name="menu" size={28} color={theme.text} />
-          </ScaleButton>
-          <Text style={[styles.headerTitle, { color: theme.primary }]} numberOfLines={1}>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
-          <View style={styles.headerRight}>
-            <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.iconBackground }]}><Ionicons name="notifications-outline" size={22} color={theme.text} /></TouchableOpacity>
-            <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.iconBackground }]} onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Preferences' })}><Ionicons name="settings-outline" size={22} color={theme.text} /></TouchableOpacity>
-            <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.iconBackground }]} onPress={toggleDarkMode}>
-              <Ionicons name={isDarkMode ? "sunny-outline" : "moon-outline"} size={22} color={theme.text} />
-            </TouchableOpacity>
-            <View style={[styles.avatar, {marginLeft: 10}]}><Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text></View>
+      
+      {isLoading ? (
+        <DashboardSkeleton />
+      ) : (
+        <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* Header */}
+          <View style={styles.header}>
+            <ScaleButton 
+              style={styles.menuHandle} 
+              onPress={() => setDrawerOpen(true)}
+              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+            >
+              <Ionicons name="menu" size={28} color={theme.text} />
+            </ScaleButton>
+            <Text style={[styles.headerTitle, { color: theme.primary }]} numberOfLines={1}>
+              Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}
+            </Text>
+            <View style={styles.headerRight}>
+              <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.iconBackground }]}>
+                <Ionicons name="notifications-outline" size={22} color={theme.text} />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.iconBtn, { backgroundColor: theme.iconBackground }]} 
+                onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Preferences' })}
+              >
+                <Ionicons name="settings-outline" size={22} color={theme.text} />
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.iconBackground }]} onPress={toggleDarkMode}>
+                <Ionicons name={isDarkMode ? "sunny-outline" : "moon-outline"} size={22} color={theme.text} />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
+              >
+                <View style={[styles.avatar, {marginLeft: 10}]}>
+                  <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
 
         {/* Hero Banner */}
         <Animated.View 
@@ -580,6 +662,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
         </View>
 
       </ScrollView>
+      )}
 
       <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="student" />
     </View>

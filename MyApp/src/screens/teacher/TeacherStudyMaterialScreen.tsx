@@ -126,7 +126,7 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
       
       // Note: in a real production app, you'd upload binary to S3/Cloudinary first.
       // Here we simulate getting a fileUrl.
-      const mockFileUrl = `https://sharnex-storage.com/${selectedFile.name.replace(/\s+/g, '_')}`;
+      const mockFileUrl = `https://sharnex-storage.com/${(selectedFile?.name || 'file').replace(/\s+/g, '_')}`;
 
       await apiClient.post(ENDPOINTS.TEACHER.STUDY_MATERIALS, {
         title: newTitle,
@@ -221,7 +221,7 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAF9F9" />
       
-      {/* Header */}
+      {/* Attendance-Style Header */}
       <View style={styles.topHeader}>
         <ScaleButton
           style={styles.menuHandle}
@@ -230,19 +230,21 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
           activeOpacity={0.7}
           scaleTo={0.85}
         >
-          <Ionicons name="menu" size={26} color="#111827" />
+          <Ionicons name="menu" size={28} color="#111827" />
         </ScaleButton>
 
-        <Text style={styles.topHeaderTitle}>Study Material</Text>
+        <Text style={styles.topHeaderTitle} numberOfLines={1}>Study Material</Text>
 
-        <TouchableOpacity 
-          style={styles.uploadBtnHeader} 
-          onPress={() => setUploadModalVisible(true)}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="cloud-upload" size={18} color="#FFF" />
-          <Text style={styles.uploadBtnText}>Upload</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity 
+            style={styles.uploadBtnHeader} 
+            onPress={() => setUploadModalVisible(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="cloud-upload" size={18} color="#FFF" />
+            <Text style={styles.uploadBtnText}>Upload</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.container}>
@@ -409,24 +411,37 @@ const styles = StyleSheet.create({
   topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 60 : 20,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 8,
+    zIndex: 10,
   },
-  menuHandle: { padding: 4 },
-  topHeaderTitle: { fontSize: 18, fontWeight: '700', color: '#1E293B', flex: 1, marginLeft: 12 },
+  menuHandle: { paddingRight: 10, paddingVertical: 10 },
+  topHeaderTitle: { 
+    fontSize: 16, 
+    fontWeight: '500', 
+    color: '#4F46E5',
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 10,
+  },
+  headerRight: { flexDirection: 'row', alignItems: 'center' },
   uploadBtnHeader: {
     backgroundColor: '#4F46E5',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
-  uploadBtnText: { color: '#FFF', fontWeight: '600', fontSize: 13, marginLeft: 6 },
+  uploadBtnText: { color: '#FFF', fontWeight: '700', fontSize: 13, marginLeft: 6 },
 
   searchSection: { padding: 16 },
   searchContainer: {
