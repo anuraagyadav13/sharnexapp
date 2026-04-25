@@ -139,6 +139,7 @@ invoices.map((item, index) => (
 | 11 | QuizDetailsScreen | `GET /quizzes/{id}` | Get by params | MEDIUM |
 | 12 | ViewQuizDetailScreen | `GET /quizzes/{id}` | Get by params | LOW |
 | 13 | PerformanceScreenStudent | `GET /student/performance` | Advanced charts | LOW |
+| 14 | StudentReportScreen | `GET /students/{id}/report` | Detailed report | MEDIUM |
 
 ### TEACHER PORTAL (12 screens)
 
@@ -152,6 +153,8 @@ invoices.map((item, index) => (
 | 6 | TeacherQuizScreen | `GET /teacher/quizzes` or `GET /quizzes?teacherId={id}` | Filter by teacher | HIGH |
 | 7 | TeacherCreateQuizScreen* | `POST /teacher/quizzes` (multi-step) | Multi-step form | HIGH |
 | 8 | TeacherViewQuizResultScreen | `GET /teacher/quizzes/{id}/results` | Get by params | MEDIUM |
+| 9 | TeacherQuizAttemptsScreen | `GET /teacher/quizzes/{id}/attempts` | Paginated list | MEDIUM |
+| 10 | TeacherExportQuizScreen | `GET /teacher/quizzes/{id}/attempts/export` | Download CSV | MEDIUM |
 
 > Note: Question import in teacher quiz creation is currently handled client-side from the app. No backend `POST /teacher/quizzes/import/json` or `/teacher/quizzes/import/excel` endpoint is available in the current API contract.
 | 9 | TeacherMonitorLiveScreen | `GET /teacher/quizzes/{id}/live` (polling) | Realtime/polling | LOW |
@@ -172,8 +175,10 @@ invoices.map((item, index) => (
 | 7 | PrincipalTimetableScreen | `GET /principal/timetable?class=X&section=Y` | Filter by class | MEDIUM |
 | 8 | PrincipalPerformanceScreen | `GET /principal/performance?period=monthly\|term\|annual` | Filter by period | MEDIUM |
 | 9 | PrincipalCalendarScreen | `GET /principal/calendar?month=MM&year=YYYY` | Filter by month | MEDIUM |
-| 10 | PrincipalRSMScreen | `GET /principal/reports` + `POST /principal/reports/generate` | List + generate | MEDIUM |
-| 11 | PrincipalCreateExamScreen | `POST /principal/exams` | Form submit | MEDIUM |
+| 10 | PrincipalRSMScreen | `GET /rms/exams` + `POST /rms/results/generate` | List + generate | MEDIUM |
+| 11 | PrincipalPublishResultScreen | `POST /rms/results/publish` | Action button | MEDIUM |
+| 12 | PrincipalPreviewResultScreen | `GET /rms/results/preview` | Preview UI | MEDIUM |
+| 13 | PrincipalCreateExamScreen | `POST /rms/exams` | Form submit | MEDIUM |
 | 12 | PrincipalReviewExamScreen | `GET /principal/exams/{id}` + `PUT /principal/exams/{id}/approve` | Get + approve action | MEDIUM |
 | 13 | PrincipalMarkStaffAttendanceScreen | `GET /principal/staff` + `POST /principal/staff/attendance` | List + bulk submit | MEDIUM |
 | 14 | PrincipalAddStaffScreen | `POST /principal/staff` | Form submit | MEDIUM |

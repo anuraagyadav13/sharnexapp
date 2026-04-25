@@ -572,7 +572,10 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
           </View>
           <View style={styles.scheduleList}>
             {isLoading ? (
-              <ActivityIndicator size="small" color="#4F46E5" />
+              <View style={{ gap: 12 }}>
+                <Skeleton width="100%" height={100} borderRadius={16} />
+                <Skeleton width="100%" height={100} borderRadius={16} />
+              </View>
             ) : dashboardData?.todaysSchedule?.length === 0 ? (
               <Text style={styles.emptyText}>No classes scheduled for today.</Text>
             ) : (
@@ -602,7 +605,11 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
           </View>
           <View style={styles.pendingTasksList}>
             {isLoading ? (
-              <ActivityIndicator size="small" color="#3B82F6" style={{ marginVertical: 20 }} />
+              <View style={{ gap: 10 }}>
+                <Skeleton width="100%" height={70} borderRadius={16} />
+                <Skeleton width="100%" height={70} borderRadius={16} />
+                <Skeleton width="100%" height={70} borderRadius={16} />
+              </View>
             ) : pendingTasks.length === 0 ? (
               <View style={styles.pendingTasksCard}>
                 <Text style={styles.pendingTasksText}>No pending tasks!</Text>

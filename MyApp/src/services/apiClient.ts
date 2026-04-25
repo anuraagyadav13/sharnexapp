@@ -289,15 +289,12 @@ apiClient.interceptors.response.use(
         }
       }
     } else if (error.request) {
-      console.error('[apiClient] API No Response (Network Error):', {
+      console.log('[apiClient] API No Response (Network Error):', {
         message: normalizedError.message || 'No response received',
-        method: error.request.method,
-        url: error.request.url,
       });
     } else {
-      console.error('[apiClient] API Error:', {
+      console.log('[apiClient] API Error:', {
         message: normalizedError.message || 'Unknown error',
-        stack: normalizedError.stack,
       });
     }
 

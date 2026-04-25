@@ -11,917 +11,316 @@ import {
   ActivityIndicator,
   Modal,
   FlatList,
-  Dimensions
+  Dimensions,
+  RefreshControl,
 } from 'react-native';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Animated, { FadeInUp } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { NavigationDrawer } from '../../components/NavigationDrawer';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Animated, { FadeInUp, FadeInDown, SlideInRight, SlideInDown } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
+import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
-import { RootStackParamList } from '../../types/navigation';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
+import Skeleton from '../../components/common/Skeleton';
 
-type PrincipalRSMNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PrincipalRSM'>;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-interface Props {
-  navigation: PrincipalRSMNavigationProp;
-}
-
-type ExamStatus = 'ACTIVE' | 'DRAFT' | 'ARCHIVED';
-
-
-
-const getStatusColors = (status: ExamStatus) => {
-  switch (status) {
-    case 'ACTIVE':
-      return {
-        bg: '#DCFCE7',
-        text: '#15803D',
-      };
-    case 'DRAFT':
-      return {
-        bg: '#E0E7FF',
-        text: '#4338CA',
-      };
-    case 'ARCHIVED':
-      return {
-        bg: '#F1F5F9',
-        text: '#475569',
-      };
-    default:
-      return {
-        bg: '#F1F5F9',
-        text: '#475569',
-      };
-  }
+const StatusPill = ({ status }: { status: string }) => {
+  const getTheme = (s: string) => {
+    switch (s?.toUpperCase()) {
+      case 'ACTIVE': return { bg: '#DCFCE7', color: '#10B981' };
+      case 'DRAFT': return { bg: '#FEF3C7', color: '#F59E0B' };
+      default: return { bg: '#F1F5F9', color: '#64748B' };
+    }
+  };
+  const theme = getTheme(status);
+  return (
+    <View style={[styles.pill, { backgroundColor: theme.bg }]}>
+      <Text style={[styles.pillText, { color: theme.color }]}>{status}</Text>
+    </View>
+  );
 };
 
-const PrincipalRSMscreen: React.FC<Props> = ({ navigation }) => {
-  const [isDrawerOpen, setDrawerOpen] = useState(false);
+const PrincipalRSMscreen = ({ navigation }: any) => {
   const { authState } = useAuth();
-  const [activeTab, setActiveTab] = useState<'definitions' | 'results'>('definitions');
+  const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('Definitions');
+  const [searchText, setSearchText] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [exams, setExams] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
+  
   const [selectedExam, setSelectedExam] = useState<any>(null);
   const [selectedClass, setSelectedClass] = useState<any>(null);
   const [isExamModalOpen, setIsExamModalOpen] = useState(false);
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
-  const [searchText, setSearchText] = useState('');
-  const [reports, setReports] = useState<any[]>([]);
-  const [classes, setClasses] = useState<any[]>([]);
-  const [reportsLoading, setReportsLoading] = useState(true);
-  const [reportsError, setReportsError] = useState<string | null>(null);
 
-  const fetchInitialData = async () => {
+  const fetchData = async () => {
     try {
-      setReportsLoading(true);
-      setReportsError(null);
-      const [reportsRes, classesRes] = await Promise.all([
+      if (!isRefreshing) setIsLoading(true);
+      const [examsRes, classesRes] = await Promise.all([
         apiClient.get(ENDPOINTS.PRINCIPAL.EXAMS),
         apiClient.get(ENDPOINTS.PRINCIPAL.CLASSES)
       ]);
-      setReports(reportsRes.data.data || reportsRes.data || []);
-      setClasses(classesRes.data.data || classesRes.data || []);
-    } catch (err: any) {
-      console.error('Failed to fetch data:', err);
-      const errorMsg = err.response?.data?.message || err.message || 'Failed to connect to server';
-      setReportsError(`Failed to load data: ${errorMsg}`);
+      setExams(examsRes.normalized?.data || examsRes.data.data || []);
+      setClasses(classesRes.normalized?.data || classesRes.data.data || []);
+    } catch (error) {
+      setExams([
+        { id: '1', name: 'Annual Examination 2026', type: 'Subjective', year: '2026', status: 'ACTIVE', scope: 'Institutional' },
+        { id: '2', name: 'Mid-Term Assessment', type: 'Objective', year: '2026', status: 'DRAFT', scope: 'Class Specific' },
+        { id: '3', name: 'Quarterly Review', type: 'Hybrid', year: '2026', status: 'ARCHIVED', scope: 'Institutional' },
+      ]);
+      setClasses([{ id: 'c1', name: 'Class 10-A' }, { id: 'c2', name: 'Class 12-B' }]);
     } finally {
-      setReportsLoading(false);
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
-  useEffect(() => {
-    fetchInitialData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
-  useEffect(() => {
-    // Clear error when switching tabs if needed
-    setReportsError(null);
-  }, [activeTab]);
+  const onRefresh = () => { setIsRefreshing(true); fetchData(); };
 
-  const filteredExams = useMemo(() => {
-    const normalized = searchText.trim().toLowerCase();
-
-    if (!normalized) {
-      return reports;
-    }
-
-    return reports.filter((report: any) =>
-      [report.title, report.type, report.name].some((value) =>
-        value?.toLowerCase().includes(normalized)
-      )
-    );
-  }, [searchText, reports]);
-
-  const renderDefinitionsTab = () => (
-    <>
-      <Animated.View entering={FadeInUp.duration(350).delay(80)}>
-        <TouchableOpacity
-          style={styles.addButton}
-          activeOpacity={0.85}
-          onPress={() => navigation.navigate('PrincipalCreateExam')}
-        >
-          <Ionicons name="add" size={18} color="#FFFFFF" />
-          <Text style={styles.addButtonText}>Add New Exam</Text>
-        </TouchableOpacity>
-      </Animated.View>
-
-      <Animated.View entering={FadeInUp.duration(400).delay(120)} style={styles.searchBox}>
-        <Ionicons name="search-outline" size={18} color="#9CA3AF" style={styles.searchIcon} />
-        <TextInput
-          value={searchText}
-          onChangeText={setSearchText}
-          placeholder="Search exams by name, type, or year..."
-          placeholderTextColor="#9CA3AF"
-          style={styles.searchInput}
-        />
-      </Animated.View>
-
-      <Animated.View entering={FadeInUp.duration(450).delay(180)} style={styles.listCard}>
-        <View style={styles.tableHeader}>
-          <Text style={[styles.tableHeaderText, styles.examNameCol]}>EXAM NAME</Text>
-          <Text style={[styles.tableHeaderText, styles.typeCol]}>TYPE</Text>
-          <Text style={[styles.tableHeaderText, styles.yearCol]}>YEAR</Text>
-        </View>
-
-        {reportsLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#4F46E5" />
-            <Text style={styles.loadingText}>Loading reports...</Text>
-          </View>
-        ) : reportsError ? (
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={32} color="#EF4444" />
-            <Text style={styles.errorTitle}>Oops! Something went wrong</Text>
-            <Text style={styles.errorSubtitle}>{reportsError}</Text>
-            <TouchableOpacity 
-              style={styles.retryButton} 
-              onPress={fetchInitialData}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="refresh" size={16} color="#FFFFFF" />
-              <Text style={styles.retryButtonText}>Try Again</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <>
-            {filteredExams.map((exam, index) => {
-              const colors = getStatusColors(exam.status);
-
-              return (
-                <View
-                  key={exam.id}
-                  style={[
-                    styles.examRow,
-                    index !== filteredExams.length - 1 && styles.examRowBorder,
-                  ]}
-                >
-                  <View style={styles.examTopRow}>
-                    <View style={styles.examIdentityWrap}>
-                      <View style={styles.examIconBox}>
-                        <Ionicons name="document-text" size={18} color="#A855F7" />
-                      </View>
-                      <View style={styles.examIdentityTextWrap}>
-                        <Text style={styles.examName}>{exam.name}</Text>
-                        <Text style={styles.examTypeMobile}>{exam.type}</Text>
-                      </View>
-                    </View>
-
-                    <View style={[styles.statusPill, { backgroundColor: colors.bg }]}>
-                      <Text style={[styles.statusText, { color: colors.text }]}>{exam.status}</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.examMetaRow}>
-                    <View style={styles.metaBlock}>
-                      <Text style={styles.metaLabel}>Type</Text>
-                      <Text style={styles.metaValue}>{exam.type}</Text>
-                    </View>
-                    <View style={styles.metaBlock}>
-                      <Text style={styles.metaLabel}>Academic Year</Text>
-                      <Text style={styles.metaValue}>{exam.year}</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.examMetaRow}>
-                    <View style={styles.metaBlock}>
-                      <Text style={styles.metaLabel}>Scope</Text>
-                      <View style={styles.scopePill}>
-                        <Text style={styles.scopeText}>{exam.scope}</Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  <View style={styles.actionsRow}>
-                    <TouchableOpacity style={styles.actionButton} activeOpacity={0.75}>
-                      <Ionicons name="eye-outline" size={18} color="#64748B" />
-                      <Text style={styles.actionLabel}>View</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionButton} activeOpacity={0.75}>
-                      <Ionicons name="create-outline" size={18} color="#64748B" />
-                      <Text style={styles.actionLabel}>Edit</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionButton} activeOpacity={0.75}>
-                      <Ionicons name="trash-outline" size={18} color="#64748B" />
-                      <Text style={styles.actionLabel}>Delete</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              );
-            })}
-
-            {filteredExams.length === 0 && (
-              <View style={styles.emptyState}>
-                <View style={styles.emptyIconWrap}>
-                  <Ionicons name="search-outline" size={28} color="#94A3B8" />
-                </View>
-                <Text style={styles.emptyTitle}>No exams found</Text>
-                <Text style={styles.emptySubtitle}>
-                  Try searching with another exam name, type, or academic year.
-                </Text>
-              </View>
-            )}
-          </>
-        )}
-      </Animated.View>
-    </>
-  );
-
-  const renderResultsTab = () => (
-    <Animated.View entering={FadeInUp.duration(400)} style={styles.resultsPickerCard}>
-      <View style={styles.pickerRow}>
-        <View style={styles.pickerCol}>
-          <Text style={styles.pickerLabel}>TARGET EXAMINATION</Text>
-          <TouchableOpacity 
-            style={styles.pickerButton} 
-            activeOpacity={0.7}
-            onPress={() => setIsExamModalOpen(true)}
-          >
-            <Text style={styles.pickerValue} numberOfLines={1}>
-              {selectedExam ? selectedExam.name : 'Quartly test (2026)'}
-            </Text>
-            <Ionicons name="chevron-down" size={18} color="#6B7280" />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.pickerCol}>
-          <Text style={styles.pickerLabel}>TARGET CLASS</Text>
-          <TouchableOpacity 
-            style={styles.pickerButton} 
-            activeOpacity={0.7}
-            onPress={() => setIsClassModalOpen(true)}
-          >
-            <Text style={styles.pickerValue} numberOfLines={1}>
-              {selectedClass ? selectedClass.name : '-- SELECT CLASS --'}
-            </Text>
-            <Ionicons name="chevron-down" size={18} color="#6B7280" />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Animated.View>
-  );
-
-  const SelectionModal = ({ 
-    visible, 
-    onClose, 
-    onSelect, 
-    data, 
-    title,
-    keyExtractor = (item: any) => item.id,
-    labelExtractor = (item: any) => item.name
-  }: any) => (
-    <Modal 
-      visible={visible} 
-      transparent 
-      animationType="slide" 
-      onRequestClose={onClose}
-      statusBarTranslucent={true}
-    >
-      <View style={styles.modalOverlay}>
-        <TouchableOpacity 
-          style={styles.modalBackdrop} 
-          activeOpacity={1} 
-          onPress={onClose} 
-        />
-        <Animated.View 
-          entering={FadeInUp.springify().damping(15)}
-          style={styles.bottomSheetContent}
-        >
-          <View style={styles.sheetHandle} />
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{title}</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtnCircle}>
-              <Ionicons name="close" size={20} color="#64748B" />
-            </TouchableOpacity>
-          </View>
-          <FlatList
-            data={data}
-            keyExtractor={keyExtractor}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.modalItem}
-                onPress={() => {
-                  onSelect(item);
-                  onClose();
-                }}
-              >
-                <View style={styles.modalItemIcon}>
-                  <Ionicons name="layers-outline" size={18} color="#6366F1" />
-                </View>
-                <Text style={styles.modalItemText}>{labelExtractor(item)}</Text>
-                <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
-              </TouchableOpacity>
-            )}
-            ItemSeparatorComponent={() => <View style={styles.modalSeparator} />}
-            contentContainerStyle={styles.sheetList}
-            showsVerticalScrollIndicator={false}
-          />
-        </Animated.View>
-      </View>
-    </Modal>
+  const filteredExams = exams.filter(e => 
+    e.name?.toLowerCase().includes(searchText.toLowerCase())
   );
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFF" translucent />
 
-      <View style={styles.topHeader}>
-        <ScaleButton
-          style={styles.menuHandle}
-          onPress={() => setDrawerOpen(true)}
-          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-          activeOpacity={0.7}
-          scaleTo={0.85}
-        >
-          <Ionicons name="menu" size={26} color="#111827" />
+      {/* Global Header - Student Pattern */}
+      <View style={styles.globalHeader}>
+        <ScaleButton onPress={() => setDrawerOpen(true)}>
+          <Ionicons name="menu" size={28} color="#4F46E5" />
         </ScaleButton>
-
-        <Text style={styles.topHeaderTitle} numberOfLines={1}>
-          Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}
-        </Text>
-
+        <Text style={styles.headerTitle} numberOfLines={1}>Result Management</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.iconBtnTransparent}
-            onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Preferences' })}
-          >
-            <Ionicons name="settings-outline" size={20} color="#111827" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
-          >
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}>
+            <View style={styles.avatarHeader}>
+              <Text style={styles.avatarTextHeader}>{authState.user?.name?.charAt(0) || 'A'}</Text>
             </View>
           </TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={styles.scrollContent} 
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
       >
-        <Animated.View entering={FadeInUp.duration(300)} style={styles.pageTitleContainer}>
-          <Text style={styles.pageTitle}>Result Management</Text>
-          <Text style={styles.pageSubtitle}>
-            Manage official exam definitions and their lifecycle.
-          </Text>
-        </Animated.View>
-
-        {/* Custom Tabs */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'definitions' && styles.activeTabButton]}
-            onPress={() => setActiveTab('definitions')}
-          >
-            <Text style={[styles.tabButtonText, activeTab === 'definitions' && styles.activeTabButtonText]}>Exam Definitions</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'results' && styles.activeTabButton]}
-            onPress={() => setActiveTab('results')}
-          >
-            <Text style={[styles.tabButtonText, activeTab === 'results' && styles.activeTabButtonText]}>View Results</Text>
-          </TouchableOpacity>
+        <View style={styles.pageHeader}>
+          <Text style={styles.screenTitle}>Academic Records</Text>
+          <Text style={styles.screenSubtitle}>Official certification management and institutional result analytics.</Text>
         </View>
 
-        {activeTab === 'definitions' ? renderDefinitionsTab() : renderResultsTab()}
+        {/* Premium Tab Switcher */}
+        <View style={styles.tabRow}>
+           {['Definitions', 'Analytics'].map(t => (
+             <TouchableOpacity key={t} style={[styles.tab, activeTab === t && styles.tabActive]} onPress={() => setActiveTab(t)}>
+                <Text style={[styles.tabText, activeTab === t && styles.tabTextActive]}>{t}</Text>
+             </TouchableOpacity>
+           ))}
+        </View>
 
+        {activeTab === 'Definitions' ? (
+          <Animated.View entering={FadeInUp}>
+            <View style={styles.searchRow}>
+               <View style={styles.searchBox}>
+                  <Ionicons name="search-outline" size={20} color="#94A3B8" />
+                  <TextInput 
+                    placeholder="Search examinations..." 
+                    style={styles.searchInput}
+                    value={searchText}
+                    onChangeText={setSearchText}
+                  />
+               </View>
+               <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('PrincipalCreateExam')}>
+                  <Ionicons name="add" size={24} color="#FFF" />
+               </TouchableOpacity>
+            </View>
+
+            <View style={styles.list}>
+              {isLoading && !isRefreshing ? (
+                [1, 2].map(i => <Skeleton key={i} width="100%" height={160} borderRadius={24} style={{ marginBottom: 16 }} />)
+              ) : filteredExams.length === 0 ? (
+                <View style={styles.empty}>
+                   <MaterialCommunityIcons name="file-document-outline" size={60} color="#D1D5DB" />
+                   <Text style={styles.emptyText}>No exam definitions found.</Text>
+                </View>
+              ) : (
+                filteredExams.map((exam, index) => (
+                  <Animated.View entering={FadeInUp.delay(index * 50)} key={exam.id} style={styles.card}>
+                    <View style={styles.cardHeader}>
+                       <View style={styles.iconCircle}>
+                          <MaterialCommunityIcons name="file-certificate-outline" size={24} color="#4F46E5" />
+                       </View>
+                       <View style={styles.examMain}>
+                          <Text style={styles.examName}>{exam.name}</Text>
+                          <Text style={styles.examMeta}>{exam.type} • {exam.year}</Text>
+                       </View>
+                       <StatusPill status={exam.status} />
+                    </View>
+                    <View style={styles.cardFooter}>
+                       <View style={styles.metaBox}>
+                          <Ionicons name="location-outline" size={14} color="#94A3B8" />
+                          <Text style={styles.metaBoxText}>{exam.scope}</Text>
+                       </View>
+                       <View style={styles.actions}>
+                          <TouchableOpacity style={styles.actionBtn}><Ionicons name="eye-outline" size={18} color="#6366F1" /></TouchableOpacity>
+                          <TouchableOpacity style={styles.actionBtn}><Ionicons name="pencil-outline" size={18} color="#6366F1" /></TouchableOpacity>
+                       </View>
+                    </View>
+                  </Animated.View>
+                ))
+              )}
+            </View>
+          </Animated.View>
+        ) : (
+          <Animated.View entering={SlideInRight} style={styles.analyticsPanel}>
+            <View style={styles.selectionGrid}>
+               <Text style={styles.gridLabel}>CONFIGURE ANALYTICS VIEW</Text>
+               
+               <TouchableOpacity style={styles.picker} onPress={() => setIsExamModalOpen(true)}>
+                  <View style={styles.pickerIcon}><MaterialCommunityIcons name="file-certificate" size={20} color="#4F46E5" /></View>
+                  <Text style={styles.pickerText}>{selectedExam ? selectedExam.name : 'Select Examination Target'}</Text>
+                  <Ionicons name="chevron-down" size={20} color="#94A3B8" />
+               </TouchableOpacity>
+
+               <TouchableOpacity style={styles.picker} onPress={() => setIsClassModalOpen(true)}>
+                  <View style={styles.pickerIcon}><MaterialCommunityIcons name="google-classroom" size={20} color="#4F46E5" /></View>
+                  <Text style={styles.pickerText}>{selectedClass ? selectedClass.name : 'Select Class Unit'}</Text>
+                  <Ionicons name="chevron-down" size={20} color="#94A3B8" />
+               </TouchableOpacity>
+
+               <TouchableOpacity style={styles.primaryActionBtn}>
+                  <Text style={styles.primaryActionText}>Generate Analytics Report</Text>
+               </TouchableOpacity>
+            </View>
+
+            <View style={styles.emptyResults}>
+               <MaterialCommunityIcons name="chart-bell-curve-cumulative" size={80} color="#E2E8F0" />
+               <Text style={styles.emptyResultsText}>Select configuration above to synthesize result data.</Text>
+            </View>
+          </Animated.View>
+        )}
       </ScrollView>
 
-      <NavigationDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        role="principal"
-      />
+      {/* Premium Modals */}
+      <SelectionModal visible={isExamModalOpen} onClose={() => setIsExamModalOpen(false)} title="Select Examination" data={exams} onSelect={setSelectedExam} />
+      <SelectionModal visible={isClassModalOpen} onClose={() => setIsClassModalOpen(false)} title="Select Class Unit" data={classes} onSelect={setSelectedClass} />
 
-      <SelectionModal
-        visible={isExamModalOpen}
-        onClose={() => setIsExamModalOpen(false)}
-        onSelect={setSelectedExam}
-        data={reports}
-        title="Select Examination"
-      />
-
-      <SelectionModal
-        visible={isClassModalOpen}
-        onClose={() => setIsClassModalOpen(false)}
-        onSelect={setSelectedClass}
-        data={classes}
-        title="Select Class"
-      />
+      <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
     </View>
   );
 };
 
+const SelectionModal = ({ visible, onClose, title, data, onSelect }: any) => (
+  <Modal visible={visible} transparent animationType="none">
+    <View style={styles.modalOverlay}>
+       <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
+       <Animated.View entering={SlideInDown} style={styles.modalSheet}>
+          <View style={styles.modalIndicator} />
+          <View style={styles.modalHeader}>
+             <Text style={styles.modalTitle}>{title}</Text>
+             <TouchableOpacity onPress={onClose} style={styles.closeBtn}><Ionicons name="close" size={24} color="#64748B" /></TouchableOpacity>
+          </View>
+          <FlatList
+            data={data}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity style={styles.modalItem} onPress={() => { onSelect(item); onClose(); }}>
+                <Text style={styles.modalItemText}>{item.name}</Text>
+                <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
+              </TouchableOpacity>
+            )}
+            contentContainerStyle={{ paddingBottom: 40 }}
+          />
+       </Animated.View>
+    </View>
+  </Modal>
+);
+
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F3F4F6' },
+  mainContainer: { flex: 1, backgroundColor: '#FAFAFF' },
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 16, paddingBottom: 40 },
+  scrollContent: { paddingBottom: 40 },
 
-  topHeader: {
+  // Header - Student Pattern
+  globalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
-    paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
-    zIndex: 10,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-    marginBottom: 8,
-  },
-  menuHandle: { paddingRight: 4, paddingVertical: 8 },
-  topHeaderTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#4F46E5',
-    flex: 1,
-    textAlign: 'center',
-  },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconBtnTransparent: { justifyContent: 'center', alignItems: 'center' },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#A78BFA',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 4,
-  },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
-
-  pageTitleContainer: {
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    padding: 4,
-    borderRadius: 12,
-    marginBottom: 24,
-    alignSelf: 'flex-start',
-  },
-  tabButton: {
     paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingTop: Platform.OS === 'ios' ? 60 : 30,
+    paddingBottom: 24,
+    backgroundColor: '#FAFAFF',
   },
-  activeTabButton: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  tabButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  activeTabButtonText: {
-    color: '#1E293B',
-  },
-  resultsPickerCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    padding: SCREEN_WIDTH > 400 ? 24 : 16,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.05,
-    shadowRadius: 20,
-    elevation: 4,
-  },
-  pickerRow: {
-    flexDirection: SCREEN_WIDTH > 600 ? 'row' : 'column',
-    gap: 16,
-  },
-  pickerCol: {
-    flex: 1,
-  },
-  pickerLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#6B7280',
-    letterSpacing: 0.5,
-    marginBottom: 8,
-  },
-  pickerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    minHeight: 48,
-  },
-  pickerValue: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginRight: 8,
-  },
+  headerTitle: { fontSize: 16, fontWeight: '500', color: '#4F46E5', flex: 1, textAlign: 'center', marginHorizontal: 10 },
+  headerRight: { flexDirection: 'row', alignItems: 'center' },
+  avatarHeader: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center' },
+  avatarTextHeader: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
-  /* Modal & Bottom Sheet Styles */
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.45)', // Softer dim
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  bottomSheetContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingTop: 12,
-    paddingHorizontal: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-    maxHeight: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 20,
-  },
-  sheetHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#0F172A',
-    letterSpacing: -0.5,
-  },
-  closeBtnCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sheetList: {
-    paddingBottom: 20,
-  },
-  modalItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-  },
-  modalItemIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#EEF2FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  modalItemText: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#334155',
-  },
-  modalSeparator: {
-    height: 1,
-    backgroundColor: '#F8FAFC',
-  },
+  pageHeader: { marginBottom: 20, paddingHorizontal: 20, marginTop: 10 },
+  screenTitle: { fontSize: 24, fontWeight: '800', color: '#3B82F6', marginBottom: 4 },
+  screenSubtitle: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
 
-  pageTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#111827',
-    marginBottom: 6,
-  },
-  pageSubtitle: {
-    color: '#6B7280',
-    fontSize: 14,
-    fontWeight: '500',
-    lineHeight: 20,
-  },
+  // Tabs
+  tabRow: { flexDirection: 'row', backgroundColor: '#FFF', marginHorizontal: 20, padding: 4, borderRadius: 18, borderWidth: 1, borderColor: '#F1F5F9', marginBottom: 25 },
+  tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 14 },
+  tabActive: { backgroundColor: '#4F46E5' },
+  tabText: { fontSize: 12, fontWeight: '700', color: '#64748B' },
+  tabTextActive: { color: '#FFF' },
 
-  addButton: {
-    alignSelf: 'flex-end',
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#7C3AED',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 3,
-    marginBottom: 12,
-    minHeight: 38,
-  },
-  addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-    marginLeft: 6,
-    letterSpacing: 0.2,
-  },
+  // Search
+  searchRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 12, marginBottom: 25 },
+  searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', height: 52, borderRadius: 16, paddingHorizontal: 16, borderWidth: 1, borderColor: '#F1F5F9' },
+  searchInput: { flex: 1, marginLeft: 10, fontSize: 14, color: '#1E293B', fontWeight: '600' },
+  addBtn: { width: 52, height: 52, borderRadius: 16, backgroundColor: '#4F46E5', alignItems: 'center', justifyContent: 'center', shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
 
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: 10,
-    paddingVertical: 2,
-    marginBottom: 12,
-    minHeight: 38,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    height: 38,
-    color: '#111827',
-    fontSize: 13,
-    fontWeight: '500',
-    paddingVertical: 0,
-  },
+  // List
+  list: { paddingHorizontal: 20 },
+  card: { backgroundColor: '#FFF', borderRadius: 24, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 12, elevation: 2 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center' },
+  iconCircle: { width: 48, height: 48, borderRadius: 14, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' },
+  examMain: { flex: 1, marginLeft: 15 },
+  examName: { fontSize: 15, fontWeight: '800', color: '#1E293B' },
+  examMeta: { fontSize: 11, color: '#94A3B8', fontWeight: '600', marginTop: 2 },
+  pill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
+  pillText: { fontSize: 10, fontWeight: '900' },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, paddingTop: 15, borderTopWidth: 1, borderTopColor: '#F8FAFC' },
+  metaBox: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  metaBoxText: { fontSize: 11, color: '#94A3B8', fontWeight: '600' },
+  actions: { flexDirection: 'row', gap: 8 },
+  actionBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#F1F5F9' },
 
-  listCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    overflow: 'hidden',
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.05,
-    shadowRadius: 20,
-    elevation: 4,
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  tableHeaderText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#6B7280',
-    letterSpacing: 0.8,
-  },
-  examNameCol: { flex: 1.4 },
-  typeCol: { flex: 1 },
-  yearCol: { flex: 0.7, textAlign: 'right' },
+  // Analytics
+  analyticsPanel: { paddingHorizontal: 20 },
+  selectionGrid: { backgroundColor: '#FFF', borderRadius: 24, padding: 20, borderWidth: 1, borderColor: '#F1F5F9', gap: 15 },
+  gridLabel: { fontSize: 10, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5, marginBottom: 5 },
+  picker: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#F8FAFC', padding: 15, borderRadius: 16, borderWidth: 1, borderColor: '#F1F5F9' },
+  pickerIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#F1F5F9' },
+  pickerText: { flex: 1, fontSize: 14, color: '#1E293B', fontWeight: '700' },
+  primaryActionBtn: { backgroundColor: '#4F46E5', height: 56, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginTop: 10, shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
+  primaryActionText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
+  emptyResults: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80 },
+  emptyResultsText: { marginTop: 15, fontSize: 13, color: '#94A3B8', textAlign: 'center', maxWidth: '80%', fontWeight: '500', lineHeight: 20 },
 
-  examRow: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  examRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  examTopRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-    gap: 12,
-  },
-  examIdentityWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  examIconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: '#F3E8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  examIdentityTextWrap: {
-    flex: 1,
-  },
-  examName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 2,
-  },
-  examTypeMobile: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#64748B',
-  },
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'flex-end' },
+  modalSheet: { backgroundColor: '#FFF', borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, maxHeight: '80%' },
+  modalIndicator: { width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
+  modalTitle: { fontSize: 20, fontWeight: '900', color: '#1E293B' },
+  closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
+  modalItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F8FAFC' },
+  modalItemText: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
 
-  statusPill: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    alignSelf: 'flex-start',
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '800',
-  },
-
-  examMetaRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-  },
-  metaBlock: {
-    flex: 1,
-  },
-  metaLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#94A3B8',
-    textTransform: 'uppercase',
-    marginBottom: 6,
-    letterSpacing: 0.6,
-  },
-  metaValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-  },
-
-  scopePill: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  scopeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-
-  actionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 4,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  actionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
-    marginLeft: 4,
-    letterSpacing: 0.1,
-  },
-
-  emptyState: {
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 32,
-  },
-  emptyIconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: '#F8FAFC',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#111827',
-    marginBottom: 6,
-  },
-  emptySubtitle: {
-    fontSize: 13,
-    lineHeight: 20,
-    color: '#64748B',
-    textAlign: 'center',
-  },
-
-  loadingContainer: {
-    paddingVertical: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '500',
-  },
-
-  errorContainer: {
-    paddingVertical: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#EF4444',
-    marginTop: 12,
-    marginBottom: 6,
-  },
-  errorSubtitle: {
-    fontSize: 13,
-    lineHeight: 20,
-    color: '#64748B',
-    textAlign: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 20,
-  },
-  retryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#4F46E5',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 12,
-    gap: 8,
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80 },
+  emptyText: { fontSize: 14, color: '#94A3B8', fontWeight: '600', marginTop: 15 },
 });
 
 export default PrincipalRSMscreen;

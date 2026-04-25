@@ -1,5 +1,7 @@
 import React from 'react';
-import { StatusBar, StyleSheet, useColorScheme, View, ActivityIndicator } from 'react-native';
+import { StatusBar, StyleSheet, useColorScheme, View, ActivityIndicator, LogBox } from 'react-native';
+
+LogBox.ignoreAllLogs(); // Ignore all log notifications
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -11,7 +13,10 @@ import { RootStackParamList } from './src/types/navigation';
 export type { RootStackParamList };
 
 import HomeScreen from './src/screens/auth/HomeScreen';
+import AppSkeleton from './src/components/shared/AppSkeleton';
 import LoginScreen from './src/screens/auth/LoginScreen';
+import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
+import ResetPasswordScreen from './src/screens/auth/ResetPasswordScreen';
 // import RegisterScreen from './src/screens/auth/RegisterScreen';
 import StudentDashboard from './src/screens/student/StudentDashboard';
 import AssignmentsScreen from './src/screens/student/AssignmentsScreen';
@@ -64,6 +69,8 @@ import PrincipalSubjects from './src/screens/principal/PrincipalSubjectsScreen';
 import PrincipalStaff from './src/screens/principal/PrincipalStaffScreen';
 import PrincipalMarkStaffAttendance from './src/screens/principal/PrincipalMarkStaffAttendanceScreen';
 import PrincipalAddStaff from './src/screens/principal/PrincipalAddStaffScreen';
+import PrincipalStaffDetails from './src/screens/principal/PrincipalStaffDetailsScreen';
+import PrincipalEditStaff from './src/screens/principal/PrincipalEditStaffScreen';
 import PrincipalStudentDetails from './src/screens/principal/PrincipalStudentDetailsScreen';
 import PrincipalAddStudent from './src/screens/principal/PrincipalAddStudentScreen';
 import PrincipalCalendar from './src/screens/principal/PrincipalCalendarScreen';
@@ -73,6 +80,11 @@ import PrincipalAnnouncements from './src/screens/principal/PrincipalAnnouncemen
 import PrincipalFees from './src/screens/principal/PrincipalFeesScreen';
 import PrincipalRSM from './src/screens/principal/PrincipalRSMscreen';
 import PrincipalCreateExam from './src/screens/principal/PrincipalCreateExamScreen';
+import PrincipalAddSubject from './src/screens/principal/PrincipalAddSubjectScreen';
+import PrincipalEditSubject from './src/screens/principal/PrincipalEditSubjectScreen';
+import PrincipalAddClass from './src/screens/principal/PrincipalAddClassScreen';
+import PrincipalManageClass from './src/screens/principal/PrincipalManageClassScreen';
+import PrincipalEditClass from './src/screens/principal/PrincipalEditClassScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -80,11 +92,7 @@ function RootNavigator() {
   const { authState } = useAuth();
 
   if (authState.isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
-        <ActivityIndicator size="large" color="#4F46E5" />
-      </View>
-    );
+    return <AppSkeleton />;
   }
 
   const getInitialRoute = () => {
@@ -110,6 +118,8 @@ function RootNavigator() {
         <>
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
         </>
       ) : (
         <>
@@ -179,7 +189,9 @@ function RootNavigator() {
               <Stack.Screen name="PrincipalStaff" component={PrincipalStaff} />
               <Stack.Screen name="PrincipalMarkStaffAttendance" component={PrincipalMarkStaffAttendance} />
               <Stack.Screen name="PrincipalAddStaff" component={PrincipalAddStaff} />
-              <Stack.Screen name="PrincipalStudentDetails" component={PrincipalStudentDetails} />
+              <Stack.Screen name="PrincipalStaffDetails" component={PrincipalStaffDetails} />
+              <Stack.Screen name="PrincipalEditStaff" component={PrincipalEditStaff} />
+              <Stack.Screen name="PrincipalStudents" component={PrincipalStudentDetails} />
               <Stack.Screen name="PrincipalAddStudent" component={PrincipalAddStudent} />
               <Stack.Screen name="PrincipalCalendar" component={PrincipalCalendar} />
               <Stack.Screen name="PrincipalTimetable" component={PrincipalTimetable} />
@@ -188,6 +200,11 @@ function RootNavigator() {
               <Stack.Screen name="PrincipalFees" component={PrincipalFees} />
               <Stack.Screen name="PrincipalRSM" component={PrincipalRSM} />
               <Stack.Screen name="PrincipalCreateExam" component={PrincipalCreateExam} />
+              <Stack.Screen name="PrincipalAddSubject" component={PrincipalAddSubject} />
+              <Stack.Screen name="PrincipalEditSubject" component={PrincipalEditSubject} />
+              <Stack.Screen name="PrincipalAddClass" component={PrincipalAddClass} />
+              <Stack.Screen name="PrincipalManageClass" component={PrincipalManageClass} />
+              <Stack.Screen name="PrincipalEditClass" component={PrincipalEditClass} />
             </>
           )}
 

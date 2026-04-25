@@ -9,26 +9,22 @@ import {
   TextInput,
   StatusBar,
   ScrollView,
-  Alert,
 } from 'react-native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Svg, { LinearGradient, Stop, Defs, Rect, Path, Circle } from 'react-native-svg';
 import FadeInView from '../../components/animations/FadeInView';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { RootStackParamList } from '../../types/navigation';
-import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../store/ToastContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
-
-
 
 const ChevronBackIcon = ({ width = 18, height = 18 }) => (
   <Svg width={width} height={height} viewBox="0 0 24 24" fill="none" stroke="#FFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <Path d="M15.75 19.5L8.25 12l7.5-7.5" />
   </Svg>
 );
-
 
 const EyeIcon = ({ show }: { show: boolean }) => (
   <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -38,77 +34,57 @@ const EyeIcon = ({ show }: { show: boolean }) => (
   </Svg>
 );
 
-type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'ResetPassword'>;
+type ScreenRouteProp = RouteProp<RootStackParamList, 'ResetPassword'>;
 
-interface Props {
-  navigation: LoginScreenNavigationProp;
-}
-
-const LoginScreen: React.FC<Props> = ({ navigation }) => {
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const { login } = useAuth();
+const ResetPasswordScreen = () => {
+  const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<ScreenRouteProp>();
   const { showToast } = useToast();
 
+  const [email, setEmail] = useState(route.params?.email || '');
+  const [code, setCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLogin = async () => {
-    if (!identifier || !password) {
-      showToast('Please enter both email / student ID and password', 'warning');
+  const handleReset = async () => {
+    if (!email || !code || !newPassword || !confirmPassword) {
+      showToast('Please fill in all fields', 'warning');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      showToast('Passwords do not match', 'error');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const response = await apiClient.post(ENDPOINTS.AUTH.LOGIN, {
-        identifier: identifier.trim(),
-        password,
+      const response = await apiClient.post(ENDPOINTS.AUTH.RESET_PASSWORD, {
+        email: email.trim(),
+        token: code.trim(),
+        newPassword
       });
-
-      // Handle standardized response format
-      if (!response.data.success) {
-        throw new Error(response.data.message || 'Login failed');
+      
+      if (response.data.success) {
+        showToast('Success! Your password has been reset.', 'success');
+        navigation.navigate('Login');
       }
-
-      const payload = response.data.data;
-      if (!payload || !payload.tokens || !payload.tokens.accessToken) {
-        throw new Error('Invalid login response from server');
-      }
-
-      const { tokens, user } = payload;
-
-      let appRole: 'student' | 'teacher' | 'principal' = 'student';
-      const backendRole = user.role;
-      if (backendRole === 'TEACHER' || backendRole === 'STAFF') appRole = 'teacher';
-      else if (backendRole === 'INSTITUTION_ADMIN' || backendRole === 'CENTRAL_ADMIN' || backendRole === 'PRINCIPAL') appRole = 'principal';
-
-      showToast('Login successful! Welcome back.', 'success');
-      login(tokens.accessToken, tokens.refreshToken, appRole, user);
     } catch (error: any) {
-      console.error('Login Error:', error);
-      let message = 'Something went wrong. Please try again.';
-      
-      if (error.response?.data?.message) {
-        message = error.response.data.message;
-      } else if (error.message) {
-        message = error.message;
-      }
-      
-      // Only show first 100 chars to keep toast readable
-      const displayMessage = message.length > 100 ? message.substring(0, 97) + '...' : message;
-      showToast(displayMessage, 'error');
+      const message = error.response?.data?.message || 'Failed to reset password. Please try again.';
+      showToast(message, 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      {/* Absolute SVG Gradient Background matching target shade EXACTLY */}
+      {/* Absolute SVG Gradient Background matching LoginScreen */}
       <View style={StyleSheet.absoluteFill}>
         <Svg height="100%" width="100%">
           <Defs>
@@ -123,7 +99,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       </View>
 
       <FadeInView delay={100} duration={400} translateYStart={-10} style={styles.backButtonContainer}>
-        <ScaleButton style={styles.backButton} onPress={() => navigation.navigate('Home' as never)} activeOpacity={0.7} scaleTo={0.92}>
+        <ScaleButton style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.7} scaleTo={0.92}>
           <View style={styles.backIconSvg}>
             <ChevronBackIcon width={20} height={20} />
           </View>
@@ -137,7 +113,8 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         <ScrollView contentContainerStyle={styles.scrollContent} bounces={false} showsVerticalScrollIndicator={false}>
 
           <FadeInView delay={200} duration={500}>
-            <Text style={styles.title}>Welcome, Glad to see you!</Text>
+            <Text style={styles.title}>Reset Password</Text>
+            <Text style={styles.subtitle}>Choose a new secure password</Text>
           </FadeInView>
 
           <FadeInView delay={300} duration={500} translateYStart={30}>
@@ -146,11 +123,11 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    placeholder="Email or Student ID"
+                    placeholder="Verification Code"
                     placeholderTextColor="#A0AEC0"
-                    autoCapitalize="none"
-                    value={identifier}
-                    onChangeText={setIdentifier}
+                    keyboardType="number-pad"
+                    value={code}
+                    onChangeText={setCode}
                   />
                 </View>
               </FadeInView>
@@ -158,49 +135,41 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
               <FadeInView delay={500}>
                 <View style={styles.inputContainer}>
                   <TextInput
-                    style={styles.passwordInput}
-                    placeholder="Password"
+                    style={styles.input}
+                    placeholder="New Password"
                     placeholderTextColor="#A0AEC0"
                     secureTextEntry={!showPassword}
-                    value={password}
-                    onChangeText={setPassword}
+                    value={newPassword}
+                    onChangeText={setNewPassword}
                   />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    style={styles.eyeBtn}>
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
                     <EyeIcon show={showPassword} />
                   </TouchableOpacity>
                 </View>
               </FadeInView>
 
               <FadeInView delay={550}>
-                <TouchableOpacity 
-                  style={styles.forgotContainer}
-                  onPress={() => navigation.navigate('ForgotPassword' as never)}>
-                  <Text style={styles.forgotText}>Forgot Password?</Text>
-                </TouchableOpacity>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Confirm New Password"
+                    placeholderTextColor="#A0AEC0"
+                    secureTextEntry={!showPassword}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                  />
+                </View>
               </FadeInView>
 
               <FadeInView delay={600}>
                 <ScaleButton 
-                  style={[styles.loginButton, isSubmitting && { opacity: 0.7 }]} 
-                  onPress={handleLogin} 
+                  style={[styles.button, isSubmitting && { opacity: 0.7 }]} 
+                  onPress={handleReset} 
                   disabled={isSubmitting}
                   activeOpacity={0.85}>
-                  <Text style={styles.loginButtonText}>{isSubmitting ? 'Loading...' : 'Login'}</Text>
+                  <Text style={styles.buttonText}>{isSubmitting ? 'Resetting...' : 'Reset Password'}</Text>
                 </ScaleButton>
               </FadeInView>
-
-
-              {/* <FadeInView delay={900}>
-                <View style={styles.bottomRow}>
-                  <Text style={styles.bottomText}>Don't have an account? </Text>
-                  <TouchableOpacity onPress={() => navigation?.navigate('Register')}>
-                    <Text style={styles.signUpText}>Sign Up Now</Text>
-                  </TouchableOpacity>
-                </View>
-              </FadeInView> */}
             </View>
           </FadeInView>
         </ScrollView>
@@ -249,8 +218,14 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
     letterSpacing: -0.3,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginBottom: 24,
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -280,53 +255,23 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     height: '100%',
   },
-  passwordInput: {
-    flex: 1,
-    fontSize: 15,
-    color: '#1F2937',
-    height: '100%',
-  },
   eyeBtn: {
     paddingLeft: 10,
   },
-  forgotContainer: {
-    alignSelf: 'flex-end',
-    marginBottom: 20,
-    marginTop: 0,
-  },
-  forgotText: {
-    fontSize: 14,
-    color: '#6366F1',
-    fontWeight: '600',
-  },
-  loginButton: {
+  button: {
     width: '100%',
     height: 56,
     backgroundColor: '#6366F1',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginTop: 8,
   },
-  loginButtonText: {
+  buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
   },
-  bottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bottomText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  signUpText: {
-    fontSize: 14,
-    color: '#6366F1',
-    fontWeight: '700',
-  },
 });
 
-export default LoginScreen;
+export default ResetPasswordScreen;

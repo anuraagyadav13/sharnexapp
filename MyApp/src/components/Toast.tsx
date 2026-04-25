@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, Text, View, Dimensions, Platform } from 'react-native';
+import { StyleSheet, Text, View, Dimensions, Platform, TouchableOpacity } from 'react-native';
 import Animated, { 
   FadeInUp, 
   FadeOutUp, 
@@ -22,9 +22,10 @@ interface ToastProps {
   type: ToastType;
   onHide: () => void;
   duration?: number;
+  onUndo?: () => void;
 }
 
-const Toast: React.FC<ToastProps> = ({ message, type, onHide, duration = 3000 }) => {
+const Toast: React.FC<ToastProps> = ({ message, type, onHide, duration = 3000, onUndo }) => {
   const insets = useSafeAreaInsets();
   
   useEffect(() => {
@@ -69,6 +70,11 @@ const Toast: React.FC<ToastProps> = ({ message, type, onHide, duration = 3000 })
           <Text style={styles.title}>{type.charAt(0).toUpperCase() + type.slice(1)}</Text>
           <Text style={styles.message}>{message}</Text>
         </View>
+        {onUndo && (
+          <TouchableOpacity onPress={() => { onUndo(); onHide(); }} style={styles.undoBtn}>
+            <Text style={styles.undoText}>UNDO</Text>
+          </TouchableOpacity>
+        )}
         <Ionicons name="close" size={20} color="#94A3B8" onPress={onHide} />
       </View>
     </Animated.View>
@@ -118,6 +124,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     lineHeight: 18,
   },
+  undoBtn: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#F1F5F9', borderRadius: 8, marginRight: 8 },
+  undoText: { fontSize: 11, fontWeight: '800', color: '#4F46E5' },
 });
 
 export default Toast;

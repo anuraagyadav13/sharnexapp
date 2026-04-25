@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,344 +7,247 @@ import {
   TouchableOpacity,
   Platform,
   StatusBar,
+  TextInput,
+  ActivityIndicator,
+  Dimensions,
 } from 'react-native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RouteProp } from '@react-navigation/native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { RootStackParamList } from '../../types/navigation';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 
-type PrincipalReviewExamNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  'PrincipalReviewExam'
->;
-type PrincipalReviewExamRouteProp = RouteProp<RootStackParamList, 'PrincipalReviewExam'>;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-interface Props {
-  navigation: PrincipalReviewExamNavigationProp;
-  route: PrincipalReviewExamRouteProp;
-}
+const PrincipalReviewExamScreen = ({ navigation, route }: any) => {
+  const { examId } = route.params || { examId: '1' };
+  const { authState } = useAuth();
+  const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-const PrincipalReviewExamScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { examId } = route.params;
-  const [isDrawerOpen, setDrawerOpen] = React.useState(false);
-
-  // Mock exam data - in real app, fetch by examId
+  // Mock data for review
   const exam = {
-    id: examId,
-    name: 'Unit Test',
-    type: 'UNIT_TEST',
+    name: 'Final Term Examination',
+    type: 'Subjective',
     year: '2026',
-    scope: '1 Classes',
-    status: 'ACTIVE' as const,
+    status: 'PENDING REVIEW',
+    totalStudents: 45,
+    submitted: 42,
+    avgScore: '78%',
   };
+
+  const students = [
+    { id: 's1', name: 'Arjun Mehta', roll: '101', score: '88/100', status: 'SUBMITTED' },
+    { id: 's2', name: 'Priya Sharma', roll: '102', score: '92/100', status: 'SUBMITTED' },
+    { id: 's3', name: 'Karan Singh', roll: '103', score: '45/100', status: 'FLAGGED' },
+    { id: 's4', name: 'Sanya Iyer', roll: '104', score: '76/100', status: 'SUBMITTED' },
+  ];
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFF" translucent />
 
-      <View style={styles.topHeader}>
-        <ScaleButton
-          style={styles.menuHandle}
-          onPress={() => setDrawerOpen(true)}
-          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-          activeOpacity={0.7}
-          scaleTo={0.85}
-        >
-          <Ionicons name="menu" size={26} color="#111827" />
+      {/* Global Header - Student Pattern */}
+      <View style={styles.globalHeader}>
+        <ScaleButton onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={28} color="#4F46E5" />
         </ScaleButton>
-
-        <Text style={styles.topHeaderTitle} numberOfLines={1}>
-          Review: {exam.name}
-        </Text>
-
+        <Text style={styles.headerTitle} numberOfLines={1}>Audit Assessment</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.iconBtnTransparent}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={20} color="#111827" />
+           <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}>
+            <View style={styles.avatarHeader}>
+              <Text style={styles.avatarTextHeader}>{authState.user?.name?.charAt(0) || 'A'}</Text>
+            </View>
           </TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={styles.scrollContent} 
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View entering={FadeInUp.duration(300)} style={styles.pageTitleContainer}>
-          <Text style={styles.pageTitle}>Exam Review</Text>
-          <Text style={styles.pageSubtitle}>
-            Review marks and performance for {exam.name}
-          </Text>
+        <View style={styles.pageHeader}>
+          <Text style={styles.screenTitle}>Submission Review</Text>
+          <Text style={styles.screenSubtitle}>Validate faculty entries, audit flagged inconsistencies, and authorize certification.</Text>
+        </View>
+
+        {/* Premium Audit Hero */}
+        <Animated.View entering={FadeInUp.duration(400)} style={styles.heroCard}>
+            <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
+              <Defs>
+                <SvgLinearGradient id="auditGrad" x1="0" y1="0" x2="1" y2="1">
+                  <Stop offset="0" stopColor="#6366F1" stopOpacity="1" />
+                  <Stop offset="1" stopColor="#4F46E5" stopOpacity="1" />
+                </SvgLinearGradient>
+              </Defs>
+              <Rect width="100%" height="100%" fill="url(#auditGrad)" rx={32} ry={32} />
+            </Svg>
+            <View style={styles.heroContent}>
+               <View style={styles.heroTop}>
+                  <View style={styles.heroIconBox}>
+                     <MaterialCommunityIcons name="file-check-outline" size={28} color="#FFF" />
+                  </View>
+                  <View style={styles.heroMainText}>
+                     <Text style={styles.heroName}>{exam.name}</Text>
+                     <Text style={styles.heroMeta}>{exam.type} • {exam.year}</Text>
+                  </View>
+                  <View style={styles.heroStatus}>
+                     <Text style={styles.heroStatusText}>{exam.status}</Text>
+                  </View>
+               </View>
+               
+               <View style={styles.heroStats}>
+                  <View style={styles.hStat}>
+                     <Text style={styles.hStatVal}>{exam.totalStudents}</Text>
+                     <Text style={styles.hStatLab}>SCHOLARS</Text>
+                  </View>
+                  <View style={styles.hStat}>
+                     <Text style={styles.hStatVal}>{exam.submitted}</Text>
+                     <Text style={styles.hStatLab}>ENTRIES</Text>
+                  </View>
+                  <View style={styles.hStat}>
+                     <Text style={styles.hStatVal}>{exam.avgScore}</Text>
+                     <Text style={styles.hStatLab}>MEAN SCORE</Text>
+                  </View>
+               </View>
+            </View>
         </Animated.View>
 
-        <Animated.View entering={FadeInUp.duration(350).delay(80)} style={styles.examCard}>
-          <View style={styles.examHeader}>
-            <View style={styles.examIconBox}>
-              <Ionicons name="document-text" size={18} color="#A855F7" />
-            </View>
-            <View style={styles.examDetails}>
-              <Text style={styles.examName}>{exam.name}</Text>
-              <Text style={styles.examType}>{exam.type} • {exam.year}</Text>
-            </View>
-            <View style={[styles.statusPill, { backgroundColor: '#DCFCE7' }]}>
-              <Text style={[styles.statusText, { color: '#15803D' }]}>{exam.status}</Text>
-            </View>
-          </View>
+        {/* List Header */}
+        <View style={styles.listHeader}>
+           <Text style={styles.sectionTitle}>Scholastic Ledger</Text>
+           <TouchableOpacity style={styles.filterBtn}>
+              <Ionicons name="filter-outline" size={16} color="#4F46E5" />
+              <Text style={styles.filterText}>Show Flags</Text>
+           </TouchableOpacity>
+        </View>
 
-          <View style={styles.examMeta}>
-            <View style={styles.metaBlock}>
-              <Text style={styles.metaLabel}>Scope</Text>
-              <Text style={styles.metaValue}>{exam.scope}</Text>
-            </View>
-            <View style={styles.metaBlock}>
-              <Text style={styles.metaLabel}>Total Students</Text>
-              <Text style={styles.metaValue}>25</Text>
-            </View>
-            <View style={styles.metaBlock}>
-              <Text style={styles.metaLabel}>Submitted</Text>
-              <Text style={styles.metaValue}>23</Text>
-            </View>
-          </View>
-        </Animated.View>
-
-        <Animated.View entering={FadeInUp.duration(400).delay(120)} style={styles.studentsList}>
-          <Text style={styles.sectionTitle}>Student Marks</Text>
-
-          {/* Mock student entries */}
-          {[
-            { name: 'Alice Johnson', rollNo: '001', marks: '85/100', status: 'Approved' },
-            { name: 'Bob Smith', rollNo: '002', marks: '92/100', status: 'Approved' },
-            { name: 'Charlie Brown', rollNo: '003', marks: '78/100', status: 'Pending' },
-          ].map((student, index) => (
-            <View key={index} style={styles.studentRow}>
-              <View style={styles.studentInfo}>
-                <Text style={styles.studentName}>{student.name}</Text>
-                <Text style={styles.studentRoll}>Roll: {student.rollNo}</Text>
-              </View>
-              <Text style={styles.studentMarks}>{student.marks}</Text>
-              <View style={[styles.statusPill, {
-                backgroundColor: student.status === 'Approved' ? '#DCFCE7' : '#E0E7FF'
-              }]}>
-                <Text style={[styles.statusText, {
-                  color: student.status === 'Approved' ? '#15803D' : '#4338CA'
-                }]}>{student.status}</Text>
-              </View>
-            </View>
+        {/* Student List */}
+        <View style={styles.list}>
+          {students.map((student, index) => (
+            <Animated.View key={student.id} entering={FadeInUp.delay(index * 50)} style={styles.card}>
+               <View style={styles.studentRow}>
+                  <View style={styles.avatarBox}>
+                     <Text style={styles.avatarText}>{student.name.charAt(0)}</Text>
+                  </View>
+                  <View style={styles.studentInfo}>
+                     <Text style={styles.studentName}>{student.name}</Text>
+                     <Text style={styles.studentRoll}>ROLL NO: {student.roll}</Text>
+                  </View>
+                  <View style={styles.scoreBox}>
+                     <Text style={styles.scoreVal}>{student.score}</Text>
+                     {student.status === 'FLAGGED' ? (
+                       <View style={styles.flag}>
+                          <Ionicons name="alert-circle" size={12} color="#EF4444" />
+                          <Text style={styles.flagText}>FLAGGED</Text>
+                       </View>
+                     ) : (
+                       <View style={styles.check}>
+                          <Ionicons name="checkmark-circle" size={12} color="#10B981" />
+                          <Text style={styles.checkText}>VERIFIED</Text>
+                       </View>
+                     )}
+                  </View>
+                  <TouchableOpacity style={styles.nextBtn}>
+                     <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
+                  </TouchableOpacity>
+               </View>
+            </Animated.View>
           ))}
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={FadeInUp.duration(450).delay(180)} style={styles.actionsContainer}>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
-            <Text style={styles.actionButtonText}>Approve All</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#EF4444' }]}>
-            <Ionicons name="close-circle" size={18} color="#FFFFFF" />
-            <Text style={styles.actionButtonText}>Reject All</Text>
-          </TouchableOpacity>
-        </Animated.View>
+        {/* Multi-tier Actions */}
+        <View style={styles.actionGrid}>
+           <TouchableOpacity style={styles.rejectBtn}>
+              <MaterialCommunityIcons name="undo-variant" size={20} color="#EF4444" />
+              <Text style={styles.rejectText}>Return to Faculty</Text>
+           </TouchableOpacity>
+           <TouchableOpacity style={styles.approveBtn}>
+              <Text style={styles.approveText}>Authorize & Publish</Text>
+              <Ionicons name="shield-checkmark" size={20} color="#FFF" />
+           </TouchableOpacity>
+        </View>
+
       </ScrollView>
 
-      <NavigationDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        role="principal"
-      />
+      <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F3F4F6' },
+  mainContainer: { flex: 1, backgroundColor: '#FAFAFF' },
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 16, paddingBottom: 40 },
+  scrollContent: { paddingBottom: 60 },
 
-  topHeader: {
+  // Header - Student Pattern
+  globalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
-    paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
-    zIndex: 10,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-    marginBottom: 8,
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 30,
+    paddingBottom: 24,
+    backgroundColor: '#FAFAFF',
   },
-  menuHandle: { paddingRight: 4, paddingVertical: 8 },
-  topHeaderTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#4F46E5',
-    flex: 1,
-    textAlign: 'center',
-  },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconBtnTransparent: { justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { fontSize: 16, fontWeight: '500', color: '#4F46E5', flex: 1, textAlign: 'center', marginHorizontal: 10 },
+  headerRight: { flexDirection: 'row', alignItems: 'center' },
+  avatarHeader: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center' },
+  avatarTextHeader: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
-  pageTitleContainer: {
-    marginTop: 20,
-    marginBottom: 16,
-  },
-  pageTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#111827',
-    marginBottom: 6,
-  },
-  pageSubtitle: {
-    color: '#6B7280',
-    fontSize: 14,
-    fontWeight: '500',
-    lineHeight: 20,
-  },
+  pageHeader: { marginBottom: 20, paddingHorizontal: 20, marginTop: 10 },
+  screenTitle: { fontSize: 24, fontWeight: '800', color: '#3B82F6', marginBottom: 4 },
+  screenSubtitle: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
 
-  examCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    padding: 16,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.05,
-    shadowRadius: 20,
-    elevation: 4,
-    marginBottom: 16,
-  },
-  examHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  examIconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: '#F3E8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  examDetails: { flex: 1 },
-  examName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 2,
-  },
-  examType: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#64748B',
-  },
-  statusPill: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    alignSelf: 'flex-start',
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '800',
-  },
+  // Hero
+  heroCard: { height: 200, borderRadius: 32, marginHorizontal: 20, padding: 24, justifyContent: 'center', overflow: 'hidden' },
+  heroContent: { flex: 1 },
+  heroTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 25 },
+  heroIconBox: { width: 50, height: 50, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  heroMainText: { flex: 1, marginLeft: 15 },
+  heroName: { color: '#FFF', fontSize: 18, fontWeight: '800' },
+  heroMeta: { color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: '600', marginTop: 2 },
+  heroStatus: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
+  heroStatusText: { color: '#FFF', fontSize: 9, fontWeight: '900' },
+  heroStats: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 10 },
+  hStat: { alignItems: 'center' },
+  hStatVal: { color: '#FFF', fontSize: 22, fontWeight: '900' },
+  hStatLab: { color: 'rgba(255,255,255,0.7)', fontSize: 9, fontWeight: '800', marginTop: 4 },
 
-  examMeta: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  metaBlock: { flex: 1 },
-  metaLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#94A3B8',
-    textTransform: 'uppercase',
-    marginBottom: 6,
-    letterSpacing: 0.6,
-  },
-  metaValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-  },
+  // Section
+  listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 35, marginBottom: 15 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B' },
+  filterBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#EEF2FF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },
+  filterText: { fontSize: 11, fontWeight: '800', color: '#4F46E5' },
 
-  studentsList: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    padding: 16,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.05,
-    shadowRadius: 20,
-    elevation: 4,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 16,
-  },
-  studentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  studentInfo: { flex: 1 },
-  studentName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 2,
-  },
-  studentRoll: {
-    fontSize: 12,
-    color: '#64748B',
-  },
-  studentMarks: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginRight: 12,
-  },
+  // List
+  list: { paddingHorizontal: 20, gap: 12 },
+  card: { backgroundColor: '#FFF', borderRadius: 24, padding: 15, borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2 },
+  studentRow: { flexDirection: 'row', alignItems: 'center' },
+  avatarBox: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: 18, fontWeight: '800', color: '#94A3B8' },
+  studentInfo: { flex: 1, marginLeft: 15 },
+  studentName: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
+  studentRoll: { fontSize: 10, color: '#94A3B8', fontWeight: '800', marginTop: 4 },
+  scoreBox: { alignItems: 'flex-end', marginRight: 15 },
+  scoreVal: { fontSize: 16, fontWeight: '900', color: '#1E293B' },
+  flag: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  flagText: { fontSize: 9, fontWeight: '900', color: '#EF4444' },
+  check: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  checkText: { fontSize: 9, fontWeight: '900', color: '#10B981' },
+  nextBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
 
-  actionsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#7C3AED',
-    paddingVertical: 12,
-    borderRadius: 10,
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  actionButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-    marginLeft: 6,
-  },
+  // Actions
+  actionGrid: { paddingHorizontal: 20, marginTop: 40, gap: 12 },
+  approveBtn: { flex: 1, backgroundColor: '#4F46E5', height: 56, borderRadius: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8, gap: 10 },
+  approveText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
+  rejectBtn: { flex: 1, height: 56, borderRadius: 18, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#F1F5F9', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  rejectText: { color: '#EF4444', fontSize: 14, fontWeight: '700' },
 });
 
 export default PrincipalReviewExamScreen;

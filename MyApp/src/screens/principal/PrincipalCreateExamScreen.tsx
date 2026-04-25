@@ -8,455 +8,210 @@ import {
   Platform,
   StatusBar,
   TextInput,
+  KeyboardAvoidingView,
+  Alert,
+  ActivityIndicator,
+  Dimensions,
 } from 'react-native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Animated, { FadeInUp } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { RootStackParamList } from '../../types/navigation';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
+import ScaleButton from '../../components/animations/ScaleButton';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
-type PrincipalCreateExamNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  'PrincipalCreateExam'
->;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-interface Props {
-  navigation: PrincipalCreateExamNavigationProp;
-}
-
-const PrincipalCreateExamScreen: React.FC<Props> = ({ navigation }) => {
+const PrincipalCreateExamScreen = ({ navigation }: any) => {
+  const { authState } = useAuth();
   const [examName, setExamName] = useState('');
   const [examType, setExamType] = useState('MIDTERM');
-  const [academicYear, setAcademicYear] = useState('2026');
+  const [academicYear, setAcademicYear] = useState('2026-27');
   const [description, setDescription] = useState('');
-  const [status, setStatus] = useState('Save as Draft');
-  const [selectedClass, setSelectedClass] = useState('-- Select Class --');
-  const [selectedSubject, setSelectedSubject] = useState('Choose Subject');
-  const [maxMarks, setMaxMarks] = useState('100');
-  const [passMarks, setPassMarks] = useState('33');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleCreate = async () => {
+    if (!examName) {
+      Alert.alert('Configuration Error', 'Please define an official title for the examination.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      // Mock API logic
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      Alert.alert('Success', 'Examination definition has been published to the portal.');
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert('System Error', 'Failed to synchronize exam definition with the institutional database.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F3F4F6" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFF" translucent />
 
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <Animated.View entering={FadeInUp.duration(280)} style={styles.breadcrumbRow}>
-          <Text style={styles.breadcrumbMain}>RESULT MANAGEMENT</Text>
-          <Ionicons name="chevron-forward" size={14} color="#94A3B8" />
-          <Text style={styles.breadcrumbSub}>Create Exam</Text>
-        </Animated.View>
-
-        <Animated.View entering={FadeInUp.duration(320).delay(60)} style={styles.headerRow}>
-          <TouchableOpacity
-            style={styles.backButton}
-            activeOpacity={0.8}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={22} color="#64748B" />
+      {/* Global Header - Student Pattern */}
+      <View style={styles.globalHeader}>
+        <ScaleButton onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={28} color="#4F46E5" />
+        </ScaleButton>
+        <Text style={styles.headerTitle} numberOfLines={1}>Define Examination</Text>
+        <View style={styles.headerRight}>
+           <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}>
+            <View style={styles.avatarHeader}>
+              <Text style={styles.avatarTextHeader}>{authState.user?.name?.charAt(0) || 'A'}</Text>
+            </View>
           </TouchableOpacity>
+        </View>
+      </View>
 
-          <View style={styles.headerTextWrap}>
-            <Text style={styles.pageTitle}>Create New Exam</Text>
-            <Text style={styles.pageSubtitle}>
-              Define the academic scope and rules for this examination.
-            </Text>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          
+          <View style={styles.pageHeader}>
+            <Text style={styles.screenTitle}>Assessment Setup</Text>
+            <Text style={styles.screenSubtitle}>Configure examination lifecycle, grading parameters, and academic scope.</Text>
           </View>
-        </Animated.View>
 
-        <Animated.View entering={FadeInUp.duration(360).delay(120)} style={styles.card}>
-          <Text style={styles.cardTitle}>General Information</Text>
-
-          <View style={styles.divider} />
-
-          <View style={styles.formGrid}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>EXAM NAME *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., Annual Examination 2024"
-                placeholderTextColor="#9CA3AF"
-                value={examName}
-                onChangeText={setExamName}
-              />
+          <Animated.View entering={FadeInUp.duration(400)} style={styles.formSection}>
+            <View style={styles.sectionHeader}>
+               <Text style={styles.sectionTitle}>Basic Configuration</Text>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>EXAM TYPE *</Text>
-              <TouchableOpacity style={styles.selectBox} activeOpacity={0.85}>
-                <Text style={styles.selectValue}>{examType}</Text>
-                <Ionicons name="chevron-down" size={18} color="#374151" />
-              </TouchableOpacity>
+            <View style={styles.field}>
+               <Text style={styles.label}>OFFICIAL EXAM TITLE</Text>
+               <View style={styles.premiumInputBox}>
+                  <MaterialCommunityIcons name="file-certificate-outline" size={20} color="#94A3B8" />
+                  <TextInput 
+                    style={styles.premiumInput} 
+                    placeholder="e.g. Annual Final Term 2026" 
+                    placeholderTextColor="#94A3B8"
+                    value={examName}
+                    onChangeText={setExamName}
+                  />
+               </View>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>ACADEMIC YEAR *</Text>
-              <TextInput
-                style={styles.input}
-                value={academicYear}
-                onChangeText={setAcademicYear}
-                placeholder="2026"
-                placeholderTextColor="#9CA3AF"
-              />
+            <View style={styles.inputRow}>
+               <View style={[styles.field, { flex: 1 }]}>
+                  <Text style={styles.label}>ASSESSMENT TYPE</Text>
+                  <TouchableOpacity style={styles.picker}>
+                     <Text style={styles.pickerText}>{examType}</Text>
+                     <Ionicons name="chevron-down" size={18} color="#94A3B8" />
+                  </TouchableOpacity>
+               </View>
+               <View style={[styles.field, { flex: 1 }]}>
+                  <Text style={styles.label}>ACADEMIC YEAR</Text>
+                  <TextInput 
+                    style={styles.premiumInputMinimal} 
+                    value={academicYear}
+                    onChangeText={setAcademicYear}
+                  />
+               </View>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>DESCRIPTION</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Optional notes or context"
-                placeholderTextColor="#9CA3AF"
-                value={description}
-                onChangeText={setDescription}
-              />
+            <View style={styles.field}>
+               <Text style={styles.label}>SCOPE & NOTES</Text>
+               <TextInput 
+                 style={[styles.premiumInputBox, styles.textArea]} 
+                 placeholder="Define the scope or add specific instructions for staff..." 
+                 placeholderTextColor="#94A3B8"
+                 multiline
+                 value={description}
+                 onChangeText={setDescription}
+               />
+            </View>
+          </Animated.View>
+
+          <Animated.View entering={FadeInUp.delay(100)} style={styles.formSection}>
+            <View style={styles.sectionHeader}>
+               <Text style={styles.sectionTitle}>Academic Mapping</Text>
+               <Text style={styles.sectionSubtitleSmall}>Synchronize participative classes and result thresholds.</Text>
             </View>
 
-            <View style={[styles.inputGroup, styles.fullWidth]}>
-              <Text style={styles.label}>INITIAL STATUS *</Text>
-              <TouchableOpacity style={styles.selectBox} activeOpacity={0.85}>
-                <Text style={styles.selectValue}>{status}</Text>
-                <Ionicons name="chevron-down" size={18} color="#374151" />
-              </TouchableOpacity>
-              <Text style={styles.helperText}>
-                Draft exams are hidden from teachers. Active exams are open for marks entry.
-              </Text>
-            </View>
-          </View>
-        </Animated.View>
-
-        <Animated.View entering={FadeInUp.duration(380).delay(180)} style={styles.mappingHeader}>
-          <Text style={styles.mappingTitle}>Academic Mapping</Text>
-          <TouchableOpacity style={styles.mappingAddButton} activeOpacity={0.85}>
-            <Ionicons name="add" size={16} color="#A855F7" />
-            <Text style={styles.mappingAddText}>Add Participating Class</Text>
-          </TouchableOpacity>
-        </Animated.View>
-
-        <Animated.View entering={FadeInUp.duration(420).delay(230)} style={styles.card}>
-          <View style={styles.participationRow}>
-            <View style={styles.mappingIconBox}>
-              <Ionicons name="school-outline" size={18} color="#A855F7" />
-            </View>
-
-            <View style={styles.participationFieldWrap}>
-              <Text style={styles.label}>PARTICIPATING CLASS</Text>
-              <TouchableOpacity style={styles.selectBox} activeOpacity={0.85}>
-                <Text style={styles.selectValue}>{selectedClass}</Text>
-                <Ionicons name="chevron-down" size={18} color="#374151" />
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity style={styles.trashButton} activeOpacity={0.8}>
-              <Ionicons name="trash-outline" size={18} color="#94A3B8" />
+            <TouchableOpacity style={styles.dashedBtn}>
+               <Ionicons name="add-circle-outline" size={22} color="#4F46E5" />
+               <Text style={styles.dashedBtnText}>Configure Participating Classes</Text>
             </TouchableOpacity>
+          </Animated.View>
+
+          <View style={styles.footerActions}>
+             <TouchableOpacity style={styles.secondaryBtn} onPress={() => navigation.goBack()}>
+                <Text style={styles.secondaryBtnText}>Cancel</Text>
+             </TouchableOpacity>
+             <TouchableOpacity 
+               style={[styles.primarySubmitBtn, isSubmitting && { opacity: 0.7 }]} 
+               onPress={handleCreate}
+               disabled={isSubmitting}
+             >
+                {isSubmitting ? <ActivityIndicator color="#FFF" /> : (
+                  <>
+                    <Text style={styles.primarySubmitText}>Publish Definition</Text>
+                    <Ionicons name="rocket-outline" size={20} color="#FFF" />
+                  </>
+                )}
+             </TouchableOpacity>
           </View>
 
-          <View style={styles.innerDivider} />
-
-          <View style={styles.subjectRow}>
-            <View style={[styles.inputGroup, styles.subjectField]}>
-              <Text style={styles.label}>SUBJECT</Text>
-              <TouchableOpacity style={styles.selectBox} activeOpacity={0.85}>
-                <Text style={styles.selectValue}>{selectedSubject}</Text>
-                <Ionicons name="chevron-down" size={18} color="#374151" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={[styles.inputGroup, styles.marksField]}>
-              <Text style={styles.label}>MAX MARKS</Text>
-              <TextInput
-                style={styles.input}
-                value={maxMarks}
-                onChangeText={setMaxMarks}
-                keyboardType="numeric"
-              />
-            </View>
-
-            <View style={[styles.inputGroup, styles.marksField]}>
-              <Text style={styles.label}>PASS MARKS</Text>
-              <TextInput
-                style={styles.input}
-                value={passMarks}
-                onChangeText={setPassMarks}
-                keyboardType="numeric"
-              />
-            </View>
-
-            <TouchableOpacity style={styles.subjectTrashButton} activeOpacity={0.8}>
-              <Ionicons name="trash-outline" size={18} color="#CBD5E1" />
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity style={styles.addSubjectButton} activeOpacity={0.85}>
-            <Ionicons name="add" size={16} color="#A855F7" />
-            <Text style={styles.addSubjectText}>Add Subject to Class</Text>
-          </TouchableOpacity>
-        </Animated.View>
-
-        <Animated.View entering={FadeInUp.duration(460).delay(280)} style={styles.footerActions}>
-          <TouchableOpacity
-            style={styles.cancelButton}
-            activeOpacity={0.85}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.submitButton} activeOpacity={0.9}>
-            <Text style={styles.submitButtonText}>Create Exam Definition</Text>
-            <Ionicons name="checkmark" size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-        </Animated.View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F3F4F6' },
+  mainContainer: { flex: 1, backgroundColor: '#FAFAFF' },
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 14, paddingTop: Platform.OS === 'ios' ? 56 : 20, paddingBottom: 40 },
+  scrollContent: { paddingBottom: 40 },
 
-  breadcrumbRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 18,
-  },
-  breadcrumbMain: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#64748B',
-    letterSpacing: 2,
-  },
-  breadcrumbSub: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
-  },
-
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  headerTextWrap: {
-    flex: 1,
-  },
-  pageTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  pageSubtitle: {
-    fontSize: 14,
-    color: '#4B5563',
-    lineHeight: 20,
-    fontWeight: '500',
-  },
-
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginBottom: 20,
-    overflow: 'hidden',
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.05,
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#111827',
-    paddingHorizontal: 16,
-    paddingTop: 18,
-    paddingBottom: 14,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  innerDivider: {
-    height: 1,
-    backgroundColor: '#E5E7EB',
-    marginBottom: 16,
-  },
-
-  formGrid: {
-    padding: 16,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  fullWidth: {
-    width: '100%',
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#64748B',
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
-  input: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    backgroundColor: '#FFFFFF',
-    color: '#111827',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  selectBox: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    backgroundColor: '#FFFFFF',
+  // Header - Student Pattern
+  globalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 30,
+    paddingBottom: 24,
+    backgroundColor: '#FAFAFF',
   },
-  selectValue: {
-    color: '#111827',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  helperText: {
-    marginTop: 8,
-    fontSize: 12,
-    lineHeight: 18,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
+  headerTitle: { fontSize: 16, fontWeight: '500', color: '#4F46E5', flex: 1, textAlign: 'center', marginHorizontal: 10 },
+  headerRight: { flexDirection: 'row', alignItems: 'center' },
+  avatarHeader: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center' },
+  avatarTextHeader: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
-  mappingHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
-  mappingTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  mappingAddButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  mappingAddText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#A855F7',
-    marginLeft: 6,
-  },
+  pageHeader: { marginBottom: 20, paddingHorizontal: 20, marginTop: 10 },
+  screenTitle: { fontSize: 24, fontWeight: '800', color: '#3B82F6', marginBottom: 4 },
+  screenSubtitle: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
 
-  participationRow: {
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  mappingIconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: '#F3E8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-    marginTop: 20,
-  },
-  participationFieldWrap: {
-    flex: 1,
-  },
-  trashButton: {
-    paddingLeft: 12,
-    paddingTop: 24,
-  },
+  // Form Sections
+  formSection: { paddingHorizontal: 20, marginTop: 32 },
+  sectionHeader: { marginBottom: 16 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B' },
+  sectionSubtitleSmall: { fontSize: 12, color: '#94A3B8', fontWeight: '600', marginTop: 4 },
+  
+  field: { marginBottom: 20 },
+  label: { fontSize: 10, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5, marginBottom: 8 },
+  premiumInputBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 16, paddingHorizontal: 16, height: 56, borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.02, shadowRadius: 8, elevation: 1 },
+  premiumInput: { flex: 1, marginLeft: 12, fontSize: 14, color: '#1E293B', fontWeight: '600' },
+  premiumInputMinimal: { backgroundColor: '#FFF', borderRadius: 16, paddingHorizontal: 16, height: 56, fontSize: 14, color: '#1E293B', fontWeight: '600', borderWidth: 1, borderColor: '#F1F5F9' },
+  inputRow: { flexDirection: 'row', gap: 15 },
+  textArea: { height: 120, alignItems: 'flex-start', paddingTop: 15 },
+  
+  picker: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 16, paddingHorizontal: 16, height: 56, borderWidth: 1, borderColor: '#F1F5F9' },
+  pickerText: { fontSize: 14, color: '#1E293B', fontWeight: '700' },
 
-  subjectRow: {
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-  },
-  subjectField: {
-    width: '100%',
-  },
-  marksField: {
-    width: '48%',
-  },
-  subjectTrashButton: {
-    alignSelf: 'flex-end',
-    marginTop: -6,
-    paddingVertical: 8,
-  },
+  dashedBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF2FF', height: 60, borderRadius: 18, borderStyle: 'dashed', borderWidth: 1, borderColor: '#4F46E5', gap: 10, marginTop: 10 },
+  dashedBtnText: { color: '#4F46E5', fontSize: 14, fontWeight: '800' },
 
-  addSubjectButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 18,
-  },
-  addSubjectText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#A855F7',
-    marginLeft: 6,
-  },
-
-  footerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 12,
-    marginTop: 6,
-  },
-  cancelButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  cancelButtonText: {
-    color: '#374151',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  submitButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#7C3AED',
-    borderRadius: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 14,
-    elevation: 5,
-  },
-  submitButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '800',
-    marginRight: 8,
-  },
+  // Footer
+  footerActions: { flexDirection: 'row', paddingHorizontal: 20, gap: 15, marginTop: 40 },
+  secondaryBtn: { flex: 0.35, height: 56, borderRadius: 18, borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF' },
+  secondaryBtnText: { color: '#64748B', fontWeight: '700', fontSize: 15 },
+  primarySubmitBtn: { flex: 1, backgroundColor: '#4F46E5', height: 56, borderRadius: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 6, gap: 8 },
+  primarySubmitText: { color: '#FFF', fontWeight: '800', fontSize: 16 },
 });
 
 export default PrincipalCreateExamScreen;

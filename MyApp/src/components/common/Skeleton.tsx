@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
-import { View, StyleSheet, ViewStyle, DimensionValue } from 'react-native';
+import React from 'react';
+import { View, StyleSheet, DimensionValue, ViewStyle } from 'react-native';
 import Animated, { 
   useAnimatedStyle, 
   useSharedValue, 
   withRepeat, 
   withTiming, 
-  interpolate 
+  withSequence,
 } from 'react-native-reanimated';
 
 interface SkeletonProps {
@@ -15,17 +15,24 @@ interface SkeletonProps {
   style?: ViewStyle;
 }
 
+/**
+ * Spotify-style Simple Pulse Skeleton.
+ * Clean, lightweight, and professional.
+ */
 const Skeleton: React.FC<SkeletonProps> = ({ 
   width = '100%', 
   height = 20, 
-  borderRadius = 4,
+  borderRadius = 8,
   style 
 }) => {
-  const opacity = useSharedValue(0.3);
+  const opacity = useSharedValue(0.4);
 
-  useEffect(() => {
+  React.useEffect(() => {
     opacity.value = withRepeat(
-      withTiming(0.7, { duration: 1000 }),
+      withSequence(
+        withTiming(0.7, { duration: 800 }),
+        withTiming(0.4, { duration: 800 })
+      ),
       -1,
       true
     );
@@ -51,7 +58,7 @@ const Skeleton: React.FC<SkeletonProps> = ({
 
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: '#E2E8F0', // slate-200
+    backgroundColor: '#E5E7EB', // Soft gray (Gray-200)
   },
 });
 

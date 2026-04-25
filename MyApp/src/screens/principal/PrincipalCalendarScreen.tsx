@@ -9,984 +9,271 @@ import {
   StatusBar,
   Modal,
   TextInput,
-  ActivityIndicator
+  ActivityIndicator,
+  RefreshControl,
+  Dimensions,
 } from 'react-native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../types/navigation';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import Animated, { FadeInUp } from 'react-native-reanimated';
-import { NavigationDrawer } from '../../components/NavigationDrawer';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
+import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
+import Skeleton from '../../components/common/Skeleton';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 
-type PrincipalCalendarNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PrincipalCalendar'>;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-interface Props {
-  navigation: PrincipalCalendarNavigationProp;
-}
+const PageSkeleton = () => (
+  <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <View style={styles.pageHeader}>
+      <Skeleton width="40%" height={24} style={{ marginBottom: 8 }} />
+      <Skeleton width="60%" height={16} />
+    </View>
+    <View style={{ marginTop: 20 }}>
+      <Skeleton width="100%" height={160} borderRadius={24} />
+    </View>
+    <View style={{ marginTop: 30 }}>
+      {[1, 2, 3].map(i => <Skeleton key={i} width="100%" height={80} borderRadius={20} style={{ marginBottom: 12 }} />)}
+    </View>
+  </ScrollView>
+);
 
-
-
-const PrincipalCalendarScreen: React.FC<Props> = ({ navigation }) => {
+const PrincipalCalendarScreen = ({ navigation }: any) => {
   const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
-  const [calendarData, setCalendarData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  useEffect(() => {
-    const fetchCalendarData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const currentDate = new Date();
-        const month = currentDate.getMonth() + 1;
-        const year = currentDate.getFullYear();
-        const res = await apiClient.get(`${ENDPOINTS.PRINCIPAL.CALENDAR}?month=${month}&year=${year}`);
-        const data = res.data.data || res.data;
-        setCalendarData(data);
-      } catch (err: any) {
-        console.error('Failed to fetch calendar data:', err);
-        setError('Failed to load calendar data');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchCalendarData();
-  }, []);
-  
-  // Modal states
-  const [isEventModalVisible, setEventModalVisible] = useState(false);
-  const [isHolidayModalVisible, setHolidayModalVisible] = useState(false);
-  const [isExamModalVisible, setExamModalVisible] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [calendarData, setCalendarData] = useState<any>(null);
 
-  // Selection states
-  const [selectedEventType, setSelectedEventType] = useState('Academic');
-  const [selectedEventGrade, setSelectedEventGrade] = useState('All Grades');
-  const [selectedHolidayType, setSelectedHolidayType] = useState('National Holiday');
-  const [selectedExamType, setSelectedExamType] = useState('Mid-Term');
-  const [selectedExamGrade, setSelectedExamGrade] = useState('K-5');
-
-  // Calendar states
-  const [pickerState, setPickerState] = useState<{modal: string, field: string} | null>(null);
-  const [eventStartDate, setEventStartDate] = useState('');
-  const [eventEndDate, setEventEndDate] = useState('');
-  const [holidayStartDate, setHolidayStartDate] = useState('');
-  const [holidayEndDate, setHolidayEndDate] = useState('');
-  const [examStartDate, setExamStartDate] = useState('');
-  const [examEndDate, setExamEndDate] = useState('');
-
-  const handleDateSelect = (day: number) => {
-    const formattedDate = `03/${day.toString().padStart(2, '0')}/2025`;
-    if (!pickerState) return;
-    
-    if (pickerState.modal === 'Event') {
-      if (pickerState.field === 'start') setEventStartDate(formattedDate);
-      else setEventEndDate(formattedDate);
-    } else if (pickerState.modal === 'Holiday') {
-      if (pickerState.field === 'start') setHolidayStartDate(formattedDate);
-      else setHolidayEndDate(formattedDate);
-    } else if (pickerState.modal === 'Exam') {
-       // Mocking time for exam
-      if (pickerState.field === 'start') setExamStartDate(formattedDate + ' 10:00 AM');
-      else setExamEndDate(formattedDate + ' 12:30 PM');
+  const fetchData = async () => {
+    try {
+      if (!isRefreshing) setIsLoading(true);
+      const res = await apiClient.get(ENDPOINTS.PRINCIPAL.CALENDAR);
+      setCalendarData(res.normalized?.data || res.data.data || res.data);
+    } catch (error) {
+      console.error('Failed to fetch calendar:', error);
+      setCalendarData(null);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
-    setPickerState(null);
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const onRefresh = () => {
+    setIsRefreshing(true);
+    fetchData();
   };
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFF" translucent={false} />
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFF" translucent />
 
-      {/* Top Standard Header */}
-      <View style={styles.topHeader}>
-        <ScaleButton
-          style={styles.menuHandle}
-          onPress={() => setDrawerOpen(true)}
-          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-          activeOpacity={0.7}
-          scaleTo={0.85}
-        >
-          <Ionicons name="menu" size={26} color="#111827" />
+      {/* Global Header - Student Pattern */}
+      <View style={styles.globalHeader}>
+        <ScaleButton onPress={() => setDrawerOpen(true)}>
+          <Ionicons name="menu" size={28} color="#4F46E5" />
         </ScaleButton>
-
-        <Text style={styles.topHeaderTitle} numberOfLines={1}>
-          Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}
-        </Text>
-
+        <Text style={styles.headerTitle} numberOfLines={1}>Institution Calendar</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconBtnTransparent}><Ionicons name="notifications-outline" size={20} color="#111827" /></TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtnTransparent} onPress={() => navigation.navigate('AccountSettings')}><Ionicons name="settings-outline" size={20} color="#111827" /></TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtnTransparent}><Ionicons name="moon-outline" size={20} color="#111827" /></TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}><View style={styles.avatar}><Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text></View></TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}>
+            <View style={styles.avatarHeader}>
+              <Text style={styles.avatarTextHeader}>{authState.user?.name?.charAt(0) || 'A'}</Text>
+            </View>
+          </TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
-        {/* Page Titles */}
-        <View style={styles.pageTitleContainer}>
-          <Text style={styles.pageTitle}>School Calendar 2024-2025</Text>
-          <Text style={styles.pageSubtitle}>Academic schedule, holidays, exams & school events.</Text>
-        </View>
-
-        {/* 1. School Year Section */}
-        <View style={styles.sectionHeader}>
-          <Ionicons name="home" size={18} style={styles.sectionIcon} />
-          <Text style={styles.sectionTitle}>School Year 2024-2025</Text>
-        </View>
-
-        <Animated.View entering={FadeInUp.duration(300)} style={styles.card}>
-          <View style={styles.academicHeader}>
-            <Text style={styles.academicHeaderText}>Academic Overview</Text>
+      {isLoading && !isRefreshing ? (
+        <PageSkeleton />
+      ) : (
+        <ScrollView 
+          style={styles.container} 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+        >
+          <View style={styles.pageHeader}>
+            <Text style={styles.screenTitle}>Academic Roadmap</Text>
+            <Text style={styles.screenSubtitle}>Align institutional goals with the official academic timeline.</Text>
           </View>
-          {isLoading ? (
-            <ActivityIndicator size="small" color="#4F46E5" style={{ marginVertical: 20 }} />
-          ) : calendarData?.terms ? (
-            calendarData.terms.map((item: any, index: number) => (
-              <View key={index} style={[styles.termRow, index === calendarData.terms.length - 1 && { borderBottomWidth: 0 }]}>
-                <View>
-                  <Text style={styles.termTitle}>{item.title}</Text>
-                  <Text style={styles.termDate}>{item.date}</Text>
-                </View>
-                <View style={styles.daysBadge}>
-                  <Text style={styles.daysBadgeText}>{item.days}</Text>
+
+          {/* Hero Section - Modern Date Focus */}
+          <Animated.View entering={FadeInUp.duration(400)} style={styles.heroCard}>
+            <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
+              <Defs>
+                <SvgLinearGradient id="calGrad" x1="0" y1="0" x2="1" y2="1">
+                  <Stop offset="0" stopColor="#6366F1" stopOpacity="1" />
+                  <Stop offset="1" stopColor="#4F46E5" stopOpacity="1" />
+                </SvgLinearGradient>
+              </Defs>
+              <Rect width="100%" height="100%" fill="url(#calGrad)" rx={30} ry={30} />
+            </Svg>
+            <View style={styles.heroContent}>
+              <View style={styles.dateCircle}>
+                <Text style={styles.dateDay}>{new Date().getDate()}</Text>
+                <Text style={styles.dateMonth}>{new Date().toLocaleString('en-US', { month: 'short' }).toUpperCase()}</Text>
+              </View>
+              <View style={styles.heroInfo}>
+                <Text style={styles.heroTitle}>Institution Status</Text>
+                <Text style={styles.heroDesc}>Session 2025-26 is currently in Term 2. 85% curriculum completion tracked.</Text>
+                <View style={styles.heroBadge}>
+                   <View style={styles.pulseDot} />
+                   <Text style={styles.heroBadgeText}>LIVE OPERATIONS</Text>
                 </View>
               </View>
-            ))
-          ) : (
-            <Text style={styles.emptyText}>No academic terms found</Text>
-          )}
-        </Animated.View>
+            </View>
+          </Animated.View>
 
-        {/* 2. Upcoming Events Section */}
-        <View style={styles.sectionHeader}>
-          <Ionicons name="megaphone" size={18} style={styles.sectionIcon} />
-          <Text style={styles.sectionTitle}>Upcoming Events</Text>
-          <View style={styles.countBadge}><Text style={styles.countBadgeText}>6 events</Text></View>
-          <View style={{ flex: 1 }} />
-          <TouchableOpacity style={styles.newBtn} onPress={() => setEventModalVisible(true)}>
-            <Text style={styles.newBtnText}>+ New Event</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Animated.View entering={FadeInUp.duration(400)} style={styles.eventCard}>
-          <Text style={styles.eventTitle}>Science Fair</Text>
-          <Text style={styles.eventDate}>March 25, 2025</Text>
-          <Text style={styles.eventDesc}>Annual School science fair showcasing students projects.</Text>
-          <View style={styles.eventTagsRow}>
-            <View style={styles.eventTag}><Text style={styles.eventTagText}>K-5</Text></View>
-            <View style={styles.eventTag}><Text style={styles.eventTagText}>6-8</Text></View>
+          {/* Term Timeline */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Academic Terms</Text>
+            <TouchableOpacity><Text style={styles.viewAllText}>View History</Text></TouchableOpacity>
           </View>
-        </Animated.View>
 
-        {/* 3. School Holidays Section */}
-        <View style={styles.sectionHeader}>
-          <Ionicons name="umbrella" size={18} style={styles.sectionIcon} />
-          <Text style={styles.sectionTitle}>School Holidays</Text>
-          <View style={styles.countBadge}><Text style={styles.countBadgeText}>3 Holidays</Text></View>
-          <View style={{ flex: 1 }} />
-          <TouchableOpacity style={styles.newBtn} onPress={() => setHolidayModalVisible(true)}>
-            <Text style={styles.newBtnText}>+ New Holiday</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={styles.termList}>
+            {calendarData?.terms?.map((term: any, index: number) => (
+              <Animated.View key={index} entering={FadeInUp.delay(index * 100)} style={styles.termCard}>
+                <View style={[styles.termIndicator, { backgroundColor: term.status === 'ONGOING' ? '#4F46E5' : '#CBD5E1' }]} />
+                <View style={styles.termMain}>
+                  <Text style={styles.termTitle}>{term.title}</Text>
+                  <Text style={styles.termPeriod}>{term.date}</Text>
+                </View>
+                <View style={[styles.statusPill, { backgroundColor: term.status === 'ONGOING' ? '#EEF2FF' : '#F8FAFC' }]}>
+                  <Text style={[styles.statusText, { color: term.status === 'ONGOING' ? '#4F46E5' : '#94A3B8' }]}>{term.status}</Text>
+                </View>
+              </Animated.View>
+            ))}
+          </View>
 
-        <Animated.View entering={FadeInUp.duration(500)}>
-          {isLoading ? (
-            <ActivityIndicator size="small" color="#4F46E5" style={{ marginVertical: 20 }} />
-          ) : calendarData?.holidays ? (
-            calendarData.holidays.map((item: any, index: number) => (
+          {/* Events Grid */}
+          <View style={[styles.sectionHeader, { marginTop: 32 }]}>
+            <Text style={styles.sectionTitle}>Institutional Events</Text>
+            <TouchableOpacity style={styles.addEventBtn}><Text style={styles.addEventBtnText}>+ New</Text></TouchableOpacity>
+          </View>
+
+          <View style={styles.eventsGrid}>
+            {calendarData?.events?.map((event: any, index: number) => (
+              <TouchableOpacity key={event.id} style={styles.eventCard}>
+                <View style={[styles.eventCatBox, { backgroundColor: (event.color || '#4F46E5') + '15' }]}>
+                  <MaterialCommunityIcons name="star-outline" size={16} color={event.color || '#4F46E5'} />
+                  <Text style={[styles.eventCatText, { color: event.color || '#4F46E5' }]}>{event.category}</Text>
+                </View>
+                <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
+                <View style={styles.eventFooter}>
+                  <Ionicons name="time-outline" size={14} color="#94A3B8" />
+                  <Text style={styles.eventDate}>{event.date}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Holidays */}
+          <View style={[styles.sectionHeader, { marginTop: 32 }]}>
+            <Text style={styles.sectionTitle}>Public Holidays</Text>
+          </View>
+
+          <View style={styles.holidaysWrapper}>
+            {calendarData?.holidays?.map((holiday: any, index: number) => (
               <View key={index} style={styles.holidayCard}>
-                <View>
-                  <Text style={styles.holidayTitle}>{item.title}</Text>
-                  <Text style={styles.holidayDate}>{item.date}</Text>
+                <View style={styles.holidayIconBox}>
+                   <MaterialCommunityIcons name="calendar-heart" size={24} color="#F59E0B" />
                 </View>
-                <View style={styles.holidayBox}>
-                  <Text style={styles.holidayBoxNum}>{item.count}</Text>
-                  <Text style={styles.holidayBoxText}>Days</Text>
+                <View style={styles.holidayMain}>
+                  <Text style={styles.holidayName}>{holiday.title}</Text>
+                  <Text style={styles.holidayDateRange}>{holiday.date}</Text>
                 </View>
-              </View>
-            ))
-          ) : (
-            <Text style={styles.emptyText}>No holidays found</Text>
-          )}
-        </Animated.View>
-
-        {/* 4. Exam Schedule Section */}
-        <View style={styles.sectionHeader}>
-          <Ionicons name="document-text" size={18} style={styles.sectionIcon} />
-          <Text style={styles.sectionTitle}>Exam Schedule</Text>
-          <View style={styles.countBadge}><Text style={styles.countBadgeText}>3 Holidays</Text></View>
-          <View style={{ flex: 1 }} />
-          <TouchableOpacity style={styles.newBtn} onPress={() => setExamModalVisible(true)}>
-            <Text style={styles.newBtnText}>+ New Exam</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Animated.View entering={FadeInUp.duration(600)}>
-          {isLoading ? (
-            <ActivityIndicator size="small" color="#4F46E5" style={{ marginVertical: 20 }} />
-          ) : calendarData?.exams ? (
-            calendarData.exams.map((item: any, index: number) => (
-              <View key={index} style={styles.card}>
-                <View style={styles.examTopRow}>
-                  <View style={styles.examPill}>
-                    <Text style={styles.examPillText}>{item.term}</Text>
-                  </View>
-                  <Text style={styles.examDateRight}>{item.date}</Text>
-                </View>
-                
-                <View style={styles.examStatsRow}>
-                  <View style={[styles.examStatCol, { flex: 0.8 }]}>
-                    <Text style={styles.examStatLabel}>MARKS</Text>
-                    <Text style={styles.examStatValue}>{item.marks}</Text>
-                  </View>
-                  <View style={styles.verticalDivider} />
-                  <View style={[styles.examStatCol, { flex: 1.2 }]}>
-                    <Text style={styles.examStatLabel}>Subjects</Text>
-                    <Text style={styles.examStatValue}>{item.subjects}</Text>
-                  </View>
-                  <View style={styles.verticalDivider} />
-                  <View style={[styles.examStatCol, { flex: 1 }]}>
-                    <Text style={styles.examStatLabel}>Duration</Text>
-                    <Text style={styles.examStatValue}>{item.duration}</Text>
-                  </View>
+                <View style={styles.durationBadge}>
+                   <Text style={styles.durationText}>{holiday.days}d</Text>
                 </View>
               </View>
-            ))
-          ) : (
-            <Text style={styles.emptyText}>No exams scheduled</Text>
-          )}
-        </Animated.View>
+            ))}
+          </View>
 
-      </ScrollView>
+        </ScrollView>
+      )}
 
-      {/* Navigation Drawer */}
       <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
-
-
-      {/* --- ADD NEW EVENT MODAL --- */}
-      <Modal statusBarTranslucent={true} visible={isEventModalVisible} transparent animationType="fade" onRequestClose={() => setEventModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={[styles.modalHeader, { backgroundColor: '#1E293B' }]}>
-              <Text style={styles.modalTitle}>Add New Event</Text>
-              <TouchableOpacity onPress={() => setEventModalVisible(false)} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
-                <Ionicons name="close" size={24} color="#FFF" />
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView contentContainerStyle={styles.modalScroll}>
-              <Text style={styles.inputLabel}>Event Title</Text>
-              <TextInput style={styles.textInput} placeholder="e.g., Science Fair" placeholderTextColor="#9CA3AF" />
-
-              <View style={styles.formRow}>
-                <View style={styles.formCol}>
-                  <Text style={styles.inputLabel}>Start Date</Text>
-                  <TouchableOpacity 
-                    style={styles.dateInputWrapper}
-                    activeOpacity={0.7}
-                    onPress={() => setPickerState({ modal: 'Event', field: 'start' })}
-                  >
-                    <Text style={[styles.dateInputText, !eventStartDate && { color: '#9CA3AF' }]}>
-                      {eventStartDate || 'mm/dd/yyyy'}
-                    </Text>
-                    <Ionicons name="calendar-outline" size={16} color="#4B5563" />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.formCol}>
-                  <Text style={styles.inputLabel}>End Date</Text>
-                  <TouchableOpacity 
-                    style={styles.dateInputWrapper}
-                    activeOpacity={0.7}
-                    onPress={() => setPickerState({ modal: 'Event', field: 'end' })}
-                  >
-                    <Text style={[styles.dateInputText, !eventEndDate && { color: '#9CA3AF' }]}>
-                      {eventEndDate || 'mm/dd/yyyy'}
-                    </Text>
-                    <Ionicons name="calendar-outline" size={16} color="#4B5563" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <Text style={styles.inputLabel}>Event Type</Text>
-              <View style={styles.gridContainer}>
-                {[
-                  { id: 'Academic', icon: 'school' },
-                  { id: 'Sports', icon: 'trophy' },
-                  { id: 'Parents Meeting', icon: 'people' },
-                  { id: 'Special Event', icon: 'star' },
-                  { id: 'Culturals', icon: 'happy' },
-                  { id: 'Other', icon: 'ellipsis-horizontal' }
-                ].map(item => (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={[styles.gridBox, selectedEventType === item.id && styles.gridBoxSelected]}
-                    onPress={() => setSelectedEventType(item.id)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name={item.icon} size={24} color={selectedEventType === item.id ? '#3B82F6' : '#9CA3AF'} />
-                    <Text style={[styles.gridBoxText, selectedEventType === item.id && {color: '#3B82F6'}]}>{item.id}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <Text style={styles.inputLabel}>Grade Levels</Text>
-              <View style={styles.pillsRow}>
-                {['K-5', '6-8', '9-12', 'All Grades'].map(grade => (
-                  <TouchableOpacity
-                    key={grade}
-                    style={[styles.gradePill, selectedEventGrade === grade && styles.gradePillSelected]}
-                    onPress={() => setSelectedEventGrade(grade)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.gradePillText, selectedEventGrade === grade && {color:'#3B82F6'}]}>{grade}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <Text style={styles.inputLabel}>Location</Text>
-              <TextInput style={styles.textInput} placeholder="e.g., Main Auditorium" placeholderTextColor="#9CA3AF" />
-              
-              <Text style={styles.inputLabel}>Event Priority</Text>
-              <TextInput style={styles.textInput} placeholder="e.g., High, Medium, Low" placeholderTextColor="#9CA3AF" />
-
-              <View style={styles.modalFooter}>
-                <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setEventModalVisible(false)}><Text style={styles.modalCancelBtnText}>Cancel</Text></TouchableOpacity>
-                <TouchableOpacity style={[styles.modalSaveBtn, {backgroundColor: '#2563EB'}]} onPress={() => setEventModalVisible(false)}><Text style={styles.modalSaveBtnText}>Save Event</Text></TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* --- ADD NEW HOLIDAY MODAL --- */}
-      <Modal statusBarTranslucent={true} visible={isHolidayModalVisible} transparent animationType="fade" onRequestClose={() => setHolidayModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={[styles.modalHeader, { backgroundColor: '#1E293B' }]}>
-              <Text style={styles.modalTitle}>Add School Holiday</Text>
-              <TouchableOpacity onPress={() => setHolidayModalVisible(false)} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
-                <Ionicons name="close" size={24} color="#FFF" />
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView contentContainerStyle={styles.modalScroll}>
-              <Text style={styles.inputLabel}>Holiday Name</Text>
-              <TextInput style={styles.textInput} placeholder="e.g., Winter Break" placeholderTextColor="#9CA3AF" />
-
-              <View style={styles.formRow}>
-                <View style={styles.formCol}>
-                  <Text style={styles.inputLabel}>Start Date</Text>
-                  <TouchableOpacity 
-                    style={styles.dateInputWrapper}
-                    activeOpacity={0.7}
-                    onPress={() => setPickerState({ modal: 'Holiday', field: 'start' })}
-                  >
-                    <Text style={[styles.dateInputText, !holidayStartDate && { color: '#9CA3AF' }]}>
-                      {holidayStartDate || 'mm/dd/yyyy'}
-                    </Text>
-                    <Ionicons name="calendar-outline" size={16} color="#4B5563" />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.formCol}>
-                  <Text style={styles.inputLabel}>End Date</Text>
-                  <TouchableOpacity 
-                    style={styles.dateInputWrapper}
-                    activeOpacity={0.7}
-                    onPress={() => setPickerState({ modal: 'Holiday', field: 'end' })}
-                  >
-                    <Text style={[styles.dateInputText, !holidayEndDate && { color: '#9CA3AF' }]}>
-                      {holidayEndDate || 'mm/dd/yyyy'}
-                    </Text>
-                    <Ionicons name="calendar-outline" size={16} color="#4B5563" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <Text style={styles.inputLabel}>Holiday Type</Text>
-              <View style={styles.gridContainer}>
-                {[
-                  { id: 'National Holiday', icon: 'flag' },
-                  { id: 'Seasonal Break', icon: 'sunny' },
-                  { id: 'Religious Holiday', icon: 'business' },
-                  { id: 'Emergency Closure', icon: 'warning' },
-                  { id: 'School Event', icon: 'calendar' },
-                  { id: 'Other', icon: 'calendar-outline' }
-                ].map(item => (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={[styles.gridBox, selectedHolidayType === item.id && styles.gridBoxSelected]}
-                    onPress={() => setSelectedHolidayType(item.id)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name={item.icon} size={24} color={selectedHolidayType === item.id ? '#3B82F6' : '#9CA3AF'} />
-                    <Text style={[styles.gridBoxText, selectedHolidayType === item.id && {color: '#3B82F6'}]}>{item.id}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <Text style={styles.inputLabel}>Description</Text>
-              <TextInput style={styles.textArea} placeholder="Add notes about holiday..." placeholderTextColor="#9CA3AF" multiline />
-
-              <View style={styles.modalFooter}>
-                <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setHolidayModalVisible(false)}><Text style={styles.modalCancelBtnText}>Cancel</Text></TouchableOpacity>
-                <TouchableOpacity style={[styles.modalSaveBtn, {backgroundColor: '#2563EB'}]} onPress={() => setHolidayModalVisible(false)}><Text style={styles.modalSaveBtnText}>Save Holiday</Text></TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* --- ADD NEW EXAM MODAL --- */}
-      <Modal statusBarTranslucent={true} visible={isExamModalVisible} transparent animationType="fade" onRequestClose={() => setExamModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={[styles.modalHeader, { backgroundColor: '#8B5CF6' }]}>
-              <Text style={styles.modalTitle}>Add Exam Schedule</Text>
-              <TouchableOpacity onPress={() => setExamModalVisible(false)} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
-                <Ionicons name="close" size={24} color="#FFF" />
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView contentContainerStyle={styles.modalScroll}>
-              <Text style={styles.inputLabel}>Exam Name</Text>
-              <TextInput style={styles.textInput} placeholder="e.g., Mid Term exam..." placeholderTextColor="#9CA3AF" />
-
-              <Text style={styles.inputLabel}>Exam Type</Text>
-              <View style={styles.pillsRow}>
-                {['Mid-Term', 'Final', 'Quarterly'].map(type => (
-                  <TouchableOpacity
-                    key={type}
-                    style={[styles.gradePill, selectedExamType === type && { borderColor: '#8B5CF6' }]}
-                    onPress={() => setSelectedExamType(type)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.gradePillText, selectedExamType === type && { color: '#8B5CF6' }]}>{type}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <View style={styles.formRow}>
-                <View style={styles.formCol}>
-                  <Text style={styles.inputLabel}>Start Date & Time</Text>
-                  <TouchableOpacity 
-                    style={styles.dateInputWrapper}
-                    activeOpacity={0.7}
-                    onPress={() => setPickerState({ modal: 'Exam', field: 'start' })}
-                  >
-                    <Text style={[styles.dateInputText, !examStartDate && { color: '#9CA3AF' }]} numberOfLines={1}>
-                      {examStartDate || 'mm/dd --:--'}
-                    </Text>
-                    <Ionicons name="calendar-outline" size={16} color="#4B5563" />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.formCol}>
-                  <Text style={styles.inputLabel}>End Date & Time</Text>
-                  <TouchableOpacity 
-                    style={styles.dateInputWrapper}
-                    activeOpacity={0.7}
-                    onPress={() => setPickerState({ modal: 'Exam', field: 'end' })}
-                  >
-                    <Text style={[styles.dateInputText, !examEndDate && { color: '#9CA3AF' }]} numberOfLines={1}>
-                      {examEndDate || 'mm/dd --:--'}
-                    </Text>
-                    <Ionicons name="calendar-outline" size={16} color="#4B5563" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <Text style={styles.inputLabel}>Grade Levels</Text>
-              <View style={styles.pillsRow}>
-                {['K-5', '6-8', '9-12', 'All Grades'].map(grade => (
-                  <TouchableOpacity
-                    key={grade}
-                    style={[styles.gradePill, selectedExamGrade === grade && { borderColor: '#8B5CF6' }]}
-                    onPress={() => setSelectedExamGrade(grade)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.gradePillText, selectedExamGrade === grade && { color: '#8B5CF6' }]}>{grade}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <Text style={styles.inputLabel}>Location/Rooms</Text>
-              <TextInput style={styles.textInput} placeholder="e.g., Room 101, 102" placeholderTextColor="#9CA3AF" />
-              
-              <Text style={styles.inputLabel}>Special Instruments</Text>
-              <TextInput style={styles.textArea} placeholder="Any special instruments for students and staff?" placeholderTextColor="#9CA3AF" multiline />
-
-              <View style={styles.modalFooter}>
-                <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setExamModalVisible(false)}><Text style={styles.modalCancelBtnText}>Cancel</Text></TouchableOpacity>
-                <TouchableOpacity style={[styles.modalSaveBtn, {backgroundColor: '#8B5CF6'}]} onPress={() => setExamModalVisible(false)}><Text style={styles.modalSaveBtnText}>Save Exam Schedule</Text></TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* --- PURE JAVASCRIPT CALENDAR PICKER --- */}
-      <Modal statusBarTranslucent={true} visible={!!pickerState} transparent animationType="fade" onRequestClose={() => setPickerState(null)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.datePickerContainer}>
-            
-            <View style={styles.datePickerHeader}>
-              <TouchableOpacity hitSlop={{top:10, bottom:10, left:10, right:10}}>
-                <Ionicons name="chevron-back" size={20} color="#111827" />
-              </TouchableOpacity>
-              <Text style={styles.datePickerMonthTitle}>March 2025</Text>
-              <TouchableOpacity hitSlop={{top:10, bottom:10, left:10, right:10}}>
-                <Ionicons name="chevron-forward" size={20} color="#111827" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.datePickerDaysRow}>
-              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-                <Text key={day} style={styles.datePickerDayLabel}>{day}</Text>
-              ))}
-            </View>
-
-            <View style={styles.datePickerGrid}>
-              {/* March 1st 2025 is a Saturday, so 6 empty slots */}
-              {Array.from({length: 6}, (_, i) => <View key={`empty-${i}`} style={styles.datePickerDayBtn} />)}
-              
-              {/* 31 days mapped out */}
-              {Array.from({length: 31}, (_, i) => i + 1).map(day => (
-                <TouchableOpacity 
-                  key={day} 
-                  style={[styles.datePickerDayBtn, day === 25 && styles.datePickerDaySelectedBtn]} 
-                  onPress={() => handleDateSelect(day)}
-                >
-                  <Text style={[styles.datePickerDayText, day === 25 && { color: '#FFF', fontWeight: 'bold' }]}>
-                    {day}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={styles.datePickerFooter}>
-              <TouchableOpacity onPress={() => setPickerState(null)} hitSlop={{top:10, bottom:10, left:10, right:10}}>
-                <Text style={styles.datePickerCancelText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+  mainContainer: { flex: 1, backgroundColor: '#FAFAFF' },
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 16, paddingBottom: 40 },
+  scrollContent: { paddingBottom: 40 },
 
-  topHeader: {
+  // Header - Student Pattern
+  globalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20, 
-    paddingBottom: 16,
-    backgroundColor: '#FFF',
-    zIndex: 10,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-  },
-  menuHandle: { paddingRight: 4, paddingVertical: 8 }, 
-  topHeaderTitle: { fontSize: 18, fontWeight: '500', color: '#4F46E5', flex: 1, textAlign: 'center' },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconBtnTransparent: { justifyContent: 'center', alignItems: 'center' },
-  avatar: {
-    width: 32, height: 32, borderRadius: 16, backgroundColor: '#A78BFA',
-    justifyContent: 'center', alignItems: 'center', marginLeft: 4,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 4
-  },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
-
-  pageTitleContainer: {
-    marginTop: 20,
-    marginBottom: 8,
-  },
-  pageTitle: { fontSize: 22, fontWeight: '700', color: '#3B82F6', marginBottom: 4 },
-  pageSubtitle: { color: '#6B7280', fontSize: 11, fontWeight: '500' },
-
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 24,
-    marginBottom: 20,
-  },
-  sectionIcon: { marginRight: 8, color: '#111827' },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
-  countBadge: {
-    backgroundColor: '#4F46E5', // indigo
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-    marginLeft: 8,
-  },
-  countBadgeText: { color: '#FFF', fontSize: 9, fontWeight: '600' },
-  newBtn: {
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 10,
-    paddingVertical: 14,
-    borderRadius: 8,
-  },
-  newBtnText: { color: '#FFF', fontSize: 10, fontWeight: '600' },
-
-  // Reusable Premium Card Style
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-    overflow: 'hidden',
-    marginBottom: 20,
-  },
-
-  // 1. Academic Overview Specifics
-  academicHeader: {
-    backgroundColor: '#4F46E5',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  academicHeaderText: { color: '#FFF', fontWeight: '600', fontSize: 13 },
-  termRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  termTitle: { fontSize: 13, fontWeight: '700', color: '#111827' },
-  termDate: { fontSize: 11, color: '#6B7280', marginTop: 4 },
-  daysBadge: {
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  daysBadgeText: { color: '#4F46E5', fontSize: 10, fontWeight: '600' },
-
-  // 2. Events Specifics
-  eventCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-    padding: 16,
-    width: '60%',
-  },
-  eventTitle: { fontSize: 13, fontWeight: '700', color: '#111827' },
-  eventDate: { fontSize: 11, color: '#3B82F6', marginTop: 4, marginBottom: 8, fontWeight: '500' },
-  eventDesc: { fontSize: 10, color: '#6B7280', lineHeight: 14, marginBottom: 12 },
-  eventTagsRow: { flexDirection: 'row', gap: 8 },
-  eventTag: {
-    backgroundColor: '#DBEAFE',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-  },
-  eventTagText: { color: '#2563EB', fontSize: 9, fontWeight: '600' },
-
-  // 3. Holidays Specifics
-  holidayCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-    borderWidth: 1,
-    borderColor: '#FDA4AF', // red outline
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 12,
-  },
-  holidayTitle: { fontSize: 13, fontWeight: '700', color: '#111827' },
-  holidayDate: { fontSize: 11, color: '#9CA3AF', marginTop: 4 },
-  holidayBox: { 
-    backgroundColor: '#FFE4E6', 
-    borderRadius: 6, 
-    paddingVertical: 4, 
-    paddingHorizontal: 8, 
-    alignItems: 'center',
-    minWidth: 36,
-  },
-  holidayBoxNum: { color: '#E11D48', fontSize: 12, fontWeight: '700' },
-  holidayBoxText: { color: '#E11D48', fontSize: 8, fontWeight: '600' },
-
-  // 4. Exams Specifics
-  examTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, paddingBottom: 12 },
-  examPill: { backgroundColor: '#0EA5E9', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  examPillText: { color: '#FFF', fontSize: 9, fontWeight: '600' },
-  examDateRight: { fontSize: 11, fontWeight: '700', color: '#111827' },
-  
-  examStatsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16 },
-  examStatCol: { alignItems: 'flex-start' },
-  examStatLabel: { fontSize: 9, color: '#9CA3AF', marginBottom: 4, textTransform: 'uppercase' },
-  examStatValue: { fontSize: 11, fontWeight: '700', color: '#111827' },
-  verticalDivider: { width: 1, height: 28, backgroundColor: '#E5E7EB', marginHorizontal: 12 },
-
-  // --- MODAL STYLES ---
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  modalContent: {
-    width: '90%',
-    maxHeight: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    overflow: 'hidden',
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-  },
-  modalTitle: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  modalScroll: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 30,
     paddingBottom: 24,
+    backgroundColor: '#FAFAFF',
   },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4B5563',
-    marginBottom: 8,
-  },
-  textInput: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 13,
-    color: '#111827',
-    marginBottom: 20,
-    backgroundColor: '#FFF',
-  },
-  formRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
-  formCol: {
-    flex: 1,
-  },
-  dateInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    backgroundColor: '#FFF',
-    height: 48,
-  },
-  dateInputText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#111827',
-  },
-  gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  gridBox: {
-    width: '31.5%', // Exact width for 3 items per line
-    aspectRatio: 1,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFF',
-    padding: 24,
-    marginBottom: 12,
-  },
-  gridBoxSelected: {
-    borderColor: '#3B82F6',
-    backgroundColor: '#F0F9FF',
-    borderWidth: 1.5,
-  },
-  gridBoxText: {
-    fontSize: 10,
-    color: '#6B7280',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  pillsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 20,
-  },
-  gradePill: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-  },
-  gradePillSelected: {
-    borderColor: '#3B82F6',
-  },
-  gradePillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4B5563',
-  },
-  textArea: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 13,
-    color: '#111827',
-    height: 100,
-    textAlignVertical: 'top',
-    marginBottom: 20,
-    backgroundColor: '#FFF',
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-    marginTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    paddingTop: 16,
-  },
-  modalCancelBtn: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFF',
-  },
-  modalCancelBtnText: {
-    color: '#374151',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  modalSaveBtn: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  modalSaveBtnText: {
-    color: '#FFF',
-    fontWeight: '600',
-    fontSize: 13,
-  },
+  headerTitle: { fontSize: 16, fontWeight: '500', color: '#4F46E5', flex: 1, textAlign: 'center', marginHorizontal: 10 },
+  headerRight: { flexDirection: 'row', alignItems: 'center' },
+  avatarHeader: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center' },
+  avatarTextHeader: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
-  // --- CUSTOM DATE PICKER STYLES ---
-  datePickerContainer: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 20,
-    width: '85%',
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-  },
-  datePickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  datePickerMonthTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  datePickerDaysRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  datePickerDayLabel: {
-    width: '14.28%',
-    textAlign: 'center',
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontWeight: '600',
-  },
-  datePickerGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  datePickerDayBtn: {
-    width: '14.28%', 
-    aspectRatio: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 8, // makes the selected state circle
-  },
-  datePickerDaySelectedBtn: {
-    backgroundColor: '#3B82F6',
-  },
-  datePickerDayText: {
-    fontSize: 14,
-    color: '#374151',
-    fontWeight: '500',
-  },
-  datePickerFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 24,
-  },
-  datePickerCancelText: {
-    fontSize: 14,
-    color: '#3B82F6',
-    fontWeight: '600',
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#999',
-  },
+  pageHeader: { marginBottom: 20, paddingHorizontal: 20, marginTop: 10 },
+  screenTitle: { fontSize: 24, fontWeight: '800', color: '#3B82F6', marginBottom: 4 },
+  screenSubtitle: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
 
+  // Hero
+  heroCard: { height: 160, borderRadius: 32, marginHorizontal: 20, overflow: 'hidden', padding: 20, justifyContent: 'center' },
+  heroContent: { flexDirection: 'row', alignItems: 'center' },
+  dateCircle: { width: 85, height: 85, borderRadius: 24, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 15, elevation: 8 },
+  dateDay: { fontSize: 32, fontWeight: '900', color: '#1E293B' },
+  dateMonth: { fontSize: 10, fontWeight: '800', color: '#6366F1', marginTop: -4 },
+  heroInfo: { flex: 1, marginLeft: 20 },
+  heroTitle: { color: '#FFF', fontSize: 18, fontWeight: '800' },
+  heroDesc: { color: 'rgba(255,255,255,0.85)', fontSize: 11, marginTop: 4, lineHeight: 16, fontWeight: '500' },
+  heroBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, marginTop: 12, gap: 6 },
+  pulseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#4ADE80' },
+  heroBadgeText: { color: '#FFF', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+
+  // Terms
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 15 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B' },
+  viewAllText: { fontSize: 12, color: '#4F46E5', fontWeight: '700' },
+  termList: { paddingHorizontal: 20, gap: 12 },
+  termCard: { backgroundColor: '#FFF', borderRadius: 20, padding: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2 },
+  termIndicator: { width: 4, height: 35, borderRadius: 2, marginRight: 15 },
+  termMain: { flex: 1 },
+  termTitle: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
+  termPeriod: { fontSize: 11, color: '#94A3B8', marginTop: 2, fontWeight: '600' },
+  statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  statusText: { fontSize: 9, fontWeight: '800' },
+
+  // Events
+  addEventBtn: { backgroundColor: '#EEF2FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+  addEventBtnText: { color: '#4F46E5', fontSize: 11, fontWeight: '800' },
+  eventsGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, gap: 12 },
+  eventCard: { width: (SCREEN_WIDTH - 52) / 2, backgroundColor: '#FFF', borderRadius: 24, padding: 16, borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 3 },
+  eventCatBox: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, marginBottom: 12, gap: 4 },
+  eventCatText: { fontSize: 9, fontWeight: '800' },
+  eventTitle: { fontSize: 14, fontWeight: '800', color: '#1E293B', height: 40, lineHeight: 18 },
+  eventFooter: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, borderTopWidth: 1, borderTopColor: '#F8FAFC', paddingTop: 10 },
+  eventDate: { fontSize: 10, color: '#94A3B8', fontWeight: '600' },
+
+  // Holidays
+  holidaysWrapper: { paddingHorizontal: 20, gap: 12 },
+  holidayCard: { backgroundColor: '#FFF', borderRadius: 24, padding: 15, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2 },
+  holidayIconBox: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center' },
+  holidayMain: { flex: 1, marginLeft: 15 },
+  holidayName: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
+  holidayDateRange: { fontSize: 11, color: '#94A3B8', marginTop: 2, fontWeight: '600' },
+  durationBadge: { borderLeftWidth: 1, borderLeftColor: '#F1F5F9', paddingLeft: 15 },
+  durationText: { fontSize: 12, fontWeight: '900', color: '#F59E0B' },
 });
 
 export default PrincipalCalendarScreen;

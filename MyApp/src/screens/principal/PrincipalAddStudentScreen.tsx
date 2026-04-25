@@ -9,462 +9,398 @@ import {
   Platform,
   StatusBar,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Dimensions,
+  Modal,
+  FlatList,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
+import { COUNTRIES } from '../../constants/countries';
+import SelectionModal from '../../components/modals/SelectionModal';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
+
+let DateTimePicker: any = null;
+try {
+  DateTimePicker = require('@react-native-community/datetimepicker').default;
+} catch (error) {
+  console.warn('DateTimePicker not available');
+}
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const PrincipalAddStudentScreen = ({ navigation }: any) => {
   const { authState } = useAuth();
-  const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Personal Information
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [dob, setDob] = useState('');
-  const [gender, setGender] = useState('');
+  // Form state
+  const [formData, setFormData] = useState({
+    firstName: '', lastName: '', email: '', phone: '', dob: '', gender: '',
+    address: '', city: '', state: '', postalCode: '',
+    guardianName: '', guardianPhone: '', guardianEmail: '', guardianRelation: '',
+    classId: '', rollNo: '', admissionDate: new Date().toISOString().split('T')[0],
+    countryCode: '+91', guardianCountryCode: '+91'
+  });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dateField, setDateField] = useState<'dob' | 'admissionDate'>('dob');
 
-  // Contact Information
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [postalCode, setPostalCode] = useState('');
+  const [selectionConfig, setSelectionConfig] = useState<{
+    visible: boolean;
+    title: string;
+    field: string;
+    options: string[];
+  }>({
+    visible: false,
+    title: '',
+    field: '',
+    options: []
+  });
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Parent/Guardian Information
-  const [guardianName, setGuardianName] = useState('');
-  const [guardianPhone, setGuardianPhone] = useState('');
-  const [guardianEmail, setGuardianEmail] = useState('');
-  const [guardianRelation, setGuardianRelation] = useState('');
-
-  // Academic Information
-  const [classId, setClassId] = useState('');
-  const [rollNo, setRollNo] = useState('');
-  const [admissionDate, setAdmissionDate] = useState('');
-
-  const handleClearForm = () => {
-    setFirstName('');
-    setLastName('');
-    setDob('');
-    setGender('');
-    setEmail('');
-    setPhone('');
-    setAddress('');
-    setCity('');
-    setState('');
-    setPostalCode('');
-    setGuardianName('');
-    setGuardianPhone('');
-    setGuardianEmail('');
-    setGuardianRelation('');
-    setClassId('');
-    setRollNo('');
-    setAdmissionDate('');
+  const updateForm = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleOpenDatePicker = (field: 'dob' | 'admissionDate') => {
+    console.log('Opening student date picker for:', field);
+    setDateField(field);
+    setShowDatePicker(true);
+  };
+
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    
+    if (event.type === 'set' && selectedDate) {
+      const yyyy = selectedDate.getFullYear();
+      const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(selectedDate.getDate()).padStart(2, '0');
+      const formatted = `${yyyy}-${mm}-${dd}`;
+      updateForm(dateField, formatted);
+    }
+
+    if (Platform.OS === 'ios' && event.type === 'dismissed') {
+       setShowDatePicker(false);
+    }
+  };
+
+  const handleOpenSelection = (title: string, field: string, options: string[]) => {
+    setSelectionConfig({ visible: true, title, field, options });
+    setSearchQuery('');
+  };
+
+  const handleSelectOption = (option: string) => {
+    // If it's a country selection, extract the code
+    if (selectionConfig.field.includes('countryCode') || selectionConfig.field.includes('CountryCode')) {
+      const code = option.split(' ').pop() || option;
+      updateForm(selectionConfig.field, code);
+    } else {
+      updateForm(selectionConfig.field, option);
+    }
+    setSelectionConfig(prev => ({ ...prev, visible: false }));
+  };
+
+  const filteredOptions = selectionConfig.options.filter(opt => 
+    opt.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const handleSubmit = async () => {
-    // Validation
-    if (!firstName || !lastName || !email || !classId) {
-      Alert.alert('Error', 'Please fill in all required fields (Name, Email, Class)');
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.classId) {
+      Alert.alert('Required Fields', 'Please complete all fields marked with an asterisk (*).');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      const studentData = {
-        name: `${firstName} ${lastName}`,
-        email,
-        phone,
-        dob,
-        gender,
-        address,
-        city,
-        state,
-        postalCode,
-        class: classId,
-        section: '',
-        rollNo,
-        guardianName,
-        guardianPhone,
-        guardianEmail,
-        guardianRelation,
-        admissionDate: admissionDate || new Date().toISOString().split('T')[0]
+      const payload = {
+        name: `${formData.firstName} ${formData.lastName}`,
+        email: formData.email,
+        phone: `${formData.countryCode} ${formData.phone}`.trim(),
+        dob: formData.dob,
+        gender: formData.gender,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        postalCode: formData.postalCode,
+        class: formData.classId,
+        rollNo: formData.rollNo,
+        guardianName: formData.guardianName,
+        guardianPhone: `${formData.guardianCountryCode} ${formData.guardianPhone}`.trim(),
+        guardianEmail: formData.guardianEmail,
+        guardianRelation: formData.guardianRelation,
+        admissionDate: formData.admissionDate
       };
 
-      const res = await apiClient.post(ENDPOINTS.PRINCIPAL.ADD_STUDENT, studentData);
-      
-      Alert.alert('Success', `Student added successfully!\nStudent ID: ${res.data.studentId}\nTemporary Password sent to ${email}`, [
-        { text: 'OK', onPress: () => navigation.goBack() }
+      await apiClient.post(ENDPOINTS.PRINCIPAL.ADD_STUDENT, payload);
+      Alert.alert('Success', 'Student registration completed successfully.', [
+        { text: 'Done', onPress: () => navigation.goBack() }
       ]);
     } catch (error: any) {
-      console.error('Failed to add student:', error);
-      Alert.alert('Error', error.response?.data?.message || 'Failed to add student. Please try again.');
+      const errorMsg = getApiErrorMessage(error);
+      Alert.alert('Registration Failed', errorMsg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const FormField = ({ label, value, onChangeText, placeholder, keyboardType, required, onPress, countryCode, onCountryCodePress }: any) => (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label.toUpperCase()} {required && <Text style={{ color: '#EF4444' }}>*</Text>}</Text>
+      <View style={{ flexDirection: 'row', gap: 12 }}>
+        {countryCode && (
+          <TouchableOpacity 
+            style={styles.countryCodePicker}
+            onPress={onCountryCodePress}
+          >
+            <Text style={styles.countryCodeText}>{countryCode}</Text>
+            <Ionicons name="caret-down" size={10} color="#94A3B8" />
+          </TouchableOpacity>
+        )}
+        {onPress ? (
+          <TouchableOpacity 
+            style={[styles.premiumInput, { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]} 
+            onPress={onPress}
+          >
+            <Text style={[styles.premiumInputText, !value && { color: '#94A3B8' }]}>
+              {value || placeholder}
+            </Text>
+            <Ionicons name="calendar-outline" size={18} color="#94A3B8" />
+          </TouchableOpacity>
+        ) : (
+          <TextInput
+            style={[styles.premiumInput, { flex: 1 }]}
+            value={value}
+            onChangeText={onChangeText}
+            placeholder={placeholder}
+            placeholderTextColor="#94A3B8"
+            keyboardType={keyboardType}
+          />
+        )}
+      </View>
+    </View>
+  );
+
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFF" translucent={false} />
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFF" translucent />
 
-      {/* Top Standard Header */}
-      <View style={styles.topHeader}>
-        <ScaleButton
-          style={styles.menuHandle}
-          onPress={() => setDrawerOpen(true)}
-          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-          activeOpacity={0.7}
-          scaleTo={0.85}
-        >
-          <Ionicons name="menu" size={26} color="#111827" />
+      {/* Global Header - Student Pattern */}
+      <View style={styles.globalHeader}>
+        <ScaleButton onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={28} color="#4F46E5" />
         </ScaleButton>
-
-        <Text style={styles.topHeaderTitle} numberOfLines={1}>
-          Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}
-        </Text>
-
+        <Text style={styles.headerTitle} numberOfLines={1}>Student Registration</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconBtnTransparent}><Ionicons name="notifications-outline" size={20} color="#111827" /></TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtnTransparent} onPress={() => navigation.navigate('AccountSettings')}><Ionicons name="settings-outline" size={20} color="#111827" /></TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtnTransparent}><Ionicons name="moon-outline" size={20} color="#111827" /></TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}><View style={styles.avatar}><Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text></View></TouchableOpacity>
+           <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}>
+            <View style={styles.avatarHeader}>
+              <Text style={styles.avatarTextHeader}>{authState.user?.name?.charAt(0) || 'A'}</Text>
+            </View>
+          </TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
-        {/* Top Blue Hero Box */}
-        <View style={styles.heroSection}>
-          <TouchableOpacity style={styles.backBtnWrapper} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={18} color="#FFF" />
-          </TouchableOpacity>
-          <Text style={styles.heroTitle}>Add Student</Text>
-          <Text style={styles.heroSubtitle}>Register new students to the school system.</Text>
-        </View>
-
-        {/* Main Form Card */}
-        <Animated.View entering={FadeInUp.duration(400)} style={styles.formCard}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           
-          {/* Section 1: Personal Information */}
-          <View style={styles.sectionHeaderRow}>
-            <Ionicons name="ribbon-outline" size={20} color="#4F46E5" style={styles.sectionIcon} />
-            <Text style={styles.sectionTitle}>Personal Information</Text>
+          <View style={styles.pageHeader}>
+            <Text style={styles.screenTitle}>Enroll New Scholar</Text>
+            <Text style={styles.screenSubtitle}>Add a new student profile to the institutional database.</Text>
           </View>
-          
-          <View style={styles.formRow}>
-            <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>First Name *</Text>
-              <TextInput style={styles.textInput} placeholder="John" placeholderTextColor="#9CA3AF" value={firstName} onChangeText={setFirstName} />
+
+          {/* Premium Hero Banner */}
+          <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.heroBanner}>
+            <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
+              <Defs>
+                <SvgLinearGradient id="regGrad" x1="0" y1="0" x2="1" y2="1">
+                  <Stop offset="0" stopColor="#6366F1" stopOpacity="1" />
+                  <Stop offset="1" stopColor="#3B82F6" stopOpacity="1" />
+                </SvgLinearGradient>
+              </Defs>
+              <Rect width="100%" height="100%" fill="url(#regGrad)" rx={32} ry={32} />
+            </Svg>
+            <View style={styles.heroContent}>
+              <View style={styles.iconCircle}>
+                <MaterialCommunityIcons name="account-school-outline" size={36} color="#FFF" />
+              </View>
+              <View style={styles.heroText}>
+                <Text style={styles.heroTitle}>Academic Profile</Text>
+                <Text style={styles.heroSubtitle}>Ensure all identity documents are verified before final submission.</Text>
+              </View>
             </View>
-            <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Last name *</Text>
-              <TextInput style={styles.textInput} placeholder="Doe" placeholderTextColor="#9CA3AF" value={lastName} onChangeText={setLastName} />
+          </Animated.View>
+
+          {/* Personal Identity Section */}
+          <View style={styles.formSection}>
+            <View style={styles.sectionHeader}>
+               <Text style={styles.sectionTitle}>Personal Identity</Text>
+            </View>
+            <View style={styles.inputRow}>
+              <FormField required label="First Name" value={formData.firstName} onChangeText={(v: any) => updateForm('firstName', v)} placeholder="John" />
+              <FormField required label="Last Name" value={formData.lastName} onChangeText={(v: any) => updateForm('lastName', v)} placeholder="Doe" />
+            </View>
+            <View style={styles.inputRow}>
+              <FormField label="Date of Birth" value={formData.dob} onPress={() => handleOpenDatePicker('dob')} placeholder="YYYY-MM-DD" />
+              <FormField label="Gender" value={formData.gender} onChangeText={(v: any) => updateForm('gender', v)} placeholder="Male/Female" />
             </View>
           </View>
 
-          <View style={styles.formRow}>
-            <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Date of birth</Text>
-              <TextInput style={styles.textInput} placeholder="YYYY-MM-DD" placeholderTextColor="#9CA3AF" value={dob} onChangeText={setDob} />
+          {/* Academic Placement Section */}
+          <View style={styles.formSection}>
+            <View style={styles.sectionHeader}>
+               <Text style={styles.sectionTitle}>Academic Placement</Text>
             </View>
-            <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Gender</Text>
-              <TextInput style={styles.textInput} placeholder="Male/Female" placeholderTextColor="#9CA3AF" value={gender} onChangeText={setGender} />
+            <View style={styles.inputRow}>
+              <FormField required label="Assigned Class" value={formData.classId} onChangeText={(v: any) => updateForm('classId', v)} placeholder="e.g. 10A" />
+              <FormField label="Roll Number" value={formData.rollNo} onChangeText={(v: any) => updateForm('rollNo', v)} placeholder="e.g. 24" />
             </View>
+            <FormField label="Date of Admission" value={formData.admissionDate} onPress={() => handleOpenDatePicker('admissionDate')} placeholder="YYYY-MM-DD" />
           </View>
 
-          {/* Section 2: Contact Information */}
-          <View style={[styles.sectionHeaderRow, { marginTop: 24 }]}>
-            <Ionicons name="mail-outline" size={20} color="#4F46E5" style={styles.sectionIcon} />
-            <Text style={styles.sectionTitle}>Contact Information</Text>
-          </View>
-
-          <View style={styles.formRow}>
-            <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Email Address *</Text>
-              <TextInput style={styles.textInput} placeholder="student@gmail.com" placeholderTextColor="#9CA3AF" value={email} onChangeText={setEmail} keyboardType="email-address" />
+          {/* Guardian & Contact Section */}
+          <View style={styles.formSection}>
+            <View style={styles.sectionHeader}>
+               <Text style={styles.sectionTitle}>Guardian & Contact</Text>
             </View>
-            <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Phone Number</Text>
-              <TextInput style={styles.textInput} placeholder="+91 9XXXXXXXX" placeholderTextColor="#9CA3AF" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+            <FormField required label="Primary Email" value={formData.email} onChangeText={(v: any) => updateForm('email', v)} placeholder="student@example.com" keyboardType="email-address" />
+            <FormField 
+               label="Contact Number" 
+               value={formData.phone} 
+               onChangeText={(v: any) => updateForm('phone', v)} 
+               placeholder="9876543210" 
+               keyboardType="phone-pad"
+               countryCode={formData.countryCode}
+               onCountryCodePress={() => handleOpenSelection('Country Code', 'countryCode', COUNTRIES.map(c => `${c.name} ${c.code}`))}
+            />
+            <FormField label="Guardian Name" value={formData.guardianName} onChangeText={(v: any) => updateForm('guardianName', v)} placeholder="Full legal name" />
+            <View style={styles.inputRow}>
+              <FormField label="Relation" value={formData.guardianRelation} onChangeText={(v: any) => updateForm('guardianRelation', v)} placeholder="e.g. Mother" />
+              <FormField 
+                label="Guardian Phone" 
+                value={formData.guardianPhone} 
+                onChangeText={(v: any) => updateForm('guardianPhone', v)} 
+                placeholder="9876..." 
+                keyboardType="phone-pad" 
+                countryCode={formData.guardianCountryCode}
+                onCountryCodePress={() => handleOpenSelection('Guardian Country Code', 'guardianCountryCode', COUNTRIES.map(c => `${c.name} ${c.code}`))}
+              />
             </View>
-          </View>
-
-          <View style={styles.formColFull}>
-            <Text style={styles.inputLabel}>Address</Text>
-            <TextInput style={styles.textInput} placeholder="Street Address" placeholderTextColor="#9CA3AF" value={address} onChangeText={setAddress} />
-          </View>
-
-          <View style={styles.formRow}>
-            <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>City</Text>
-              <TextInput style={styles.textInput} placeholder="City" placeholderTextColor="#9CA3AF" value={city} onChangeText={setCity} />
-            </View>
-            <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>State</Text>
-              <TextInput style={styles.textInput} placeholder="State" placeholderTextColor="#9CA3AF" value={state} onChangeText={setState} />
-            </View>
-          </View>
-
-          <View style={styles.formRow}>
-            <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Postal code</Text>
-              <TextInput style={styles.textInput} placeholder="PIN code" placeholderTextColor="#9CA3AF" value={postalCode} onChangeText={setPostalCode} />
-            </View>
-            <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Parent/Guardian Name</Text>
-              <TextInput style={styles.textInput} placeholder="Parents Name" placeholderTextColor="#9CA3AF" value={guardianName} onChangeText={setGuardianName} />
-            </View>
-          </View>
-
-          <View style={styles.formRow}>
-            <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Parent Phone Number</Text>
-              <TextInput style={styles.textInput} placeholder="+91 9XXXXXXXX" placeholderTextColor="#9CA3AF" value={guardianPhone} onChangeText={setGuardianPhone} keyboardType="phone-pad" />
-            </View>
-            <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Parent Email</Text>
-              <TextInput style={styles.textInput} placeholder="parent@gmail.com" placeholderTextColor="#9CA3AF" value={guardianEmail} onChangeText={setGuardianEmail} keyboardType="email-address" />
-            </View>
-          </View>
-
-          <View style={styles.formRow}>
-            <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Relationship</Text>
-              <TextInput style={styles.textInput} placeholder="Father/Mother" placeholderTextColor="#9CA3AF" value={guardianRelation} onChangeText={setGuardianRelation} />
-            </View>
-            <View style={styles.formCol}>
-              {/* Empty col for spacing formatting as per design half width */}
-            </View>
-          </View>
-          {/* Section 3: Academic Information */}
-          <View style={[styles.sectionHeaderRow, { marginTop: 24 }]}>
-            <Ionicons name="school-outline" size={20} color="#4F46E5" style={styles.sectionIcon} />
-            <Text style={styles.sectionTitle}>Academic Information</Text>
-          </View>
-
-          <View style={styles.formRow}>
-            <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Class *</Text>
-              <TextInput style={styles.textInput} placeholder="e.g., 10A" placeholderTextColor="#9CA3AF" value={classId} onChangeText={setClassId} />
-            </View>
-            <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Roll Number</Text>
-              <TextInput style={styles.textInput} placeholder="Roll Number" placeholderTextColor="#9CA3AF" value={rollNo} onChangeText={setRollNo} />
-            </View>
-          </View>
-
-          <View style={styles.formRow}>
-            <View style={styles.formCol}>
-              <Text style={styles.inputLabel}>Admission Date</Text>
-              <TextInput style={styles.textInput} placeholder="YYYY-MM-DD" placeholderTextColor="#9CA3AF" value={admissionDate} onChangeText={setAdmissionDate} />
-            </View>
-            <View style={styles.formCol}>
-              {/* Empty for layout */}
-            </View>
-          </View>
-
-          {/* Section 4: Account & Invite */}
-          <View style={[styles.sectionHeaderRow, { marginTop: 24 }]}>
-            <Ionicons name="mail-outline" size={20} color="#4F46E5" style={styles.sectionIcon} />
-            <Text style={styles.sectionTitle}>Account & Invite</Text>
-          </View>
-
-          <View style={styles.formColFull}>
-            <Text style={styles.helperText}>A secure temporary password will be generated and sent to the student's email address.</Text>
           </View>
 
           {/* Form Actions */}
-          <View style={styles.formActionsRow}>
-            <TouchableOpacity style={styles.clearBtn} activeOpacity={0.7} onPress={handleClearForm}>
-              <Ionicons name="close" size={16} color="#6B7280" style={{ marginRight: 6 }} />
-              <Text style={styles.clearBtnText}>Clear Form</Text>
+          <View style={styles.footerActions}>
+            <TouchableOpacity style={styles.secondaryBtn} onPress={() => navigation.goBack()}>
+              <Text style={styles.secondaryBtnText}>Cancel</Text>
             </TouchableOpacity>
-            
             <TouchableOpacity 
-              style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]} 
-              activeOpacity={0.8}
-              disabled={isSubmitting}
+              style={[styles.primarySubmitBtn, isSubmitting && { opacity: 0.7 }]} 
               onPress={handleSubmit}
+              disabled={isSubmitting}
             >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFF" />
-              ) : (
-                <Text style={styles.submitBtnText}>+ Add Student</Text>
-              )}
+              {isSubmitting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primarySubmitText}>Register Scholar</Text>}
             </TouchableOpacity>
           </View>
 
-        </Animated.View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-      {/* Navigation Drawer */}
-      <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
+      {showDatePicker && DateTimePicker && (
+        <DateTimePicker
+          value={(() => {
+            if (formData[dateField]) {
+              const d = new Date(formData[dateField]);
+              return isNaN(d.getTime()) ? new Date() : d;
+            }
+            return new Date();
+          })()}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={onDateChange}
+        />
+      )}
 
+      <SelectionModal 
+        visible={selectionConfig.visible}
+        title={selectionConfig.title}
+        options={selectionConfig.options}
+        onSelect={handleSelectOption}
+        onClose={() => setSelectionConfig(prev => ({ ...prev, visible: false }))}
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+  mainContainer: { flex: 1, backgroundColor: '#FAFAFF' },
   container: { flex: 1 },
-  scrollContent: { paddingBottom: 40 },
+  scrollContent: { paddingBottom: 60 },
 
-  topHeader: {
+  // Header - Student Pattern
+  globalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20, 
-    paddingBottom: 16,
-    backgroundColor: '#FFF',
-    zIndex: 10,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 30,
+    paddingBottom: 24,
+    backgroundColor: '#FAFAFF',
   },
-  menuHandle: { paddingRight: 4, paddingVertical: 8 }, 
-  topHeaderTitle: { fontSize: 18, fontWeight: '500', color: '#4F46E5', flex: 1, textAlign: 'center' },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconBtnTransparent: { justifyContent: 'center', alignItems: 'center' },
-  avatar: {
-    width: 32, height: 32, borderRadius: 16, backgroundColor: '#A78BFA',
-    justifyContent: 'center', alignItems: 'center', marginLeft: 4,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 4
-  },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
+  headerTitle: { fontSize: 16, fontWeight: '500', color: '#4F46E5', flex: 1, textAlign: 'center', marginHorizontal: 10 },
+  headerRight: { flexDirection: 'row', alignItems: 'center' },
+  avatarHeader: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center' },
+  avatarTextHeader: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
-  heroSection: {
-    backgroundColor: '#4F46E5', // vibrant blue/purple
-    paddingTop: 20,
-    paddingBottom: 32,
-    paddingHorizontal: 16,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-    marginBottom: 24, // Space between hero and form card
-  },
-  backBtnWrapper: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  heroTitle: { fontSize: 20, fontWeight: '700', color: '#FFF', marginBottom: 4 },
-  heroSubtitle: { color: '#E0E7FF', fontSize: 13, fontWeight: '400' },
+  pageHeader: { marginBottom: 20, paddingHorizontal: 20, marginTop: 10 },
+  screenTitle: { fontSize: 24, fontWeight: '800', color: '#3B82F6', marginBottom: 4 },
+  screenSubtitle: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
 
-  formCard: {
-    marginHorizontal: 16,
-    padding: 24,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginBottom: 40,
-  },
+  // Hero
+  heroBanner: { height: 140, borderRadius: 32, marginHorizontal: 20, padding: 20, justifyContent: 'center', overflow: 'hidden' },
+  heroContent: { flexDirection: 'row', alignItems: 'center' },
+  iconCircle: { width: 65, height: 65, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  heroText: { flex: 1, marginLeft: 15 },
+  heroTitle: { color: '#FFF', fontSize: 20, fontWeight: '800' },
+  heroSubtitle: { color: 'rgba(255,255,255,0.85)', fontSize: 11, marginTop: 4, lineHeight: 16, fontWeight: '500' },
 
-  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  sectionIcon: { marginRight: 8 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
-
-  formRow: { flexDirection: 'row', gap: 20, marginBottom: 20 },
-  formCol: { flex: 1 },
-  formColFull: { marginBottom: 20 },
-  inputLabel: { fontSize: 13, fontWeight: '600', color: '#111827', marginBottom: 8 },
-  textInput: {
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 13,
-    color: '#111827',
-    backgroundColor: '#FFF',
-  },
-
-  uploadBox: {
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: '#93C5FD',
-    borderRadius: 16,
-    paddingVertical: 36,
-    paddingHorizontal: 16,
-    backgroundColor: '#F8FAFC',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  uploadIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#3B82F6', // vibrant blue
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  uploadMainText: { fontSize: 13, fontWeight: '500', color: '#111827', marginBottom: 4 },
-  uploadSubText: { fontSize: 12, color: '#9CA3AF', marginBottom: 20 },
-  browseBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#4F46E5',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+  // Form Sections
+  formSection: { paddingHorizontal: 20, marginTop: 32 },
+  sectionHeader: { marginBottom: 16 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B' },
   
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,},
-  browseBtnText: { color: '#FFF', fontSize: 13, fontWeight: '600' },
+  field: { flex: 1, marginBottom: 15 },
+  label: { fontSize: 10, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5, marginBottom: 6 },
+  premiumInput: { backgroundColor: '#FFF', borderRadius: 12, paddingHorizontal: 14, height: 44, fontSize: 14, color: '#1E293B', fontWeight: '600', borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.02, shadowRadius: 8, elevation: 1, justifyContent: 'center' },
+  premiumInputText: { fontSize: 13, color: '#1E293B', fontWeight: '600' },
+  countryCodePicker: { width: 60, height: 44, backgroundColor: '#FFF', borderRadius: 12, borderWidth: 1, borderColor: '#F1F5F9', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.02, shadowRadius: 8, elevation: 1 },
+  countryCodeText: { fontSize: 12, fontWeight: '700', color: '#1E293B' },
+  inputRow: { flexDirection: 'row', gap: 15 },
 
-  helperText: { fontSize: 11, color: '#6B7280', marginTop: 8 },
+  // Footer
+  footerActions: { flexDirection: 'row', paddingHorizontal: 20, gap: 15, marginTop: 40 },
+  secondaryBtn: { flex: 0.4, height: 48, borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF' },
+  secondaryBtnText: { color: '#64748B', fontWeight: '700', fontSize: 14 },
+  primarySubmitBtn: { flex: 1, backgroundColor: '#4F46E5', height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.2, shadowRadius: 10, elevation: 6 },
+  primarySubmitText: { color: '#FFF', fontWeight: '800', fontSize: 14 },
 
-  formActionsRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 32, gap: 12 },
-  clearBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
-  },
-  clearBtnText: { color: '#6B7280', fontSize: 13, fontWeight: '600' },
-  submitBtn: {
-    backgroundColor: '#4F46E5',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-  },
-  submitBtnDisabled: {
-    backgroundColor: '#A78BFA',
-    opacity: 0.7,
-  },
-  submitBtnText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
+  // Modal Styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  selectionCard: { backgroundColor: '#FFF', borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, maxHeight: '60%' },
+  selectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  selectionTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B' },
+  selectionItem: { paddingVertical: 16, paddingHorizontal: 20, borderRadius: 14, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC' },
+  selectionItemActive: { backgroundColor: '#4F46E5' },
+  selectionItemText: { fontSize: 15, fontWeight: '600', color: '#4F46E5' },
+  selectionItemTextActive: { color: '#FFF' },
 
+  searchBarContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 14, paddingHorizontal: 16, height: 48, marginBottom: 16, borderWidth: 1, borderColor: '#F1F5F9' },
+  searchBar: { flex: 1, marginLeft: 10, fontSize: 14, color: '#1E293B', fontWeight: '600' },
 });
 
 export default PrincipalAddStudentScreen;
