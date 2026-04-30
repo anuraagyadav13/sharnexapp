@@ -280,7 +280,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                   desc="Enroll & track students"
                   color="#10B981"
                   icon="school"
-                  onPress={() => navigation.navigate('PrincipalStudents')}
+                  onPress={() => navigation.navigate('PrincipalStudentDetails')}
                 />
                 <QuickActionCard
                   delay={200}

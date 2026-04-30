@@ -93,7 +93,7 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
           ]
         });
       } finally {
-        setTimeout(() => setIsLoading(false), 800);
+        setIsLoading(false);
       }
     };
     fetchAttendance();

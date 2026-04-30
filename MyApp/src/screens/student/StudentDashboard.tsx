@@ -375,7 +375,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
           { title: 'Calculus Assignment 1', subject_name: 'Mathematics', due_date: '2026-05-25' },
           { title: 'Quantum Mechanics Lab', subject_name: 'Physics', due_date: '2026-05-26' },
         ]);
-      } finally { setTimeout(() => setIsLoading(false), 800); }
+      } finally { setIsLoading(false); }
     };
     fetchAllData();
   }, [authState.user?.id]);

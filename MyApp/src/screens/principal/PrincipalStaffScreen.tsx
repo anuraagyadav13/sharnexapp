@@ -13,6 +13,7 @@ import {
   RefreshControl,
   Dimensions,
   Alert,
+  Modal,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -113,7 +114,11 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [staffList, setStaffList] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
   const [stats, setStats] = useState({ total: 0, active: 0, onLeave: 0 });
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [selectedClassForAssign, setSelectedClassForAssign] = useState<any>(null);
+  const [assignForm, setAssignForm] = useState({ classId: '', teacherId: '' });
   const [toast, setToast] = useState<{ visible: boolean; message: string; type: ToastType; onUndo?: () => void }>({
     visible: false,
     message: '',
@@ -127,14 +132,22 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
   const fetchData = async () => {
     try {
       if (!isRefreshing) setIsLoading(true);
-      const res = await apiClient.get(ENDPOINTS.PRINCIPAL.STAFF);
-      const data = res.data.staff || res.data.data || (Array.isArray(res.data) ? res.data : []);
-      const statsData = res.data.stats || { total: Array.isArray(data) ? data.length : 0, active: 0, onLeave: 0 };
-      setStaffList(Array.isArray(data) ? data : []);
+      const [staffRes, classRes] = await Promise.all([
+        apiClient.get(ENDPOINTS.PRINCIPAL.STAFF),
+        apiClient.get(ENDPOINTS.PRINCIPAL.CLASSES)
+      ]);
+      
+      const staffData = staffRes.data.data || staffRes.data.staff || staffRes.data || [];
+      const statsData = staffRes.data.stats || { total: Array.isArray(staffData) ? staffData.length : 0, active: 0, onLeave: 0 };
+      setStaffList(Array.isArray(staffData) ? staffData : []);
       setStats(statsData);
+
+      const classData = classRes.data.data || classRes.data || [];
+      const classList = Array.isArray(classData) ? classData : classData.classes || [];
+      setClasses(classList);
     } catch (error) {
-      console.error('Failed to fetch staff:', error);
-      setStaffList([]);
+      console.error('Failed to fetch data:', error);
+      showToast('Error loading data.', 'error');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -148,6 +161,38 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
   const onRefresh = () => {
     setIsRefreshing(true);
     fetchData();
+  };
+
+  const handleOpenAssign = (cls: any) => {
+    setSelectedClassForAssign(cls);
+    setAssignForm({ classId: cls.id, teacherId: cls.teacherId || '' });
+    setIsAssignModalOpen(true);
+  };
+
+  const handleUpdateAssignment = async (overrideId?: string) => {
+    try {
+      const finalTeacherId = overrideId !== undefined ? overrideId : assignForm.teacherId;
+      const selectedTeacher = staffList.find(t => t.id === finalTeacherId);
+      const teacherName = selectedTeacher ? (selectedTeacher.name || `${selectedTeacher.firstName} ${selectedTeacher.lastName}`) : 'Not Assigned';
+      
+      // Optimistic Update
+      setClasses(prev => prev.map(c => 
+        c.id === assignForm.classId ? { ...c, teacher: teacherName, teacherId: finalTeacherId } : c
+      ));
+
+      setIsLoading(true);
+      await apiClient.post(`${ENDPOINTS.PRINCIPAL.CLASSES}/${assignForm.classId}/assign-teacher`, {
+        teacherId: finalTeacherId
+      });
+      setIsAssignModalOpen(false);
+      fetchData(); // Sync with server
+      showToast(finalTeacherId ? 'Assignment updated successfully!' : 'Assignment removed.', 'success');
+    } catch (error) {
+      fetchData(); // Rollback on error
+      showToast('Failed to update assignment.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -238,8 +283,8 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
 
           <View style={styles.statsRow}>
             <StatCard title="Total Teachers" value={stats.total} color="#8B5CF6" icon="account-group-outline" />
-            <StatCard title="Dept. Heads" value="0" color="#EF4444" icon="account-tie-outline" />
-            <StatCard title="New This Year" value={stats.total} color="#3B82F6" icon="account-plus-outline" />
+            <StatCard title="Assigned Classes" value={classes.filter(c => c.teacher || c.teacherName || c.teacher_name).length} color="#10B981" icon="account-check-outline" />
+            <StatCard title="Total Students" value={classes.reduce((acc, curr) => acc + (curr.studentCount || 0), 0)} color="#3B82F6" icon="account-group-outline" />
           </View>
 
           <View style={styles.searchWrapper}>
@@ -268,14 +313,21 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
           <View style={styles.assignmentSection}>
              <Text style={styles.sectionTitle}>Class Teacher Assignments</Text>
              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.assignmentScroll}>
-                {[1, 2, 3].map(i => (
-                  <View key={i} style={styles.assignmentCard}>
+                {classes.map(cls => (
+                  <View key={cls.id} style={styles.assignmentCard}>
                      <View style={styles.assignmentHeader}>
-                        <Text style={styles.className}>Class 10 A</Text>
-                        <View style={styles.assignedBadge}><Text style={styles.assignedText}>Assigned</Text></View>
+                        <Text style={styles.className}>{cls.className || cls.name}</Text>
+                        <View style={[styles.assignedBadge, { backgroundColor: cls.teacher ? '#D1FAE5' : '#FEE2E2' }]}>
+                           <Text style={[styles.assignedText, { color: cls.teacher ? '#059669' : '#EF4444' }]}>
+                              {cls.teacher ? 'Assigned' : 'Vacant'}
+                           </Text>
+                        </View>
                      </View>
-                     <Text style={styles.teacherName}>ANURAG YADAV</Text>
-                     <TouchableOpacity style={styles.changeBtn}>
+                     <Text style={styles.teacherName}>{cls.teacher || cls.teacherName || cls.teacher_name || 'Not Assigned'}</Text>
+                     <TouchableOpacity 
+                       style={styles.changeBtn}
+                       onPress={() => handleOpenAssign(cls)}
+                     >
                         <Text style={styles.changeBtnText}>Change Teacher</Text>
                      </TouchableOpacity>
                   </View>
@@ -284,6 +336,72 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
           </View>
         </ScrollView>
       )}
+
+      {/* Assign Teacher Modal */}
+      <Modal visible={isAssignModalOpen} transparent animationType="fade">
+         <View style={styles.assignOverlay}>
+            <View style={styles.assignContent}>
+               <Text style={styles.assignModalTitle}>Assign Class Teacher</Text>
+               
+               <View style={styles.assignField}>
+                  <Text style={styles.assignLabel}>Class</Text>
+                  <View style={styles.readOnlyBox}>
+                     <Text style={styles.readOnlyText}>{selectedClassForAssign?.className || selectedClassForAssign?.name}</Text>
+                     <Ionicons name="chevron-down" size={18} color="#94A3B8" />
+                  </View>
+               </View>
+
+               <View style={styles.assignField}>
+                  <Text style={styles.assignLabel}>Teacher</Text>
+                  <View style={styles.pickerBox}>
+                     <ScrollView style={{ maxHeight: 300 }}>
+                        <TouchableOpacity 
+                          style={styles.removeAssignmentBtn}
+                          onPress={() => handleUpdateAssignment('')}
+                        >
+                           <Ionicons name="person-remove-outline" size={20} color="#EF4444" />
+                           <Text style={styles.removeAssignmentText}>Remove Assignment</Text>
+                        </TouchableOpacity>
+
+                        {staffList.length === 0 ? (
+                           <View style={styles.emptyTeachersBox}>
+                              <Text style={styles.emptyTeachersText}>No teachers found</Text>
+                           </View>
+                        ) : (
+                           staffList.map((t, idx) => (
+                              <TouchableOpacity 
+                                key={t.id} 
+                                style={[styles.teacherOption, assignForm.teacherId === t.id && styles.teacherOptionActive]}
+                                onPress={() => setAssignForm(prev => ({ ...prev, teacherId: t.id }))}
+                              >
+                                 <View style={styles.teacherIndexBox}>
+                                    <Text style={styles.teacherIndexText}>{idx + 1}</Text>
+                                 </View>
+                                 <View style={styles.teacherDetails}>
+                                    <Text style={[styles.teacherNameText, assignForm.teacherId === t.id && styles.teacherNameTextActive]}>
+                                       {t.name || (t.firstName ? `${t.firstName} ${t.lastName}` : 'Unknown Teacher')}
+                                    </Text>
+                                    <Text style={styles.teacherEmailText}>{t.email}</Text>
+                                 </View>
+                                 {assignForm.teacherId === t.id && <Ionicons name="checkmark-circle" size={20} color="#4F46E5" />}
+                              </TouchableOpacity>
+                           ))
+                        )}
+                     </ScrollView>
+                  </View>
+               </View>
+
+               <View style={styles.assignFooter}>
+                  <TouchableOpacity style={styles.assignCancelBtn} onPress={() => setIsAssignModalOpen(false)}>
+                     <Text style={styles.assignCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.assignSaveBtn} onPress={handleUpdateAssignment}>
+                     <Text style={styles.assignSaveText}>Save</Text>
+                  </TouchableOpacity>
+               </View>
+            </View>
+         </View>
+      </Modal>
 
       <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
     </View>
@@ -356,6 +474,32 @@ const styles = StyleSheet.create({
   teacherName: { fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 12 },
   changeBtn: { borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 10, alignItems: 'center' },
   changeBtnText: { fontSize: 11, fontWeight: '700', color: '#6366F1' },
+
+  assignOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  assignContent: { backgroundColor: '#FFF', width: '100%', maxWidth: 400, borderRadius: 24, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10 },
+  assignModalTitle: { fontSize: 20, fontWeight: '800', color: '#1E293B', marginBottom: 20 },
+  assignField: { marginBottom: 18 },
+  assignLabel: { fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 8 },
+  readOnlyBox: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC', height: 50, borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#E2E8F0' },
+  readOnlyText: { fontSize: 14, fontWeight: '600', color: '#1E293B' },
+  pickerBox: { backgroundColor: '#FFF', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', padding: 5 },
+  teacherOption: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: '#F1F5F9' },
+  teacherOptionActive: { backgroundColor: '#EEF2FF', borderColor: '#C7D2FE' },
+  teacherIndexBox: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  teacherIndexText: { fontSize: 11, fontWeight: '800', color: '#64748B' },
+  teacherDetails: { flex: 1 },
+  teacherNameText: { fontSize: 14, fontWeight: '700', color: '#1E293B', marginBottom: 2 },
+  teacherNameTextActive: { color: '#4F46E5' },
+  teacherEmailText: { fontSize: 11, color: '#94A3B8', fontWeight: '500' },
+  removeAssignmentBtn: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 12, marginBottom: 12, backgroundColor: '#FFF1F2', borderWidth: 1, borderColor: '#FECACA', gap: 10 },
+  removeAssignmentText: { fontSize: 14, fontWeight: '700', color: '#EF4444' },
+  emptyTeachersBox: { padding: 30, alignItems: 'center', justifyContent: 'center' },
+  emptyTeachersText: { fontSize: 14, color: '#94A3B8', fontWeight: '500', fontStyle: 'italic' },
+  assignFooter: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 15, marginTop: 15 },
+  assignCancelBtn: { paddingHorizontal: 15, paddingVertical: 10 },
+  assignCancelText: { fontSize: 15, fontWeight: '700', color: '#64748B' },
+  assignSaveBtn: { backgroundColor: '#2563EB', paddingHorizontal: 25, height: 44, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  assignSaveText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
 });
 
 export default PrincipalStaffScreen;

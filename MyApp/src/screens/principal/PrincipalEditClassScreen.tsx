@@ -68,10 +68,10 @@ const PrincipalEditClassScreen = ({ navigation, route }: any) => {
 
       const classData = classRes.data.data || classRes.data;
       const classSubjects = subjectsRes.data.classSubjects || [];
-      const staffList = staffRes.data.staff || [];
+      const staffList = staffRes.data.data || staffRes.data.staff || staffRes.data || [];
       const availableSubjects = allSubsRes.data.subjects || [];
 
-      setTeachers(staffList);
+      setTeachers(Array.isArray(staffList) ? staffList : []);
       setAllAvailableSubjects(availableSubjects);
       setForm({
         name: classData.name || '',
@@ -80,10 +80,10 @@ const PrincipalEditClassScreen = ({ navigation, route }: any) => {
         academicYear: classData.academicYear || '',
         subjects: classSubjects.map((s: any) => ({
           classSubjectId: s.id,
-          subjectId: s.subjectId,
-          name: s.subjectName || s.name,
-          teacherId: s.teacherId,
-          weeklyPeriods: s.weeklyPeriods || 0,
+          subjectId: s.subject_id,
+          name: s.subject_name || s.name,
+          teacherId: s.teachers && s.teachers.length > 0 ? s.teachers[0].teacher_id : '',
+          weeklyPeriods: s.weekly_periods || 1,
         })),
       });
 
@@ -133,10 +133,10 @@ const PrincipalEditClassScreen = ({ navigation, route }: any) => {
   };
 
   const addSubjectRow = () => {
-     setForm({
-        ...form,
-        subjects: [...form.subjects, { name: 'Select Subject', subjectId: '', teacherId: '', weeklyPeriods: 0 }]
-     });
+    setForm({
+      ...form,
+      subjects: [...form.subjects, { name: 'Select Subject', subjectId: '', teacherId: '', weeklyPeriods: 1 }]
+    });
   };
 
   const updateSubjectRow = (index: number, data: any) => {
@@ -388,29 +388,52 @@ const PrincipalEditClassScreen = ({ navigation, route }: any) => {
             </View>
             <ScrollView style={styles.pickerList}>
               <TouchableOpacity 
-                style={styles.pickerItem}
+                style={styles.removeAssignmentBtn}
                 onPress={() => {
                   if (activeRowIndex !== null) updateSubjectRow(activeRowIndex, { teacherId: null });
                   setTeacherPickerVisible(false);
                 }}
               >
-                <Text style={[styles.pickerItemText, {color: '#EF4444'}]}>Remove Assignment</Text>
+                <Ionicons name="person-remove-outline" size={20} color="#EF4444" />
+                <Text style={styles.removeAssignmentText}>Remove Assignment</Text>
               </TouchableOpacity>
-              {teachers.map((t) => (
-                <TouchableOpacity 
-                  key={t.id} 
-                  style={styles.pickerItem}
-                  onPress={() => {
-                    if (activeRowIndex !== null) {
-                      updateSubjectRow(activeRowIndex, { teacherId: t.id });
-                    }
-                    setTeacherPickerVisible(false);
-                  }}
-                >
-                  <Text style={styles.pickerItemText}>{t.name}</Text>
-                  <Text style={styles.pickerItemSub}>{t.role || 'Teacher'}</Text>
-                </TouchableOpacity>
-              ))}
+
+              {teachers.length === 0 ? (
+                <View style={styles.emptyTeachersBox}>
+                   <Text style={styles.emptyTeachersText}>No teachers found</Text>
+                </View>
+              ) : (
+                teachers.map((t, idx) => {
+                  const isSelected = activeRowIndex !== null && form.subjects[activeRowIndex]?.teacherId === t.id;
+                  return (
+                    <TouchableOpacity 
+                      key={t.id} 
+                      style={[styles.teacherOption, isSelected && styles.teacherOptionActive]}
+                      onPress={() => {
+                        if (activeRowIndex !== null) {
+                          updateSubjectRow(activeRowIndex, { teacherId: t.id });
+                        }
+                        setTeacherPickerVisible(false);
+                      }}
+                    >
+                      <View style={styles.teacherIndexBox}>
+                         <Text style={styles.teacherIndexText}>{idx + 1}</Text>
+                      </View>
+                      <View style={styles.teacherDetails}>
+                         <Text style={[styles.teacherNameText, isSelected && styles.teacherNameTextActive]}>
+                            {t.name || (t.firstName ? `${t.firstName} ${t.lastName}` : 'Unknown Teacher')}
+                         </Text>
+                         <Text style={styles.teacherEmailText}>{t.email}</Text>
+                      </View>
+                      {isSelected ? (
+                        <Ionicons name="checkmark-circle" size={20} color="#4F46E5" />
+                      ) : (
+                        <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })
+              )}
             </ScrollView>
           </View>
         </View>
@@ -484,6 +507,19 @@ const styles = StyleSheet.create({
   pickerTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B' },
   pickerList: { flex: 1 },
   pickerItem: { paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F8FAFC', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  
+  teacherOption: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: '#F1F5F9', backgroundColor: '#FFF' },
+  teacherIndexBox: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  teacherIndexText: { fontSize: 11, fontWeight: '800', color: '#64748B' },
+  teacherDetails: { flex: 1 },
+  teacherNameText: { fontSize: 14, fontWeight: '700', color: '#1E293B', marginBottom: 2 },
+  teacherNameTextActive: { color: '#4F46E5' },
+  teacherOptionActive: { borderColor: '#4F46E5', backgroundColor: '#F5F3FF' },
+  teacherEmailText: { fontSize: 11, color: '#94A3B8', fontWeight: '500' },
+  removeAssignmentBtn: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 12, marginBottom: 12, backgroundColor: '#FFF1F2', borderWidth: 1, borderColor: '#FECACA', gap: 10 },
+  removeAssignmentText: { fontSize: 14, fontWeight: '700', color: '#EF4444' },
+  emptyTeachersBox: { padding: 30, alignItems: 'center', justifyContent: 'center' },
+  emptyTeachersText: { fontSize: 14, color: '#94A3B8', fontWeight: '500', fontStyle: 'italic' },
 });
 
 export default PrincipalEditClassScreen;

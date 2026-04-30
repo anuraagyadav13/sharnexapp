@@ -15,6 +15,7 @@ import {
   Dimensions,
   Modal,
   FlatList,
+  PermissionsAndroid,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -206,6 +207,29 @@ const PrincipalEditStaffScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   };
 
+  const handleBack = () => {
+    const isDirty = 
+      formData.firstName !== (initialData?.firstName || initialData?.name?.split(' ')[0] || '') ||
+      formData.lastName !== (initialData?.lastName || initialData?.name?.split(' ').slice(1).join(' ') || '') ||
+      formData.email !== (initialData?.email || '') ||
+      formData.address !== (initialData?.address || '') ||
+      formData.bankName !== (initialData?.bankName || '') ||
+      formData.accountNumber !== (initialData?.accountNumber || '');
+
+    if (isDirty) {
+      Alert.alert(
+        'Unsaved Changes',
+        'You have modified this profile. Are you sure you want to discard changes?',
+        [
+          { text: 'Stay Here', style: 'cancel' },
+          { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() }
+        ]
+      );
+    } else {
+      navigation.goBack();
+    }
+  };
+
   const filteredOptions = selectionConfig.options.filter(opt => 
     opt.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -216,7 +240,7 @@ const PrincipalEditStaffScreen: React.FC<Props> = ({ navigation, route }) => {
       
       {/* Premium Header */}
       <View style={styles.header}>
-        <ScaleButton onPress={() => navigation.goBack()} style={styles.backButton}>
+        <ScaleButton onPress={handleBack} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="#1E293B" />
         </ScaleButton>
         <Text style={styles.headerTitle}>Edit Faculty Profile</Text>
@@ -601,7 +625,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flex: 1,
     gap: 8,
-    marginTop: 10,
     shadowColor: '#6366F1',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -610,7 +633,7 @@ const styles = StyleSheet.create({
   },
   nextButtonText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
 
-  footerButtons: { flexDirection: 'row', gap: 15, marginTop: 10 },
+  footerButtons: { flexDirection: 'row', gap: 15, marginTop: 30, alignItems: 'center' },
   prevButton: {
     flex: 1,
     backgroundColor: '#FFF',

@@ -22,7 +22,7 @@ import Animated, { FadeInUp, FadeInDown, SlideInDown } from 'react-native-reanim
 import ScaleButton from '../../components/animations/ScaleButton';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
+import apiClient, { getApiErrorMessage } from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import Skeleton from '../../components/common/Skeleton';
 import Toast, { ToastType } from '../../components/Toast';
@@ -56,7 +56,7 @@ const StatCard = ({ title, value, color, icon }: { title: string, value: string 
   </View>
 );
 
-const ClassCard = ({ item, index, delay, onDelete }: any) => {
+const ClassCard = ({ item, index, delay, onDelete, onAssign }: any) => {
   const navigation = useNavigation<any>();
   return (
     <Animated.View entering={FadeInUp.delay(delay).springify()} style={styles.classCard}>
@@ -112,9 +112,10 @@ const ClassCard = ({ item, index, delay, onDelete }: any) => {
           </View>
           <View>
             <Text style={styles.teacherLabel}>TEACHER</Text>
-            <Text style={styles.teacherName}>{item.teacher || 'Not Assigned'}</Text>
+            <Text style={styles.teacherName}>{item.teacher || item.teacherName || item.teacher_name || 'Not Assigned'}</Text>
           </View>
         </View>
+
       </View>
     </Animated.View>
   );
@@ -133,6 +134,10 @@ const PrincipalClassesScreen = ({ navigation }: any) => {
     message: '',
     type: 'info'
   });
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [selectedClassForAssign, setSelectedClassForAssign] = useState<any>(null);
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [assignForm, setAssignForm] = useState({ classId: '', teacherId: '' });
 
   const showToast = (message: string, type: ToastType = 'info', onUndo?: () => void) => {
     setToast({ visible: true, message, type, onUndo });
@@ -149,16 +154,21 @@ const PrincipalClassesScreen = ({ navigation }: any) => {
   const fetchData = async () => {
     try {
       if (!isRefreshing) setIsLoading(true);
-      const res = await apiClient.get(ENDPOINTS.PRINCIPAL.CLASSES);
+      const [res, staffRes] = await Promise.all([
+        apiClient.get(ENDPOINTS.PRINCIPAL.CLASSES),
+        apiClient.get(ENDPOINTS.PRINCIPAL.STAFF)
+      ]);
+
       const data = res.data.data || res.data || [];
       const classList = Array.isArray(data) ? data : data.classes || [];
-      
-      // De-duplicate classes by ID to match web portal's unique class list
       const uniqueClasses = Array.from(new Map(classList.map((c: any) => [c.id, c])).values());
       setClasses(uniqueClasses);
+
+      const staffData = staffRes.data.data || staffRes.data.staff || staffRes.data || [];
+      setTeachers(Array.isArray(staffData) ? staffData : []);
     } catch (error) {
-      console.error('Failed to fetch classes:', error);
-      setClasses([]);
+      console.error('Failed to fetch data:', error);
+      showToast('Error loading data.', 'error');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -198,6 +208,35 @@ const PrincipalClassesScreen = ({ navigation }: any) => {
       console.error('Add class error:', error);
       const errorMsg = error?.response?.data?.message || 'Failed to create class. Please try again.';
       showToast(errorMsg, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOpenAssign = (cls: any) => {
+    setSelectedClassForAssign(cls);
+    setAssignForm({ classId: cls.id, teacherId: cls.teacherId || '' });
+    setIsAssignModalOpen(true);
+  };
+
+  const handleUpdateAssignment = async (overrideId?: string) => {
+    try {
+      const finalTeacherId = overrideId !== undefined ? overrideId : assignForm.teacherId;
+      const selectedTeacher = teachers.find(t => t.id === finalTeacherId);
+      const teacherName = selectedTeacher ? (selectedTeacher.name || `${selectedTeacher.firstName} ${selectedTeacher.lastName}`) : 'Not Assigned';
+      
+      const institutionId = authState.user?.institutionId || authState.user?.tenantId;
+      await apiClient.post(`/tenants/${institutionId}/class-assignments`, {
+        classId: assignForm.classId,
+        teacherId: assignForm.teacherId
+      });
+      setIsAssignModalOpen(false);
+      fetchData(); // Sync with server
+      showToast('Teacher assigned successfully!', 'success');
+    } catch (error) {
+      console.error('Failed to update assignment:', error);
+      fetchData(); // Rollback on error
+      showToast(getApiErrorMessage(error), 'error');
     } finally {
       setIsLoading(false);
     }
@@ -328,11 +367,69 @@ const PrincipalClassesScreen = ({ navigation }: any) => {
             {classes
               .filter(c => (c.className || c.name)?.toLowerCase().includes(searchQuery.toLowerCase()))
               .map((item, index) => (
-                <ClassCard key={item.id} item={item} index={index} delay={index * 50} onDelete={handleDelete} />
+                <ClassCard key={item.id} item={item} index={index} delay={index * 50} onDelete={handleDelete} onAssign={handleOpenAssign} />
               ))}
           </View>
         </ScrollView>
       )}
+
+      {/* Assign Teacher Modal */}
+      <Modal visible={isAssignModalOpen} transparent animationType="fade">
+         <View style={styles.assignOverlay}>
+            <View style={styles.assignContent}>
+               <Text style={styles.assignTitle}>Assign Class Teacher</Text>
+               
+               <View style={styles.assignField}>
+                  <Text style={styles.assignLabel}>Class</Text>
+                  <View style={styles.readOnlyBox}>
+                     <Text style={styles.readOnlyText}>{selectedClassForAssign?.className || selectedClassForAssign?.name}</Text>
+                     <Ionicons name="chevron-down" size={18} color="#94A3B8" />
+                  </View>
+               </View>
+
+               <View style={styles.assignField}>
+                  <Text style={styles.assignLabel}>Teacher</Text>
+                  <View style={styles.pickerBox}>
+                     <ScrollView style={styles.pickerList}>
+              {teachers.length === 0 ? (
+                <View style={styles.emptyTeachersBox}>
+                   <Text style={styles.emptyTeachersText}>No teachers found</Text>
+                </View>
+              ) : (
+                teachers.map((t, idx) => (
+                  <TouchableOpacity 
+                    key={t.id} 
+                    style={styles.teacherOption}
+                    onPress={() => setAssignForm({ ...assignForm, teacherId: t.id })}
+                  >
+                    <View style={styles.teacherIndexBox}>
+                       <Text style={styles.teacherIndexText}>{idx + 1}</Text>
+                    </View>
+                    <View style={styles.teacherDetails}>
+                       <Text style={styles.teacherNameText}>
+                          {t.name || (t.firstName ? `${t.firstName} ${t.lastName}` : 'Unknown Teacher')}
+                       </Text>
+                       <Text style={styles.teacherEmailText}>{t.email}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+                  </View>
+               </View>
+
+               <View style={styles.assignFooter}>
+                  <TouchableOpacity style={styles.assignCancelBtn} onPress={() => setIsAssignModalOpen(false)}>
+                     <Text style={styles.assignCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.assignSaveBtn} onPress={handleUpdateAssignment}>
+                     <Text style={styles.assignSaveText}>Save</Text>
+                  </TouchableOpacity>
+               </View>
+            </View>
+         </View>
+      </Modal>
 
       <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
     </View>
@@ -418,8 +515,36 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: 'row', gap: 15 },
   inputLabel: { fontSize: 10, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5, marginBottom: 8 },
   premiumInput: { backgroundColor: '#F8FAFC', borderRadius: 12, paddingHorizontal: 16, height: 50, fontSize: 14, color: '#1E293B', fontWeight: '600', borderWidth: 1, borderColor: '#F1F5F9' },
-  primarySubmitBtn: { backgroundColor: '#4F46E5', height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 10, shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
   primarySubmitBtnText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+
+  changeBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#C7D2FE' },
+  changeBtnText: { fontSize: 11, fontWeight: '700', color: '#4F46E5' },
+
+  assignOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  assignContent: { backgroundColor: '#FFF', width: '100%', maxWidth: 400, borderRadius: 24, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10 },
+  assignTitle: { fontSize: 20, fontWeight: '800', color: '#1E293B', marginBottom: 20 },
+  assignField: { marginBottom: 18 },
+  assignLabel: { fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 8 },
+  readOnlyBox: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC', height: 50, borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#E2E8F0' },
+  readOnlyText: { fontSize: 14, fontWeight: '600', color: '#1E293B' },
+  pickerBox: { backgroundColor: '#FFF', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', padding: 5 },
+  teacherOption: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: '#F1F5F9' },
+  teacherOptionActive: { backgroundColor: '#EEF2FF', borderColor: '#C7D2FE' },
+  teacherIndexBox: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  teacherIndexText: { fontSize: 11, fontWeight: '800', color: '#64748B' },
+  teacherDetails: { flex: 1 },
+  teacherNameText: { fontSize: 14, fontWeight: '700', color: '#1E293B', marginBottom: 2 },
+  teacherNameTextActive: { color: '#4F46E5' },
+  teacherEmailText: { fontSize: 11, color: '#94A3B8', fontWeight: '500' },
+  removeAssignmentBtn: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 12, marginBottom: 12, backgroundColor: '#FFF1F2', borderWidth: 1, borderColor: '#FECACA', gap: 10 },
+  removeAssignmentText: { fontSize: 14, fontWeight: '700', color: '#EF4444' },
+  emptyTeachersBox: { padding: 30, alignItems: 'center', justifyContent: 'center' },
+  emptyTeachersText: { fontSize: 14, color: '#94A3B8', fontWeight: '500', fontStyle: 'italic' },
+  assignFooter: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 15, marginTop: 15 },
+  assignCancelBtn: { paddingHorizontal: 15, paddingVertical: 10 },
+  assignCancelText: { fontSize: 15, fontWeight: '700', color: '#64748B' },
+  assignSaveBtn: { backgroundColor: '#2563EB', paddingHorizontal: 25, height: 44, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  assignSaveText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
 });
 
 export default PrincipalClassesScreen;

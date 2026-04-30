@@ -9,7 +9,8 @@ import {
   Platform,
   TextInput,
   ActivityIndicator,
-  Alert
+  Alert,
+  KeyboardAvoidingView
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -90,8 +91,16 @@ const PrincipalAddSubjectScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
            <View style={{flex: 1}}>
               <Text style={styles.pageTitle}>Add Subject</Text>
               <Text style={styles.pageSubtitle}>Define new academic course offerings</Text>
@@ -148,7 +157,8 @@ const PrincipalAddSubjectScreen: React.FC<Props> = ({ navigation }) => {
               </TouchableOpacity>
            </View>
         </Animated.View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 };

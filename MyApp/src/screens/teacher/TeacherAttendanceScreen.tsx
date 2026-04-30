@@ -89,9 +89,7 @@ const TeacherAttendanceScreen: React.FC<Props> = ({ navigation }) => {
           { id: 'c2', name: 'Class 9', section: 'B', totalStudents: 38, grade: 'Secondary', todayStatus: 'pending' },
         ]);
         setMyAttendance({ percentage: 94 });
-      } finally {
-        setTimeout(() => setIsLoading(false), 800);
-      }
+      } finally { setIsLoading(false); }
     };
     fetchData();
   }, [authState.user?.id]);

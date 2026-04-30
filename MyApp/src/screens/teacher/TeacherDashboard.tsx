@@ -377,7 +377,7 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
           { id: '2', type: 'assignment', title: 'Review Physics Project', subtitle: 'Due in 2 days', icon: 'file-document-outline', color: '#10B981', data: { id: 'a1', classId: 'c2' } },
         ]);
       } finally {
-        setTimeout(() => setIsLoading(false), 800);
+        setIsLoading(false);
       }
     };
 
