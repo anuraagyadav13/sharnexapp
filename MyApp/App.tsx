@@ -72,8 +72,10 @@ import PrincipalAddStaff from './src/screens/principal/PrincipalAddStaffScreen';
 import PrincipalStaffDetails from './src/screens/principal/PrincipalStaffDetailsScreen';
 import PrincipalEditStaff from './src/screens/principal/PrincipalEditStaffScreen';
 import PrincipalStudentDetails from './src/screens/principal/PrincipalStudentDetailsScreen';
-import PrincipalAddStudent from './src/screens/principal/PrincipalAddStudentScreen';
-import PrincipalCalendar from './src/screens/principal/PrincipalCalendarScreen';
+import PrincipalAddStudentScreen from './src/screens/principal/PrincipalAddStudentScreen';
+import PrincipalEditStudentScreen from './src/screens/principal/PrincipalEditStudentScreen';
+import PrincipalViewStudentScreen from './src/screens/principal/PrincipalViewStudentScreen';
+import PrincipalCalendarScreen from './src/screens/principal/PrincipalCalendarScreen';
 import PrincipalTimetable from './src/screens/principal/PrincipalTimetableScreen';
 import PrincipalPerformance from './src/screens/principal/PrincipalPerformanceScreen';
 import PrincipalAnnouncements from './src/screens/principal/PrincipalAnnouncementsScreen';
@@ -191,9 +193,11 @@ function RootNavigator() {
               <Stack.Screen name="PrincipalAddStaff" component={PrincipalAddStaff} />
               <Stack.Screen name="PrincipalStaffDetails" component={PrincipalStaffDetails} />
               <Stack.Screen name="PrincipalEditStaff" component={PrincipalEditStaff} />
-              <Stack.Screen name="PrincipalStudents" component={PrincipalStudentDetails} />
-              <Stack.Screen name="PrincipalAddStudent" component={PrincipalAddStudent} />
-              <Stack.Screen name="PrincipalCalendar" component={PrincipalCalendar} />
+              <Stack.Screen name="PrincipalStudentDetails" component={PrincipalStudentDetails} />
+              <Stack.Screen name="PrincipalAddStudent" component={PrincipalAddStudentScreen} />
+              <Stack.Screen name="PrincipalEditStudent" component={PrincipalEditStudentScreen} />
+              <Stack.Screen name="PrincipalViewStudent" component={PrincipalViewStudentScreen} />
+              <Stack.Screen name="PrincipalCalendar" component={PrincipalCalendarScreen} />
               <Stack.Screen name="PrincipalTimetable" component={PrincipalTimetable} />
               <Stack.Screen name="PrincipalPerformance" component={PrincipalPerformance} />
               <Stack.Screen name="PrincipalAnnouncements" component={PrincipalAnnouncements} />
