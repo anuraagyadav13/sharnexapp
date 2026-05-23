@@ -2,6 +2,8 @@ export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   Home: undefined;
+  ForgotPassword: undefined;
+  ResetPassword: { email?: string };
   
   // Student Screens
   StudentDashboard: undefined;
@@ -72,8 +74,12 @@ export type RootStackParamList = {
   PrincipalStaff: undefined;
   PrincipalMarkStaffAttendance: undefined;
   PrincipalAddStaff: undefined;
+  PrincipalStaffDetails: { staffId: string };
+  PrincipalEditStaff: { staffId: string, initialData?: any };
   PrincipalStudentDetails: undefined;
   PrincipalAddStudent: undefined;
+  PrincipalEditStudent: { studentId: string };
+  PrincipalViewStudent: { studentId: string };
   PrincipalCalendar: undefined;
   PrincipalTimetable: undefined;
   PrincipalPerformance: undefined;
@@ -81,4 +87,9 @@ export type RootStackParamList = {
   PrincipalFees: undefined;
   PrincipalRSM: undefined;
   PrincipalCreateExam: undefined;
+  PrincipalAddSubject: undefined;
+  PrincipalEditSubject: { subjectId: string, initialData?: any };
+  PrincipalAddClass: undefined;
+  PrincipalManageClass: { classId: string, className: string };
+  PrincipalEditClass: { classId: string };
 };

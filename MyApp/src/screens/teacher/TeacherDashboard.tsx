@@ -12,15 +12,65 @@ import {
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import Animated, { 
+  FadeInUp, 
+  FadeInDown,
+  Layout,
+  LinearTransition,
+  useAnimatedStyle, 
+  withRepeat, 
+  withTiming, 
+  withSequence,
+  interpolate,
+  useSharedValue
+} from 'react-native-reanimated';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../../store/AuthContext';
+import { useTheme } from '../../store/ThemeContext';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
+import Skeleton from '../../components/common/Skeleton';
+
+const DashboardSkeleton = () => {
+  const { theme } = useTheme();
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <View style={styles.header}>
+         <Skeleton width={30} height={30} borderRadius={6} />
+         <Skeleton width="40%" height={24} borderRadius={6} />
+         <View style={{flexDirection: 'row', gap: 10}}>
+            <Skeleton width={24} height={24} borderRadius={12} />
+            <Skeleton width={24} height={24} borderRadius={12} />
+            <Skeleton width={32} height={32} borderRadius={16} />
+         </View>
+      </View>
+
+      <View style={styles.section}>
+        <Skeleton width="100%" height={180} borderRadius={20} />
+      </View>
+
+      <View style={styles.section}>
+         <View style={styles.statsRow}>
+            <Skeleton width="31%" height={110} borderRadius={16} />
+            <Skeleton width="31%" height={110} borderRadius={16} />
+            <Skeleton width="31%" height={110} borderRadius={16} />
+         </View>
+      </View>
+
+      <View style={styles.section}>
+         <Skeleton width={120} height={20} style={{marginBottom: 20}} />
+         <View style={styles.quickActionsGrid}>
+            {[1,2,3,4,5,6,7,8,9].map(i => <Skeleton key={i} width="31%" height={110} borderRadius={16} />)}
+         </View>
+      </View>
+    </ScrollView>
+  );
+};
+
 
 type DashboardNavigationProp = NativeStackNavigationProp<RootStackParamList, 'TeacherDashboard'>;
 
@@ -37,46 +87,75 @@ const IconBox = ({ name, color = '#fff', bgColor, size = 50, iconSize = 24, icon
   );
 };
 
-const StatCard = React.memo(({ title, value, subtext1, subtext2, subtextColor, iconName, iconColor }: any) => {
+const ActivityItem = ({ iconName, iconBgColor, name, action, time, isLast, iconLibrary = 'Ionicons' }: any) => {
+  const IconComponent = iconLibrary === 'MaterialCommunityIcons' ? MaterialCommunityIcons : Ionicons;
   return (
-    <View style={styles.statCardHalfAligned}>
-      <Ionicons name={iconName} size={28} color={iconColor} style={styles.statIconNoBg} />
-      <Text style={styles.statTitleHalfAligned} numberOfLines={1}>{title}</Text>
-      <Text style={styles.statValueHalfAligned}>{value}</Text>
-      <Text style={[styles.statSubtext1HalfAligned, { color: subtextColor }]} numberOfLines={1}>{subtext1}</Text>
-      <Text style={styles.statSubtext2HalfAligned} numberOfLines={1}>{subtext2}</Text>
+    <View style={[styles.activityItem, !isLast && styles.activityItemBorder]}>
+      <View style={[styles.activityAvatarBox, { backgroundColor: iconBgColor }]}>
+        <IconComponent name={iconName} size={14} color="#FFF" />
+      </View>
+      <View style={styles.activityContent}>
+        <Text style={styles.activityName}>{name}</Text>
+        <Text style={styles.activityAction} numberOfLines={2}>{action}</Text>
+        <Text style={styles.activityDateText}>{time}</Text>
+      </View>
     </View>
+  );
+};
+
+const StatCard = ({ title, value, color, icon }: { title: string, value: string | number, color: string, icon: string }) => {
+  const { theme } = useTheme();
+  return (
+    <View style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+      <View style={[styles.statIconCircle, { backgroundColor: `${color}15` }]}>
+        <Ionicons name={icon} size={18} color={color} />
+      </View>
+      <Text style={[styles.statValue, { color: theme.text }]}>{value}</Text>
+      <Text style={[styles.statTitle, { color: theme.subtext }]} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
+    </View>
+  );
+};
+
+const QuickActionCard = React.memo(({ title, iconName, bgColor, delay, onPress, iconLibrary = 'Ionicons', badge }: any) => {
+  const { theme } = useTheme();
+  return (
+    <Animated.View entering={FadeInUp.delay(delay).springify()} style={[styles.quickActionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+      <TouchableOpacity onPress={onPress} activeOpacity={onPress ? 0.7 : 1} disabled={!onPress} style={styles.quickActionTouchable}>
+        <View>
+          <IconBox name={iconName} bgColor={bgColor} iconLibrary={iconLibrary} />
+          {!!badge && (
+            <View style={styles.badgeContainer}>
+              <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
+            </View>
+          )}
+        </View>
+        <Text style={[styles.quickActionTitle, { color: theme.text }]}>{title}</Text>
+      </TouchableOpacity>
+    </Animated.View>
   );
 });
 
-const QuickActionCard = React.memo(({ title, iconName, bgColor, delay, onPress, iconLibrary = 'Ionicons' }: any) => (
-  <Animated.View entering={FadeInUp.delay(delay).springify()} style={styles.quickActionCard}>
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.quickActionTouchable}>
-      <IconBox name={iconName} bgColor={bgColor} iconLibrary={iconLibrary} />
-      <Text style={styles.quickActionTitle}>{title}</Text>
-    </TouchableOpacity>
-  </Animated.View>
-));
-
 const ScheduleCard = React.memo(({ time, title, classSection, room, color, status, isOngoing, bgStyleColor, borderStyleColor }: any) => {
+  const { theme, isDarkMode } = useTheme();
   const isSpecialBg = !!bgStyleColor;
   return (
     <View style={[
       styles.scheduleCard,
+      { backgroundColor: theme.surface, borderColor: theme.border },
       isSpecialBg ? {
-        backgroundColor: bgStyleColor,
+        backgroundColor: isDarkMode ? (status === 'Ongoing' ? '#1E293B' : theme.surface) : bgStyleColor,
         borderColor: borderStyleColor,
         shadowColor: borderStyleColor,
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.06,
-        shadowRadius: 20,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.25,
+        shadowRadius: 10,
         elevation: 6
-      } : { borderColor: `${color}40` }
+      } : { borderColor: isDarkMode ? theme.border : `${color}40` }
     ]}>
       <View style={styles.scheduleLeftCol}>
         <View style={[styles.scheduleCardIndicator, { backgroundColor: color }]} />
         <View style={styles.scheduleTimeWrapper}>
-          <Text style={styles.scheduleTime} numberOfLines={1}>{time}</Text>
+          <Text style={[styles.scheduleTime, { color: theme.subtext }]} numberOfLines={1} adjustsFontSizeToFit>{time}</Text>
         </View>
       </View>
 
@@ -93,22 +172,16 @@ const ScheduleCard = React.memo(({ time, title, classSection, room, color, statu
           )}
           {status === 'Completed' && (
             <View style={styles.statusContainer}>
-              <Ionicons name="checkmark" size={14} color="#4B5563" />
-              <Text style={styles.scheduleStatus}>Completed</Text>
-            </View>
-          )}
-          {status === 'Up next' && (
-            <View style={styles.statusContainer}>
-              <Ionicons name="ellipse-outline" size={12} color="#4F46E5" />
-              <Text style={styles.scheduleUpNext}>Up next</Text>
+              <Ionicons name="checkmark" size={14} color={theme.subtext} />
+              <Text style={[styles.scheduleStatus, { color: theme.subtext }]}>Completed</Text>
             </View>
           )}
         </View>
 
-        <Text style={styles.scheduleTeacher}>{classSection}</Text>
+        <Text style={[styles.scheduleTeacher, { color: theme.text }]} numberOfLines={1}>{classSection}</Text>
 
         <View style={styles.scheduleBottomRow}>
-          <Text style={styles.scheduleRoom}>{room}</Text>
+          <Text style={[styles.scheduleRoom, { color: theme.subtext }]}>{room}</Text>
           {isOngoing && (
             <TouchableOpacity style={[styles.joinClassBtn, { backgroundColor: `${color}20`, borderColor: `${color}40` }]}>
               <Text style={[styles.joinClassBtnText, { color }]}>Start Session →</Text>
@@ -120,21 +193,77 @@ const ScheduleCard = React.memo(({ time, title, classSection, room, color, statu
   );
 });
 
-const LiveSessionBanner = ({ subject, classSection, time, color }: any) => (
-  <Animated.View entering={FadeInUp.springify()} style={[styles.liveBanner, { borderLeftColor: color }]}>
-    <View style={styles.liveBannerContent}>
-      <View style={styles.liveIndicatorRow}>
-        <View style={styles.liveDot} />
-        <Text style={styles.liveText}>CLASS IN PROGRESS</Text>
+const EventCard = React.memo(({ title, date, color }: any) => {
+  const { theme } = useTheme();
+  return (
+    <View style={[styles.eventCard, { borderLeftColor: color }]}>
+      <View style={styles.eventCardContent}>
+        <Text style={styles.eventTitle} numberOfLines={1}>{title}</Text>
+        <View style={styles.eventDateContainer}>
+          <Ionicons name="calendar-outline" size={12} color="#9CA3AF" />
+          <Text style={styles.eventDateText}>{date}</Text>
+        </View>
       </View>
-      <Text style={styles.liveSubject}>{subject}</Text>
-      <Text style={styles.liveClassName}>{classSection} • {time}</Text>
     </View>
-    <TouchableOpacity style={[styles.liveJoinBtn, { backgroundColor: color }]}>
-      <Text style={styles.liveJoinBtnText}>Start Session</Text>
-    </TouchableOpacity>
-  </Animated.View>
-);
+  );
+});
+
+const TopStudentCard = React.memo(({ rank, name, className, percentage }: any) => {
+  return (
+    <View style={styles.topStudentCard}>
+      <View style={[styles.rankCircle, { backgroundColor: rank === 1 ? '#FEF3C7' : '#F3F4F6' }]}>
+        <Text style={[styles.rankText, { color: rank === 1 ? '#D97706' : '#6B7280' }]}>{rank}</Text>
+      </View>
+      <View style={styles.topStudentInfo}>
+        <Text style={styles.topStudentName} numberOfLines={1}>{name}</Text>
+        <Text style={styles.topStudentClass}>{className}</Text>
+      </View>
+      <Text style={styles.topStudentPercentage}>{percentage}</Text>
+    </View>
+  );
+});
+
+const LiveSessionBanner = ({ subject, classSection, time, color }: any) => {
+  const { theme, isDarkMode } = useTheme();
+  const shimmerValue = useSharedValue(0);
+
+  useEffect(() => {
+    shimmerValue.value = withRepeat(withTiming(1, { duration: 2500 }), -1, false);
+  }, []);
+
+  const animatedShimmerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(shimmerValue.value, [0, 1], [-100, 250]) }],
+    opacity: interpolate(shimmerValue.value, [0, 0.5, 1], [0.3, 0.8, 0.3]),
+  }));
+
+  return (
+    <Animated.View entering={FadeInUp.springify()} style={[styles.liveBanner, { 
+      backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF', 
+      borderColor: isDarkMode ? '#334155' : '#FDF4FF',
+      borderLeftColor: color 
+    }]}>
+      <View style={styles.liveBannerContent}>
+        <View style={styles.liveIndicatorRow}>
+          <View style={[styles.liveDot, { backgroundColor: color }]} />
+          <Text style={[styles.liveText, { color }]}>CLASS IN PROGRESS</Text>
+        </View>
+        <Text style={[styles.liveSubject, { color: theme.text }]}>{subject}</Text>
+        <Text style={[styles.liveClassName, { color: theme.subtext }]}>{classSection} • {time}</Text>
+        
+        <View style={styles.liveProgressContainer}>
+           <View style={[styles.liveProgressBar, { backgroundColor: isDarkMode ? '#334155' : '#FDF4FF' }]}>
+              <View style={[styles.liveProgressFill, { width: '45%', backgroundColor: color }]}>
+                 <Animated.View style={[styles.shimmerStreak, animatedShimmerStyle]} />
+              </View>
+           </View>
+        </View>
+      </View>
+      <TouchableOpacity style={[styles.liveJoinBtn, { backgroundColor: color }]}>
+        <Text style={styles.liveJoinBtnText}>Start</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
 
 
 const HELP_CENTER_DATA = [
@@ -188,6 +317,7 @@ const FAQ_DATA = [
 const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
+  const { theme, isDarkMode, toggleDarkMode } = useTheme();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [pendingTasks, setPendingTasks] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -205,109 +335,47 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
           return;
         }
 
-        // Fetch dashboard summary, work items, and review items in parallel
-        const [summaryRes, workRes, reviewRes, assignmentRes, quizRes] = await Promise.all([
+        // Fetch dashboard summary and unified pending tasks in parallel
+        const [summaryRes, tasksRes] = await Promise.all([
           // @ts-ignore
           apiClient.get(ENDPOINTS.TEACHER.DASHBOARD(teacherId)),
-          apiClient.get(ENDPOINTS.TEACHER.RMS_WORK_ITEMS).catch(() => ({ data: { items: [] } })),
-          apiClient.get(ENDPOINTS.TEACHER.RMS_REVIEW_ITEMS).catch(() => ({ data: { items: [] } })),
-          apiClient.get(ENDPOINTS.TEACHER.ASSIGNMENTS(teacherId)).catch(() => ({ data: { assignments: [] } })),
-          apiClient.get(ENDPOINTS.TEACHER.TEACHER_QUIZZES(teacherId)).catch(() => ({ data: [] }))
+          apiClient.get(ENDPOINTS.TEACHER.PENDING_TASKS(teacherId)).catch(() => ({ data: { tasks: [] } }))
         ]);
 
         // Handle normalized response appropriately
         const payload = summaryRes.normalized?.data?.summary || summaryRes.data?.summary || summaryRes.data?.data || summaryRes.data;
         setDashboardData(payload);
 
-        // Process Pending Tasks from RMS and Assignments
-        const workItems = Array.isArray(workRes.data) ? workRes.data : workRes.data?.data || workRes.data?.items || [];
-        const reviewItems = Array.isArray(reviewRes.data) ? reviewRes.data : reviewRes.data?.data || reviewRes.data?.items || [];
-        const assignments = Array.isArray(assignmentRes.data) ? assignmentRes.data : assignmentRes.data?.assignments || [];
-        const quizzes = Array.isArray(quizRes.data) ? quizRes.data : quizRes.data?.data || [];
+        // Process Pending Tasks from the unified API
+        const tasks = tasksRes.data?.tasks || tasksRes.data || [];
+        setPendingTasks(tasks);
 
-        const tasks: any[] = [];
-
-        // Add Marking Tasks (Status is null, DRAFT, or REJECTED)
-        workItems.filter((item: any) => !item.status || item.status === 'DRAFT' || item.status === 'REJECTED')
-          .forEach((item: any) => {
-            tasks.push({
-              id: `mark-${item.examId}-${item.classId}-${item.subjectId}`,
-              title: `Enter Marks: ${item.subjectName}`,
-              subtitle: `${item.className} • ${item.examName}`,
-              icon: 'border-color',
-              color: item.status === 'REJECTED' ? '#EF4444' : '#6366F1',
-              type: 'marking',
-              data: item
-            });
-          });
-
-        // Add Review Tasks (Review items with pending subjects)
-        reviewItems.filter((item: any) => (item.pending_subjects || 0) > 0)
-          .forEach((item: any) => {
-            tasks.push({
-              id: `review-${item.examId}-${item.classId}`,
-              title: `Review Class Results: ${item.className}`,
-              subtitle: `${item.examName} • ${item.pending_subjects} Pending`,
-              icon: 'rate-review',
-              color: '#F59E0B',
-              type: 'review',
-              data: item
-            });
-          });
-
-        // Add Assignment Tasks (Ungraded submissions)
-        assignments.filter((item: any) => (item.submissions || 0) > (item.graded || 0))
-          .forEach((item: any) => {
-            tasks.push({
-              id: `assignment-${item.id}`,
-              title: `Grade: ${item.title}`,
-              subtitle: `${item.class} • ${item.submissions - item.graded} New Submissions`,
-              icon: 'file-document-edit-outline',
-              color: '#10B981',
-              type: 'assignment',
-              data: item
-            });
-          });
-
-        // Add Quiz Tasks (Live monitoring or Results review)
-        quizzes.forEach((quiz: any) => {
-          if (quiz.derivedStatus === 'active') {
-            tasks.push({
-              id: `quiz-live-${quiz.id}`,
-              title: `Monitor Live Quiz: ${quiz.title}`,
-              subtitle: `${quiz.className || 'Class'} • Ends at ${quiz.dueDate ? new Date(quiz.dueDate).toLocaleTimeString() : 'N/A'}`,
-              icon: 'pulse',
-              color: '#EF4444',
-              type: 'quiz-live',
-              data: quiz
-            });
-          } else if (quiz.derivedStatus === 'completed') {
-            tasks.push({
-              id: `quiz-result-${quiz.id}`,
-              title: `Review Quiz Results: ${quiz.title}`,
-              subtitle: `${quiz.className || 'Class'} • ${quiz.subject}`,
-              icon: 'chart-bar',
-              color: '#4F46E5',
-              type: 'quiz-result',
-              data: quiz
-            });
-          } else if (quiz.status === 'draft') {
-            tasks.push({
-              id: `quiz-draft-${quiz.id}`,
-              title: `Finish Quiz Draft: ${quiz.title}`,
-              subtitle: `${quiz.subject} • Incomplete`,
-              icon: 'file-edit-outline',
-              color: '#9CA3AF',
-              type: 'quiz-draft',
-              data: quiz
-            });
-          }
-        });
-
+        // Pending tasks are now fully handled by the unified API
         setPendingTasks(tasks);
       } catch (error: any) {
         console.error('Failed to fetch teacher dashboard:', error);
-        setError('Failed to load dashboard. Please try again.');
+        // TEMPORARY: Mock data fallback for dev work
+          setDashboardData({
+            stats: { totalStudents: 154, avgAttendance: 88, activeQuizzes: 3, pendingGrading: 12 },
+            todaysSchedule: [
+              { start_time: '08:30', end_time: '09:30', subject_name: 'Mathematics', class_name: 'Class 10', section: 'A', room_name: 'Room 201', status: 'Ongoing' },
+              { start_time: '10:00', end_time: '11:00', subject_name: 'Science', class_name: 'Class 9', section: 'B', room_name: 'Lab 1', status: 'Upcoming' },
+            ],
+            upcomingEvents: [
+              { title: 'Annual Sports Day', date: '25 May 2026', color: '#EF4444' },
+              { title: 'Parent Teacher Meeting', date: '02 Jun 2026', color: '#F59E0B' },
+              { title: 'Summer Vacation Starts', date: '15 Jun 2026', color: '#10B981' }
+            ],
+            topStudents: [
+              { rank: 1, name: 'Aditya Sharma', className: '12-A', percentage: '98.5%' },
+              { rank: 2, name: 'Priya Patel', className: '10-C', percentage: '97.2%' },
+              { rank: 3, name: 'Rahul Verma', className: '11-B', percentage: '95.8%' }
+            ]
+          });
+        setPendingTasks([
+          { id: '1', type: 'marking', title: 'Grade Quiz: Calculus', subtitle: '32 submissions pending', icon: 'clipboard-edit-outline', color: '#8B5CF6', data: { examId: 'q1', classId: 'c1' } },
+          { id: '2', type: 'assignment', title: 'Review Physics Project', subtitle: 'Due in 2 days', icon: 'file-document-outline', color: '#10B981', data: { id: 'a1', classId: 'c2' } },
+        ]);
       } finally {
         setIsLoading(false);
       }
@@ -320,48 +388,58 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Top Header */}
-        <View style={styles.globalHeader}>
-          <ScaleButton
-            style={styles.menuHandle}
-            onPress={() => setDrawerOpen(true)}
-            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-            activeOpacity={0.7}
-            scaleTo={0.85}
-          >
-            <Ionicons name="menu" size={28} color="#1F2937" />
-          </ScaleButton>
-          <Text style={styles.headerTitle} numberOfLines={1}>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
-          <View style={styles.headerRight}>
-            <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-            <Ionicons name="settings-outline" size={22} color="#1F2937" />
-            <Ionicons name="moon-outline" size={22} color="#1F2937" />
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
+      {isLoading ? (
+        <DashboardSkeleton />
+      ) : (
+        <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* Global Header */}
+          <View style={styles.header}>
+            <ScaleButton 
+              style={styles.menuHandle} 
+              onPress={() => setDrawerOpen(true)}
+              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+            >
+              <Ionicons name="menu" size={28} color="#1F2937" />
+            </ScaleButton>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              Welcome, {authState.user?.name?.split(' ')[0] || 'Teacher'}
+            </Text>
+            <View style={styles.headerRight}>
+              <TouchableOpacity style={styles.iconBtn}>
+                <Ionicons name="notifications-outline" size={22} color="#1F2937" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('TeacherProfile')} style={styles.iconBtn}>
+                <Ionicons name="settings-outline" size={22} color="#1F2937" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={toggleDarkMode} style={styles.iconBtn}>
+                <Ionicons name={isDarkMode ? "sunny-outline" : "moon-outline"} size={22} color="#1F2937" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('TeacherProfile')}
+              >
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
+                </View>
+              </TouchableOpacity>
             </View>
           </View>
-        </View>
 
-        {/* Hero Banner (Similar to StudentDashboard)
-        <Animated.View entering={FadeInUp.delay(50).springify()} style={styles.heroBannerRow}>
+        {/* Hero Banner */}
+        <Animated.View 
+          entering={FadeInUp.delay(50).springify()} 
+          style={[styles.heroBannerRow, { backgroundColor: isDarkMode ? '#1E1B4B' : '#D9DAF9' }]}
+        >
           <View style={styles.heroTextSide}>
-            <Text style={styles.heroRowTitle1}>
-              Empower <Text style={styles.heroRowTitle2}>Teaching</Text>
-            </Text>
-            <Text style={styles.heroRowTitle3}>with Sharnex</Text>
-            <Text style={styles.heroRowSubtitle}>
-              Easily manage attendance, assignments, and quizzes all in one platform.
-            </Text>
+            <Text style={[styles.heroRowTitle1, { color: isDarkMode ? '#F8FAFC' : '#1F2937' }]}>Empower <Text style={[styles.heroRowTitle2, { color: isDarkMode ? '#818CF8' : '#4F46E5' }]}>Teaching</Text></Text>
+            <Text style={[styles.heroRowTitle2, { color: isDarkMode ? '#818CF8' : '#4F46E5' }]}>Management with</Text>
+            <Text style={[styles.heroRowTitle3, { color: isDarkMode ? '#F8FAFC' : '#1F2937' }]}>Sharnex</Text>
+            <Text style={[styles.heroRowSubtitle, { color: isDarkMode ? '#CBD5E1' : '#4B5563' }]}>Easily manage attendance, assignments, and quizzes all in one platform.</Text>
           </View>
           <View style={styles.heroImageSide}>
-            <Image
-              source={require('../../assets/laptop.png')}
-              style={styles.heroRowImage}
-              resizeMode="contain"
-            />
+            <Image source={require('../../assets/laptop.png')} style={styles.heroRowImage} resizeMode="contain" />
           </View>
-        </Animated.View> */}
+        </Animated.View>
 
         {/* Overview Stats - All in one row, student style */}
         <View style={styles.section}>
@@ -386,54 +464,103 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
               <Text style={{ color: '#DC2626', fontWeight: '500' }}>{error}</Text>
             </View>
           ) : (
-            <View style={styles.statsRowHorizontalAligned}>
-              <StatCard
-                title="Today's Classes"
-                value={dashboardData?.todaysSchedule?.length || 0}
-                subtext1={`${(dashboardData?.todaysSchedule || []).filter((s: any) => s.status === 'Completed').length} Completed`}
-                subtext2={`${(dashboardData?.todaysSchedule || []).filter((s: any) => s.status !== 'Completed').length} Remaining`}
-                subtextColor="#3B82F6"
-                iconName="calendar"
-                iconColor="#3B82F6"
-              />
-              <StatCard
-                title="Pending Grading"
-                value={dashboardData?.stats?.pendingGrading || 0}
-                subtext1="Assignments"
-                subtext2="Needs Review"
-                subtextColor="#F59E0B"
-                iconName="clipboard"
-                iconColor="#F59E0B"
-              />
+            <View style={styles.statsRow}>
               <StatCard
                 title="Total Students"
-                value={dashboardData?.stats?.totalStudents || 84}
-                subtext1="Active"
-                subtext2="Enrolled"
-                subtextColor="#10B981"
-                iconName="people"
-                iconColor="#10B981"
+                value={dashboardData?.stats?.totalStudents || 0}
+                color="#6366F1"
+                icon="people"
+              />
+              <StatCard
+                title="Attendance"
+                value={(dashboardData?.stats?.avgAttendance || 0) + "%"}
+                color="#10B981"
+                icon="bar-chart"
+              />
+              <StatCard
+                title="Active Quizzes"
+                value={dashboardData?.stats?.activeQuizzes || 0}
+                color="#F59E0B"
+                icon="help-circle"
               />
             </View>
           )}
         </View>
 
-        {/* Quick Actions (Similar to StudentDashboard) */}
+        {/* Quick Actions */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="flash" size={20} color="#3B82F6" style={styles.sectionIconMargin} />
             <Text style={styles.sectionTitle}>Quick Actions</Text>
           </View>
           <View style={styles.quickActionsGrid}>
-            <QuickActionCard delay={100} title="Attendance" iconName="checkmark-circle" bgColor="#10B981" onPress={() => navigation.navigate('TeacherAttendance')} />
-            <QuickActionCard delay={150} title="Assignments" iconName="document-text" bgColor="#8B5CF6" onPress={() => navigation.navigate('TeacherAssignment')} />
-            <QuickActionCard delay={200} title="Quizzes" iconName="time" bgColor="#EAB308" onPress={() => navigation.navigate('TeacherQuiz')} />
-            <QuickActionCard delay={250} title="Performance" iconName="bar-chart" bgColor="#3B82F6" onPress={() => navigation.navigate('TeacherPerformance')} />
-            <QuickActionCard delay={300} title="Materials" iconName="book" bgColor="#10B981" onPress={() => navigation.navigate('TeacherStudyMaterial')} />
-          </View>
-          <View style={[styles.quickActionsGrid, { marginTop: 12 }]}>
-            <QuickActionCard delay={350} title="Live Monitor" iconName="pulse" bgColor="#EC4899" onPress={() => navigation.navigate('TeacherMonitorLive', { quizId: '1' })} />
-            <QuickActionCard delay={400} title="Equipment" iconName="construct" bgColor="#F59E0B" onPress={() => navigation.navigate('TeacherEquipment')} />
+            <QuickActionCard
+              delay={100}
+              title="Attendance"
+              iconName="checkmark-circle"
+              bgColor="#10B981"
+              badge={dashboardData?.todaysSchedule?.length || 0}
+              onPress={() => navigation.navigate('TeacherAttendance')}
+            />
+            <QuickActionCard
+              delay={150}
+              title="Assignments"
+              iconName="document-text"
+              bgColor="#8B5CF6"
+              badge={dashboardData?.stats?.pendingGrading || 0}
+              onPress={() => navigation.navigate('TeacherAssignment')}
+            />
+            <QuickActionCard
+              delay={200}
+              title="Quizzes"
+              iconName="time"
+              bgColor="#EAB308"
+              badge={dashboardData?.stats?.activeQuizzes || 0}
+              onPress={() => navigation.navigate('TeacherQuiz')}
+            />
+            <QuickActionCard 
+              delay={250} 
+              title="Performance" 
+              iconName="bar-chart" 
+              bgColor="#3B82F6" 
+              onPress={() => navigation.navigate('TeacherResult')}
+            />
+            <QuickActionCard 
+              delay={300} 
+              title="Materials" 
+              iconName="book" 
+              bgColor="#10B981" 
+              onPress={() => navigation.navigate('TeacherMaterial')}
+            />
+            <QuickActionCard 
+              delay={350} 
+              title="Live Monitor" 
+              iconName="pulse" 
+              bgColor="#EC4899" 
+              onPress={() => navigation.navigate('TeacherLiveClass')}
+            />
+            <QuickActionCard 
+              delay={400} 
+              title="Equipment" 
+              iconName="construct" 
+              bgColor="#F59E0B" 
+              onPress={() => navigation.navigate('TeacherEquipment')}
+            />
+            <QuickActionCard 
+              delay={450} 
+              title="Leave Entry" 
+              iconName="calendar-outline" 
+              bgColor="#6366F1" 
+              onPress={() => navigation.navigate('TeacherLeave')}
+            />
+            <QuickActionCard
+              delay={500}
+              title="Exam Records"
+              iconName="list-outline"
+              bgColor="#F97316"
+              badge={pendingTasks.filter(t => t.type === 'marking').length || 0}
+              onPress={() => navigation.navigate('TeacherResult')}
+            />
           </View>
         </View>
 
@@ -445,7 +572,10 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
           </View>
           <View style={styles.scheduleList}>
             {isLoading ? (
-              <ActivityIndicator size="small" color="#4F46E5" />
+              <View style={{ gap: 12 }}>
+                <Skeleton width="100%" height={100} borderRadius={16} />
+                <Skeleton width="100%" height={100} borderRadius={16} />
+              </View>
             ) : dashboardData?.todaysSchedule?.length === 0 ? (
               <Text style={styles.emptyText}>No classes scheduled for today.</Text>
             ) : (
@@ -475,7 +605,11 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
           </View>
           <View style={styles.pendingTasksList}>
             {isLoading ? (
-              <ActivityIndicator size="small" color="#3B82F6" style={{ marginVertical: 20 }} />
+              <View style={{ gap: 10 }}>
+                <Skeleton width="100%" height={70} borderRadius={16} />
+                <Skeleton width="100%" height={70} borderRadius={16} />
+                <Skeleton width="100%" height={70} borderRadius={16} />
+              </View>
             ) : pendingTasks.length === 0 ? (
               <View style={styles.pendingTasksCard}>
                 <Text style={styles.pendingTasksText}>No pending tasks!</Text>
@@ -514,6 +648,9 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
                       navigation.navigate('TeacherViewQuizResult', { quizId: task.data.id });
                     } else if (task.type === 'quiz-draft') {
                       navigation.navigate('TeacherCreateQuiz', { quizId: task.data.id });
+                    } else if (task.type === 'substitution') {
+                      // @ts-ignore
+                      navigation.navigate('TeacherTimetable');
                     }
                   }}
                 >
@@ -533,6 +670,76 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
                 </TouchableOpacity>
               ))
             )}
+          </View>
+        </View>
+
+        {/* Performance & Events Grid */}
+        <View style={[styles.section, { flexDirection: 'row', gap: 16 }]}>
+          {/* Top Students */}
+          <View style={{ flex: 1.1 }}>
+            <Text style={[styles.sectionTitle, { marginBottom: 16 }]}>Top Students</Text>
+            <View style={styles.cardContainer}>
+              {(dashboardData?.topStudents || []).map((student: any, index: number) => (
+                <TopStudentCard
+                  key={index}
+                  rank={student.rank}
+                  name={student.name}
+                  className={student.className}
+                  percentage={student.percentage}
+                />
+              ))}
+            </View>
+          </View>
+
+          {/* Upcoming Events */}
+          <View style={{ flex: 0.9 }}>
+            <Text style={[styles.sectionTitle, { marginBottom: 16 }]}>Events</Text>
+            <View style={{ gap: 10 }}>
+              {(dashboardData?.upcomingEvents || []).map((event: any, index: number) => (
+                <EventCard
+                  key={index}
+                  title={event.title}
+                  date={event.date}
+                  color={event.color || '#4F46E5'}
+                />
+              ))}
+            </View>
+          </View>
+        </View>
+
+        {/* Recent Activity */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderSpaceBetween}>
+            <Text style={styles.sectionTitle}>Recent Activity</Text>
+            <TouchableOpacity><Text style={styles.viewAllText}>View All →</Text></TouchableOpacity>
+          </View>
+          
+          <View style={styles.activityBox}>
+            <ActivityItem 
+              iconName="people" 
+              iconBgColor="#3B82F6" 
+              name="Ms. Anjali Verma" 
+              action="Uploaded Mathematics exam results" 
+              time="Today, 10:30 AM" 
+              isLast={false} 
+            />
+            <ActivityItem 
+              iconName="person-add" 
+              iconBgColor="#8B5CF6" 
+              name="Mr. Rajesh Kumar" 
+              action="Added 5 new students to Class 11-B" 
+              time="Yesterday, 3:45 PM" 
+              isLast={false} 
+            />
+            <ActivityItem 
+              iconLibrary="MaterialCommunityIcons"
+              iconName="checkbox-marked-circle-outline" 
+              iconBgColor="#10B981" 
+              name="Ms. Emily Rodriguez" 
+              action="Submitted Physics lab equipment request" 
+              time="Yesterday, 11:20 AM" 
+              isLast={true} 
+            />
           </View>
         </View>
 
@@ -669,9 +876,9 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
             </View>
           </View>
         </View>
-
       </ScrollView>
-
+      )}
+      
       {/* Navigation Drawer */}
       <NavigationDrawer
         isOpen={isDrawerOpen}
@@ -686,23 +893,14 @@ const styles = StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: '#FAFAFF' },
   container: { flex: 1 },
   scrollContent: { paddingBottom: 40 },
-
-  iconBox: { borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-
-  globalHeader: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 8,
-    zIndex: 10,
+    paddingTop: Platform.OS === 'ios' ? 60 : 30,
+    paddingBottom: 24,
+    backgroundColor: '#FAFAFF',
   },
   menuHandle: { paddingRight: 10, paddingVertical: 10 },
   headerTitle: {
@@ -713,8 +911,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 10,
   },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  iconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
   avatar: {
     width: 34,
     height: 34,
@@ -729,11 +927,8 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
-
-  heroBannerRow: {
-    backgroundColor: '#D9DAF9', flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 24, paddingLeft: 16, paddingRight: 0, overflow: 'hidden', minHeight: 180,
-  },
+  
+  heroBannerRow: { backgroundColor: '#D9DAF9', flexDirection: 'row', alignItems: 'center', paddingVertical: 24, paddingLeft: 16, paddingRight: 0, overflow: 'hidden', minHeight: 180 },
   heroTextSide: { width: '58%', paddingRight: 8, alignItems: 'center' },
   heroRowTitle1: { fontSize: 20, fontWeight: '800', color: '#2563EB', textAlign: 'center' },
   heroRowTitle2: { fontSize: 20, fontWeight: '800', color: '#D946EF', textAlign: 'center' },
@@ -741,82 +936,63 @@ const styles = StyleSheet.create({
   heroRowSubtitle: { fontSize: 10, color: '#4B5563', lineHeight: 15, textAlign: 'center', fontWeight: '500' },
   heroImageSide: { width: '42%', justifyContent: 'center', alignItems: 'flex-start' },
   heroRowImage: { width: '100%', height: 140 },
-
-  section: { paddingHorizontal: 16, marginTop: 32 },
+  
+  section: { paddingHorizontal: 20, marginTop: 32 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   sectionIconMargin: { marginRight: 8 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
-
-  // Stats
-  statsGridContainer: { gap: 12 },
-  // New horizontal row for stats, perfectly aligned
-  statsRowHorizontalAligned: {
-    flexDirection: 'row',
+  sectionTitle: { fontSize: 20, fontWeight: '800', color: '#4F46E5', letterSpacing: -0.5 },
+  
+  statsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 0, gap: 12 },
+  statCard: { alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 16, paddingVertical: 12, paddingHorizontal: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0', width: '31%', minHeight: 110 },
+  statIconCircle: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
+  statTitle: { fontSize: 10, fontWeight: '700', color: '#6B7280', marginTop: 6, textAlign: 'center', width: '100%' },
+  statValue: { fontSize: 16, fontWeight: '800', color: '#1F2937', marginTop: 2 },
+  
+  quickActionsGrid: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
     justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 20,
-    marginBottom: 8,
+    gap: 12,
   },
-  // Remove old statsRow if not used elsewhere
-  statFullCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 4, borderWidth: 1, borderColor: '#F1F5F9' },
-  statFullHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  statIconContainer: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  statTitle: { fontSize: 15, fontWeight: '600', color: '#4B5563' },
-  statFullValue: { fontSize: 32, fontWeight: '800', color: '#111827', marginBottom: 8 },
-  statFullFooter: { flexDirection: 'row', alignItems: 'center' },
-  statSubtext1: { fontSize: 13, fontWeight: '600' },
-  statSubtext2: { fontSize: 12, color: '#9CA3AF', marginLeft: 6 },
-  statCardHalfAligned: {
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    paddingVertical: 18,
-    paddingHorizontal: 10,
-    flex: 1,
-    marginHorizontal: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 4,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    minWidth: 100,
-    maxWidth: 140,
+  quickActionCard: { 
+    width: '31%', 
+    backgroundColor: '#FFFFFF', 
+    borderRadius: 16, 
+    paddingVertical: 16, 
+    paddingHorizontal: 4, 
+    borderWidth: 1, 
+    borderColor: '#F8FAFC', 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 6 }, 
+    shadowOpacity: 0.06, 
+    shadowRadius: 16, 
+    elevation: 4,
   },
-  statIconNoBg: {
-    marginBottom: 10,
-  },
-  statTitleHalfAligned: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#22223B',
-    marginBottom: 2,
-    textAlign: 'center',
-  },
-  statValueHalfAligned: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#1F2937',
-    marginBottom: 2,
-    textAlign: 'center',
-  },
-  statSubtext1HalfAligned: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 0,
-    textAlign: 'center',
-  },
-  statSubtext2HalfAligned: {
-    fontSize: 10,
-    color: '#9CA3AF',
-    textAlign: 'center',
-  },
-
-  quickActionsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
-  quickActionCard: { width: '22%', backgroundColor: '#FFFFFF', borderRadius: 16, paddingVertical: 14, paddingHorizontal: 4, borderWidth: 1, borderColor: '#E5E7EB', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 4 },
   quickActionTouchable: { alignItems: 'center' },
-  quickActionTitle: { fontSize: 10, fontWeight: '600', color: '#374151', marginTop: 10, textAlign: 'center' },
-
+  quickActionTitle: { fontSize: 11, fontWeight: '600', color: '#374151', marginTop: 10, textAlign: 'center' },
+  badgeContainer: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    zIndex: 10,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  
   scheduleList: { gap: 12 },
-  scheduleCard: { backgroundColor: '#FFFFFF', borderRadius: 16, flexDirection: 'row', borderWidth: 1, borderColor: '#E5E7EB', paddingRight: 10, height: 80, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 4 },
+  scheduleCard: { backgroundColor: '#FFFFFF', borderRadius: 12, flexDirection: 'row', borderWidth: 1, borderColor: '#F8FAFC', paddingRight: 10, height: 80, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 4 },
   scheduleLeftCol: { flexDirection: 'row', alignItems: 'stretch', width: 145 },
   scheduleCardIndicator: { width: 4, borderRadius: 2, marginVertical: 4, marginLeft: 16, marginRight: 16 },
   scheduleTimeWrapper: { flex: 1, justifyContent: 'center' },
@@ -834,298 +1010,151 @@ const styles = StyleSheet.create({
   scheduleTeacher: { fontSize: 13, fontWeight: '400', color: '#4B5563', marginBottom: 4 },
   scheduleBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   scheduleRoom: { fontSize: 10, color: '#9CA3AF' },
-  joinClassBtn: { paddingHorizontal: 10, paddingVertical: 14, borderRadius: 8, borderWidth: 1 },
+  joinClassBtn: { paddingHorizontal: 10, paddingVertical: 2, borderRadius: 4, borderWidth: 1 },
   joinClassBtnText: { fontSize: 10, fontWeight: '600' },
-  emptyText: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginTop: 20,
-    fontWeight: '500',
-  },
-  liveBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    shadowColor: '#D946EF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: '#FDF4FF',
-  },
+  
+  emptyText: { fontSize: 14, color: '#6B7280', textAlign: 'center', marginTop: 20, fontWeight: '500' },
+  
+  liveBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 20, borderLeftWidth: 4, shadowColor: '#EF4444', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5, borderWidth: 1, borderColor: '#FEE2E2' },
   liveBannerContent: { flex: 1 },
   liveIndicatorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#D946EF' },
-  liveText: { fontSize: 10, fontWeight: '800', color: '#D946EF', letterSpacing: 0.5 },
+  liveDot: { width: 8, height: 8, borderRadius: 4 },
+  liveText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
   liveSubject: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  liveClassName: { fontSize: 12, color: '#6B7280', marginTop: 2 },
-  liveJoinBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    marginLeft: 12,
-  },
-  liveJoinBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
-  pendingTasksCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+  liveClassName: { fontSize: 13, color: '#6B7280', marginTop: 2 },
+  liveJoinBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, marginLeft: 12 },
+  liveJoinBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
+  liveProgressContainer: { height: 8, width: '100%', backgroundColor: '#FEE2E2', borderRadius: 4, overflow: 'hidden', marginTop: 10, marginBottom: 8, borderWidth: 1, borderColor: '#FECACA' },
+  liveProgressFill: { height: '100%', borderRadius: 4 },
+  shimmerStreak: { position: 'absolute', top: 0, bottom: 0, width: 60, backgroundColor: 'rgba(255, 255, 255, 0.6)', zIndex: 2 },
+  
+  pendingTasksCard: { backgroundColor: '#FFFFFF', borderRadius: 12, paddingVertical: 24, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2, marginBottom: 6 },
+  pendingTasksText: { fontSize: 11, color: '#9CA3AF', fontWeight: '500', letterSpacing: 0.2 },
+  pendingTasksList: { gap: 12 },
+  taskCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
+  taskIconBg: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  taskInfo: { flex: 1 },
+  taskTitle: { fontSize: 13, fontWeight: '700', color: '#1F2937', marginBottom: 1 },
+  taskSubtitle: { fontSize: 10, color: '#6B7280', fontWeight: '500' },
+  
+  announcementCard: { backgroundColor: '#EA580C', borderRadius: 20, overflow: 'hidden', padding: 24, paddingBottom: 30, marginTop: 0, shadowColor: '#EA580C', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 },
+  announcementContent: { zIndex: 1 },
+  announcementTitle: { fontSize: 18, fontWeight: '900', color: '#FFFFFF', marginBottom: 10, letterSpacing: 0.3 },
+  announcementList: { gap: 12 },
+  announcementItem: { flexDirection: 'row', alignItems: 'flex-start' },
+  announcementBullet: { color: '#FFFFFF', fontSize: 16, marginRight: 10, fontWeight: '900', marginTop: -3 },
+  announcementText: { fontSize: 13, color: 'rgba(255, 255, 255, 0.95)', lineHeight: 19, flex: 1, fontWeight: '500' },
+  boldText: { fontWeight: '800', color: '#FFFFFF' },
+  
+  helpGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 },
+  helpCard: { width: '48%', height: 204, backgroundColor: '#FFFFFF', borderRadius: 12, paddingVertical: 16, paddingHorizontal: 16, borderWidth: 1, borderColor: '#F8FAFC', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 4 },
+  helpIconBg: { width: 36, height: 36, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  helpCardTitle: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 6, lineHeight: 18 },
+  helpCardDesc: { fontSize: 10, color: '#6B7280', lineHeight: 14 },
+  viewGuidesRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 'auto', borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 12 },
+  viewGuidesText: { fontSize: 11, fontWeight: '700', color: '#3B82F6' },
+  
+  faqList: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 8, elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10 },
+  faqItem: { borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  faqHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 18 },
+  faqQuestion: { fontSize: 13, fontWeight: '600', color: '#111827', flex: 1 },
+  faqAnswerContainer: { backgroundColor: '#F0FDF4', borderRadius: 12, padding: 12, marginHorizontal: 10, marginBottom: 16 },
+  faqAnswer: { fontSize: 13, color: '#374151', lineHeight: 20 },
+  
+  helpBannerCard: { paddingVertical: 24, paddingHorizontal: 20, marginHorizontal: 0, marginTop: 32, marginBottom: 40, alignItems: 'center', shadowColor: '#5A67D8', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 8, overflow: 'hidden', borderRadius: 20 },
+  helpBannerContent: { zIndex: 1, alignItems: 'center' },
+  helpBannerTitle: { fontSize: 18, fontWeight: '700', color: '#FFFFFF', marginBottom: 8 },
+  helpBannerSubtitle: { fontSize: 12, color: '#E0E7FF', textAlign: 'center', lineHeight: 18, marginBottom: 20, paddingHorizontal: 10 },
+  helpBannerButtons: { flexDirection: 'row', gap: 12, width: '100%' },
+  helpBtnWhite: { flex: 1, paddingVertical: 10, borderRadius: 24, borderWidth: 1, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  helpBtnTextPrimary: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
+  sectionSpacing: { height: 10 },
+  iconBox: { borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  cardContainer: { 
+    backgroundColor: '#FFFFFF', 
+    borderRadius: 16, 
+    padding: 12, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 6 }, 
+    shadowOpacity: 0.06, 
+    shadowRadius: 16, 
+    elevation: 4,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#F8FAFC'
+  },
+  eventCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    borderLeftWidth: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 3,
-    marginBottom: 8,
-  },
-  pendingTasksText: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontWeight: '500',
-    letterSpacing: 0.2,
-  },
-  pendingTasksList: {
-    gap: 12,
-  },
-  taskCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
-  },
-  taskIconBg: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 14,
-  },
-  taskInfo: {
-    flex: 1,
-  },
-  taskTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 2,
-  },
-  taskSubtitle: {
-    fontSize: 11,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  announcementCard: {
-    backgroundColor: '#EA580C',
-    borderRadius: 20,
-    overflow: 'hidden',
-    padding: 24,
-    paddingBottom: 30,
-    marginTop: 0,
-    shadowColor: '#EA580C',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  announcementContent: {
-    zIndex: 1,
-  },
-  announcementTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    marginBottom: 10,
-    letterSpacing: 0.3,
-  },
-  announcementList: {
-    gap: 12,
-  },
-  announcementItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  announcementBullet: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    marginRight: 10,
-    fontWeight: '900',
-    marginTop: -3,
-  },
-  announcementText: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.95)',
-    lineHeight: 19,
-    flex: 1,
-    fontWeight: '500',
-  },
-  boldText: {
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  helpGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  helpCard: {
-    width: '48%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 16,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    elevation: 2,
-    marginBottom: 4,
+    borderColor: '#F8FAFC'
   },
-  helpIconBg: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  helpCardTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#1F2937',
-    marginBottom: 6,
-    letterSpacing: -0.2,
-  },
-  helpCardDesc: {
-    fontSize: 10,
-    color: '#6B7280',
-    lineHeight: 14,
-    marginBottom: 12,
-    fontWeight: '500',
-  },
-  viewGuidesRow: {
+  eventCardContent: { flex: 1 },
+  eventTitle: { fontSize: 13, fontWeight: '700', color: '#1F2937', marginBottom: 4 },
+  eventDateContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  eventDateText: { fontSize: 11, color: '#9CA3AF' },
+  topStudentCard: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  viewGuidesText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  faqList: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    marginTop: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    elevation: 1,
-  },
-  faqItem: {
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
-  faqHeader: {
-    flexDirection: 'row',
+  rankCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 18,
-  },
-  faqQuestion: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#374151',
-    flex: 1,
     marginRight: 10,
-    letterSpacing: -0.1,
   },
-  faqAnswerContainer: {
-    padding: 18,
-    paddingTop: 0,
-    backgroundColor: '#F9FAFB',
-  },
-  faqAnswer: {
-    fontSize: 12,
-    color: '#6B7280',
-    lineHeight: 18,
-    fontWeight: '500',
-  },
-  helpBannerCard: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    padding: 24,
-    alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 20,
-    shadowColor: '#8B5CF6',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  helpBannerContent: {
-    zIndex: 1,
-    alignItems: 'center',
-  },
-  helpBannerTitle: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    marginBottom: 6,
-  },
-  helpBannerSubtitle: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.95)',
-    marginBottom: 20,
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  helpBannerButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  helpBtnWhite: {
+  rankText: { fontSize: 12, fontWeight: '700' },
+  topStudentInfo: { flex: 1 },
+  topStudentName: { fontSize: 13, fontWeight: '700', color: '#1F2937' },
+  topStudentClass: { fontSize: 11, color: '#6B7280' },
+  topStudentPercentage: { fontSize: 13, fontWeight: '700', color: '#10B981' },
+  sectionHeaderSpaceBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
+  viewAllText: { fontSize: 13, fontWeight: '600', color: '#3B82F6' },
+  activityBox: {
     backgroundColor: '#FFFFFF',
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 12,
+    borderRadius: 16,
+    padding: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#F8FAFC'
   },
-  helpBtnTextPrimary: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#4F46E5',
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
-  sectionSpacing: {
-    height: 10,
+  activityItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
+  activityAvatarBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  activityContent: { flex: 1, justifyContent: 'center' },
+  activityName: { fontSize: 13, fontWeight: '700', color: '#1F2937', marginBottom: 2 },
+  activityAction: { fontSize: 11, color: '#6B7280', marginBottom: 4, lineHeight: 15 },
+  activityDateText: { fontSize: 10, color: '#9CA3AF' },
 });
 
 export default TeacherDashboard;

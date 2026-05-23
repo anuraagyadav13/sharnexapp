@@ -14,6 +14,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
+import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import apiClient from '../../services/apiClient';
@@ -82,14 +83,31 @@ const TeacherSelfAttendanceScreen: React.FC<Props> = ({ navigation }) => {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent />
       
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#FFF" />
-        </TouchableOpacity>
-        <View>
-          <Text style={styles.headerTitle}>My Attendance History</Text>
-          <Text style={styles.headerSubtitle}>Personal Tracking Portal</Text>
+      {/* Standardized Header Box */}
+      <View style={styles.globalHeader}>
+        <ScaleButton
+          style={styles.menuHandle}
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+        >
+          <Ionicons name="arrow-back" size={28} color="#111827" />
+        </ScaleButton>
+
+        <Text style={styles.headerTitle} numberOfLines={1}>My Attendance</Text>
+
+        <View style={styles.headerRight}>
+          <TouchableOpacity style={styles.iconBtn}>
+            <Ionicons name="notifications-outline" size={22} color="#111827" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('AccountSettings')} style={styles.iconBtn}>
+            <Ionicons name="settings-outline" size={22} color="#111827" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => {}} style={styles.iconBtn}>
+            <Ionicons name="moon-outline" size={22} color="#111827" />
+          </TouchableOpacity>
+          <View style={[styles.avatar, { backgroundColor: '#A855F7' }]}>
+            <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
+          </View>
         </View>
       </View>
 
@@ -187,19 +205,46 @@ const TeacherSelfAttendanceScreen: React.FC<Props> = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: { 
-    backgroundColor: '#6366F1', 
-    paddingTop: Platform.OS === 'ios' ? 60 : 40, 
-    paddingBottom: 25, 
-    paddingHorizontal: 20,
+  globalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 16,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 8,
+    zIndex: 10,
   },
-  backBtn: { marginRight: 15, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#FFF' },
-  headerSubtitle: { fontSize: 12, color: '#E0E7FF', fontWeight: '500' },
+  menuHandle: { paddingRight: 10, paddingVertical: 10 },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#4F46E5',
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 10,
+  },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  iconBtn: { padding: 4 },
+  avatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#A855F7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#A855F7',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
   content: { flex: 1, paddingHorizontal: 20 },
   
   statsCard: { 

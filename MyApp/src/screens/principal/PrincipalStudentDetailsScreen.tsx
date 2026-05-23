@@ -8,456 +8,372 @@ import {
   TextInput,
   Platform,
   StatusBar,
-  ActivityIndicator
+  ActivityIndicator,
+  RefreshControl,
+  Dimensions,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
+import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
+import Skeleton from '../../components/common/Skeleton';
 
-const StatCard = React.memo(({ icon, value, label }: any) => (
-  <View style={styles.statCard}>
-    <View style={styles.statIconTextBox}>
-      <View style={styles.statIconBoxSquare}>
-        <Ionicons name={icon} size={18} color="#A855F7" />
-      </View>
-      <View>
-        <Text style={styles.statValue}>{value}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
-      </View>
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const PageSkeleton = () => (
+  <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <View style={styles.pageHeader}>
+      <Skeleton width="40%" height={24} style={{ marginBottom: 8 }} />
+      <Skeleton width="60%" height={16} />
     </View>
+    <View style={styles.statsGrid}>
+      <Skeleton width="48%" height={90} borderRadius={12} />
+      <Skeleton width="48%" height={90} borderRadius={12} />
+      <Skeleton width="48%" height={90} borderRadius={12} style={{ marginTop: 12 }} />
+      <Skeleton width="48%" height={90} borderRadius={12} style={{ marginTop: 12 }} />
+    </View>
+    <View style={{ marginTop: 30, paddingHorizontal: 20 }}>
+      <Skeleton width="100%" height={160} borderRadius={20} />
+    </View>
+  </ScrollView>
+);
+
+const StatCard = ({ title, value, subtitle }: { title: string, value: string | number, subtitle?: string }) => (
+  <View style={styles.statCard}>
+    <Text style={styles.statTitle}>{title}</Text>
+    <Text style={styles.statValue}>{value}</Text>
+    {subtitle && <Text style={styles.statSubtitle}>{subtitle}</Text>}
   </View>
-));
+);
 
-
-const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
-  const { authState } = useAuth();
-  const [isDrawerOpen, setDrawerOpen] = useState(false);
-  const [classes, setClasses] = useState<any[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
-  const [activeClassIndex, setActiveClassIndex] = useState(0);
-  const [isLoadingClasses, setIsLoadingClasses] = useState(true);
-  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [stats, setStats] = useState({ totalStudents: 0, avgScore: 0, attendanceRate: 0, activeClasses: 0 });
-
-  // Fetch all classes on mount
-  useEffect(() => {
-    const fetchClasses = async () => {
-      try {
-        setIsLoadingClasses(true);
-        const res = await apiClient.get(ENDPOINTS.PRINCIPAL.CLASSES);
-        
-        if (!res.data.success) {
-          throw new Error(res.data.message || 'Failed to fetch classes');
-        }
-        
-        const classList = res.data.data || [];
-        setClasses(classList);
-        
-        // Compute stats
-        setStats({
-          totalStudents: classList.reduce((sum: number, c: any) => sum + (c.totalStudents || 0), 0),
-          avgScore: 88.7, // This would come from a dedicated API if available
-          attendanceRate: 96,
-          activeClasses: classList.length
-        });
-        
-        // Fetch students for first class if available
-        if (classList.length > 0) {
-          await fetchStudentsForClass(classList[0].id || classList[0].name);
-        }
-      } catch (error) {
-        console.error('Failed to fetch classes:', error);
-      } finally {
-        setIsLoadingClasses(false);
-      }
-    };
-    fetchClasses();
-  }, []);
-
-  // Fetch students when active class changes
-  const fetchStudentsForClass = async (classIdentifier: string) => {
-    try {
-      setIsLoadingStudents(true);
-      const res = await apiClient.get(ENDPOINTS.PRINCIPAL.STUDENTS, {
-        params: { class: classIdentifier }
-      });
-      
-      if (!res.data.success) {
-        throw new Error(res.data.message || 'Failed to fetch students');
-      }
-      
-      setStudents(res.data.data || []);
-    } catch (error) {
-      console.error('Failed to fetch students:', error);
-    } finally {
-      setIsLoadingStudents(false);
-    }
-  };
-
-  const handleClassChange = (index: number) => {
-    setActiveClassIndex(index);
-    if (classes.length > index) {
-      fetchStudentsForClass(classes[index].id || classes[index].name);
-    }
-  };
-
-  const filteredStudents = students.filter(s =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.rollNo?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const currentClass = classes.length > activeClassIndex ? classes[activeClassIndex] : null;
-
+const StudentCard = ({ item, index, delay, onEdit, onView }: any) => {
   return (
-    <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" translucent={false} />
-
-      {/* Top Standard Header */}
-      <View style={styles.topHeader}>
-        <ScaleButton
-          style={styles.menuHandle}
-          onPress={() => setDrawerOpen(true)}
-          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-          activeOpacity={0.7}
-          scaleTo={0.85}
-        >
-          <Ionicons name="menu" size={26} color="#111827" />
-        </ScaleButton>
-
-        <Text style={styles.topHeaderTitle} numberOfLines={1}>
-          Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}
-        </Text>
-
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconBtnTransparent}><Ionicons name="notifications-outline" size={20} color="#111827" /></TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtnTransparent} onPress={() => navigation.navigate('AccountSettings')}><Ionicons name="settings-outline" size={20} color="#111827" /></TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtnTransparent}><Ionicons name="moon-outline" size={20} color="#111827" /></TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}><View style={styles.avatar}><Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text></View></TouchableOpacity>
+    <Animated.View entering={FadeInUp.delay(delay).springify()} style={styles.studentCard}>
+      <View style={styles.studentHeader}>
+        <View style={styles.avatarWrapper}>
+           <Text style={styles.avatarTextMain}>{item.name?.charAt(0).toUpperCase()}</Text>
+        </View>
+        <View style={styles.studentMainInfo}>
+          <Text style={styles.studentName}>{item.name}</Text>
+          <Text style={styles.studentRoll}>Roll No: {item.rollNo || 'N/A'}</Text>
+        </View>
+        <View style={styles.actionIconsRow}>
+          <TouchableOpacity style={styles.actionIconButton} onPress={onView}>
+            <Ionicons name="eye-outline" size={16} color="#3B82F6" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionIconButton} onPress={onEdit}>
+            <Ionicons name="pencil-outline" size={16} color="#6B7280" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionIconButton}>
+            <Ionicons name="trash-outline" size={16} color="#EF4444" />
+          </TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.sectionPadding}>
+      <View style={styles.divider} />
 
-          {/* Title Section */}
-          <View style={styles.titleSection}>
+      <View style={styles.metricsGrid}>
+        <View style={styles.metricItem}>
+           <Text style={styles.metricLabel}>AVERAGE GRADE</Text>
+           <Text style={styles.metricVal}>{item.grade || '-'}</Text>
+           {!item.grade && <Text style={styles.metricSub}>Grade data coming soon</Text>}
+        </View>
+        <View style={styles.metricDivider} />
+        <View style={styles.metricItem}>
+           <Text style={styles.metricLabel}>ATTENDANCE</Text>
+           <Text style={[styles.metricVal, { color: item.attendanceRate ? '#10B981' : '#1F2937' }]}>{item.attendanceRate ? `${item.attendanceRate}%` : '-'}</Text>
+        </View>
+        <View style={styles.metricDivider} />
+        <View style={styles.metricItem}>
+           <Text style={styles.metricLabel}>PERFORMANCE</Text>
+           {item.performance ? (
+             <View style={styles.perfPill}><Text style={styles.perfText}>{item.performance}</Text></View>
+           ) : (
+             <Text style={styles.metricVal}>-</Text>
+           )}
+        </View>
+      </View>
+    </Animated.View>
+  );
+};
+
+const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
+  const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const { authState } = useAuth();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [classes, setClasses] = useState<any[]>([]);
+  const [allStudents, setAllStudents] = useState<any[]>([]);
+  const [activeClassId, setActiveClassId] = useState<string | null>(null);
+
+  const fetchData = async () => {
+    try {
+      if (!isRefreshing) setIsLoading(true);
+      const [classesRes, studentsRes] = await Promise.all([
+        apiClient.get(ENDPOINTS.PRINCIPAL.CLASSES),
+        apiClient.get(ENDPOINTS.PRINCIPAL.STUDENTS)
+      ]);
+      const classList = classesRes.data.data || classesRes.data || [];
+      const studentList = studentsRes.data.data || studentsRes.data || [];
+      
+      setClasses(classList);
+      setAllStudents(studentList);
+      
+      if (classList.length > 0) {
+        const firstId = classList[0].id || classList[0].name;
+        setActiveClassId(firstId);
+      } else {
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+      setClasses([]);
+      setAllStudents([]);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const onRefresh = () => {
+    setIsRefreshing(true);
+    fetchData();
+  };
+
+  const currentClass = classes.find(c => (c.id || c.name) === activeClassId);
+  const currentClassStudents = allStudents.filter(s => s.className === currentClass?.name || s.class_name === currentClass?.name || s.className === currentClass?.className);
+
+  return (
+    <View style={styles.mainContainer}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFF" translucent />
+
+      {/* Global Header */}
+      <View style={styles.globalHeader}>
+        <ScaleButton onPress={() => setDrawerOpen(true)}>
+          <Ionicons name="menu" size={28} color="#1F2937" />
+        </ScaleButton>
+        <Text style={styles.headerTitle} numberOfLines={1}>Student Directory</Text>
+        <View style={styles.headerRight}>
+          <TouchableOpacity style={styles.iconBtnHeader} onPress={() => navigation.navigate('PrincipalAddStudent')}>
+            <Ionicons name="person-add-outline" size={24} color="#1F2937" />
+          </TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}>
+            <View style={styles.avatarHeader}>
+              <Text style={styles.avatarTextHeader}>{authState.user?.name?.charAt(0) || 'A'}</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {isLoading && !isRefreshing ? (
+        <PageSkeleton />
+      ) : (
+        <ScrollView 
+          style={styles.container} 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+        >
+          <View style={styles.pageHeader}>
             <Text style={styles.screenTitle}>Students details</Text>
             <Text style={styles.screenSubtitle}>Class-Wise students details</Text>
           </View>
 
-          {/* Stat Cards 2x2 Grid */}
-          <View style={styles.statCardsGrid}>
-            <View style={styles.statCardRow}>
-              <StatCard icon="school-outline" value={stats.totalStudents.toString()} label="Total Students" />
-              <StatCard icon="school-outline" value={stats.avgScore.toString()} label="Average Score" />
-            </View>
-            <View style={styles.statCardRow}>
-              <StatCard icon="school-outline" value={`${stats.attendanceRate}%`} label="Attendance Rate" />
-              <StatCard icon="school-outline" value={stats.activeClasses.toString()} label="Active Classes" />
-            </View>
+          {/* Stats Grid (4 Cards) */}
+          <View style={styles.statsGrid}>
+            <StatCard title="Total Students" value={allStudents.length} />
+            <StatCard title="Average Score" value="N/A" subtitle="Coming soon" />
+            <StatCard title="Attendance Rate" value="N/A" subtitle="Coming soon" />
+            <StatCard title="Active Classes" value={classes.length} />
           </View>
 
           {/* Class Tabs */}
-          <View style={styles.classTabsContainer}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {isLoadingClasses ? (
-                <ActivityIndicator size="small" color="#4F46E5" style={{ marginTop: 8 }} />
-              ) : classes.length === 0 ? (
-                <Text style={styles.emptyText}>No classes found</Text>
-              ) : (
-                classes.map((cls, index) => (
+          <View style={styles.tabsContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsScroll}>
+              {classes.map((cls) => {
+                const clsId = cls.id || cls.name;
+                const count = allStudents.filter(s => s.className === cls.name || s.class_name === cls.name || s.className === cls.className).length;
+                return (
                   <TouchableOpacity
-                    key={cls.id || index}
-                    style={[styles.classTabBtn, activeClassIndex === index && styles.classTabBtnActive]}
-                    onPress={() => handleClassChange(index)}
+                    key={clsId}
+                    style={[styles.classTab, activeClassId === clsId && styles.classTabActive]}
+                    onPress={() => setActiveClassId(clsId)}
                   >
-                    <Text style={[styles.classTabBtnText, activeClassIndex === index && styles.classTabBtnTextActive]}>
-                      {cls.name} ({cls.totalStudents || 0})
-                    </Text>
+                    <Text style={[styles.classTabText, activeClassId === clsId && styles.classTabTextActive]}>{cls.name || cls.className} ({count})</Text>
                   </TouchableOpacity>
-                ))
-              )}
+                );
+              })}
             </ScrollView>
           </View>
 
-          {/* Purple Hero Card */}
-          <Animated.View entering={FadeInUp.duration(300)} style={styles.heroCard}>
-            <Text style={styles.heroTitle}>{currentClass?.name || 'Select a Class'}</Text>
-            <View style={styles.heroTeacherRow}>
-              <Ionicons name="people" size={16} color="#FFF" style={{ marginRight: 6 }} />
-              <Text style={styles.heroTeacherText}>Class Teacher : {currentClass?.classTeacher || 'N/A'}</Text>
+          {/* Class Hero Banner */}
+          <Animated.View entering={FadeInUp.duration(400)} style={styles.classHero}>
+            <View style={styles.heroMain}>
+              <Text style={styles.heroTitle}>{currentClass?.name || 'Loading...'}</Text>
+              <Text style={styles.heroTeacherName}>Class Teacher: {currentClass?.teacher || 'TBA'}</Text>
             </View>
-            <View style={styles.heroStatsRow}>
+            <View style={styles.heroDivider} />
+            <View style={styles.heroStats}>
               <View style={styles.heroStatItem}>
-                <Text style={styles.heroStatValue}>{currentClass?.totalStudents || 0}</Text>
-                <Text style={styles.heroStatLabel}>Students</Text>
+                <Text style={styles.heroStatVal}>{currentClassStudents.length}</Text>
+                <Text style={styles.heroStatLab}>Students</Text>
               </View>
               <View style={styles.heroStatItem}>
-                <Text style={styles.heroStatValue}>88.7%</Text>
-                <Text style={styles.heroStatLabel}>Avg Score</Text>
+                <Text style={styles.heroStatVal}>-</Text>
+                <Text style={styles.heroStatLab}>Avg Score</Text>
               </View>
               <View style={styles.heroStatItem}>
-                <Text style={styles.heroStatValue}>96%</Text>
-                <Text style={styles.heroStatLabel}>Attendance</Text>
+                <Text style={styles.heroStatVal}>-</Text>
+                <Text style={styles.heroStatLab}>Attendance</Text>
               </View>
               <View style={styles.heroStatItem}>
-                <Text style={styles.heroStatValue}>--</Text>
-                <Text style={styles.heroStatLabel}>Top performer</Text>
+                <Text style={styles.heroStatVal}>-</Text>
+                <Text style={styles.heroStatLab}>Top performer</Text>
               </View>
             </View>
           </Animated.View>
 
-          {/* Search Bar */}
-          <View style={styles.searchBarContainer}>
-            <Ionicons name="search" size={16} color="#6B7280" style={{ marginLeft: 12, marginRight: 8 }} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder={`Search Student in ${currentClass?.name || 'class'}`}
-              placeholderTextColor="#9CA3AF"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
-
-          {/* Actions Row */}
-          <View style={styles.actionsRow}>
-            <TouchableOpacity style={styles.actionBtnOutline}>
-              <Ionicons name="push-outline" size={16} color="#374151" style={{ marginRight: 6 }} />
-              <Text style={styles.actionBtnOutlineText}>Export</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtnOutline}>
-              <Ionicons name="print-outline" size={16} color="#374151" style={{ marginRight: 6 }} />
-              <Text style={styles.actionBtnOutlineText}>Print</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtnSolid} onPress={() => navigation.navigate('PrincipalAddStudent')}>
-              <Text style={styles.actionBtnSolidText}>+ Add Student</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Table Container */}
-          <View style={styles.tableCard}>
-            <View style={styles.tableHeaderRow}>
-              <Text style={[styles.tableHeaderText, { flex: 2 }]}>Student</Text>
-              <Text style={[styles.tableHeaderText, { flex: 1.5 }]}>Roll No</Text>
-              <Text style={[styles.tableHeaderText, { flex: 1.5 }]}>Avg. Grade</Text>
-              <Text style={[styles.tableHeaderText, { flex: 2 }]}>Attendance</Text>
-              <Text style={[styles.tableHeaderText, { flex: 2 }]}>Performance</Text>
-              <Text style={[styles.tableHeaderText, { flex: 1, textAlign: 'right' }]}>Actions</Text>
+          {/* Actions & Search */}
+          <View style={styles.actionsWrapper}>
+            <View style={styles.searchWrapper}>
+              <Ionicons name="search-outline" size={18} color="#94A3B8" />
+              <TextInput 
+                placeholder={`Search students in ${currentClass?.name || 'Class'}...`} 
+                placeholderTextColor="#94A3B8"
+                style={styles.searchInput}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
             </View>
-            <View style={styles.tableBodyEmpty}>
-              {isLoadingStudents ? (
-                <ActivityIndicator size="large" color="#4F46E5" style={{ marginVertical: 40 }} />
-              ) : filteredStudents.length === 0 ? (
-                <Text style={styles.emptyText}>No students found in this class</Text>
-              ) : (
-                filteredStudents.map((student: any) => (
-                  <View key={student.id} style={styles.tableRow}>
-                    <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={1}>{student.name}</Text>
-                    <Text style={[styles.tableCell, { flex: 1.5 }]} numberOfLines={1}>{student.rollNo || '-'}</Text>
-                    <Text style={[styles.tableCell, { flex: 1.5 }]} numberOfLines={1}>{student.cgpa ? student.cgpa.toFixed(1) : '-'}</Text>
-                    <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={1}>{student.attendanceRate ? `${student.attendanceRate}%` : '-'}</Text>
-                    <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={1}>{student.performance || 'Good'}</Text>
-                    <TouchableOpacity style={{ flex: 1, alignItems: 'flex-end', paddingRight: 12 }}>
-                      <Ionicons name="ellipsis-vertical" size={16} color="#4F46E5" />
-                    </TouchableOpacity>
-                  </View>
-                ))
-              )}
-            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionButtonsScroll}>
+              <TouchableOpacity style={styles.secondaryBtn}>
+                <Ionicons name="download-outline" size={16} color="#4B5563" />
+                <Text style={styles.secondaryBtnText}>Export</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.secondaryBtn}>
+                <Ionicons name="print-outline" size={16} color="#4B5563" />
+                <Text style={styles.secondaryBtnText}>Print</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('PrincipalAddStudent')}>
+                <Ionicons name="add" size={18} color="#FFF" />
+                <Text style={styles.primaryBtnText}>Add Students</Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
 
-        </View>
-      </ScrollView>
+          {/* Student List */}
+          <View style={styles.listContainer}>
+            {currentClassStudents
+              .filter(s => s.name?.toLowerCase().includes(searchQuery.toLowerCase()) || s.rollNo?.toLowerCase().includes(searchQuery.toLowerCase()))
+              .map((item, index) => (
+              <StudentCard 
+                key={item.id} 
+                item={item} 
+                index={index} 
+                delay={index * 50} 
+                onEdit={() => navigation.navigate('PrincipalEditStudent', { studentId: item.id })}
+                onView={() => navigation.navigate('PrincipalViewStudent', { studentId: item.id })}
+              />
+              ))}
+          </View>
+        </ScrollView>
+      )}
 
-      {/* Navigation Drawer */}
       <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
-
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+  mainContainer: { flex: 1, backgroundColor: '#FAFAFF' },
   container: { flex: 1 },
   scrollContent: { paddingBottom: 40 },
-  sectionPadding: { paddingHorizontal: 16 },
 
-  topHeader: {
+  // Header
+  globalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 30,
     paddingBottom: 16,
-    backgroundColor: '#FFF',
-    zIndex: 10,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
+    backgroundColor: '#FAFAFF',
   },
-  menuHandle: { paddingRight: 4, paddingVertical: 8 },
-  topHeaderTitle: { fontSize: 18, fontWeight: '500', color: '#4F46E5', flex: 1, textAlign: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: '#1F2937', flex: 1, textAlign: 'center', marginHorizontal: 10 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconBtnTransparent: { justifyContent: 'center', alignItems: 'center' },
-  avatar: {
-    width: 32, height: 32, borderRadius: 16, backgroundColor: '#A78BFA',
-    justifyContent: 'center', alignItems: 'center', marginLeft: 4,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 4
-  },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
+  iconBtnHeader: { padding: 4 },
+  avatarHeader: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center', shadowColor: '#8B5CF6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
+  avatarTextHeader: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
-  titleSection: { marginTop: 10, marginBottom: 20 },
-  screenTitle: { fontSize: 26, fontWeight: '700', color: '#3B82F6', letterSpacing: -0.5 },
-  screenSubtitle: { color: '#6B7280', fontSize: 12, marginTop: 4, fontWeight: '500' },
+  pageHeader: { marginBottom: 12, paddingHorizontal: 20, marginTop: 0 },
+  screenTitle: { fontSize: 20, fontWeight: '800', color: '#111827', marginBottom: 2, letterSpacing: -0.5 },
+  screenSubtitle: { fontSize: 11, color: '#6B7280', fontWeight: '400', lineHeight: 16 },
 
-  statCardsGrid: { gap: 12, marginBottom: 20 },
-  statCardRow: { flexDirection: 'row', gap: 12 },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-  },
-  statIconTextBox: { flexDirection: 'row', alignItems: 'center', gap: 20 },
-  statIconBoxSquare: { width: 36, height: 36, borderRadius: 8, backgroundColor: '#F3E8FF', alignItems: 'center', justifyContent: 'center' },
-  statLabel: { fontSize: 11, color: '#374151', fontWeight: '500' },
-  statValue: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 2 },
+  // Stats
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 12, rowGap: 8 },
+  statCard: { width: '48%', backgroundColor: '#FFFFFF', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.02, shadowRadius: 4, elevation: 1, borderWidth: 1, borderColor: '#F1F5F9' },
+  statTitle: { fontSize: 10, fontWeight: '600', color: '#64748B', marginBottom: 4 },
+  statValue: { fontSize: 18, fontWeight: '800', color: '#111827' },
+  statSubtitle: { fontSize: 9, color: '#94A3B8', marginTop: 2 },
 
-  classTabsContainer: { marginBottom: 20 },
-  classTabBtn: {
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFF',
-    marginRight: 8,
-  },
-  classTabBtnActive: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
-  },
-  classTabBtnText: { color: '#6B7280', fontSize: 12, fontWeight: '600' },
-  classTabBtnTextActive: { color: '#FFF' },
+  // Tabs
+  tabsContainer: { marginBottom: 12 },
+  tabsScroll: { paddingHorizontal: 20, gap: 8 },
+  classTab: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0', gap: 6 },
+  classTabActive: { backgroundColor: '#3B82F6', borderColor: '#3B82F6' },
+  classTabText: { fontSize: 12, fontWeight: '600', color: '#475569' },
+  classTabTextActive: { color: '#FFF' },
 
-  heroCard: {
-    backgroundColor: '#7C3AED', // deep purple
-    borderRadius: 16,
-    paddingTop: 20,
-    paddingBottom: 24,
-    paddingHorizontal: 16,
-    marginBottom: 20,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-  },
-  heroTitle: { fontSize: 20, fontWeight: '700', color: '#FFF', marginBottom: 8 },
-  heroTeacherRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
-  heroTeacherText: { color: '#E0E7FF', fontSize: 12, fontWeight: '500' },
-  heroStatsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  heroStatItem: { alignItems: 'flex-start' },
-  heroStatValue: { color: '#FFF', fontSize: 18, fontWeight: '700', marginBottom: 4 },
-  heroStatLabel: { color: '#E0E7FF', fontSize: 11, fontWeight: '500' },
+  // Hero
+  classHero: { minHeight: 90, borderRadius: 12, marginHorizontal: 20, padding: 14, backgroundColor: '#6366F1', shadowColor: '#6366F1', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 10, elevation: 4 },
+  heroMain: {},
+  heroTitle: { fontSize: 16, fontWeight: '700', color: '#FFF', letterSpacing: -0.2 },
+  heroTeacherName: { fontSize: 10, color: 'rgba(255,255,255,0.9)', fontWeight: '400', marginTop: 2 },
+  heroDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.2)', marginVertical: 10 },
+  heroStats: { flexDirection: 'row', justifyContent: 'space-between' },
+  heroStatItem: { alignItems: 'center', flex: 1 },
+  heroStatVal: { fontSize: 14, fontWeight: '700', color: '#FFF', marginBottom: 2 },
+  heroStatLab: { fontSize: 8, fontWeight: '500', color: 'rgba(255,255,255,0.8)', textTransform: 'capitalize' },
 
-  searchBarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    height: 44,
-    marginBottom: 20,
-  },
-  searchInput: { flex: 1, fontSize: 13, color: '#111827' },
+  // Actions & Search
+  actionsWrapper: { marginHorizontal: 20, marginTop: 16, marginBottom: 20 },
+  searchWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', paddingHorizontal: 14, height: 44, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 12 },
+  searchInput: { flex: 1, marginLeft: 10, fontSize: 13, color: '#1F2937' },
+  actionButtonsScroll: { gap: 8 },
+  secondaryBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0', gap: 6 },
+  secondaryBtnText: { fontSize: 12, fontWeight: '600', color: '#4B5563' },
+  primaryBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#3B82F6', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, gap: 4 },
+  primaryBtnText: { fontSize: 12, fontWeight: '600', color: '#FFF' },
 
-  actionsRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginBottom: 20 },
-  actionBtnOutline: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFF',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  actionBtnOutlineText: { color: '#374151', fontSize: 12, fontWeight: '600' },
-  actionBtnSolid: {
-    flex: 1.2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#3B82F6',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  actionBtnSolidText: { color: '#FFF', fontSize: 12, fontWeight: '600' },
-
-  tableCard: {
-    backgroundColor: '#FFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 16,
-    paddingVertical: 12,
-    minHeight: 200, // as shown in image, empty space below
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-  },
-  tableHeaderRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  tableHeaderText: { color: '#9CA3AF', fontSize: 10, fontWeight: '600' },
-  tableBodyEmpty: {
-    flex: 1,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-    alignItems: 'center',
-  },
-  tableCell: {
-    fontSize: 12,
-    color: '#374151',
-    fontWeight: '500',
-  },
-  emptyText: {
-    textAlign: 'center',
-    color: '#9CA3AF',
-    fontSize: 13,
-    marginTop: 30,
-    fontWeight: '500',
-  },
-
+  // List
+  listContainer: { paddingHorizontal: 20 },
+  studentCard: { backgroundColor: '#FFF', borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.02, shadowRadius: 6, elevation: 1 },
+  studentHeader: { flexDirection: 'row', alignItems: 'center' },
+  avatarWrapper: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center' },
+  avatarTextMain: { fontSize: 14, fontWeight: '700', color: '#FFF' },
+  studentMainInfo: { flex: 1, marginLeft: 12 },
+  studentName: { fontSize: 14, fontWeight: '600', color: '#111827' },
+  studentRoll: { fontSize: 11, color: '#64748B', marginTop: 2 },
+  actionIconsRow: { flexDirection: 'row', gap: 12 },
+  actionIconButton: { padding: 4 },
+  divider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 14 },
+  metricsGrid: { flexDirection: 'row', justifyContent: 'space-between' },
+  metricItem: { flex: 1 },
+  metricDivider: { width: 1, height: '100%', backgroundColor: '#F1F5F9', marginHorizontal: 10 },
+  metricLabel: { fontSize: 9, fontWeight: '600', color: '#94A3B8', marginBottom: 4, textTransform: 'uppercase' },
+  metricVal: { fontSize: 13, fontWeight: '600', color: '#1F2937' },
+  metricSub: { fontSize: 9, color: '#94A3B8', marginTop: 2 },
+  perfPill: { backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' },
+  perfText: { fontSize: 9, fontWeight: '600', color: '#10B981' },
 });
 
 export default PrincipalStudentDetailsScreen;

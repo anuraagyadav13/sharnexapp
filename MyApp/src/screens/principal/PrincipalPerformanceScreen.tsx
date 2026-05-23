@@ -8,511 +8,293 @@ import {
   Platform,
   StatusBar,
   ActivityIndicator,
-  Alert
+  Alert,
+  RefreshControl,
+  Dimensions,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { NavigationDrawer } from '../../components/NavigationDrawer';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
+import Skeleton from '../../components/common/Skeleton';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const PageSkeleton = () => (
+  <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <View style={styles.pageHeader}>
+      <Skeleton width="40%" height={24} style={{ marginBottom: 8 }} />
+      <Skeleton width="60%" height={16} />
+    </View>
+    <View style={{ marginTop: 20 }}>
+      <Skeleton width="100%" height={160} borderRadius={24} />
+    </View>
+    <View style={styles.statsRowSkeleton}>
+      <Skeleton width="48%" height={120} borderRadius={20} />
+      <Skeleton width="48%" height={120} borderRadius={20} />
+    </View>
+  </ScrollView>
+);
+
+const StatCard = ({ title, value, color, icon, subtitle }: any) => (
+  <View style={styles.statCard}>
+    <View style={[styles.statIconCircle, { backgroundColor: `${color}15` }]}>
+      <MaterialCommunityIcons name={icon} size={22} color={color} />
+    </View>
+    <Text style={[styles.statValue, { color: color }]}>{value}</Text>
+    <Text style={styles.statTitle}>{title}</Text>
+    <Text style={styles.statSubtitle}>{subtitle}</Text>
+  </View>
+);
 
 const PrincipalPerformanceScreen = ({ navigation }: any) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [performanceData, setPerformanceData] = useState<any>(null);
-  const [selectedPeriod, setSelectedPeriod] = useState('current_term');
+  const [selectedTerm, setSelectedTerm] = useState('Term 1');
 
-  // Fetch performance data
+  const fetchPerformance = async () => {
+    try {
+      if (!isRefreshing) setIsLoading(true);
+      const res = await apiClient.get(ENDPOINTS.PRINCIPAL.PERFORMANCE);
+      setPerformanceData(res.normalized?.data || res.data.data || res.data);
+    } catch (error) {
+      console.error('Failed to fetch performance:', error);
+      setPerformanceData(null);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchPerformanceData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const res = await apiClient.get(ENDPOINTS.PRINCIPAL.PERFORMANCE);
-        const data = res.data.data || res.data;
-        setPerformanceData(data);
-      } catch (error: any) {
-        console.error('Failed to fetch performance data:', error);
-        setError('Failed to load performance data');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchPerformanceData();
-  }, [selectedPeriod]);
+    fetchPerformance();
+  }, []);
 
-  const handleRetry = () => {
-    setError(null);
-    setIsLoading(true);
-    // Re-trigger useEffect
-    setSelectedPeriod(selectedPeriod);
+  const onRefresh = () => {
+    setIsRefreshing(true);
+    fetchPerformance();
   };
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFF" translucent={false} />
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFF" translucent />
 
-      {/* Standard Principal Header */}
-      <View style={styles.topHeader}>
-        <ScaleButton
-          style={styles.menuHandle}
-          onPress={() => setDrawerOpen(true)}
-          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-          activeOpacity={0.7}
-          scaleTo={0.85}
-        >
-          <Ionicons name="menu" size={26} color="#111827" />
+      {/* Global Header - Student Pattern */}
+      <View style={styles.globalHeader}>
+        <ScaleButton onPress={() => setDrawerOpen(true)}>
+          <Ionicons name="menu" size={28} color="#4F46E5" />
         </ScaleButton>
-
-        <Text style={styles.topHeaderTitle} numberOfLines={1}>
-          Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}
-        </Text>
-
+        <Text style={styles.headerTitle} numberOfLines={1}>Institution Insights</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconBtnTransparent}>
-            <Ionicons name="notifications-outline" size={20} color="#111827" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtnTransparent} onPress={() => navigation.navigate('AccountSettings')}>
-            <Ionicons name="settings-outline" size={20} color="#111827" />
-          </TouchableOpacity>
           <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}>
-            <View style={styles.avatar}><Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text></View>
+            <View style={styles.avatarHeader}>
+              <Text style={styles.avatarTextHeader}>{authState.user?.name?.charAt(0) || 'A'}</Text>
+            </View>
           </TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
-        {/* Page Titles */}
-        <Animated.View entering={FadeInUp.duration(300)} style={styles.pageTitleContainer}>
-          <Text style={styles.pageTitle}>Performance</Text>
-          <Text style={styles.pageSubtitle}>View comprehensive analytics and performance reports.</Text>
-        </Animated.View>
-
-        {/* Loading State */}
-        {isLoading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#4F46E5" />
-            <Text style={styles.loadingText}>Loading performance data...</Text>
+      {isLoading && !isRefreshing ? (
+        <PageSkeleton />
+      ) : (
+        <ScrollView 
+          style={styles.container} 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+        >
+          <View style={styles.pageHeader}>
+            <Text style={styles.screenTitle}>Academic Analytics</Text>
+            <Text style={styles.screenSubtitle}>Data-driven insights into institutional performance and growth.</Text>
           </View>
-        )}
 
-        {/* Error State */}
-        {error && !isLoading && (
-          <Animated.View entering={FadeInUp.duration(400)} style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
-            <Text style={styles.errorTitle}>Failed to Load Data</Text>
-            <Text style={styles.errorMessage}>{error}</Text>
-            <TouchableOpacity style={styles.retryBtn} onPress={handleRetry}>
-              <Ionicons name="refresh" size={16} color="#FFF" style={{ marginRight: 8 }} />
-              <Text style={styles.retryBtnText}>Retry</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
-
-        {/* Performance Data */}
-        {!isLoading && !error && performanceData && (
-          <>
-            {/* Period Selector */}
-            <Animated.View entering={FadeInUp.duration(400).delay(100)} style={styles.periodSelector}>
-              <TouchableOpacity 
-                style={[styles.periodBtn, selectedPeriod === 'current_term' && styles.periodBtnActive]}
-                onPress={() => setSelectedPeriod('current_term')}
-              >
-                <Text style={[styles.periodBtnText, selectedPeriod === 'current_term' && styles.periodBtnTextActive]}>
-                  Current Term
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.periodBtn, selectedPeriod === 'last_term' && styles.periodBtnActive]}
-                onPress={() => setSelectedPeriod('last_term')}
-              >
-                <Text style={[styles.periodBtnText, selectedPeriod === 'last_term' && styles.periodBtnTextActive]}>
-                  Last Term
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.periodBtn, selectedPeriod === 'academic_year' && styles.periodBtnActive]}
-                onPress={() => setSelectedPeriod('academic_year')}
-              >
-                <Text style={[styles.periodBtnText, selectedPeriod === 'academic_year' && styles.periodBtnTextActive]}>
-                  Academic Year
-                </Text>
-              </TouchableOpacity>
-            </Animated.View>
-
-            {/* --- PERFORMANCE OVERVIEW CARD --- */}
-            <Animated.View entering={FadeInUp.duration(400).delay(200)} style={styles.cardContainer}>
-              <View style={styles.cardHeader}>
-                <Ionicons name="bar-chart" size={16} color="#3B82F6" style={{marginRight: 8}} />
-                <Text style={styles.cardTitle}>Performance Overview</Text>
-              </View>
-              
-              <View style={styles.statsGrid}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{performanceData.averageScore || '85%'}</Text>
-                  <Text style={styles.statLabel}>Average Score</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{performanceData.totalStudents || '1,250'}</Text>
-                  <Text style={styles.statLabel}>Total Students</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{performanceData.passingRate || '92%'}</Text>
-                  <Text style={styles.statLabel}>Pass Rate</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{performanceData.topPerformers || '156'}</Text>
-                  <Text style={styles.statLabel}>Top Performers</Text>
-                </View>
-              </View>
-            </Animated.View>
-
-            {/* --- CLASS PERFORMANCE CARD --- */}
-            <Animated.View entering={FadeInUp.duration(400).delay(300)} style={styles.cardContainer}>
-              <View style={styles.cardHeader}>
-                <Ionicons name="school" size={16} color="#3B82F6" style={{marginRight: 8}} />
-                <Text style={styles.cardTitle}>Class Performance</Text>
-              </View>
-              
-              {performanceData.classPerformance && performanceData.classPerformance.length > 0 ? (
-                <View style={styles.classList}>
-                  {performanceData.classPerformance.map((classData: any, index: number) => (
-                    <View key={index} style={styles.classItem}>
-                      <View style={styles.classInfo}>
-                        <Text style={styles.className}>{classData.name || `Class ${index + 1}`}</Text>
-                        <Text style={styles.classStats}>
-                          Students: {classData.studentCount || 0} | Avg: {classData.averageScore || 'N/A'}%
-                        </Text>
-                      </View>
-                      <View style={styles.classProgress}>
-                        <View style={styles.progressBar}>
-                          <View 
-                            style={[styles.progressFill, { width: `${classData.averageScore || 0}%` }]}
-                          />
-                        </View>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <View style={styles.emptyState}>
-                  <Ionicons name="school-outline" size={32} color="#9CA3AF" />
-                  <Text style={styles.emptyStateText}>No class performance data available</Text>
-                </View>
-              )}
-            </Animated.View>
-
-            {/* --- PERFORMANCE REPORTS CARD --- */}
-            <Animated.View entering={FadeInUp.duration(400).delay(400)} style={styles.cardContainer}>
-              <View style={[styles.cardHeader, {marginBottom: 20}]}>
-                <Ionicons name="document-text" size={16} color="#3B82F6" style={{marginRight: 8}} />
-                <Text style={styles.cardTitle}>Performance Reports</Text>
-              </View>
-              
-              {performanceData.reports && performanceData.reports.length > 0 ? (
-                performanceData.reports.map((report: any, index: number) => (
-                  <View key={index} style={styles.reportItemContainer}>
-                    <Text style={styles.reportTitle}>{report.title || 'Performance Report'}</Text>
-                    <Text style={styles.reportSubtitle}>{report.description || 'Detailed performance analysis'}</Text>
-                    <TouchableOpacity style={styles.viewReportBtn}>
-                      <Ionicons name="eye" size={14} color="#4F46E5" style={{ marginRight: 6 }} />
-                      <Text style={styles.viewReportBtnText}>View Report</Text>
-                    </TouchableOpacity>
+          {/* Hero Analytics - Modern Gauge Style */}
+          <Animated.View entering={FadeInUp.duration(400)} style={styles.heroCard}>
+            <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
+              <Defs>
+                <SvgLinearGradient id="perfGrad" x1="0" y1="0" x2="1" y2="1">
+                  <Stop offset="0" stopColor="#6366F1" stopOpacity="1" />
+                  <Stop offset="1" stopColor="#4F46E5" stopOpacity="1" />
+                </SvgLinearGradient>
+              </Defs>
+              <Rect width="100%" height="100%" fill="url(#perfGrad)" rx={32} ry={32} />
+            </Svg>
+            <View style={styles.heroContent}>
+               <View style={styles.heroMain}>
+                  <Text style={styles.heroLabel}>AVERAGE PERFORMANCE</Text>
+                  <Text style={styles.heroValue}>{performanceData?.averageScore || '0%'}</Text>
+                  <View style={styles.improvementBadge}>
+                     <Ionicons name="trending-up" size={14} color="#4ADE80" />
+                     <Text style={styles.improvementText}>{performanceData?.improvement || '+0%'} growth</Text>
                   </View>
-                ))
-              ) : (
-                <View style={styles.emptyState}>
-                  <Ionicons name="document-outline" size={32} color="#9CA3AF" />
-                  <Text style={styles.emptyStateText}>No reports available</Text>
+               </View>
+               <View style={styles.heroGraphic}>
+                  <MaterialCommunityIcons name="chart-arc" size={80} color="rgba(255,255,255,0.2)" />
+               </View>
+            </View>
+          </Animated.View>
+
+          {/* Term Toggle */}
+          <View style={styles.termToggle}>
+            {['Term 1', 'Term 2', 'Final'].map(term => (
+              <TouchableOpacity 
+                key={term} 
+                style={[styles.termBtn, selectedTerm === term && styles.termBtnActive]}
+                onPress={() => setSelectedTerm(term)}
+              >
+                <Text style={[styles.termBtnText, selectedTerm === term && styles.termBtnTextActive]}>{term}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Stats Grid */}
+          <View style={styles.statsGrid}>
+            <StatCard 
+              title="Pass Ratio" 
+              value={performanceData?.passPercentage || '0%'} 
+              subtitle="Current academic year" 
+              icon="shield-check-outline" 
+              color="#10B981" 
+            />
+            <StatCard 
+              title="Elite Scholars" 
+              value={performanceData?.topPerformers || '0'} 
+              subtitle="Scored above 90%" 
+              icon="crown-outline" 
+              color="#F59E0B" 
+            />
+          </View>
+
+          {/* Class-wise leaderboard */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Unit Performance</Text>
+            <TouchableOpacity><Text style={styles.viewAllText}>Detailed View</Text></TouchableOpacity>
+          </View>
+
+          <View style={styles.leaderboardCard}>
+            {performanceData?.classWise?.map((item: any, index: number) => (
+              <View key={index} style={[styles.leaderboardItem, index === 0 && { borderTopWidth: 0 }]}>
+                <View style={styles.leaderboardRank}>
+                   <Text style={styles.rankText}>{index + 1}</Text>
                 </View>
-              )}
-            </Animated.View>
-          </>
-        )}
+                <View style={styles.leaderboardMain}>
+                  <Text style={styles.leaderboardClass}>{item.name}</Text>
+                  <View style={styles.progressTrack}>
+                     <View style={[styles.progressFill, { width: `${item.score}%`, backgroundColor: item.score > 80 ? '#10B981' : '#6366F1' }]} />
+                  </View>
+                </View>
+                <Text style={styles.leaderboardScore}>{item.score}%</Text>
+              </View>
+            ))}
+          </View>
 
-      </ScrollView>
+          {/* Recent Reports */}
+          <View style={[styles.sectionHeader, { marginTop: 32 }]}>
+            <Text style={styles.sectionTitle}>Published Reports</Text>
+          </View>
+          <View style={styles.reportsWrapper}>
+            {performanceData?.recentReports?.map((report: any, index: number) => (
+              <TouchableOpacity key={report.id} style={styles.reportItem}>
+                <View style={styles.reportIconCircle}>
+                   <MaterialCommunityIcons name="file-chart-outline" size={24} color="#6366F1" />
+                </View>
+                <View style={styles.reportInfo}>
+                  <Text style={styles.reportTitle}>{report.title}</Text>
+                  <Text style={styles.reportDate}>{report.date}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
+              </TouchableOpacity>
+            ))}
+          </View>
 
-      {/* Navigation Drawer */}
+        </ScrollView>
+      )}
+
       <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' }, // Soft layout background
+  mainContainer: { flex: 1, backgroundColor: '#FAFAFF' },
   container: { flex: 1 },
-  scrollContent: { paddingBottom: 40, paddingHorizontal: 16 },
+  scrollContent: { paddingBottom: 40 },
 
-  topHeader: {
+  // Header - Student Pattern
+  globalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20, 
-    paddingBottom: 16,
-    backgroundColor: '#FFF',
-    zIndex: 10,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-    marginBottom: 8
-  },
-  menuHandle: { paddingRight: 4, paddingVertical: 8 }, 
-  topHeaderTitle: { fontSize: 18, fontWeight: '600', color: '#4F46E5', flex: 1, textAlign: 'center' },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconBtnTransparent: { justifyContent: 'center', alignItems: 'center' },
-  avatar: {
-    width: 32, height: 32, borderRadius: 16, backgroundColor: '#A78BFA',
-    justifyContent: 'center', alignItems: 'center', marginLeft: 4,
-  },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
-
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#6B7280',
-  },
-
-  errorContainer: {
-    marginHorizontal: 16,
-    marginTop: 20,
-    padding: 24,
-    borderRadius: 16,
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    alignItems: 'center',
-  },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#DC2626',
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  errorMessage: {
-    fontSize: 14,
-    color: '#7F1D1D',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#4F46E5',
-    paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: 8,
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    paddingTop: Platform.OS === 'ios' ? 60 : 30,
+    paddingBottom: 24,
+    backgroundColor: '#FAFAFF',
   },
-  retryBtnText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  headerTitle: { fontSize: 16, fontWeight: '500', color: '#4F46E5', flex: 1, textAlign: 'center', marginHorizontal: 10 },
+  headerRight: { flexDirection: 'row', alignItems: 'center' },
+  avatarHeader: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center' },
+  avatarTextHeader: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
-  periodSelector: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    marginBottom: 20,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    padding: 4,
-  },
-  periodBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  periodBtnActive: {
-    backgroundColor: '#4F46E5',
-  },
-  periodBtnText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#64748B',
-  },
-  periodBtnTextActive: {
-    color: '#FFF',
-  },
+  pageHeader: { marginBottom: 20, paddingHorizontal: 20, marginTop: 10 },
+  screenTitle: { fontSize: 24, fontWeight: '800', color: '#3B82F6', marginBottom: 4 },
+  screenSubtitle: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
 
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-    marginTop: 16,
-  },
-  statItem: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: '#F8FAFC',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#64748B',
-    textAlign: 'center',
-  },
+  // Hero
+  heroCard: { height: 180, borderRadius: 32, marginHorizontal: 20, overflow: 'hidden', padding: 24, justifyContent: 'center' },
+  heroContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  heroMain: { flex: 1 },
+  heroLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
+  heroValue: { color: '#FFF', fontSize: 44, fontWeight: '900', marginVertical: 6 },
+  improvementBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 6 },
+  improvementText: { color: '#FFF', fontSize: 12, fontWeight: '700' },
+  heroGraphic: { marginLeft: 20 },
 
-  classList: {
-    marginTop: 16,
-  },
-  classItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  classInfo: {
-    flex: 1,
-  },
-  className: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 2,
-  },
-  classStats: {
-    fontSize: 12,
-    color: '#64748B',
-  },
-  classProgress: {
-    width: 80,
-    marginLeft: 12,
-  },
-  progressBar: {
-    height: 6,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#4F46E5',
-    borderRadius: 3,
-  },
+  // Toggle
+  termToggle: { flexDirection: 'row', backgroundColor: '#FFF', marginHorizontal: 20, padding: 6, borderRadius: 18, borderWidth: 1, borderColor: '#F1F5F9', marginTop: 25 },
+  termBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 14 },
+  termBtnActive: { backgroundColor: '#4F46E5', shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
+  termBtnText: { fontSize: 12, fontWeight: '700', color: '#64748B' },
+  termBtnTextActive: { color: '#FFF' },
 
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyStateText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 8,
-  },
+  // Stats Grid
+  statsGrid: { flexDirection: 'row', gap: 15, paddingHorizontal: 20, marginTop: 25 },
+  statCard: { flex: 1, backgroundColor: '#FFF', borderRadius: 24, padding: 20, borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.04, shadowRadius: 15, elevation: 3 },
+  statIconCircle: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  statValue: { fontSize: 24, fontWeight: '900' },
+  statTitle: { fontSize: 13, fontWeight: '800', color: '#1E293B', marginTop: 6 },
+  statSubtitle: { fontSize: 10, color: '#94A3B8', marginTop: 2, fontWeight: '600' },
 
-  chartPlaceholderBox: {
-    height: 200,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: '#CBD5E1',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  chartPlaceholderText: {
-    fontSize: 16,
-    color: '#94A3B8',
-    fontWeight: '500',
-  },
+  // Leaderboard
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 32, marginBottom: 16 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B' },
+  viewAllText: { fontSize: 12, color: '#4F46E5', fontWeight: '700' },
+  leaderboardCard: { backgroundColor: '#FFF', marginHorizontal: 20, borderRadius: 24, padding: 8, borderWidth: 1, borderColor: '#F1F5F9' },
+  leaderboardItem: { flexDirection: 'row', alignItems: 'center', padding: 16, borderTopWidth: 1, borderTopColor: '#F8FAFC' },
+  leaderboardRank: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginRight: 15 },
+  rankText: { fontSize: 12, fontWeight: '800', color: '#64748B' },
+  leaderboardMain: { flex: 1 },
+  leaderboardClass: { fontSize: 14, fontWeight: '700', color: '#1E293B', marginBottom: 8 },
+  progressTrack: { height: 6, backgroundColor: '#F1F5F9', borderRadius: 3, width: '90%', overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 3 },
+  leaderboardScore: { fontSize: 15, fontWeight: '800', color: '#1E293B' },
 
-  pageTitleContainer: {
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  pageTitle: { fontSize: 24, fontWeight: '800', color: '#1E293B', marginBottom: 4 },
-  pageSubtitle: { color: '#64748B', fontSize: 13, fontWeight: '500' },
+  // Reports
+  reportsWrapper: { paddingHorizontal: 20, gap: 12 },
+  reportItem: { backgroundColor: '#FFF', borderRadius: 24, padding: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#F1F5F9' },
+  reportIconCircle: { width: 48, height: 48, borderRadius: 15, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' },
+  reportInfo: { flex: 1, marginLeft: 15 },
+  reportTitle: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
+  reportDate: { fontSize: 11, color: '#94A3B8', marginTop: 2, fontWeight: '600' },
 
-  cardContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1E293B',
-  },
-
-  reportItemContainer: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  reportTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#334155',
-    marginBottom: 4,
-  },
-  reportSubtitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#64748B',
-    marginBottom: 20,
-  },
-  viewReportBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  viewReportBtnText: {
-    color: '#4F46E5',
-    fontSize: 12,
-    fontWeight: '600',
-  }
+  statsRowSkeleton: { flexDirection: 'row', gap: 15, paddingHorizontal: 20, marginTop: 25 },
 });
 
 export default PrincipalPerformanceScreen;

@@ -181,7 +181,14 @@ const ScheduleRow = ({ item, index }: { item: any, index: number }) => {
       <View style={styles.colTime}><Text style={styles.tableValue}>{item.time || item.start_time}</Text></View>
       <View style={styles.colClass}><Text style={styles.tableValueBold}>{item.class_name}</Text></View>
       <View style={styles.colSubject}><View style={styles.subjectBadge}><Text style={styles.subjectBadgeText}>{item.subject_name}</Text></View></View>
-      <View style={styles.colStatus}><View style={styles.statusRowRow}><View style={[styles.statusDot, { backgroundColor: '#10B981' }]} /><Text style={styles.statusLabel}>Regular</Text></View></View>
+      <View style={styles.colStatus}>
+        <View style={styles.statusRowRow}>
+          <View style={[styles.statusDot, { backgroundColor: item.assignment_type === 'substitute' ? '#F59E0B' : '#10B981' }]} />
+          <Text style={[styles.statusLabel, { color: item.assignment_type === 'substitute' ? '#D97706' : '#10B981' }]}>
+            {item.assignment_type === 'substitute' ? 'Substitute' : 'Regular'}
+          </Text>
+        </View>
+      </View>
       <TouchableOpacity style={styles.colAction}><Ionicons name="open-outline" size={16} color="#CBD5E1" /></TouchableOpacity>
     </Animated.View>
   );
@@ -303,8 +310,8 @@ const TeacherTimetableScreen = () => {
     }
   };
 
-  const activeSessions = useMemo(() => schedule.filter(s => s.subject_name).length, [schedule]);
-  const subSlots = useMemo(() => schedule.filter(s => s.status === 'SUBSTITUTION' || s.assignment_type === 'substitute').length, [schedule]);
+  const regularSessions = useMemo(() => schedule.filter(s => s.subject_name && (s.assignment_type === 'original' || !s.assignment_type)).length, [schedule]);
+  const subSlots = useMemo(() => schedule.filter(s => s.assignment_type === 'substitute' || s.status === 'SUBSTITUTION').length, [schedule]);
 
   const weekDays = useMemo(() => {
     const startOfWeek = new Date(selectedDate);
@@ -432,7 +439,7 @@ const TeacherTimetableScreen = () => {
             <View style={styles.summaryRow}>
                 <View style={[styles.sumCard, {backgroundColor: '#FFFFFF'}]}>
                     <Text style={styles.sumLabel}>REGULAR SESSIONS</Text>
-                    <Text style={styles.sumVal}>{summaryData?.stats?.totalClasses || activeSessions} Classes</Text>
+                    <Text style={styles.sumVal}>{regularSessions} Classes</Text>
                 </View>
                 <View style={[styles.sumCard, {marginLeft: 12, backgroundColor: '#FFFFFF'}]}>
                     <Text style={styles.sumLabel}>SUBSTITUTE TASKS</Text>
@@ -618,39 +625,39 @@ const styles = StyleSheet.create({
   },
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
-  titleArea: { paddingHorizontal: 20, paddingVertical: 12 },
-  title: { fontSize: 20, fontWeight: '900', color: '#6366F1', marginBottom: 2 },
-  subtitle: { fontSize: 13, fontWeight: '600', color: '#94A3B8' },
+  titleArea: { paddingHorizontal: 16, paddingVertical: 10 },
+  title: { fontSize: 18, fontWeight: '900', color: '#6366F1', marginBottom: 2 },
+  subtitle: { fontSize: 11, fontWeight: '600', color: '#94A3B8' },
   content: { flex: 1 },
-  navRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, marginBottom: 20 },
+  navRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 12 },
   dateControl: { flexDirection: 'row', alignItems: 'center' },
-  navText: { fontSize: 11, fontWeight: '700', color: '#94A3B8' },
-  viewToggle: { flexDirection: 'row', backgroundColor: '#F1F5F9', borderRadius: 20, padding: 2, marginHorizontal: 12 },
-  vTab: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 15 },
+  navText: { fontSize: 10, fontWeight: '700', color: '#94A3B8' },
+  viewToggle: { flexDirection: 'row', backgroundColor: '#F1F5F9', borderRadius: 16, padding: 2, marginHorizontal: 12 },
+  vTab: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   vTabActive: { backgroundColor: '#6366F1' },
-  vTabText: { fontSize: 10, fontWeight: '700', color: '#64748B' },
+  vTabText: { fontSize: 9, fontWeight: '700', color: '#64748B' },
   vTabTextActive: { color: '#FFFFFF' },
-  leaveBtn: { backgroundColor: '#111827', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
-  leaveBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+  leaveBtn: { backgroundColor: '#111827', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
+  leaveBtnText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
   
   listContainer: { paddingHorizontal: 16 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: '#F8FAFC', shadowColor: '#000', shadowOffset: {width: 0, height: 8}, shadowOpacity: 0.05, shadowRadius: 12, elevation: 4 },
-  freeCard: { borderStyle: 'dashed', backgroundColor: '#FAFAFA', borderColor: '#E2E8F0', height: 100, flexDirection: 'row', alignItems: 'center' },
-  freeTitle: { flex: 1, marginLeft: 12, fontSize: 14, fontWeight: '700', color: '#64748B' },
-  freeTime: { fontSize: 12, color: '#94A3B8', fontWeight: '600' },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: '#F8FAFC', shadowColor: '#000', shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
+  freeCard: { borderStyle: 'dashed', backgroundColor: '#FAFAFA', borderColor: '#E2E8F0', height: 80, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
+  freeTitle: { flex: 1, fontSize: 13, fontWeight: '700', color: '#64748B' },
+  freeTime: { fontSize: 11, color: '#94A3B8', fontWeight: '600' },
   cardHeader: { flexDirection: 'row', alignItems: 'center' },
-  periodCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginRight: 16 },
-  pLabel: { fontSize: 7, fontWeight: '800', color: '#94A3B8', opacity: 0.6 },
-  pNum: { fontSize: 16, fontWeight: '900', color: '#1E293B' },
+  periodCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  pLabel: { fontSize: 6, fontWeight: '800', color: '#94A3B8', opacity: 0.6 },
+  pNum: { fontSize: 13, fontWeight: '900', color: '#1E293B' },
   cardInfo: { flex: 1 },
-  tagLine: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  timeTag: { fontSize: 11, fontWeight: '700', color: '#94A3B8', marginRight: 8 },
-  statusTag: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  statusTagText: { fontSize: 8, fontWeight: '900' },
-  subjectText: { fontSize: 18, fontWeight: '900', color: '#1E293B' },
-  classText: { fontSize: 13, color: '#94A3B8', fontWeight: '600', marginTop: 2 },
-  cardFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F8FAFC' },
-  footerText: { fontSize: 11, fontWeight: '700', color: '#94A3B8' },
+  tagLine: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
+  timeTag: { fontSize: 10, fontWeight: '700', color: '#94A3B8', marginRight: 8 },
+  statusTag: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 },
+  statusTagText: { fontSize: 7, fontWeight: '900' },
+  subjectText: { fontSize: 15, fontWeight: '900', color: '#1E293B' },
+  classText: { fontSize: 11, color: '#94A3B8', fontWeight: '600', marginTop: 1 },
+  cardFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F8FAFC' },
+  footerText: { fontSize: 10, fontWeight: '700', color: '#94A3B8' },
   
   tableView: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#F1F5F9', padding: 10 },
   tableHead: { flexDirection: 'row', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', marginBottom: 8 },
@@ -669,10 +676,10 @@ const styles = StyleSheet.create({
   lLine: { flex: 1, height: 1, backgroundColor: '#F1F5F9' },
   lMark: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12 },
   lText: { fontSize: 9, fontWeight: '900', color: '#94A3B8', letterSpacing: 1 },
-  summaryRow: { flexDirection: 'row', marginBottom: 20 },
-  sumCard: { flex: 1, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#F1F5F9', elevation: 2 },
-  sumLabel: { fontSize: 9, fontWeight: '800', color: '#94A3B8', marginBottom: 4 },
-  sumVal: { fontSize: 18, fontWeight: '900', color: '#1E293B' },
+  summaryRow: { flexDirection: 'row', marginBottom: 16, gap: 10 },
+  sumCard: { flex: 1, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#F1F5F9', elevation: 2 },
+  sumLabel: { fontSize: 8, fontWeight: '800', color: '#94A3B8', marginBottom: 2 },
+  sumVal: { fontSize: 16, fontWeight: '900', color: '#1E293B' },
   printBtn: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', marginTop: 10 },
   printBtnText: { fontSize: 11, fontWeight: '700', color: '#64748B' },
   empty: { paddingVertical: 100, alignItems: 'center' },

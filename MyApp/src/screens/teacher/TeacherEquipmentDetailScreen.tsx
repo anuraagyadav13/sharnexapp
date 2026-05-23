@@ -109,7 +109,7 @@ const TeacherEquipmentDetailScreen: React.FC<Props> = ({ navigation, route }) =>
           <Text style={styles.headerDate}>Created on {new Date(request.created_at).toLocaleDateString()}</Text>
         </View>
         <View style={[styles.statusPill, { backgroundColor: statusStyle.bg }]}>
-          <Text style={[styles.statusText, { color: statusStyle.text }]}>{request.status.replace(/_/g, ' ')}</Text>
+          <Text style={[styles.statusText, { color: statusStyle.text }]}>{(request.status || '').replace(/_/g, ' ')}</Text>
         </View>
       </View>
 
@@ -167,7 +167,7 @@ const TeacherEquipmentDetailScreen: React.FC<Props> = ({ navigation, route }) =>
                 </View>
                 <View style={styles.timelineRight}>
                   <View style={styles.timelineHeader}>
-                    <Text style={styles.timelineAction}>{step.action_type.replace(/_/g, ' ')}</Text>
+                    <Text style={styles.timelineAction}>{(step.action_type || '').replace(/_/g, ' ')}</Text>
                     <Text style={styles.timelineDate}>{new Date(step.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</Text>
                   </View>
                   <Text style={styles.timelineActor}>By {step.actor_name}</Text>

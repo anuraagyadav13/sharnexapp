@@ -8,7 +8,9 @@ import {
   Platform,
   StatusBar,
   Dimensions,
-  ActivityIndicator
+  ActivityIndicator,
+  LayoutAnimation,
+  UIManager
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -21,6 +23,8 @@ import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'reac
 import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
+import Skeleton from '../../components/common/Skeleton';
+import Toast, { ToastType } from '../../components/Toast';
 
 type DashboardNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PrincipalDashboard'>;
 
@@ -28,93 +32,138 @@ interface Props {
   navigation: DashboardNavigationProp;
 }
 
-// --- Subcomponents ---
-
-const QuickActionCard = React.memo(({ title, desc, delay, color }: { title: string, desc: string, delay: number, color: string }) => (
-  <Animated.View entering={FadeInUp.delay(delay).springify()} style={[styles.quickActionCard, { borderLeftColor: color, borderLeftWidth: 4 }]}>
-    <TouchableOpacity style={styles.quickActionTouchable} activeOpacity={0.7}>
-      <View style={[styles.quickActionIconBox, { backgroundColor: color + '15' }]}>
-        <Ionicons name="document-text" size={20} color={color} />
-      </View>
-      <Text style={styles.quickActionTitle}>{title}</Text>
-      <Text style={styles.quickActionDesc} numberOfLines={2}>{desc}</Text>
-    </TouchableOpacity>
-  </Animated.View>
-));
-
-const ActivityItem = React.memo(({ iconName, iconBgColor, name, action, time, isLast, iconLibrary = 'Ionicons' }: any) => {
-  const IconComponent = iconLibrary === 'MaterialCommunityIcons' ? MaterialCommunityIcons : Ionicons;
-  return (
-    <View style={[styles.activityItem, !isLast && styles.activityItemBorder]}>
-      <View style={[styles.activityAvatarBox, { backgroundColor: iconBgColor }]}>
-        <IconComponent name={iconName} size={15} color="#FFFFFF" />
-      </View>
-      <View style={styles.activityContent}>
-        <Text style={styles.activityName}>{name}</Text>
-        <Text style={styles.activityAction}>{action}</Text>
-        <Text style={styles.activityTime}>{time}</Text>
-      </View>
-    </View>
-  );
-});
-
-const EventCard = React.memo(({ title, date, color }: any) => (
-  <View style={[styles.eventCard, { borderLeftColor: color, borderLeftWidth: 4 }]}>
-    <View style={styles.eventCardContent}>
-      <Text style={styles.eventTitle}>{title}</Text>
-      <View style={styles.eventDateContainer}>
-        <Ionicons name="calendar-outline" size={14} color="#9CA3AF" />
-        <Text style={styles.eventDateText}>{date}</Text>
-      </View>
-    </View>
-  </View>
-));
-
-const TopStudentCard = React.memo(({ rank, name, className, percentage }: any) => (
-  <View style={styles.topStudentCard}>
-    <View style={styles.rankCircle}>
-      <Text style={styles.rankText}>{rank}</Text>
-    </View>
-    <View style={styles.topStudentInfo}>
-      <Text style={styles.topStudentName}>{name}</Text>
-      <Text style={styles.topStudentClass}>{className}</Text>
-    </View>
-    <Text style={styles.topStudentPercentage}>{percentage}</Text>
-  </View>
-));
+// Enable LayoutAnimation for Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 // --- Main Screen ---
 const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [dashboardData, setDashboardData] = useState<any>(null);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [approvals, setApprovals] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isActivityCollapsed, setIsActivityCollapsed] = useState(false);
+  const [isApprovalsCollapsed, setIsApprovalsCollapsed] = useState(false);
+  const [isTopStudentsCollapsed, setIsTopStudentsCollapsed] = useState(false);
+  const [toast, setToast] = useState<{ visible: boolean; message: string; type: ToastType }>({
+    visible: false,
+    message: '',
+    type: 'info'
+  });
+
+  const showToast = (message: string, type: ToastType = 'info') => {
+    setToast({ visible: true, message, type });
+  };
+
+  const toggleSection = (section: 'activity' | 'approvals' | 'topStudents') => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    if (section === 'activity') setIsActivityCollapsed(!isActivityCollapsed);
+    if (section === 'approvals') setIsApprovalsCollapsed(!isApprovalsCollapsed);
+    if (section === 'topStudents') setIsTopStudentsCollapsed(!isTopStudentsCollapsed);
+  };
+
+  const formatDate = (dateStr: string) => {
+    try {
+      if (!dateStr) return 'N/A';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return 'N/A';
+      return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+    } catch {
+      return 'N/A';
+    }
+  };
+
+  const fetchDashboard = async () => {
+    try {
+      if (!isRefreshing) setIsLoading(true);
+      
+      const [dashRes, announceRes, attendRes, equipRes] = await Promise.all([
+        apiClient.get(ENDPOINTS.PRINCIPAL.DASHBOARD).catch(() => ({ data: {} })),
+        apiClient.get(ENDPOINTS.STUDENT.ANNOUNCEMENTS).catch(() => ({ data: { announcements: [] } })),
+        apiClient.get(ENDPOINTS.PRINCIPAL.ATTENDANCE, { params: { limit: 10 } }).catch(() => ({ data: { data: [] } })),
+        apiClient.get(ENDPOINTS.PRINCIPAL.EQUIPMENT_REQUESTS, { params: { status: 'PENDING', limit: 5 } }).catch(() => ({ data: { data: [] } }))
+      ]);
+
+      const dData = dashRes.data?.data || dashRes.data || {};
+      setDashboardData(dData);
+      setAnnouncements(announceRes.data?.announcements || []);
+      
+      // Map Attendance to Activity Items
+      const attendData = attendRes.data?.data || [];
+          setActivities(attendData.map((a: any) => {
+            const timeStr = a.outTime || a.inTime;
+            let formattedTime = 'Just now';
+            if (timeStr) {
+              try {
+                const d = new Date(timeStr);
+                formattedTime = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+              } catch (e) {}
+            }
+            return {
+              id: a.id || Math.random().toString(),
+              name: a.teacherName || 'Staff Member',
+              action: `Clocked ${a.outTime ? 'out' : 'in'} (${a.method || 'Biometric'})`,
+              time: formattedTime,
+              color: a.outTime ? '#8B5CF6' : '#10B981',
+              icon: a.outTime ? 'exit-outline' : 'enter-outline'
+            };
+          }));
+
+      // Map Equipment Requests to Approvals
+      const equipData = equipRes.data?.data || [];
+      if (Array.isArray(equipData)) {
+        setApprovals(equipData.map((e: any) => ({
+          id: e.id || Math.random().toString(),
+          request: e.equipment_name || e.item || 'Equipment Request',
+          submittedBy: e.teacher_name || 'Teacher',
+          date: formatDate(e.created_at),
+          status: e.status
+        })));
+      }
+
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchDashboard = async () => {
-      try {
-        setIsLoading(true);
-        const res = await apiClient.get(ENDPOINTS.PRINCIPAL.DASHBOARD);
-        setDashboardData(res.data);
-      } catch (error) {
-        console.error('Failed to fetch Principal dashboard:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchDashboard();
   }, []);
+
+  const onRefresh = () => {
+    setIsRefreshing(true);
+    fetchDashboard();
+  };
+
+  const visibleActivities = activities.slice(0, 5);
+  const upcomingEvents = (dashboardData?.upcomingEvents || announcements).map((a: any) => ({
+    title: a.title,
+    date: a.date || new Date(a.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+    color: a.color || (a.priority === 'high' ? '#EF4444' : '#6366F1')
+  }));
 
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      
+      {toast.visible && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onHide={() => setToast(prev => ({ ...prev, visible: false }))} 
+        />
+      )}
 
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4F46E5" />
-          <Text style={styles.loadingText}>Synchronizing school data...</Text>
-        </View>
+        <DashboardSkeleton />
       ) : (
         <ScrollView
           style={styles.container}
@@ -169,15 +218,47 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                   <Defs>
                     <SvgLinearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
                       <Stop offset="0" stopColor="#4F46E5" stopOpacity="1" />
-                      <Stop offset="1" stopColor="#8B5CF6" stopOpacity="1" />
+                      <Stop offset="1" stopColor="#6366F1" stopOpacity="1" />
                     </SvgLinearGradient>
                   </Defs>
                   <Rect width="100%" height="100%" fill="url(#grad)" rx="16" ry="16" />
                 </Svg>
               </View>
-              <Text style={styles.heroTitle}>{dashboardData?.schoolName || 'Sunrise High School'}</Text>
-              <Text style={styles.heroSubtitle}>Managing {dashboardData?.stats?.students || 0} Students, {dashboardData?.stats?.teachers || 0} Teachers, and {dashboardData?.stats?.classes || 0} Classes</Text>
+              <View style={styles.heroContent}>
+                <Text style={styles.heroTitle}>Welcome to Institution Portal</Text>
+                <Text style={styles.heroSubtitle}>Manage your institution, staff, and students efficiently</Text>
+              </View>
             </Animated.View>
+          </View>
+
+          {/* Metric Cards - Optimized Single Row */}
+          <View style={[styles.sectionPadding, { marginTop: 16 }]}>
+            <View style={styles.metricRow}>
+              <MetricCard 
+                title="STUDENTS"
+                value={dashboardData?.stats?.students?.value || 0}
+                trend={dashboardData?.stats?.students?.trend}
+                subValue={dashboardData?.stats?.students?.subTrend}
+                icon="school"
+                color="#4F46E5"
+              />
+              <MetricCard 
+                title="STAFF"
+                value={dashboardData?.stats?.teachers?.value || 0}
+                trend={dashboardData?.stats?.teachers?.trend}
+                subValue={dashboardData?.stats?.teachers?.subTrend}
+                icon="people"
+                color="#8B5CF6"
+              />
+              <MetricCard 
+                title="ATTENDANCE"
+                value={`${dashboardData?.stats?.attendance?.value || 0}%`}
+                trend={dashboardData?.stats?.attendance?.trend}
+                subValue={dashboardData?.stats?.attendance?.subTrend}
+                icon="calendar"
+                color="#10B981"
+              />
+            </View>
           </View>
 
           {/* Quick Actions */}
@@ -187,60 +268,78 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
               <View style={styles.quickActionsGrid}>
                 <QuickActionCard
                   delay={100}
-                  title="Generate Report"
-                  desc="Academic & financial reports"
+                  title="Staff Management"
+                  desc="Manage your school team"
                   color="#4F46E5"
+                  icon="people"
+                  onPress={() => navigation.navigate('PrincipalStaff')}
                 />
                 <QuickActionCard
                   delay={150}
-                  title="Add Staff"
-                  desc="Register new staff members"
+                  title="Student Management"
+                  desc="Enroll & track students"
                   color="#10B981"
+                  icon="school"
+                  onPress={() => navigation.navigate('PrincipalStudentDetails')}
                 />
                 <QuickActionCard
                   delay={200}
                   title="Announcements"
                   desc="Notify teachers & parents"
                   color="#F59E0B"
+                  icon="megaphone"
+                  onPress={() => navigation.navigate('PrincipalAnnouncements')}
                 />
                 <QuickActionCard
                   delay={250}
                   title="Schedule Event"
                   desc="Add to academic calendar"
                   color="#EC4899"
+                  icon="calendar"
+                  onPress={() => navigation.navigate('PrincipalCalendar')}
                 />
               </View>
             </View>
           </View>
 
           {/* Performance & Events Grid */}
-          <View style={[styles.sectionPadding, { flexDirection: 'row', gap: 16 }]}>
+          <View style={[styles.sectionPadding, { flexDirection: 'column', gap: 20 }]}>
             {/* Top Students */}
-            <View style={{ flex: 1.2 }}>
-              <Text style={styles.sectionTitle}>Top Students</Text>
-              <View style={styles.cardContainer}>
-                {(dashboardData?.topStudents && dashboardData.topStudents.length > 0) ? (
-                  dashboardData.topStudents.map((student: any, index: number) => (
-                    <TopStudentCard
-                      key={index}
-                      rank={student.rank}
-                      name={student.name}
-                      className={student.className}
-                      percentage={student.percentage}
-                    />
-                  ))
-                ) : (
-                  <Text style={styles.emptyText}>No data available</Text>
-                )}
-              </View>
+            <View>
+              <TouchableOpacity 
+                activeOpacity={0.7} 
+                onPress={() => toggleSection('topStudents')}
+                style={styles.sectionHeaderSpaceBetween}
+              >
+                <Text style={styles.sectionTitle}>Top Students</Text>
+                <Ionicons name={isTopStudentsCollapsed ? "chevron-down" : "chevron-up"} size={20} color="#6B7280" />
+              </TouchableOpacity>
+              
+              {!isTopStudentsCollapsed && (
+                <View style={styles.cardContainer}>
+                  {(dashboardData?.topStudents && dashboardData.topStudents.length > 0) ? (
+                    dashboardData.topStudents.map((student: any, index: number) => (
+                      <TopStudentCard
+                        key={index}
+                        rank={student.rank}
+                        name={student.name}
+                        className={student.className}
+                        percentage={student.percentage}
+                      />
+                    ))
+                  ) : (
+                    <Text style={styles.emptyText}>No data available</Text>
+                  )}
+                </View>
+              )}
             </View>
 
             {/* Upcoming Events */}
-            <View style={{ flex: 0.8 }}>
-              <Text style={styles.sectionTitle}>Events</Text>
+            <View>
+              <Text style={styles.sectionTitle}>Upcoming Events</Text>
               <View style={styles.cardContainer}>
-                {(dashboardData?.upcomingEvents && dashboardData.upcomingEvents.length > 0) ? (
-                  dashboardData.upcomingEvents.map((event: any, index: number) => (
+                {(upcomingEvents && upcomingEvents.length > 0) ? (
+                  upcomingEvents.map((event: any, index: number) => (
                     <EventCard
                       key={index}
                       title={event.title}
@@ -258,37 +357,80 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
           {/* Recent Staff Activity */}
           <View style={[styles.sectionPadding, { marginTop: 24 }]}>
             <View style={styles.sectionHeaderSpaceBetween}>
-              <Text style={styles.sectionTitle}>Staff Activity</Text>
-              <TouchableOpacity><Text style={styles.viewAllText}>View All →</Text></TouchableOpacity>
+              <TouchableOpacity 
+                activeOpacity={0.7} 
+                onPress={() => toggleSection('activity')}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+              >
+                <Text style={styles.sectionTitle}>Recent Staff Activity</Text>
+                <Ionicons name={isActivityCollapsed ? "chevron-down" : "chevron-up"} size={18} color="#6B7280" />
+              </TouchableOpacity>
+              <TouchableOpacity>
+                <Text style={styles.viewAllText}>View All →</Text>
+              </TouchableOpacity>
             </View>
             
-            <View style={styles.activityBox}>
-              <ActivityItem 
-                iconName="people" 
-                iconBgColor="#3B82F6" 
-                name="Ms. Anjali Verma" 
-                action="Uploaded Mathematics exam results" 
-                time="Today, 10:30 AM" 
-                isLast={false} 
-              />
-              <ActivityItem 
-                iconName="person-add" 
-                iconBgColor="#8B5CF6" 
-                name="Mr. Rajesh Kumar" 
-                action="Added 5 new students to Class 11-B" 
-                time="Yesterday, 3:45 PM" 
-                isLast={false} 
-              />
-              <ActivityItem 
-                iconLibrary="MaterialCommunityIcons"
-                iconName="checkbox-marked-circle-outline" 
-                iconBgColor="#10B981" 
-                name="Ms. Emily Rodriguez" 
-                action="Submitted Physics lab equipment request" 
-                time="Yesterday, 11:20 AM" 
-                isLast={true} 
-              />
+            {!isActivityCollapsed && (
+              <View style={styles.activityBox}>
+                {visibleActivities.length > 0 ? (
+                  visibleActivities.map((item, idx) => (
+                    <ActivityItem 
+                      key={item.id}
+                      initial={item.name.charAt(0)}
+                      iconBgColor={item.color} 
+                      name={item.name} 
+                      action={item.action} 
+                      time={item.time} 
+                      isLast={idx === visibleActivities.length - 1} 
+                    />
+                  ))
+                ) : (
+                  <Text style={styles.emptyText}>No recent staff activity</Text>
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* Pending Approvals - Requested UI */}
+          <View style={[styles.sectionPadding, { marginTop: 24, marginBottom: 20 }]}>
+            <View style={styles.sectionHeaderSpaceBetween}>
+              <TouchableOpacity 
+                activeOpacity={0.7} 
+                onPress={() => toggleSection('approvals')}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+              >
+                <Text style={styles.sectionTitle}>Pending Approvals</Text>
+                <Ionicons name={isApprovalsCollapsed ? "chevron-down" : "chevron-up"} size={18} color="#6B7280" />
+              </TouchableOpacity>
+              <TouchableOpacity>
+                <Text style={styles.viewAllText}>View All →</Text>
+              </TouchableOpacity>
             </View>
+
+            {!isApprovalsCollapsed && (
+              <View style={styles.approvalsContainer}>
+                 {approvals.length > 0 ? (
+                   approvals.map((app, idx) => (
+                     <View key={app.id} style={[styles.approvalCard, idx === approvals.length - 1 && { borderBottomWidth: 0 }]}>
+                        <View style={styles.approvalInfo}>
+                           <Text style={styles.approvalRequest} numberOfLines={1}>{app.request}</Text>
+                           <Text style={styles.approvalBy}>By {app.submittedBy} • {app.date}</Text>
+                        </View>
+                        <View style={styles.approvalActions}>
+                           <TouchableOpacity style={styles.approveBtn}>
+                              <Ionicons name="checkmark" size={16} color="#10B981" />
+                           </TouchableOpacity>
+                           <TouchableOpacity style={styles.rejectBtn}>
+                              <Ionicons name="close" size={16} color="#EF4444" />
+                           </TouchableOpacity>
+                        </View>
+                     </View>
+                   ))
+                 ) : (
+                   <Text style={styles.emptyText}>All requests are processed</Text>
+                 )}
+              </View>
+            )}
           </View>
         </ScrollView>
       )}
@@ -301,6 +443,123 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
     </View>
   );
 };
+
+// --- Subcomponents ---
+
+const DashboardSkeleton = () => (
+  <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <View style={styles.globalHeader}>
+       <Skeleton width={30} height={30} borderRadius={6} />
+       <Skeleton width="40%" height={24} borderRadius={6} />
+       <View style={{flexDirection: 'row', gap: 10}}>
+          <Skeleton width={24} height={24} borderRadius={12} />
+          <Skeleton width={24} height={24} borderRadius={12} />
+          <Skeleton width={32} height={32} borderRadius={16} />
+       </View>
+    </View>
+
+    <View style={styles.sectionPadding}>
+       <View style={styles.metricRow}>
+          <Skeleton width="31%" height={100} borderRadius={12} />
+          <Skeleton width="31%" height={100} borderRadius={12} />
+          <Skeleton width="31%" height={100} borderRadius={12} />
+       </View>
+    </View>
+
+    <View style={styles.sectionPadding}>
+       <View style={styles.fullScreenBox}>
+          <Skeleton width={120} height={20} style={{marginBottom: 16}} />
+          <View style={styles.quickActionsGrid}>
+            {[1,2,3,4].map(i => <Skeleton key={i} width="48%" height={80} borderRadius={12} />)}
+          </View>
+       </View>
+    </View>
+
+    <View style={styles.sectionPadding}>
+       <View style={{flexDirection: 'row', gap: 16}}>
+          <View style={{flex: 1}}>
+             <Skeleton width="100%" height={200} borderRadius={16} />
+          </View>
+          <View style={{flex: 1}}>
+             <Skeleton width="100%" height={200} borderRadius={16} />
+          </View>
+       </View>
+    </View>
+  </ScrollView>
+);
+
+const QuickActionCard = React.memo(({ title, desc, delay, color, icon = 'document-text', onPress }: { title: string, desc: string, delay: number, color: string, icon?: string, onPress?: () => void }) => (
+  <Animated.View entering={FadeInUp.delay(delay).springify()} style={[styles.quickActionCard, { borderLeftColor: color, borderLeftWidth: 4 }]}>
+    <TouchableOpacity style={styles.quickActionTouchable} activeOpacity={0.7} onPress={onPress}>
+      <View style={[styles.quickActionIconBox, { backgroundColor: color + '15' }]}>
+        <Ionicons name={icon} size={20} color={color} />
+      </View>
+      <Text style={styles.quickActionTitle}>{title}</Text>
+      <Text style={styles.quickActionDesc} numberOfLines={2}>{desc}</Text>
+    </TouchableOpacity>
+  </Animated.View>
+));
+
+const ActivityItem = React.memo(({ initial, iconBgColor, name, action, time, isLast }: any) => {
+  return (
+    <View style={[styles.activityItem, !isLast && styles.activityItemBorder]}>
+      <View style={[styles.activityAvatarBox, { backgroundColor: iconBgColor + '20' }]}>
+        <Text style={[styles.activityInitial, { color: iconBgColor }]}>{initial}</Text>
+      </View>
+      <View style={styles.activityContent}>
+        <Text style={styles.activityName}>{name}</Text>
+        <Text style={styles.activityAction}>{action}</Text>
+        <Text style={styles.activityTime}>{time}</Text>
+      </View>
+    </View>
+  );
+});
+
+const EventCard = React.memo(({ title, date, color }: any) => (
+  <View style={[styles.eventCard, { borderLeftColor: color, borderLeftWidth: 4 }]}>
+    <View style={styles.eventCardContent}>
+      <Text style={styles.eventTitle}>{title}</Text>
+      <View style={styles.eventDateContainer}>
+        <Ionicons name="calendar-outline" size={14} color="#9CA3AF" />
+        <Text style={styles.eventDateText}>{date}</Text>
+      </View>
+    </View>
+  </View>
+));
+
+const MetricCard = React.memo(({ title, value, trend, icon, color }: any) => {
+  return (
+    <View style={styles.metricCard}>
+      <View style={[styles.metricIconBox, { backgroundColor: color + '12' }]}>
+        <Ionicons name={icon} size={16} color={color} />
+      </View>
+      
+      <View style={styles.metricContentCenter}>
+        <Text style={styles.metricValue}>{value}</Text>
+        <Text style={styles.metricTitle}>{title}</Text>
+      </View>
+
+      {trend ? (
+        <View style={styles.trendBadge}>
+          <Text style={[styles.trendText, { color: color }]}>{trend}</Text>
+        </View>
+      ) : <View style={{ height: 14 }} />}
+    </View>
+  );
+});
+
+const TopStudentCard = React.memo(({ rank, name, className, percentage }: any) => (
+  <View style={styles.topStudentCard}>
+    <View style={styles.rankCircle}>
+      <Text style={styles.rankText}>{rank}</Text>
+    </View>
+    <View style={styles.topStudentInfo}>
+      <Text style={styles.topStudentName}>{name}</Text>
+      <Text style={styles.topStudentClass}>{className}</Text>
+    </View>
+    <Text style={styles.topStudentPercentage}>{percentage}</Text>
+  </View>
+));
 
 const styles = StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
@@ -376,19 +635,84 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   heroTitle: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '800',
     color: '#fff',
     textAlign: 'center',
     marginBottom: 8,
     zIndex: 2,
+    letterSpacing: -0.5,
   },
   heroSubtitle: {
-    fontSize: 13,
-    color: '#E0E7FF',
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 20,
     zIndex: 2,
+    maxWidth: '80%',
+  },
+  heroContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+  },
+  metricRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  metricCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#64748B',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#F8FAFC',
+    minHeight: 120,
+  },
+  metricIconBox: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  metricContentCenter: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  metricValue: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#1E293B',
+    letterSpacing: -0.5,
+  },
+  metricTitle: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginTop: 2,
+  },
+  trendBadge: {
+    marginTop: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: '#F8FAFC',
+  },
+  trendText: {
+    fontSize: 8,
+    fontWeight: '700',
   },
 
   // Sections
@@ -457,16 +781,22 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E2E8F0', // slate-200, more visible divider
   },
   activityAvatarBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 12,
+  },
+  activityInitial: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   activityContent: { flex: 1, justifyContent: 'center' },
   activityName: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 1 },
   activityAction: { fontSize: 11, color: '#6B7280', marginBottom: 1, lineHeight: 15 },
+  activityTime: { fontSize: 11, color: '#9CA3AF' },
+
   // Event Card Styles
   eventCard: {
     backgroundColor: '#FFFFFF',
@@ -506,6 +836,16 @@ const styles = StyleSheet.create({
   topStudentName: { fontSize: 13, fontWeight: '700', color: '#1F2937' },
   topStudentClass: { fontSize: 11, color: '#6B7280' },
   topStudentPercentage: { fontSize: 13, fontWeight: '700', color: '#10B981' },
+  
+  // Approvals
+  approvalsContainer: { backgroundColor: '#FFFFFF', borderRadius: 16, shadowColor: '#1E293B', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.1, shadowRadius: 36, elevation: 12, overflow: 'hidden' },
+  approvalCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  approvalInfo: { flex: 1 },
+  approvalRequest: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
+  approvalBy: { fontSize: 11, color: '#94A3B8', marginTop: 2, fontWeight: '500' },
+  approvalActions: { flexDirection: 'row', gap: 10 },
+  approveBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: '#DCFCE7', alignItems: 'center', justifyContent: 'center' },
+  rejectBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center' },
 });
 
 export default PrincipalDashboard;

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, ScrollView } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -31,6 +31,7 @@ interface MenuItem {
   label: string;
   icon: string;
   isDivider?: boolean;
+  subItems?: { id: string; label: string; icon?: string }[];
 }
 
 const STUDENT_MENU: MenuItem[] = [
@@ -53,16 +54,24 @@ const STUDENT_MENU: MenuItem[] = [
 
 const PRINCIPAL_MENU: MenuItem[] = [
   { id: '1', label: 'Home', icon: 'grid-outline' },
-  { id: '2', label: 'Classes', icon: 'layers-outline' },
-  { id: '3', label: 'Subjects', icon: 'pie-chart-outline' },
-  { id: '4', label: 'Staff Management', icon: 'trending-up-outline' },
-  { id: '5', label: 'Staff Details', icon: 'person-outline' },
+  { 
+    id: 'academic', 
+    label: 'Academic Structure', 
+    icon: 'school-outline',
+    subItems: [
+      { id: 'classes', label: 'Classes' },
+      { id: 'subjects', label: 'Subjects' }
+    ]
+  },
+  { id: '4', label: 'Staff Management', icon: 'people-outline' },
+  { id: '5', label: 'Students details', icon: 'person-outline' },
   { id: '6', label: 'Academic Calendar', icon: 'calendar-outline' },
-  { id: '7', label: 'Time Table', icon: 'chatbox-ellipses-outline' },
-  { id: '8', label: 'Performance', icon: 'document-text-outline' },
-  { id: '9', label: 'Announcements', icon: 'document-outline' },
-  { id: '10', label: 'Fees & Payments', icon: 'document-outline' },
+  { id: '7', label: 'Timetable', icon: 'time-outline' },
+  { id: '8', label: 'Performance', icon: 'trending-up-outline' },
   { id: '11', label: 'Result Management', icon: 'reader-outline' },
+  { id: '9', label: 'Announcements', icon: 'megaphone-outline' },
+  { id: '10', label: 'Fees & Payments', icon: 'card-outline' },
+  { id: 'equip', label: 'Equipment Requests', icon: 'construct-outline' },
   { id: 'div1', label: '', icon: '', isDivider: true },
   { id: '12', label: 'Account Settings', icon: 'settings-outline' },
   { id: '13', label: 'Logout', icon: 'log-out-outline' },
@@ -151,125 +160,120 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
     };
   });
 
+  const [expandedItems, setExpandedItems] = useState<string[]>(['academic']);
+
+  const toggleExpand = (id: string) => {
+    setExpandedItems(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
   const renderMenu = () => {
     let menuItems = STUDENT_MENU;
     if (role === 'teacher') menuItems = TEACHER_MENU;
-    if (role === 'admin') menuItems = STUDENT_MENU; // Mock
+    if (role === 'admin') menuItems = STUDENT_MENU; 
     if (role === 'principal') menuItems = PRINCIPAL_MENU;
 
     const getIsActive = (label: string): boolean => {
       switch (label) {
-        case 'Home': case 'Dashboard': case 'Student Dashboard':
-          return currentRouteName === 'PrincipalDashboard' || currentRouteName === 'StudentDashboard' || currentRouteName === 'TeacherDashboard';
+        case 'Home': return currentRouteName === 'PrincipalDashboard' || currentRouteName === 'StudentDashboard' || currentRouteName === 'TeacherDashboard';
         case 'Classes': return currentRouteName === 'PrincipalClasses';
         case 'Subjects': return currentRouteName === 'PrincipalSubjects';
         case 'Staff Management': return currentRouteName === 'PrincipalStaff';
-        case 'Staff Details': case 'Students details': return currentRouteName === 'PrincipalStudentDetails';
+        case 'Students details': return currentRouteName === 'PrincipalStudentDetails';
         case 'Academic Calendar': return currentRouteName === 'PrincipalCalendar' || currentRouteName === 'Calendar';
-        case 'Time Table': case 'Timetable': return currentRouteName === 'PrincipalTimetable' || currentRouteName === 'Timetable';
-        case 'Performance': return currentRouteName === 'PrincipalPerformance' || currentRouteName === 'Performance';
+        case 'Timetable': return currentRouteName === 'PrincipalTimetable' || currentRouteName === 'Timetable' || currentRouteName === 'TeacherTimetable';
+        case 'Performance': return currentRouteName === 'PrincipalPerformance' || currentRouteName === 'Performance' || currentRouteName === 'TeacherPerformance';
         case 'Announcements': return currentRouteName === 'PrincipalAnnouncements' || currentRouteName === 'Announcements';
-        case 'Fees & Payments': case 'Fees Portal': return currentRouteName === 'PrincipalFees' || currentRouteName === 'Fees';
+        case 'Fees & Payments': return currentRouteName === 'PrincipalFees' || currentRouteName === 'Fees';
         case 'Result Management': return currentRouteName === 'PrincipalRSM' || currentRouteName === 'ResultManagement' || currentRouteName === 'TeacherResultManagement';
         case 'Account Settings': return currentRouteName === 'AccountSettings';
-        case 'Attendance': case 'Class Attendance': return currentRouteName === 'TeacherAttendance' || currentRouteName === 'Attendance' || currentRouteName === 'TeacherViewAttendance';
-        case 'Assignments': return currentRouteName === 'TeacherAssignment' || currentRouteName === 'Assignments';
-        case 'Quizzes': case 'Quizzes & Tests': case 'Exams': return currentRouteName === 'TeacherQuiz' || currentRouteName === 'Quizzes';
-        case 'Time Table': case 'Timetable': return currentRouteName === 'PrincipalTimetable' || currentRouteName === 'Timetable' || currentRouteName === 'TeacherTimetable';
-        case 'Live Monitor': return currentRouteName === 'TeacherMonitorLive';
-        case 'Study Material': return currentRouteName === 'StudyMaterial';
-        case 'Performance Report': return currentRouteName === 'Performance';
-        case 'Announcements': return currentRouteName === 'Announcements';
-        case 'Result Management': return currentRouteName === 'PrincipalRSM' || currentRouteName === 'ResultManagement' || currentRouteName === 'TeacherResultManagement';
-        case 'My Attendance': return currentRouteName === 'TeacherSelfAttendance';
         default: return false;
       }
     };
 
-    return menuItems.map((item) => {
-      if (item.isDivider) {
-        return <View key={item.id} style={styles.divider} />;
-      }
+    const handleNavigation = (label: string) => {
+      onClose();
+      setTimeout(() => {
+        if (label === 'Home') {
+          if (role === 'principal') navigation.navigate('PrincipalDashboard');
+          else if (role === 'teacher') navigation.navigate('TeacherDashboard');
+          else navigation.navigate('StudentDashboard');
+        } else if (label === 'Classes') navigation.navigate('PrincipalClasses');
+        else if (label === 'Subjects') navigation.navigate('PrincipalSubjects');
+        else if (label === 'Staff Management') navigation.navigate('PrincipalStaff');
+        else if (label === 'Students details') navigation.navigate('PrincipalStudentDetails');
+        else if (label === 'Academic Calendar') navigation.navigate('PrincipalCalendar');
+        else if (label === 'Timetable') {
+          if (role === 'principal') navigation.navigate('PrincipalTimetable');
+          else if (role === 'teacher') navigation.navigate('TeacherTimetable');
+          else navigation.navigate('Timetable');
+        } else if (label === 'Performance') navigation.navigate('PrincipalPerformance');
+        else if (label === 'Announcements') {
+          if (role === 'principal') navigation.navigate('PrincipalAnnouncements');
+          else navigation.navigate('Announcements');
+        } else if (label === 'Fees & Payments') navigation.navigate('PrincipalFees');
+        else if (label === 'Result Management') {
+          if (role === 'principal') navigation.navigate('PrincipalRSM');
+          else if (role === 'teacher') navigation.navigate('TeacherResultManagement');
+        } else if (label === 'Account Settings') navigation.navigate('AccountSettings');
+        else if (label === 'Logout') logout();
+      }, 250);
+    };
 
-      const isActive = getIsActive(item.label);
+    return (
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
+        {role === 'principal' && (
+          <View style={styles.headerInfo}>
+            <Text style={styles.headerTitle}>Institution Portal</Text>
+            <Text style={styles.headerSubtitle}>Manage your institution</Text>
+          </View>
+        )}
+        {menuItems.map((item) => {
+          if (item.isDivider) return <View key={item.id} style={styles.divider} />;
 
-      return (
-        <TouchableOpacity
-          key={item.id}
-          activeOpacity={0.7}
-          style={[styles.menuItem, isActive && styles.menuItemActive]}
-          onPress={() => {
-            onClose();
+          const isActive = getIsActive(item.label);
+          const isExpanded = expandedItems.includes(item.id);
 
-            setTimeout(() => {
-              if (item.label === 'Home' || item.label === 'Student Dashboard' || item.label === 'Dashboard') {
-                if (role === 'principal') navigation.navigate('PrincipalDashboard');
-                else if (role === 'teacher') navigation.navigate('TeacherDashboard');
-                else navigation.navigate('StudentDashboard');
-              } else if (item.label === 'Classes') {
-                navigation.navigate('PrincipalClasses');
-              } else if (item.label === 'Subjects') {
-                navigation.navigate('PrincipalSubjects');
-              } else if (item.label === 'Staff Management') {
-                navigation.navigate('PrincipalStaff');
-              } else if (item.label === 'Staff Details' || item.label === 'Students details') {
-                navigation.navigate('PrincipalStudentDetails');
-              } else if (item.label === 'Assignments') {
-                if (role === 'teacher') navigation.navigate('TeacherAssignment');
-                else navigation.navigate('Assignments');
-              } else if (item.label === 'Quizzes & Tests' || item.label === 'Quizzes' || item.label === 'Exams') {
-                if (role === 'teacher') navigation.navigate('TeacherQuiz');
-                else navigation.navigate('Quizzes');
-              } else if (item.label === 'Performance Trend' || item.label === 'Performance Report') {
-                if (role === 'teacher') navigation.navigate('TeacherPerformance');
-                else navigation.navigate('Performance');
-              } else if (item.label === 'Performance') {
-                navigation.navigate('PrincipalPerformance');
-              } else if (item.label === 'Study Material') {
-                if (role === 'teacher') navigation.navigate('TeacherStudyMaterial');
-                else navigation.navigate('StudyMaterial');
-              } else if (item.label === 'Attendance' || item.label === 'Class Attendance') {
-                if (role === 'teacher') navigation.navigate('TeacherAttendance');
-                else navigation.navigate('Attendance');
-              } else if (item.label === 'My Attendance') {
-                navigation.navigate('TeacherSelfAttendance');
-              } else if (item.label === 'Live Monitor') {
-                navigation.navigate('TeacherMonitorLive', { quizId: '1' });
-              } else if (item.label === 'Academic Calendar') {
-                if (role === 'principal') navigation.navigate('PrincipalCalendar');
-              } else if (item.label === 'Announcements') {
-                if (role === 'principal') navigation.navigate('PrincipalAnnouncements');
-                else navigation.navigate('Announcements');
-              } else if (item.label === 'Grades & Reports') {
-                navigation.navigate('Grades');
-              } else if (item.label === 'Fees Portal' || item.label === 'Fees & Payments') {
-                if (role === 'principal') navigation.navigate('PrincipalFees');
-                else navigation.navigate('Fees');
-              } else if (item.label === 'Time Table' || item.label === 'Timetable') {
-                if (role === 'principal') navigation.navigate('PrincipalTimetable');
-                else if (role === 'teacher') navigation.navigate('TeacherTimetable');
-                else navigation.navigate('Timetable');
-              } else if (item.label === 'Result Management') {
-                if (role === 'principal') navigation.navigate('PrincipalRSM');
-                else if (role === 'teacher') navigation.navigate('TeacherResultManagement');
-                else navigation.navigate('ResultManagement');
-              } else if (item.label === 'Equipment') {
-                navigation.navigate('TeacherEquipment');
-              } else if (item.label === 'My Attendance') {
-                navigation.navigate('TeacherSelfAttendance');
-              } else if (item.label === 'Account Settings') {
-                navigation.navigate('AccountSettings');
-              } else if (item.label === 'Logout') {
-                logout();
-              }
-            }, 250);
-          }}
-        >
-          <Ionicons name={item.icon} size={22} color={isActive ? '#FFFFFF' : '#E0E7FF'} />
-          <Text style={[styles.menuText, isActive && styles.menuTextActive]}>{item.label}</Text>
-        </TouchableOpacity>
-      );
-    });
+          return (
+            <View key={item.id}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={[styles.menuItem, isActive && styles.menuItemActive, item.subItems && isExpanded && styles.expandableActive]}
+                onPress={() => item.subItems ? toggleExpand(item.id) : handleNavigation(item.label)}
+              >
+                <Ionicons name={item.icon} size={22} color={isActive ? '#FFFFFF' : 'rgba(255,255,255,0.8)'} />
+                <Text style={[styles.menuText, isActive && styles.menuTextActive]}>{item.label}</Text>
+                {item.subItems && (
+                  <Ionicons 
+                    name={isExpanded ? "chevron-up" : "chevron-down"} 
+                    size={18} 
+                    color="rgba(255,255,255,0.6)" 
+                    style={{ marginLeft: 'auto' }} 
+                  />
+                )}
+              </TouchableOpacity>
+
+              {item.subItems && isExpanded && (
+                <View style={styles.subMenuContainer}>
+                  {item.subItems.map(sub => (
+                    <TouchableOpacity
+                      key={sub.id}
+                      style={[styles.subMenuItem, getIsActive(sub.label) && styles.subMenuItemActive]}
+                      onPress={() => handleNavigation(sub.label)}
+                    >
+                      <Text style={[styles.subMenuText, getIsActive(sub.label) && styles.subMenuTextActive]}>
+                        {sub.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+          );
+        })}
+      </ScrollView>
+    );
   };
 
   return (
@@ -283,7 +287,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
       <GestureDetector gesture={panGesture}>
         <Animated.View style={[styles.drawerContainer, drawerStyle]}>
           {/* Uniform Semi-transparent overlay background */}
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(139, 92, 246, 0.95)' }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: role === 'principal' ? '#8B5CF6' : 'rgba(139, 92, 246, 0.95)' }]} />
 
           <TouchableOpacity style={styles.closeBtn} onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name="close" size={26} color="#FFFFFF" />
@@ -321,6 +325,21 @@ const styles = StyleSheet.create({
   menuList: {
     flex: 1,
   },
+  headerInfo: {
+    paddingHorizontal: 20,
+    paddingBottom: 25,
+    marginTop: 10,
+  },
+  headerTitle: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
+  headerSubtitle: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 14,
+    marginTop: 4,
+  },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -329,10 +348,13 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   menuItemActive: {
-    backgroundColor: 'rgba(29, 78, 216, 0.6)', // Deep blue solid highlight
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderLeftWidth: 4,
-    borderLeftColor: '#1E3A8A', // Extra dark blue rim
+    borderLeftColor: '#FFFFFF',
     paddingLeft: 16,
+  },
+  expandableActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   menuText: {
     marginLeft: 14,
@@ -344,9 +366,31 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '800',
   },
+  subMenuContainer: {
+    paddingLeft: 56,
+    paddingBottom: 10,
+  },
+  subMenuItem: {
+    paddingVertical: 10,
+  },
+  subMenuItemActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 8,
+    marginRight: 20,
+    paddingLeft: 10,
+  },
+  subMenuText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '500',
+  },
+  subMenuTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     marginHorizontal: 0,
     marginVertical: 10,
   },

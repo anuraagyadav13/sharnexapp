@@ -10,871 +10,223 @@ import {
   Modal,
   TextInput,
   ActivityIndicator,
-  Alert
+  Alert,
+  RefreshControl,
+  Dimensions,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Animated, { FadeInUp, FadeInDown, SlideInDown } from 'react-native-reanimated';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
-import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
+import Skeleton from '../../components/common/Skeleton';
 
-// Announcements will be fetched from API
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const AnnouncementCard = ({ item, index, delay, onDelete }: any) => {
+  const getTheme = (cat: string) => {
+    switch (cat?.toLowerCase()) {
+      case 'urgent': return { color: '#EF4444', icon: 'alert-decagram-outline' };
+      case 'event': return { color: '#8B5CF6', icon: 'calendar-star-outline' };
+      case 'update': return { color: '#3B82F6', icon: 'sync-circle-outline' };
+      default: return { color: '#10B981', icon: 'bullhorn-outline' };
+    }
+  };
+
+  const theme = getTheme(item.category);
+
+  return (
+    <Animated.View entering={FadeInUp.delay(delay).springify()} style={styles.card}>
+      <View style={styles.cardTop}>
+        <View style={[styles.typePill, { backgroundColor: `${theme.color}15` }]}>
+          <MaterialCommunityIcons name={theme.icon as any} size={14} color={theme.color} />
+          <Text style={[styles.typeText, { color: theme.color }]}>{item.category?.toUpperCase()}</Text>
+        </View>
+        <Text style={styles.dateText}>{item.date}</Text>
+      </View>
+
+      <Text style={styles.titleText}>{item.title}</Text>
+      <Text style={styles.contentText} numberOfLines={3}>{item.content}</Text>
+
+      <View style={styles.cardBottom}>
+        <View style={styles.authorRow}>
+           <View style={styles.authorAvatar}><Text style={styles.authorInitial}>{item.author?.charAt(0)}</Text></View>
+           <View>
+              <Text style={styles.authorName}>{item.author}</Text>
+              <View style={styles.targetRow}>
+                 <Ionicons name="people-outline" size={12} color="#94A3B8" />
+                 <Text style={styles.targetText}>{item.targetAudience || 'General'}</Text>
+              </View>
+           </View>
+        </View>
+        <View style={styles.actions}>
+           <TouchableOpacity style={styles.circleBtn}><Ionicons name="pencil-outline" size={18} color="#6366F1" /></TouchableOpacity>
+           <TouchableOpacity style={[styles.circleBtn, { borderColor: '#FEE2E2' }]} onPress={() => onDelete(item.id)}>
+              <Ionicons name="trash-outline" size={18} color="#EF4444" />
+           </TouchableOpacity>
+        </View>
+      </View>
+    </Animated.View>
+  );
+};
 
 const PrincipalAnnouncementsScreen = ({ navigation }: any) => {
-  const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
+  const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('All');
-  const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [announcements, setAnnouncements] = useState<any[]>([]);
 
-  // Form input states
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('general');
-  const [priority, setPriority] = useState('medium');
-  const [status, setStatus] = useState('published');
-  const [targetAudience, setTargetAudience] = useState('all');
-  const [expiryDate, setExpiryDate] = useState('');
-
-  // Date Picker States
-  const [datePickerTarget, setDatePickerTarget] = useState<boolean>(false);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-
-  // Fetch Announcements
-  useEffect(() => {
-    const fetchAnnouncements = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const res = await apiClient.get(ENDPOINTS.PRINCIPAL.ANNOUNCEMENTS);
-        const data = res.data.data || res.data;
-        setAnnouncements(data.announcements || []);
-      } catch (error: any) {
-        console.error('Failed to fetch announcements:', error);
-        setError('Failed to load announcements');
-        setAnnouncements([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchAnnouncements();
-  }, []);
-
-  // Handle Publish Announcement
-  const handlePublishAnnouncement = async () => {
-    if (!title.trim() || !content.trim()) {
-      Alert.alert('Error', 'Please fill in title and content');
-      return;
-    }
-
+  const fetchData = async () => {
     try {
-      setIsSubmitting(true);
-      const announcementData = {
-        title,
-        content,
-        category: selectedCategory,
-        priority,
-        status,
-        targetAudience,
-        expiryDate: expiryDate || null
-      };
-
-      const res = await apiClient.post(ENDPOINTS.PRINCIPAL.CREATE_ANNOUNCEMENT, announcementData);
-      
-      Alert.alert('Success', 'Announcement published successfully');
-      setIsNewModalOpen(false);
-      
-      // Reset form
-      setTitle('');
-      setContent('');
-      setSelectedCategory('general');
-      setPriority('medium');
-      setStatus('published');
-      setTargetAudience('all');
-      setExpiryDate('');
-      
-      // Refresh list
-      const refreshRes = await apiClient.get(ENDPOINTS.PRINCIPAL.ANNOUNCEMENTS);
-      const data = refreshRes.data.data || refreshRes.data;
-      setAnnouncements(data.announcements || []);
+      if (!isRefreshing) setIsLoading(true);
+      const res = await apiClient.get(ENDPOINTS.PRINCIPAL.ANNOUNCEMENTS);
+      const data = res.data.announcements || res.data.data || (Array.isArray(res.data) ? res.data : []);
+      setAnnouncements(Array.isArray(data) ? data : []);
     } catch (error: any) {
-      console.error('Failed to publish announcement:', error);
-      Alert.alert('Error', error.response?.data?.message || 'Failed to publish announcement');
+      console.error('Failed to fetch announcements:', error);
+      setAnnouncements([]);
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
-  const handleDeleteAnnouncement = async (announcementId: string) => {
-    Alert.alert('Confirm', 'Are you sure you want to delete this announcement?', [
-      { text: 'Cancel', onPress: () => {} },
-      {
-        text: 'Delete',
-        onPress: async () => {
-          try {
-            await apiClient.delete(`${ENDPOINTS.PRINCIPAL.ANNOUNCEMENTS}/${announcementId}`);
-            Alert.alert('Success', 'Announcement deleted');
-            // Refresh list
-            const refreshRes = await apiClient.get(ENDPOINTS.PRINCIPAL.ANNOUNCEMENTS);
-            const data = refreshRes.data.data || refreshRes.data;
-            setAnnouncements(data.announcements || []);
-          } catch (error: any) {
-            Alert.alert('Error', 'Failed to delete announcement');
-          }
-        }
-      }
+  useEffect(() => { fetchData(); }, []);
+
+  const onRefresh = () => { setIsRefreshing(true); fetchData(); };
+
+  const handleDelete = (id: string) => {
+    Alert.alert('Delete Notice', 'This announcement will be removed from all feeds.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => {} }
     ]);
-  };
-
-  // Filter announcements by status
-  const getFilteredAnnouncements = () => {
-    if (activeTab === 'All') return announcements;
-    if (activeTab === 'Published') return announcements.filter(a => a.status === 'PUBLISHED');
-    if (activeTab === 'Drafts') return announcements.filter(a => a.status === 'DRAFT');
-    return announcements;
-  };
-
-  const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
-  const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
-
-  const generateDates = () => {
-    const dates = [];
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    
-    for (let i = 0; i < firstDay; i++) dates.push(null);
-    for (let i = 1; i <= daysInMonth; i++) dates.push(i);
-    return dates;
-  };
-
-  const handleDateSelect = (day: number | null) => {
-    if (!day) return;
-    const formatted = `${String(currentMonth.getMonth() + 1).padStart(2, '0')}/${String(day).padStart(2, '0')}/${currentMonth.getFullYear()}`;
-    setExpiryDate(formatted);
-    setDatePickerTarget(false);
-  };
-
-  const renderTag = (tag: any) => {
-    let bg = '#F1F5F9';
-    let color = '#475569';
-    if (tag.type === 'blue') { bg = '#EFF6FF'; color = '#2563EB'; }
-    if (tag.type === 'yellow') { bg = '#FEF3C7'; color = '#D97706'; }
-    if (tag.type === 'lightBlue') { bg = '#E0F2FE'; color = '#0284C7'; }
-    
-    return (
-      <View key={tag.id} style={[styles.tagPill, { backgroundColor: bg }]}>
-        <Text style={[styles.tagText, { color }]}>{tag.label}</Text>
-      </View>
-    );
   };
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFF" translucent={false} />
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFF" translucent />
 
-      {/* --- Top Header --- */}
-      <View style={styles.topHeader}>
-        <ScaleButton
-          style={styles.menuHandle}
-          onPress={() => setDrawerOpen(true)}
-          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-          activeOpacity={0.7}
-          scaleTo={0.85}
-        >
-          <Ionicons name="menu" size={26} color="#111827" />
+      {/* Global Header - Student Pattern */}
+      <View style={styles.globalHeader}>
+        <ScaleButton onPress={() => setDrawerOpen(true)}>
+          <Ionicons name="menu" size={28} color="#4F46E5" />
         </ScaleButton>
-
-        <Text style={styles.topHeaderTitle} numberOfLines={1}>
-          Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}
-        </Text>
-
+        <Text style={styles.headerTitle} numberOfLines={1}>Institutional Notices</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconBtnTransparent}>
-            <Ionicons name="notifications-outline" size={20} color="#111827" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtnTransparent} onPress={() => navigation.navigate('AccountSettings')}>
-            <Ionicons name="settings-outline" size={20} color="#111827" />
-          </TouchableOpacity>
           <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}>
-            <View style={styles.avatar}><Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text></View>
+            <View style={styles.avatarHeader}>
+              <Text style={styles.avatarTextHeader}>{authState.user?.name?.charAt(0) || 'A'}</Text>
+            </View>
           </TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
-        {/* --- Page Info --- */}
-        <Animated.View entering={FadeInUp.duration(300)} style={styles.pageTitleContainer}>
-          <Text style={styles.pageTitle}>Announcements</Text>
-          <Text style={styles.pageSubtitle}>Create and manage announcements for teachers, students and parents.</Text>
-        </Animated.View>
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+      >
+        <View style={styles.pageHeader}>
+          <Text style={styles.screenTitle}>Broadcast Center</Text>
+          <Text style={styles.screenSubtitle}>Manage and distribute official communications across the campus ecosystem.</Text>
+        </View>
 
-        {/* --- List Actions / Tabs --- */}
-        <Animated.View entering={FadeInUp.duration(400).delay(100)} style={styles.sectionHeaderRow}>
-           <Text style={styles.sectionTitle}>Recent Announcements</Text>
-           <TouchableOpacity style={styles.newBtn} onPress={() => setIsNewModalOpen(true)}>
-             <Ionicons name="add" size={16} color="#FFF" />
-             <Text style={styles.newBtnText}>New Announcement</Text>
+        {/* Premium Tab Switcher */}
+        <View style={styles.tabRow}>
+           <View style={styles.tabs}>
+              {['All', 'Published', 'Drafts'].map(t => (
+                <TouchableOpacity key={t} style={[styles.tab, activeTab === t && styles.tabActive]} onPress={() => setActiveTab(t)}>
+                   <Text style={[styles.tabText, activeTab === t && styles.tabTextActive]}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+           </View>
+           <TouchableOpacity style={styles.createBtn}>
+              <Ionicons name="add" size={24} color="#FFF" />
            </TouchableOpacity>
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={FadeInUp.duration(400).delay(150)}>
-          <View style={styles.tabsRow}>
-            {['All', 'Published', 'Drafts'].map((tab) => (
-              <TouchableOpacity key={tab} style={[styles.tabItem, activeTab === tab && styles.tabItemActive]} onPress={() => setActiveTab(tab)}>
-                <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </Animated.View>
-
-        {/* --- Announcement Card / Empty State --- */}
-        <Animated.View entering={FadeInUp.duration(400).delay(200)} style={styles.cardsContainer}>
-          {isLoading ? (
-            <ActivityIndicator size="large" color="#8B5CF6" style={{ marginTop: 40 }} />
-          ) : error ? (
-            <View style={styles.emptyStateContainer}>
-              <Ionicons name="alert-circle-outline" size={48} color="#EF4444" style={{ marginBottom: 12 }} />
-              <Text style={styles.emptyStateText}>{error}</Text>
-            </View>
-          ) : getFilteredAnnouncements().length === 0 ? (
-            <View style={styles.emptyStateContainer}>
-              <Text style={styles.emptyStateText}>No announcements yet. Create your first announcement!</Text>
+        {/* Notices List */}
+        <View style={styles.list}>
+          {isLoading && !isRefreshing ? (
+            [1, 2].map(i => <Skeleton key={i} width="100%" height={200} borderRadius={24} style={{ marginBottom: 16 }} />)
+          ) : announcements.length === 0 ? (
+            <View style={styles.empty}>
+               <MaterialCommunityIcons name="bullhorn-variant-outline" size={60} color="#D1D5DB" />
+               <Text style={styles.emptyText}>No active announcements found.</Text>
             </View>
           ) : (
-            getFilteredAnnouncements().map(item => (
-              <View key={item.id} style={styles.announcementCard}>
-                 
-                 {/* Header Row */}
-                 <View style={styles.cardHeaderRow}>
-                   <Text style={styles.cardTitle}>{item.title}</Text>
-                   <View style={styles.statusPill}>
-                     <Text style={styles.statusPillText}>{item.status}</Text>
-                   </View>
-                 </View>
-
-                 {/* Meta Data */}
-                 <View style={styles.cardMetaRow}>
-                   <Text style={styles.metaDataText}>{item.date}</Text>
-                   <Text style={styles.metaDataDot}> • </Text>
-                   <Text style={styles.metaDataText}>{item.author}</Text>
-                   <View style={styles.rolePill}>
-                     <Text style={styles.rolePillText}>{item.role}</Text>
-                   </View>
-                 </View>
-
-                 {/* Body Content */}
-                 <View style={styles.cardDashedDivider} />
-                 <Text style={styles.cardBodyText}>{item.content}</Text>
-
-                 {/* Tags */}
-                 <View style={styles.tagsContainer}>
-                   {(item.tags as string[]).map((tag: string) => renderTag(tag))}
-                 </View>
-
-                 <View style={styles.cardDivider} />
-
-                 {/* Actions */}
-                 <View style={styles.cardActionsRow}>
-                   <TouchableOpacity style={styles.actionBtnOutline}>
-                     <Ionicons name="pencil" size={14} color="#475569" style={{marginRight: 6}} />
-                     <Text style={styles.actionBtnOutlineText}>Edit Announcement</Text>
-                   </TouchableOpacity>
-
-                   <TouchableOpacity style={styles.actionBtnSolidDanger} onPress={() => handleDeleteAnnouncement(item.id)}>
-                     <Ionicons name="trash" size={14} color="#FFF" style={{marginRight: 6}} />
-                     <Text style={styles.actionBtnSolidDangerText}>Delete</Text>
-                   </TouchableOpacity>
-                 </View>
-
-              </View>
+            announcements.map((item, index) => (
+              <AnnouncementCard key={item.id} item={item} index={index} delay={index * 50} onDelete={handleDelete} />
             ))
           )}
-        </Animated.View>
-
+        </View>
       </ScrollView>
 
-      {/* --- NEW ANNOUNCEMENT MODAL --- */}
-      <Modal visible={isNewModalOpen} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setIsNewModalOpen(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            
-            <View style={styles.modalTopHeader}>
-              <Text style={styles.modalTopTitle}>New Announcement</Text>
-              <TouchableOpacity onPress={() => setIsNewModalOpen(false)} hitSlop={{top:10,bottom:10,left:10,right:10}}>
-                <Ionicons name="close" size={24} color="#FFF" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScrollBody}>
-              
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Title</Text>
-                <TextInput 
-                  style={styles.modalTextInput} 
-                  placeholder="Enter Announcement Title" 
-                  placeholderTextColor="#94A3B8"
-                  value={title}
-                  onChangeText={setTitle}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Content</Text>
-                <TextInput 
-                  style={[styles.modalTextInput, styles.modalTextArea]} 
-                  multiline 
-                  placeholder="Enter Announcement Details" 
-                  placeholderTextColor="#94A3B8" 
-                  textAlignVertical="top"
-                  value={content}
-                  onChangeText={setContent}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Category</Text>
-                <View style={styles.categoryGrid}>
-                  <TouchableOpacity style={[styles.catBox, {backgroundColor: '#FEE2E2', borderColor: selectedCategory==='urgent' ? '#3B82F6': '#FECACA'}, selectedCategory==='urgent' && styles.catBoxSelected]} onPress={() => setSelectedCategory('urgent')}>
-                    <Text style={[styles.catText, {color: '#DC2626'}]}>urgent</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.catBox, {backgroundColor: '#DCFCE7', borderColor: selectedCategory==='general' ? '#3B82F6': '#bbf7d0'}, selectedCategory==='general' && styles.catBoxSelected]} onPress={() => setSelectedCategory('general')}>
-                    <Text style={[styles.catText, {color: '#16A34A'}]}>general</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.catBox, {backgroundColor: '#F3E8FF', borderColor: selectedCategory==='event' ? '#3B82F6': '#E9D5FF'}, selectedCategory==='event' && styles.catBoxSelected]} onPress={() => setSelectedCategory('event')}>
-                    <Text style={[styles.catText, {color: '#9333EA'}]}>event</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.catBox, {backgroundColor: '#DBEAFE', borderColor: selectedCategory==='update' ? '#3B82F6': '#BFDBFE'}, selectedCategory==='update' && styles.catBoxSelected]} onPress={() => setSelectedCategory('update')}>
-                    <Text style={[styles.catText, {color: '#2563EB'}]}>update</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.rowInputs}>
-                <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
-                  <Text style={styles.inputLabel}>Priority</Text>
-                  <TouchableOpacity style={styles.dropdownBox}>
-                    <Text style={styles.dropdownText}>{priority}</Text>
-                    <Ionicons name="chevron-down" size={16} color="#1E293B" />
-                  </TouchableOpacity>
-                </View>
-                <View style={[styles.inputGroup, { flex: 1 }]}>
-                  <Text style={styles.inputLabel}>Status</Text>
-                  <TouchableOpacity style={styles.dropdownBox}>
-                    <Text style={styles.dropdownText}>{status}</Text>
-                    <Ionicons name="chevron-down" size={16} color="#1E293B" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.rowInputs}>
-                <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
-                  <Text style={styles.inputLabel}>Target Audience</Text>
-                  <TouchableOpacity style={styles.dropdownBox}>
-                    <Text style={styles.dropdownText}>{targetAudience}</Text>
-                    <Ionicons name="chevron-down" size={16} color="#1E293B" />
-                  </TouchableOpacity>
-                </View>
-                <View style={[styles.inputGroup, { flex: 1 }]}>
-                  <Text style={styles.inputLabel}>Expiry Date (Optional)</Text>
-                  <TouchableOpacity style={styles.datePickerBox} onPress={() => setDatePickerTarget(true)}>
-                    <Text style={[styles.datePickerTextPlaceholder, expiryDate && {color: '#1E293B'}]}>{expiryDate || 'mm/dd/yyyy'}</Text>
-                    <Ionicons name="calendar-outline" size={16} color="#1E293B" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.modalDivider} />
-
-              <View style={styles.modalFooter}>
-                <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsNewModalOpen(false)}>
-                  <Text style={styles.cancelBtnText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.publishBtn, isSubmitting && {opacity: 0.7}]} 
-                  disabled={isSubmitting}
-                  onPress={handlePublishAnnouncement}
-                >
-                  {isSubmitting ? (
-                    <ActivityIndicator size="small" color="#FFF" />
-                  ) : (
-                    <Text style={styles.publishBtnText}>Publish Announcement</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* --- PURE JAVASCRIPT DATE PICKER --- */}
-      <Modal statusBarTranslucent={true} visible={datePickerTarget} transparent animationType="fade" onRequestClose={() => setDatePickerTarget(false)}>
-        <View style={[styles.modalOverlay, { zIndex: 999 }]}>
-           <View style={styles.calModalContainer}>
-             <View style={styles.calHeader}>
-               <TouchableOpacity onPress={prevMonth} style={styles.calNavBtn}><Ionicons name="chevron-back" size={20} color="#111827" /></TouchableOpacity>
-               <Text style={styles.calMonthText}>
-                 {currentMonth.toLocaleString('default', { month: 'long' })} {currentMonth.getFullYear()}
-               </Text>
-               <TouchableOpacity onPress={nextMonth} style={styles.calNavBtn}><Ionicons name="chevron-forward" size={20} color="#111827" /></TouchableOpacity>
-             </View>
-             
-             <View style={styles.calWeekdaysRow}>
-               {['S','M','T','W','T','F','S'].map((wd, i) => <Text key={i} style={styles.calWeekdayText}>{wd}</Text>)}
-             </View>
-             
-             <View style={styles.calDaysGrid}>
-               {generateDates().map((day, idx) => (
-                 <TouchableOpacity 
-                   key={idx} 
-                   style={[styles.calDayBtn, !day && {backgroundColor: 'transparent'}]} 
-                   onPress={() => handleDateSelect(day)}
-                   disabled={!day}
-                 >
-                   {day && <Text style={styles.calDayText}>{day}</Text>}
-                 </TouchableOpacity>
-               ))}
-             </View>
-
-             <TouchableOpacity style={styles.calCancelBtn} onPress={() => setDatePickerTarget(false)}>
-               <Text style={styles.cancelBtnText}>Cancel</Text>
-             </TouchableOpacity>
-           </View>
-        </View>
-      </Modal>
-
-      {/* Navigation Drawer */}
       <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+  mainContainer: { flex: 1, backgroundColor: '#FAFAFF' },
   container: { flex: 1 },
-  scrollContent: { paddingBottom: 40, paddingHorizontal: 16 },
+  scrollContent: { paddingBottom: 40 },
 
-  topHeader: {
+  // Header - Student Pattern
+  globalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20, 
-    paddingBottom: 16,
-    backgroundColor: '#FFF',
-    zIndex: 10,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-    marginBottom: 8
-  },
-  menuHandle: { paddingRight: 4, paddingVertical: 8 }, 
-  topHeaderTitle: { fontSize: 18, fontWeight: '600', color: '#4F46E5', flex: 1, textAlign: 'center' },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconBtnTransparent: { justifyContent: 'center', alignItems: 'center' },
-  avatar: {
-    width: 32, height: 32, borderRadius: 16, backgroundColor: '#A78BFA',
-    justifyContent: 'center', alignItems: 'center', marginLeft: 4,
-  },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
-
-  pageTitleContainer: {
-    marginTop: 20,
-    marginBottom: 24,
-  },
-  pageTitle: { fontSize: 24, fontWeight: '800', color: '#1E293B', marginBottom: 4 },
-  pageSubtitle: { color: '#64748B', fontSize: 13, fontWeight: '500' },
-
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1E293B' },
-  newBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2563EB',
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    borderRadius: 8,
-  },
-  newBtnText: { color: '#FFF', fontSize: 13, fontWeight: '600', marginLeft: 4 },
-
-  tabsRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    marginBottom: 20,
-  },
-  tabItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  tabItemActive: {
-    borderBottomColor: '#2563EB',
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  tabTextActive: {
-    color: '#2563EB',
-  },
-
-  cardsContainer: {
-    marginBottom: 20,
-  },
-  announcementCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 24,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-    marginBottom: 20,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    flexWrap: 'wrap',
-    marginBottom: 8,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginRight: 8,
-  },
-  statusPill: {
-    backgroundColor: '#D1FAE5',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-  },
-  statusPillText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#059669',
-    letterSpacing: 0.5,
-  },
-  cardMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  metaDataText: { fontSize: 12, color: '#64748B', fontWeight: '500' },
-  metaDataDot: { fontSize: 12, color: '#94A3B8', marginHorizontal: 4 },
-  rolePill: {
-    backgroundColor: '#EFF6FF',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginLeft: 6,
-  },
-  rolePillText: { fontSize: 10, fontWeight: '700', color: '#2563EB' },
-
-  cardBodyText: {
-    fontSize: 14,
-    color: '#475569',
-    lineHeight: 22,
-    marginBottom: 20,
-  },
-
-  cardDashedDivider: {
-    height: 1,
-    borderTopWidth: 1,
-    borderColor: '#E2E8F0',
-    borderStyle: 'dashed',
-    marginVertical: 12,
-  },
-  cardDivider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginBottom: 20,
-  },
-
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 4,
-  },
-  tagPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  tagText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-
-  cardActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: 12,
-  },
-  actionBtnOutline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#F8FAFC',
-    flex: 1,
-  },
-  actionBtnOutlineText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#334155',
-  },
-  actionBtnSolidDanger: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EF4444',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  actionBtnSolidDangerText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFF',
-  },
-
-  paginationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    marginTop: 10,
-    marginBottom: 20,
-  },
-  paginationBtn: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 8,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-  },
-  paginationBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#475569',
-  },
-  paginationPageText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#3B82F6',
-  },
-
-  emptyStateContainer: {
-    paddingVertical: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyStateText: {
-    fontSize: 13,
-    color: '#94A3B8',
-    fontWeight: '500',
-  },
-
-  // --- MODAL STYLES ---
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    width: '90%',
-    maxHeight: '85%',
-    backgroundColor: '#FFF',
-    borderRadius: 8,
-    overflow: 'hidden',
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-  },
-  modalTopHeader: {
-    backgroundColor: '#2563EB',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  modalTopTitle: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  modalScrollBody: {
-    padding: 20,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#475569',
-    marginBottom: 8,
-  },
-  modalTextInput: {
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#1E293B',
-    backgroundColor: '#FFF',
-  },
-  modalTextArea: {
-    height: 120,
-  },
-  categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  catBox: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 6,
-    borderWidth: 1,
-    minWidth: '48%',
-    flex: 1,
-    alignItems: 'center',
-  },
-  catBoxSelected: {
-    borderWidth: 1.5,
-  },
-  catText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  rowInputs: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  dropdownBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#FFF',
-  },
-  dropdownText: {
-    fontSize: 13,
-    color: '#1E293B',
-  },
-  datePickerBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#FFF',
-  },
-  datePickerTextPlaceholder: {
-    fontSize: 13,
-    color: '#64748B',
-  },
-  modalDivider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginVertical: 10,
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 10,
-  },
-  cancelBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 8,
-    paddingVertical: 14,
     paddingHorizontal: 20,
-    alignItems: 'center',
+    paddingTop: Platform.OS === 'ios' ? 60 : 30,
+    paddingBottom: 24,
+    backgroundColor: '#FAFAFF',
   },
-  cancelBtnText: {
-    color: '#475569',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  publishBtn: {
-    flex: 1.5,
-    backgroundColor: '#2563EB',
-    borderRadius: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
-  publishBtnText: {
-    color: '#FFF',
-    fontWeight: '700',
-    fontSize: 13,
-  },
+  headerTitle: { fontSize: 16, fontWeight: '500', color: '#4F46E5', flex: 1, textAlign: 'center', marginHorizontal: 10 },
+  headerRight: { flexDirection: 'row', alignItems: 'center' },
+  avatarHeader: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center' },
+  avatarTextHeader: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
-  // --- CALENDAR MODAL STYLES ---
-  calModalContainer: { backgroundColor: '#FFF', borderRadius: 16, padding: 20, width: '90%', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 4 },
-  calHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  calNavBtn: { width: 32, height: 32, backgroundColor: '#F3F4F6', borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  calMonthText: { fontSize: 15, fontWeight: '800', color: '#111827' },
-  calWeekdaysRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  calWeekdayText: { width: '14%', textAlign: 'center', fontSize: 11, fontWeight: '800', color: '#9CA3AF' },
-  calDaysGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  calDayBtn: { width: '14%', aspectRatio: 1, justifyContent: 'center', alignItems: 'center', marginBottom: 8, borderRadius: 8 },
-  calDayText: { fontSize: 14, fontWeight: '600', color: '#374151' },
-  calCancelBtn: { marginTop: 10, alignItems: 'center', paddingVertical: 14,
-    paddingHorizontal: 20, borderTopWidth: 1, borderTopColor: '#F3F4F6' }
+  pageHeader: { marginBottom: 20, paddingHorizontal: 20, marginTop: 10 },
+  screenTitle: { fontSize: 24, fontWeight: '800', color: '#3B82F6', marginBottom: 4 },
+  screenSubtitle: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
 
+  // Tabs
+  tabRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 12, marginBottom: 25 },
+  tabs: { flex: 1, flexDirection: 'row', backgroundColor: '#FFF', padding: 4, borderRadius: 18, borderWidth: 1, borderColor: '#F1F5F9' },
+  tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 14 },
+  tabActive: { backgroundColor: '#4F46E5' },
+  tabText: { fontSize: 12, fontWeight: '700', color: '#64748B' },
+  tabTextActive: { color: '#FFF' },
+  createBtn: { width: 54, height: 54, borderRadius: 18, backgroundColor: '#4F46E5', alignItems: 'center', justifyContent: 'center', shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
+
+  // List
+  list: { paddingHorizontal: 20 },
+  card: { backgroundColor: '#FFF', borderRadius: 24, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 3 },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+  typePill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
+  typeText: { fontSize: 10, fontWeight: '900' },
+  dateText: { fontSize: 11, color: '#94A3B8', fontWeight: '700' },
+  titleText: { fontSize: 18, fontWeight: '800', color: '#1E293B', marginBottom: 8 },
+  contentText: { fontSize: 13, color: '#64748B', lineHeight: 20, fontWeight: '500', marginBottom: 20 },
+  cardBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 15, borderTopWidth: 1, borderTopColor: '#F8FAFC' },
+  authorRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  authorAvatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' },
+  authorInitial: { color: '#4F46E5', fontWeight: '800', fontSize: 14 },
+  authorName: { fontSize: 13, fontWeight: '700', color: '#1E293B' },
+  targetRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  targetText: { fontSize: 10, color: '#94A3B8', fontWeight: '700' },
+  actions: { flexDirection: 'row', gap: 8 },
+  circleBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#F1F5F9' },
+
+  empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80 },
+  emptyText: { fontSize: 14, color: '#94A3B8', fontWeight: '600', marginTop: 15 },
 });
 
 export default PrincipalAnnouncementsScreen;
