@@ -7,22 +7,73 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Platform
+  Platform,
+  Alert
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../App';
+import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useAuth } from '../../store/AuthContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherAddQuestion'>;
 
-const MOCK_EXISTING_QUESTIONS = [
-  { id: 1, text: 'What is the value of pi ?', points: 5, difficulty: 'Easy', correct: 'B' },
-  { id: 2, text: 'What is the value of pi ?', points: 5, difficulty: 'Easy', correct: 'B' },
-  { id: 3, text: 'What is the value of pi ?', points: 5, difficulty: 'Easy', correct: 'B' },
-];
 
-const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation }) => {
+const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { authState } = useAuth();
+  const editQuestion = route.params?.editQuestion;
+  
+  const [questionText, setQuestionText] = useState(editQuestion?.text || '');
+  const [options, setOptions] = useState(editQuestion?.options || [
+    { letter: 'A', value: '' },
+    { letter: 'B', value: '' },
+    { letter: 'C', value: '' },
+    { letter: 'D', value: '' }
+  ]);
+  const [correctAnswer, setCorrectAnswer] = useState(editQuestion?.correctAnswer || 'A');
+
+  const handleAddOption = () => {
+    if (options.length >= 6) {
+      Alert.alert('Info', 'Maximum 6 options allowed');
+      return;
+    }
+    const nextLetter = String.fromCharCode(65 + options.length);
+    setOptions([...options, { letter: nextLetter, value: '' }]);
+  };
+
+  const handleOptionChange = (text: string, index: number) => {
+    const newOptions = [...options];
+    newOptions[index].value = text;
+    setOptions(newOptions);
+  };
+
+  const handleSave = () => {
+    if (!questionText.trim()) {
+      Alert.alert('Error', 'Please enter question text');
+      return;
+    }
+    if (options.some(opt => !opt.value.trim())) {
+      Alert.alert('Error', 'Please fill all option values');
+      return;
+    }
+
+    const newQuestion = {
+      text: questionText,
+      options,
+      correctAnswer
+    };
+
+    // Go back to Step 2 with the new question while preserving existing quiz data
+    const existingParams = (route.params as any) || {};
+    const existingQuizData = existingParams.quizData || {};
+    
+    navigation.navigate('TeacherCreateQuizStep2', { 
+      quizData: { ...existingQuizData },
+      newQuestion,
+      editIndex: existingParams.editIndex // Pass back the index if we were editing
+    } as any);
+  };
+
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
@@ -30,13 +81,13 @@ const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation }) => {
       {/* Global Header */}
       <View style={styles.globalHeader}>
         <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={22} color="#1F2937" />
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
           </View>
         </View>
       </View>
@@ -46,83 +97,90 @@ const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation }) => {
          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
          </TouchableOpacity>
-         <Text style={styles.blueTitle}>Add New Question</Text>
-         <Text style={styles.blueSubtitle}>Mid-Term Mathematics Examination</Text>
+         <Text style={styles.blueTitle}>{editQuestion ? 'Edit Question' : 'Add New Question'}</Text>
+         <Text style={styles.blueSubtitle}>{editQuestion ? 'Modify your question and options' : 'Design your question and options'}</Text>
       </Animated.View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
          
          {/* Form Card */}
          <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.mainCard}>
-            <Text style={styles.cardTitle}>Create new questions</Text>
+            <Text style={styles.cardTitle}>Question Details</Text>
             
             {/* Question Text Area */}
             <View style={styles.inputGroup}>
-               <Text style={styles.inputLabel}>Question</Text>
+               <Text style={styles.inputLabel}>Question Text</Text>
                <TextInput 
                   style={styles.textArea} 
                   placeholder="Enter your question here" 
                   placeholderTextColor="#9CA3AF"
                   multiline={true}
                   textAlignVertical="top"
+                  value={questionText}
+                  onChangeText={setQuestionText}
                />
-            </View>
-
-            {/* Points & Difficulty Row */}
-            <View style={styles.rowInputsWrapper}>
-               <View style={[styles.inputGroup, {flex: 1, marginRight: 16}]}>
-                  <Text style={styles.inputLabel}>Points</Text>
-                  <TextInput style={styles.textInput} placeholder="2" placeholderTextColor="#9CA3AF" keyboardType="numeric" />
-               </View>
-               <View style={[styles.inputGroup, {flex: 1}]}>
-                  <Text style={styles.inputLabel}>Difficulty</Text>
-                  <TouchableOpacity style={styles.dropdownInput} activeOpacity={0.8}>
-                     <Text style={styles.dropdownTextPlaceholder}>Select Difficulty</Text>
-                     <Ionicons name="chevron-down" size={16} color="#4B5563" />
-                  </TouchableOpacity>
-               </View>
             </View>
 
             {/* Answer Options Box */}
             <View style={styles.answerBox}>
                <View style={styles.answerBoxHeader}>
                   <Text style={styles.answerBoxTitle}>Answer Options</Text>
-                  <TouchableOpacity style={styles.addOptionBtn} activeOpacity={0.8}>
+                  <TouchableOpacity 
+                    style={styles.addOptionBtn} 
+                    activeOpacity={0.8}
+                    onPress={handleAddOption}
+                  >
                      <Text style={styles.addOptionBtnText}>+ Add option</Text>
                   </TouchableOpacity>
                </View>
 
-               {/* Option 1 (Selected) */}
-               <View style={[styles.optionInputRow, styles.optionInputRowSelected]}>
-                  <Ionicons name="checkbox" size={20} color="#111827" style={styles.checkboxIcon} />
-                  <TextInput 
-                     style={styles.optionInputText}
-                     placeholder="Enter Option....."
-                     placeholderTextColor="#111827"
-                     value="Enter Option....."
-                  />
-               </View>
-
-               {/* Option 2 (Unselected) */}
-               <View style={styles.optionInputRow}>
-                  <View style={styles.checkboxOutline} />
-                  <TextInput 
-                     style={styles.optionInputText}
-                     placeholder="Enter Option...."
-                     placeholderTextColor="#6B7280"
-                  />
-               </View>
+               {/* Options List */}
+               {options.map((opt, index) => {
+                 const isCorrect = opt.letter === correctAnswer;
+                 return (
+                   <View key={index} style={[styles.optionInputRow, isCorrect ? styles.optionInputRowSelected : null]}>
+                      <TouchableOpacity onPress={() => setCorrectAnswer(opt.letter)}>
+                        {isCorrect ? (
+                          <Ionicons name="checkbox" size={20} color="#059669" style={styles.checkboxIcon} />
+                        ) : (
+                          <View style={styles.checkboxOutline} />
+                        )}
+                      </TouchableOpacity>
+                      <TextInput 
+                         style={[styles.optionInputText, isCorrect ? {color: '#065F46'} : null]}
+                         placeholder={`Option ${opt.letter}`}
+                         placeholderTextColor={isCorrect ? '#065F46' : '#9CA3AF'}
+                         value={opt.value}
+                         onChangeText={(text) => handleOptionChange(text, index)}
+                      />
+                      <Text style={[styles.optionBadge, isCorrect ? styles.optionBadgeCorrect : null]}>{opt.letter}</Text>
+                   </View>
+                 );
+               })}
 
                <Text style={styles.answerBoxFooterHint}>Check the box next to correct answer</Text>
             </View>
 
             {/* Form Action Buttons */}
             <View style={styles.formActionRow}>
-               <TouchableOpacity style={styles.clearFormBtn} activeOpacity={0.8}>
+               <TouchableOpacity 
+                 style={styles.clearFormBtn} 
+                 activeOpacity={0.8}
+                 onPress={() => {
+                   setQuestionText('');
+                   setOptions([
+                    { letter: 'A', value: '' },
+                    { letter: 'B', value: '' },
+                    { letter: 'C', value: '' },
+                    { letter: 'D', value: '' }
+                  ]);
+                  setCorrectAnswer('A');
+                 }}
+               >
                   <Text style={styles.clearFormBtnText}>Clear Form</Text>
                </TouchableOpacity>
-               <TouchableOpacity style={styles.addQuesBtn} activeOpacity={0.8}>
-                  <Text style={styles.addQuesBtnText}>+ Add Question</Text>
+               <TouchableOpacity style={styles.addQuesBtn} activeOpacity={0.8} onPress={handleSave}>
+                  <Text style={styles.addQuesBtnText}>{editQuestion ? 'Update Question' : 'Save Question'}</Text>
                </TouchableOpacity>
             </View>
          </Animated.View>
@@ -135,26 +193,19 @@ const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.divider} />
 
             {/* List */}
-            {MOCK_EXISTING_QUESTIONS.map((q, index) => (
-               <View key={q.id} style={styles.existingQuestionCard}>
-                  <View style={styles.existingQuesContent}>
-                     <Text style={styles.existingQuesTitle}>{q.id}. {q.text}</Text>
-                     <View style={styles.existingQuesMeta}>
-                        <Text style={styles.metaGray}>{q.points} points</Text>
-                        <Text style={styles.metaGray}>{q.difficulty}</Text>
-                        <Text style={styles.metaGray}>Correct : {q.correct}</Text>
-                     </View>
-                  </View>
-                  <View style={styles.existingQuesActions}>
-                     <TouchableOpacity style={styles.actionIconBtn} activeOpacity={0.7}>
-                        <Ionicons name="create-outline" size={20} color="#111827" />
-                     </TouchableOpacity>
-                     <TouchableOpacity style={styles.actionIconBtn} activeOpacity={0.7}>
-                        <Ionicons name="trash-outline" size={20} color="#111827" />
-                     </TouchableOpacity>
-                  </View>
-               </View>
-            ))}
+            {false ? ( // TODO: Replace with actual quiz questions from API
+              <View style={styles.emptyContainer}>
+                <Ionicons name="help-circle-outline" size={48} color="#D1D5DB" />
+                <Text style={styles.emptyText}>No questions added yet</Text>
+                <Text style={styles.emptySubtext}>Add questions using the form above</Text>
+              </View>
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="help-circle-outline" size={48} color="#D1D5DB" />
+                <Text style={styles.emptyText}>No questions added yet</Text>
+                <Text style={styles.emptySubtext}>Add questions using the form above</Text>
+              </View>
+            )}
          </Animated.View>
 
       </ScrollView>
@@ -247,15 +298,15 @@ const styles = StyleSheet.create({
 
   mainCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: 8,
+    padding: 16,
     marginHorizontal: 16,
-    marginTop: 20,
+    marginTop: 16,
     shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.02)',
   },
@@ -277,13 +328,14 @@ const styles = StyleSheet.create({
   },
   textArea: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
     borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     fontSize: 13,
-    color: '#111827',
-    height: 100,
+    color: '#1E293B',
+    backgroundColor: '#F8FAFC',
+    height: 80,
   },
   rowInputsWrapper: {
     flexDirection: 'row',
@@ -329,15 +381,15 @@ const styles = StyleSheet.create({
   },
   addOptionBtn: {
     backgroundColor: '#4F46E5',
-    paddingVertical: 14,
+    paddingVertical: 10,
     paddingHorizontal: 10,
-    borderRadius: 8,
-  
+    borderRadius: 6,
     shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,},
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
   addOptionBtnText: {
     color: '#FFFFFF',
     fontSize: 11,
@@ -347,10 +399,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     borderRadius: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 10,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   optionInputRowSelected: {
     backgroundColor: '#D1FAE5',
@@ -405,15 +459,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#4F46E5',
-    borderRadius: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   
     shadowColor: '#4F46E5',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,},
   addQuesBtnText: {
     fontSize: 12,
     fontWeight: '700',
@@ -503,19 +557,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#4F46E5',
-    borderRadius: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   
     shadowColor: '#4F46E5',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,},
   saveBtnText: {
     fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  optionBadge: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#9CA3AF',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  optionBadgeCorrect: {
+    color: '#FFFFFF',
+    backgroundColor: '#10B981',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#999',
+  },
+  emptySubtext: {
+    fontSize: 12,
+    color: '#bbb',
   },
 });
 

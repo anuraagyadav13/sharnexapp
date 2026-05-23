@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,61 +9,112 @@ import {
   Platform,
   StatusBar,
   Modal,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  ActivityIndicator
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
-
-const StatCard = React.memo(({ color, iconBg, icon, value, label }: any) => (
-  <View style={styles.statCard}>
-    <View style={[styles.statIconBox, { backgroundColor: iconBg }]}>
-      <Ionicons name={icon} size={20} color={color} />
-    </View>
+const StatCard = React.memo(({ color, value, label, subtext }: any) => (
+  <View style={[styles.statCard, { borderLeftColor: color, borderLeftWidth: 4 }]}>
     <View style={styles.statContent}>
-      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statLabel} numberOfLines={2}>{label}</Text>
+      {subtext ? <Text style={styles.statSubtext}>{subtext}</Text> : null}
       <Text style={styles.statValue}>{value}</Text>
     </View>
   </View>
 ));
 
-const SubjectRow = ({ item, delay }: any) => (
-  <Animated.View entering={FadeInUp.delay(delay).springify()} style={styles.rowCard}>
-    <View style={styles.rowCol1}>
-      <View style={styles.subjectIcon}>
-        <Text style={styles.subjectIconText}>{item.name[0]}</Text>
+const SubjectItem = ({ item, isLast }: any) => (
+  <View style={styles.subjectItemContainer}>
+    <View style={styles.subjectCardHeaderRow}>
+      <View style={styles.subjectBox}>
+        <Text style={styles.subjectBoxText}>{item.name[0]}</Text>
       </View>
-      <Text style={styles.subjectName}>{item.name}</Text>
+      <View style={{ flex: 1, marginLeft: 12 }}>
+        <Text style={styles.subjectCardTitle}>{item.name}</Text>
+        <Text style={styles.subjectCardSubtitle}>Code: {item.code}</Text>
+      </View>
+      <View style={styles.subjectCardActions}>
+        <TouchableOpacity style={styles.actionBtnIcon} activeOpacity={0.7}>
+          <Ionicons name="create-outline" size={18} color="#111827" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtnIcon} activeOpacity={0.7}>
+          <Ionicons name="trash" size={18} color="#111827" />
+        </TouchableOpacity>
+      </View>
     </View>
-    <View style={styles.rowCol2}>
-      <Text style={styles.subjectCode}>{item.code}</Text>
-    </View>
-    <View style={styles.rowCol3}>
-      <TouchableOpacity style={styles.actionBtn}>
-        <Ionicons name="create-outline" size={18} color="#111827" />
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.actionBtn}>
-        <Ionicons name="trash" size={18} color="#111827" />
-      </TouchableOpacity>
-    </View>
-  </Animated.View>
+    {!isLast && <View style={styles.hrLine} />}
+  </View>
 );
 
-const DUMMY_SUBJECTS = [
-  { id: '1', name: 'Chemistry', code: '--' },
-  { id: '2', name: 'Chemistry', code: '--' },
-  { id: '3', name: 'Chemistry', code: '--' },
-  { id: '4', name: 'Chemistry', code: '--' },
-  { id: '5', name: 'Chemistry', code: '--' },
-  { id: '6', name: 'Chemistry', code: '--' },
-];
 
 const PrincipalSubjectsScreen = ({ navigation }: any) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const { authState } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [newSubjectName, setNewSubjectName] = useState('');
+  const [newSubjectCode, setNewSubjectCode] = useState('');
+
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const res = await apiClient.get(ENDPOINTS.PRINCIPAL.SUBJECTS);
+        const data = res.data.data || res.data;
+        setSubjects(data.subjects || []);
+      } catch (err: any) {
+        console.error('Failed to fetch subjects:', err);
+        setError('Failed to load subjects data');
+        setSubjects([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchSubjects();
+  }, []);
+
+  const handleAddSubject = async () => {
+    if (!newSubjectName.trim()) return;
+    
+    try {
+      const subjectData = {
+        name: newSubjectName.trim(),
+        code: newSubjectCode.trim() || undefined,
+      };
+      
+      const res = await apiClient.post(ENDPOINTS.PRINCIPAL.SUBJECTS, subjectData);
+      const newSubject = res.data.data || res.data;
+      
+      setSubjects([newSubject, ...subjects]);
+      setNewSubjectName('');
+      setNewSubjectCode('');
+      setIsAddModalOpen(false);
+    } catch (err: any) {
+      console.error('Failed to add subject:', err);
+      // For now, just add locally
+      const newSubject = {
+        id: Date.now().toString(),
+        name: newSubjectName.trim(),
+        code: newSubjectCode.trim() || '--',
+      };
+      setSubjects([newSubject, ...subjects]);
+      setNewSubjectName('');
+      setNewSubjectCode('');
+      setIsAddModalOpen(false);
+    }
+  };
+
 
   return (
     <View style={styles.mainContainer}>
@@ -82,7 +133,7 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
         </ScaleButton>
 
         <Text style={styles.headerTitle} numberOfLines={1}>
-          Welcome back, Anurag
+          Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}
         </Text>
 
         <View style={styles.headerRight}>
@@ -103,7 +154,7 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
             onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
           >
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>A</Text>
+              <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -114,20 +165,18 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
           {/* Title and Add Button */}
           <View style={styles.titleSection}>
             <View style={styles.titleRow}>
-              <View>
-                <Text style={styles.screenTitle}>Subjects</Text>
-                <Text style={styles.screenSubtitle}>Manage and add subjects</Text>
-              </View>
+              <Text style={styles.screenTitle}>Subjects Management</Text>
               <TouchableOpacity style={styles.addBtn} activeOpacity={0.8} onPress={() => setIsAddModalOpen(true)}>
                 <Text style={styles.addBtnText}>+ Add Subject</Text>
               </TouchableOpacity>
             </View>
+            <Text style={styles.screenSubtitle}>Manage and add subjects to the curriculum.</Text>
           </View>
 
-          {/* Stat Cards */}
+          {/* Stat Cards Row */}
           <View style={styles.statCardsRow}>
-            <StatCard color="#3B82F6" iconBg="#EFF6FF" icon="book" value="5" label="Total Subjects" />
-            <StatCard color="#10B981" iconBg="#ECFDF5" icon="book" value="5" label="With Code" />
+            <StatCard color="#3B82F6" value={subjects.length.toString()} label="Total Subjects" />
+            <StatCard color="#10B981" value={subjects.filter(s => s.code !== '--').length.toString()} label="With Code" />
           </View>
 
           {/* Search Bar */}
@@ -142,20 +191,25 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
             />
           </View>
 
-          {/* List Container */}
-          <View style={styles.listContainer}>
-            <View style={styles.listHeaderRow}>
-              <Text style={styles.listHeaderCol1}>SUBJECT NAME</Text>
-              <Text style={styles.listHeaderCol2}>CODE</Text>
-              <Text style={styles.listHeaderCol3}>ACTIONS</Text>
-            </View>
-            
-            <View style={styles.listBody}>
-              {DUMMY_SUBJECTS.map((item, index) => (
-                <SubjectRow key={index} item={item} delay={100 + index * 50} />
-              ))}
-            </View>
-          </View>
+          {/* All Subjects Title */}
+          <Text style={styles.allSubjectsTitle}>All Subjects</Text>
+
+          {/* Subject Cards List */}
+          <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.listContainer}>
+            {isLoading ? (
+              <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
+            ) : subjects.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="book-outline" size={48} color="#D1D5DB" />
+                <Text style={styles.emptyText}>No subjects found</Text>
+                <Text style={styles.emptySubtext}>Click + button above to add your first subject</Text>
+              </View>
+            ) : (
+              subjects.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.code.toLowerCase().includes(searchQuery.toLowerCase())).map((item, index, arr) => (
+                <SubjectItem key={item.id} item={item} isLast={index === arr.length - 1} />
+              ))
+            )}
+          </Animated.View>
         </View>
       </ScrollView>
 
@@ -180,17 +234,29 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.inputLabel}>Subject Name</Text>
-            <TextInput style={styles.modalInput} placeholder="e.g, Class 1" placeholderTextColor="#9CA3AF" />
+            <Text style={styles.inputLabel}>Subject Name *</Text>
+            <TextInput 
+              style={styles.modalInput} 
+              placeholder="e.g. Mathematics, Physics, English" 
+              placeholderTextColor="#9CA3AF" 
+              value={newSubjectName} 
+              onChangeText={setNewSubjectName} 
+            />
 
-            <Text style={styles.inputLabel}>Subject Code (Optional)</Text>
-            <TextInput style={styles.modalInput} placeholder="2026" placeholderTextColor="#9CA3AF" />
+            <Text style={styles.inputLabel}>Subject Code (optional)</Text>
+            <TextInput 
+              style={styles.modalInput} 
+              placeholder="e.g. MATH, PHY, ENG" 
+              placeholderTextColor="#9CA3AF" 
+              value={newSubjectCode} 
+              onChangeText={setNewSubjectCode} 
+            />
 
             <View style={[styles.modalFooter, { marginTop: 32 }]}>
               <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setIsAddModalOpen(false)}>
                 <Text style={styles.modalCancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modalAddBtn}>
+              <TouchableOpacity style={styles.modalAddBtn} onPress={handleAddSubject}>
                 <Text style={styles.modalAddBtnText}>Create Subject</Text>
               </TouchableOpacity>
             </View>
@@ -233,43 +299,44 @@ const styles = StyleSheet.create({
   },
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
 
-  titleSection: { marginTop: 20, marginBottom: 20 },
-  titleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-  screenTitle: { fontSize: 24, fontWeight: '700', color: '#3B82F6', letterSpacing: -0.25 },
-  screenSubtitle: { color: '#6B7280', fontSize: 12, marginTop: 4 },
+  titleSection: { marginTop: 20, marginBottom: 16 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  screenTitle: { fontSize: 20, fontWeight: '700', color: '#3B82F6', letterSpacing: -0.25 },
+  screenSubtitle: { color: '#6B7280', fontSize: 12 },
   addBtn: { 
     backgroundColor: '#3B82F6', 
     borderRadius: 8, 
-    paddingHorizontal: 14, 
-    paddingVertical: 14,
-    shadowColor: '#1E293B', 
-    shadowOffset: { width: 0, height: 10 }, 
-    shadowOpacity: 0.06, 
-    shadowRadius: 20, 
-    elevation: 6
+    paddingHorizontal: 12, 
+    paddingVertical: 8,
+    shadowColor: '#3B82F6', 
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.3, 
+    shadowRadius: 8, 
+    elevation: 4
   },
-  addBtnText: { color: '#FFF', fontWeight: '600', fontSize: 13 },
+  addBtnText: { color: '#FFF', fontWeight: '600', fontSize: 12 },
 
+  // Stat cards row
   statCardsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, gap: 10 },
   statCard: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    padding: 24,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 0,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
     shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
     elevation: 6,
   },
-  statIconBox: { width: 36, height: 36, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   statContent: { flex: 1, justifyContent: 'center' },
-  statLabel: { fontSize: 11, color: '#9CA3AF', fontWeight: '500', marginBottom: 4 },
-  statValue: { fontSize: 18, fontWeight: '800', color: '#111827' },
+  statLabel: { fontSize: 11, color: '#111827', fontWeight: '600', marginBottom: 4 },
+  statSubtext: { fontSize: 9, color: '#9CA3AF', marginBottom: 4 },
+  statValue: { fontSize: 22, fontWeight: '800', color: '#111827', marginTop: 4 },
 
   searchBarRow: { 
     flexDirection: 'row', 
@@ -287,47 +354,30 @@ const styles = StyleSheet.create({
   },
   searchBarInput: { flex: 1, fontSize: 13, color: '#111827' },
 
+  allSubjectsTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 12 },
+
+  // Subject Card
   listContainer: {
     backgroundColor: '#FFF',
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-    overflow: 'hidden',
+    padding: 16,
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 6
   },
-  listHeaderRow: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#F8FAFC',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+  subjectItemContainer: {
+    flexDirection: 'column',
   },
-  listHeaderCol1: { flex: 2, fontSize: 10, color: '#9CA3AF', fontWeight: '600' },
-  listHeaderCol2: { flex: 1, fontSize: 10, color: '#9CA3AF', fontWeight: '600' },
-  listHeaderCol3: { width: 80, fontSize: 10, color: '#9CA3AF', fontWeight: '600', textAlign: 'right' },
-  
-  listBody: {
-    paddingVertical: 8,
-  },
-  rowCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  rowCol1: { flex: 2, flexDirection: 'row', alignItems: 'center' },
-  subjectIcon: {
-    width: 28, height: 28, borderRadius: 6, backgroundColor: '#4F46E5',
-    alignItems: 'center', justifyContent: 'center', marginRight: 12,
-  },
-  subjectIconText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
-  subjectName: { fontSize: 13, fontWeight: '600', color: '#111827' },
-  
-  rowCol2: { flex: 1, justifyContent: 'center' },
-  subjectCode: { fontSize: 13, color: '#111827' },
-  
-  rowCol3: { width: 80, flexDirection: 'row', justifyContent: 'flex-end', gap: 20 },
-  actionBtn: { alignItems: 'center', justifyContent: 'center' },
+  subjectCardHeaderRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4 },
+  hrLine: { height: 1, backgroundColor: '#F3F4F6', marginVertical: 12 },
+  subjectBox: { width: 36, height: 36, borderRadius: 8, backgroundColor: '#4F46E5', alignItems: 'center', justifyContent: 'center' },
+  subjectBoxText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
+  subjectCardTitle: { fontSize: 15, fontWeight: '700', color: '#111827' },
+  subjectCardSubtitle: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  subjectCardActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  actionBtnIcon: { alignItems: 'center', justifyContent: 'center' },
 
   // Modal Styles
   modalOverlay: {
@@ -353,23 +403,24 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalHeaderSubtitle: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '700',
-    color: '#059669',
-    letterSpacing: 0.5,
+    color: '#4F46E5',
+    letterSpacing: 1.2,
     marginBottom: 4,
+    textTransform: 'uppercase'
   },
   modalHeaderTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
     color: '#111827',
   },
   inputLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#111827',
+    color: '#374151',
     marginBottom: 8,
-    marginTop: 24,
+    marginTop: 20,
   },
   modalInput: {
     backgroundColor: '#FFF',
@@ -387,29 +438,44 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   modalCancelBtn: {
-    paddingVertical: 14,
+    paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#D1D5DB',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center'
   },
   modalCancelBtnText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#111827',
+    fontWeight: '600',
+    color: '#374151',
   },
   modalAddBtn: {
-    backgroundColor: '#3B82F6',
-    paddingVertical: 14,
+    backgroundColor: '#4F46E5',
+    paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    borderRadius: 6,
+    justifyContent: 'center'
   },
   modalAddBtnText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFF',
+    color: '#FFFFFF',
   },
-
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#999',
+  },
+  emptySubtext: {
+    fontSize: 12,
+    color: '#bbb',
+  },
 });
 
 export default PrincipalSubjectsScreen;

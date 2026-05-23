@@ -21,23 +21,49 @@ export type RootStackParamList = {
   Grades: undefined;
   Fees: undefined;
   AccountSettings: { targetTab?: 'Personal Details' | 'Parent Information' | 'Preferences' } | undefined;
+
+  OfficialResult: { resultId: string };
+  ResultManagement: undefined;
   Timetable: undefined;
 
   // Teacher Screens
   TeacherDashboard: undefined;
   TeacherAttendance: undefined;
-  TeacherViewAttendance: { classId: string };
-  TeacherMarkAttendance: undefined;
+  TeacherViewAttendance: { classId: string, className?: string };
+  TeacherMarkAttendance: { classId: string, className?: string };
   TeacherAssignment: undefined;
   TeacherViewSubmission: { assignmentId: string };
   TeacherCreateAssignment: undefined;
   TeacherQuiz: undefined;
-  TeacherCreateQuiz: undefined;
-  TeacherCreateQuizStep2: undefined;
+  TeacherCreateQuiz: { initialQuiz?: any };
+  TeacherCreateQuizStep2: { quizData: any };
   TeacherAddQuestion: undefined;
-  TeacherCreateQuizStep3: undefined;
+  TeacherCreateQuizStep3: { quizData: any };
   TeacherViewQuizResult: { quizId: string };
   TeacherMonitorLive: { quizId: string };
+  TeacherResultManagement: undefined;
+  TeacherMarksEntry: { 
+    examId: string; 
+    classId: string; 
+    subjectId: string;
+    examName: string;
+    className: string;
+    subjectName: string;
+  };
+  TeacherReviewSubmission: { 
+    examId: string; 
+    classId: string; 
+    examName: string;
+    className: string;
+  };
+  TeacherTimetable: undefined;
+  TeacherSelfAttendance: undefined;
+  TeacherEditAssignment: { assignmentId: string };
+  TeacherEquipment: undefined;
+  TeacherAddEquipmentRequest: { requestId?: string };
+  TeacherEquipmentDetail: { requestId: string };
+  TeacherPerformance: undefined;
+  TeacherStudyMaterial: undefined;
 
   // Principal Screens
   PrincipalDashboard: undefined;
@@ -55,5 +81,4 @@ export type RootStackParamList = {
   PrincipalFees: undefined;
   PrincipalRSM: undefined;
   PrincipalCreateExam: undefined;
-  PrincipalReviewExam: { examId: string };
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ScrollView,
   View,
@@ -6,29 +6,208 @@ import {
   StyleSheet,
   StatusBar,
   Platform,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../../App';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type StartQuizNavigationProp = NativeStackNavigationProp<RootStackParamList, 'StartQuiz'>;
+type StartQuizRouteProp = RouteProp<RootStackParamList, 'StartQuiz'>;
 
 interface Props {
   navigation: StartQuizNavigationProp;
+  route: StartQuizRouteProp;
 }
 
-const StartQuizScreen: React.FC<Props> = ({ navigation }) => {
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { authState } = useAuth();
+  const [quizData, setQuizData] = useState<any>(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedAnswers, setSelectedAnswers] = useState<{[key: number]: number}>({});
+  const [timeRemaining, setTimeRemaining] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [startedAt, setStartedAt] = useState<string | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const options = [
-    { id: 1, letter: 'A', text: 'O(1) - Constant Time' },
-    { id: 2, letter: 'B', text: 'O(n) - Linear Time' },
-    { id: 3, letter: 'C', text: 'O(log n) - Logarithmic Time' },
-    { id: 4, letter: 'D', text: 'O(n²) - Quadratic Time' },
-  ];
+  // Fetch quiz data on mount
+  useEffect(() => {
+    fetchQuizData();
+  }, []);
+
+  // Timer effect
+  useEffect(() => {
+    if (timeRemaining > 0 && !isLoading) {
+      timerRef.current = setInterval(() => {
+        setTimeRemaining(prev => {
+          if (prev <= 1) {
+            // Auto-submit when time runs out
+            handleSubmitQuiz(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [timeRemaining, isLoading]);
+
+  const fetchQuizData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const quizId = route?.params?.quizId;
+      if (!quizId) {
+        throw new Error('Quiz ID is required');
+      }
+
+      // 1. Validate and start attempt on server to get verified timestamp
+      const startRes = await apiClient.post(ENDPOINTS.STUDENT.START_QUIZ(quizId));
+      const startData = startRes.normalized?.data || startRes.data;
+      const verifiedStart = startData?.startedAt;
+      setStartedAt(verifiedStart);
+
+      // 2. Fetch quiz questions and content
+      const response = await apiClient.get(ENDPOINTS.STUDENT.START_QUIZ(quizId));
+      const data = response.normalized?.data || response.data;
+      
+      setQuizData(data);
+      // Ensure we have a valid duration (default to 60 mins if missing or invalid)
+      const duration = Number(data.duration) || Number(data.timeLimit) || 60;
+      setTimeRemaining(duration * 60); 
+    } catch (err: any) {
+      console.error('Error fetching quiz:', err);
+      setError(err.message || 'Failed to load quiz');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAnswerSelect = (questionId: number, optionId: number | string) => {
+    setSelectedAnswers(prev => ({
+      ...prev,
+      [questionId]: optionId as any
+    }));
+  };
+
+  const handleNextQuestion = () => {
+    if (currentQuestionIndex < (quizData?.questions?.length || 0) - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+    }
+  };
+
+  const handlePrevQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(prev => prev - 1);
+    }
+  };
+
+  const handleSubmitQuiz = async (isAutoSubmit = false) => {
+    if (isSubmitting) return;
+
+    const questions = quizData?.questions || [];
+    const answers = Object.entries(selectedAnswers).map(([questionId, optionId]) => {
+      const qIndex = questions.findIndex((q: any) => q.id?.toString() === questionId.toString());
+      return {
+        questionIndex: qIndex !== -1 ? qIndex : 0,
+        selectedOption: optionId
+      };
+    }).filter(a => a.questionIndex !== -1);
+
+    // If it's a manual submit, we require at least one answer.
+    // If it's an auto-submit (timer out), we submit whatever they have (even if empty).
+    if (!isAutoSubmit && answers.length === 0) {
+      Alert.alert('Info', 'Please answer at least one question before submitting');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      const quizId = route?.params?.quizId;
+      
+      await apiClient.post(ENDPOINTS.STUDENT.SUBMIT_QUIZ(quizId), {
+        answers,
+        startedAt,
+        timeSpent: ((Number(quizData?.duration) || 60) * 60) - timeRemaining,
+        isAutoSubmitted: isAutoSubmit
+      });
+
+      // Clear timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+
+      navigation.navigate('QuizResult', { quizId: route?.params?.quizId, timestamp: Date.now() });
+    } catch (err: any) {
+      console.error('Error submitting quiz:', err);
+      // For auto-submit, we might want to retry or at least show a specific error
+      Alert.alert('Error', isAutoSubmit ? 'Time is up but submission failed. Retrying...' : 'Failed to submit quiz. Please try again.');
+      
+      if (isAutoSubmit) {
+        // Simple retry logic for auto-submit
+        setTimeout(() => handleSubmitQuiz(true), 3000);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getProgressPercentage = () => {
+    if (!quizData?.questions?.length) return 0;
+    return ((currentQuestionIndex + 1) / quizData.questions.length) * 100;
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+        <Text style={styles.loadingText}>Loading quiz...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+        <Text style={styles.errorText}>{error}</Text>
+        <ScaleButton
+          style={styles.retryButton}
+          activeOpacity={0.8}
+          scaleTo={0.95}
+          onPress={fetchQuizData}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </ScaleButton>
+      </View>
+    );
+  }
+
+  const currentQuestion = quizData?.questions?.[currentQuestionIndex];
+  const selectedOption = selectedAnswers[currentQuestion?.id];
 
   return (
     <View style={styles.mainContainer}>
@@ -39,13 +218,13 @@ const StartQuizScreen: React.FC<Props> = ({ navigation }) => {
          <ScaleButton style={styles.menuHandle} onPress={() => {}}>
            <View style={{width: 28}} /> 
          </ScaleButton>
-         <Text style={styles.headerTitle} numberOfLines={1}>Welcome back, Anurag</Text>
+         <Text style={styles.headerTitle} numberOfLines={1}>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
          <View style={styles.headerRight}>
            <Ionicons name="notifications-outline" size={20} color="#1F2937" />
            <Ionicons name="settings-outline" size={20} color="#1F2937" />
            <Ionicons name="moon-outline" size={20} color="#1F2937" />
            <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
            </View>
          </View>
       </View>
@@ -63,8 +242,10 @@ const StartQuizScreen: React.FC<Props> = ({ navigation }) => {
             <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </ScaleButton>
 
-          <Text style={styles.heroTitle}>Data Structures - Weekly Quiz</Text>
-          <Text style={styles.heroSubtitle}>Question 1 of 50 • 200 Points Total</Text>
+          <Text style={styles.heroTitle}>{quizData?.title || 'Quiz'}</Text>
+          <Text style={styles.heroSubtitle}>
+            Question {currentQuestionIndex + 1} of {quizData?.questions?.length || 0} • {quizData?.totalPoints || 0} Points Total
+          </Text>
         </Animated.View>
 
         {/* Global Wrapper for everything below hero */}
@@ -76,15 +257,15 @@ const StartQuizScreen: React.FC<Props> = ({ navigation }) => {
              <View style={styles.timerBox}>
                 <MaterialCommunityIcons name="clock" size={16} color="#F59E0B" style={{marginRight: 6}} />
                 <View>
-                  <Text style={styles.timerTextMain}>112 : 32</Text>
+                  <Text style={styles.timerTextMain}>{formatTime(timeRemaining)}</Text>
                   <Text style={styles.timerTextSub}>Time Remaining</Text>
                 </View>
              </View>
 
              {/* Progress Number */}
              <View style={styles.questionCounterBlock}>
-               <Text style={styles.counterCurrent}>1</Text>
-               <Text style={styles.counterTotal}>of 50</Text>
+               <Text style={styles.counterCurrent}>{currentQuestionIndex + 1}</Text>
+               <Text style={styles.counterTotal}>of {quizData?.questions?.length || 0}</Text>
              </View>
           </Animated.View>
 
@@ -92,10 +273,10 @@ const StartQuizScreen: React.FC<Props> = ({ navigation }) => {
           <Animated.View entering={FadeInUp.delay(150).springify()} style={styles.progressContainer}>
              <View style={styles.progressLabelRow}>
                <Text style={styles.progressLabel}>Quiz Progress</Text>
-               <Text style={styles.progressLabel}>0%</Text>
+               <Text style={styles.progressLabel}>{Math.round(getProgressPercentage())}%</Text>
              </View>
              <View style={styles.progressBarTrack}>
-                <View style={styles.progressBarFill} />
+                <View style={[styles.progressBarFill, { width: `${getProgressPercentage()}%` }]} />
              </View>
           </Animated.View>
 
@@ -103,37 +284,39 @@ const StartQuizScreen: React.FC<Props> = ({ navigation }) => {
           <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.questionCard}>
             <View style={styles.questionHeader}>
               <View style={styles.questionNumberCircle}>
-                <Text style={styles.questionNumberText}>1</Text>
+                <Text style={styles.questionNumberText}>{currentQuestionIndex + 1}</Text>
               </View>
               <Text style={styles.questionMainText}>
-                What is the time complexity of accessing an element in an array by index?
+                {currentQuestion?.question || 'Question not available'}
               </Text>
               <View style={styles.pointsBadge}>
-                <Text style={styles.pointsBadgeText}>2 Points</Text>
+                <Text style={styles.pointsBadgeText}>{currentQuestion?.points || 0} Points</Text>
               </View>
             </View>
 
             <View style={styles.optionsList}>
-              {options.map((opt) => {
-                const isSelected = selectedOption === opt.id;
+              {(currentQuestion?.options || []).map((option: any, index: number) => {
+                const optionId = option.id || index + 1;
+                const isSelected = selectedOption === optionId;
+                const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
                 return (
-                  <ScaleButton 
-                    key={opt.id} 
+                  <ScaleButton
+                    key={optionId}
                     activeOpacity={0.8}
                     scaleTo={0.98}
-                    onPress={() => setSelectedOption(opt.id)}
+                    onPress={() => handleAnswerSelect(currentQuestion.id, optionId)}
                     style={[styles.optionItem, isSelected && styles.optionItemSelected]}
                   >
                      <View style={[styles.optionLetterBox, isSelected && styles.optionLetterBoxSelected]}>
                        <Text style={[styles.optionLetterText, isSelected && styles.optionLetterTextSelected]}>
-                         {opt.letter}
+                         {letters[index] || String.fromCharCode(65 + index)}
                        </Text>
                      </View>
                      <Text style={[styles.optionTextMain, isSelected && styles.optionTextMainSelected]}>
-                       {opt.text}
+                       {option.text || option.option}
                      </Text>
                   </ScaleButton>
-                )
+                );
               })}
             </View>
 
@@ -146,20 +329,40 @@ const StartQuizScreen: React.FC<Props> = ({ navigation }) => {
           {/* Bottom Action Footer */}
           <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.actionFooter}>
             <View style={styles.navigationRow}>
-               <ScaleButton style={styles.prevBtn} activeOpacity={0.8} scaleTo={0.95}>
-                 <Ionicons name="arrow-back" size={16} color="#4F46E5" style={{marginRight: 6}} />
-                 <Text style={styles.prevBtnText}>Previous</Text>
+               <ScaleButton
+                 style={[styles.prevBtn, currentQuestionIndex === 0 && styles.disabledBtn]}
+                 activeOpacity={0.8}
+                 scaleTo={0.95}
+                 onPress={handlePrevQuestion}
+                 disabled={currentQuestionIndex === 0}
+               >
+                 <Ionicons name="arrow-back" size={16} color={currentQuestionIndex === 0 ? "#9CA3AF" : "#4F46E5"} style={{marginRight: 6}} />
+                 <Text style={[styles.prevBtnText, currentQuestionIndex === 0 && styles.disabledBtnText]}>Previous</Text>
                </ScaleButton>
-               
-               <ScaleButton style={styles.nextBtn} activeOpacity={0.8} scaleTo={0.95}>
-                 <Text style={styles.nextBtnText}>Next</Text>
-                 <Ionicons name="arrow-forward" size={16} color="#FFFFFF" style={{marginLeft: 6}} />
+
+               <ScaleButton
+                 style={[styles.nextBtn, currentQuestionIndex === (quizData?.questions?.length || 0) - 1 && styles.disabledBtn]}
+                 activeOpacity={0.8}
+                 scaleTo={0.95}
+                 onPress={handleNextQuestion}
+                 disabled={currentQuestionIndex === (quizData?.questions?.length || 0) - 1}
+               >
+                 <Text style={[styles.nextBtnText, currentQuestionIndex === (quizData?.questions?.length || 0) - 1 && styles.disabledBtnText]}>Next</Text>
+                 <Ionicons name="arrow-forward" size={16} color={currentQuestionIndex === (quizData?.questions?.length || 0) - 1 ? "#9CA3AF" : "#FFFFFF"} style={{marginLeft: 6}} />
                </ScaleButton>
             </View>
-            
-            <ScaleButton style={styles.submitBtn} activeOpacity={0.8} scaleTo={0.95} onPress={() => navigation.navigate('QuizResult')}>
+
+            <ScaleButton
+              style={[styles.submitBtn, isSubmitting && styles.disabledBtn]}
+              activeOpacity={0.8}
+              scaleTo={0.95}
+              onPress={handleSubmitQuiz}
+              disabled={isSubmitting}
+            >
               <Ionicons name="paper-plane" size={18} color="#FFFFFF" style={{marginRight: 8}} />
-              <Text style={styles.submitBtnText}>Submit Quiz</Text>
+              <Text style={styles.submitBtnText}>
+                {isSubmitting ? 'Submitting...' : 'Submit Quiz'}
+              </Text>
             </ScaleButton>
           </Animated.View>
 
@@ -286,6 +489,54 @@ const styles = StyleSheet.create({
     shadowColor: '#EA580C', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6,
   },
   submitBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+
+  // Loading and Error States
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FAF9F9',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FAF9F9',
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#EF4444',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#4F46E5',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
+  // Disabled States
+  disabledBtn: {
+    opacity: 0.5,
+  },
+  disabledBtnText: {
+    opacity: 0.5,
+  },
 });
 
 export default StartQuizScreen;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   StatusBar,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -14,6 +15,9 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useState } from 'react';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type PerformanceScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Performance'>;
 
@@ -22,7 +26,98 @@ interface Props {
 }
 
 const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
+  const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [performance, setPerformance] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchPerformance = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // Resolve absolute Student ID
+        const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+        const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
+
+        if (!studentId) throw new Error('Student ID not found');
+
+        const [dashRes, perfRes, gradesRes] = await Promise.all([
+          apiClient.get(ENDPOINTS.STUDENT.DASHBOARD(studentId)),
+          apiClient.get(ENDPOINTS.STUDENT.PERFORMANCE(studentId)),
+          apiClient.get(ENDPOINTS.STUDENT.GRADES)
+        ]);
+
+        const dashData = dashRes.normalized?.data || dashRes.data;
+        const perfData = perfRes.normalized?.data?.performance || perfRes.data?.performance;
+        const gradesData = gradesRes.normalized?.data?.grades || gradesRes.data?.grades;
+
+        setPerformance({
+          ...dashData,
+          performanceMetrics: perfData,
+          grades: gradesData
+        });
+      } catch (err: any) {
+        console.error('Failed to fetch performance:', err);
+        setError('Failed to load performance data.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPerformance();
+  }, [authState.user?.id]);
+
+  if (isLoading && !performance) {
+    return (
+      <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
+  if (error && !performance) {
+    return (
+      <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }]}>
+        <Ionicons name="alert-circle" size={64} color="#EF4444" style={{ marginBottom: 16 }} />
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', textAlign: 'center' }}>Unable to Load Performance</Text>
+        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>{error}</Text>
+        <ScaleButton
+          style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
+          onPress={() => {
+            setError(null);
+            setIsLoading(true);
+            const fetchPerformance = async () => {
+              try {
+                const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+                const studentId = profileRes.data?.id;
+                if (!studentId) throw new Error('Student ID not found');
+                const res = await apiClient.get(ENDPOINTS.STUDENT.DASHBOARD(studentId));
+                setPerformance(res.data?.data || res.data?.stats || res.data);
+              } catch (err: any) {
+                setError('Failed to load performance data. Please try again.');
+              } finally {
+                setIsLoading(false);
+              }
+            };
+            fetchPerformance();
+          }}
+          scaleTo={0.95}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
+        </ScaleButton>
+      </View>
+    );
+  }
+
+  const dashStats = performance || {};
+  const perfMetrics = performance?.performanceMetrics || {};
+  
+  const attendanceRate = dashStats.attendance?.percentage || 0;
+  const assignmentRate = dashStats.stats?.assignmentRate || 75; // Fallback for missing backend field
+  const quizRate = perfMetrics.overallScore || 0;
+  const trendStatus = perfMetrics.trend || 'improving';
 
   return (
     <View style={styles.mainContainer}>
@@ -39,13 +134,13 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
         >
           <Ionicons name="menu" size={28} color="#1F2937" />
         </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={22} color="#1F2937" />
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
           </View>
         </View>
       </View>
@@ -55,7 +150,7 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
         {/* Page Titles */}
         <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
            <Text style={styles.pageTitle}>Performance</Text>
-           <Text style={styles.pageSubtitle}>Take a look on your Performance</Text>
+           <Text style={styles.pageSubtitle}>Analyze your academic growth</Text>
         </Animated.View>
 
         {/* Card 1: Performance Overview */}
@@ -64,19 +159,19 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
            <View style={styles.cardDivider} />
            <View style={styles.gridContainer}>
               <View style={styles.gridBox}>
-                 <Text style={[styles.gridVal, {color: '#9333EA'}]}>70 %</Text>
-                 <Text style={styles.gridLbl}>Current GPA</Text>
+                 <Text style={[styles.gridVal, {color: '#9333EA'}]}>{quizRate}%</Text>
+                 <Text style={styles.gridLbl}>Avg Quiz Score</Text>
               </View>
               <View style={styles.gridBox}>
-                 <Text style={[styles.gridVal, {color: '#F97316'}]}>#8</Text>
+                 <Text style={[styles.gridVal, {color: '#F97316'}]}>#{performance?.rank || 'N/A'}</Text>
                  <Text style={styles.gridLbl}>Class Rank</Text>
               </View>
               <View style={styles.gridBox}>
-                 <Text style={[styles.gridVal, {color: '#F59E0B'}]}>+12%</Text>
-                 <Text style={styles.gridLbl}>Improvement Rate</Text>
+                 <Text style={[styles.gridVal, {color: '#F59E0B'}]}>{assignmentRate}%</Text>
+                 <Text style={styles.gridLbl}>Assignment Rate</Text>
               </View>
               <View style={styles.gridBox}>
-                 <Text style={[styles.gridVal, {color: '#3B82F6'}]}>93.5%</Text>
+                 <Text style={[styles.gridVal, {color: '#3B82F6'}]}>{attendanceRate}%</Text>
                  <Text style={styles.gridLbl}>Attendance</Text>
               </View>
            </View>
@@ -84,38 +179,33 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* Card 2: Overall Performance */}
         <Animated.View entering={FadeInUp.delay(150).springify()} style={styles.card}>
-           <View style={styles.cardRowBetween}>
-              <Text style={styles.cardHeader}>Overall Performance</Text>
-              <View style={styles.improvingPill}>
-                 <Ionicons name="arrow-up" size={12} color="#10B981" />
-                 <Text style={styles.improvingText}>Improving</Text>
-              </View>
-           </View>
+            <View style={styles.cardRowBetween}>
+               <Text style={styles.cardHeader}>Overall Performance</Text>
+               <View style={[styles.improvingPill, trendStatus !== 'improving' && { backgroundColor: '#FEE2E2', borderColor: '#FECACA' }]}>
+                  <Ionicons 
+                    name={trendStatus === 'improving' ? "arrow-up" : "trending-down"} 
+                    size={12} 
+                    color={trendStatus === 'improving' ? "#10B981" : "#EF4444"} 
+                  />
+                  <Text style={[styles.improvingText, trendStatus !== 'improving' && { color: '#EF4444' }]}>
+                    {trendStatus === 'improving' ? 'Improving' : 'Attention Needed'}
+                  </Text>
+               </View>
+            </View>
            <View style={styles.cardDivider} />
 
            <View style={styles.centerBlock}>
-             <Text style={styles.hugePercent}>87.9 %</Text>
-             <Text style={styles.hugeSubtitle}>Current Term Average</Text>
-           </View>
-
-           <View style={[styles.gridContainer, {marginTop: 6}]}>
-              <View style={styles.gridBox}>
-                 <Text style={[styles.gridVal, {color: '#EF4444'}]}>5th</Text>
-                 <Text style={styles.gridLbl}>Class Rank</Text>
-              </View>
-              <View style={styles.gridBox}>
-                 <Text style={[styles.gridVal, {color: '#9333EA', fontSize: 18}]}>A-</Text>
-                 <Text style={styles.gridLbl}>Overall Grade</Text>
-              </View>
+             <Text style={styles.hugePercent}>{Math.round((quizRate + assignmentRate + attendanceRate) / 3)}%</Text>
+             <Text style={styles.hugeSubtitle}>Cumulative Average</Text>
            </View>
 
            <View style={styles.progressSection}>
              <View style={styles.progressRow}>
-               <Text style={styles.progressLbl}>Assignment Completed</Text>
-               <Text style={styles.progressVal}>98%</Text>
+               <Text style={styles.progressLbl}>Syllabus Covered</Text>
+               <Text style={styles.progressVal}>85%</Text>
              </View>
              <View style={styles.progressBarBg}>
-               <View style={[styles.progressBarFill, { width: '98%', backgroundColor: '#F97316' }]} />
+               <View style={[styles.progressBarFill, { width: '85%', backgroundColor: '#F97316' }]} />
              </View>
            </View>
         </Animated.View>
@@ -126,27 +216,21 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
            <View style={styles.cardDivider} />
            
            <View style={styles.centerBlock}>
-             <Text style={[styles.hugePercent, {color: '#000', textShadowRadius: 0, textShadowColor: 'transparent'}]}>100 %</Text>
+             <Text style={[styles.hugePercent, {color: '#000', textShadowRadius: 0, textShadowColor: 'transparent'}]}>{attendanceRate}%</Text>
              <Text style={styles.hugeSubtitle}>Current Attendance Rate</Text>
            </View>
 
            <View style={styles.gridContainer}>
-              <View style={styles.gridBox}>
-                 <Text style={[styles.gridVal, {color: '#000'}]}>5/5</Text>
-                 <Text style={styles.gridLbl}>This Week</Text>
-              </View>
-              <View style={styles.gridBox}>
-                 <Text style={[styles.gridVal, {color: '#000'}]}>5/5</Text>
-                 <Text style={styles.gridLbl}>This Month</Text>
-              </View>
-              <View style={styles.gridBox}>
-                 <Text style={[styles.gridVal, {color: '#000'}]}>5/5</Text>
-                 <Text style={styles.gridLbl}>This Term</Text>
-              </View>
-              <View style={styles.gridBox}>
-                 <Text style={[styles.gridVal, {color: '#000'}]}>2</Text>
-                 <Text style={styles.gridLbl}>Days Absent</Text>
-              </View>
+               <View style={styles.gridBox}>
+                  <Text style={[styles.gridVal, {color: '#10B981'}]}>{dashStats.attendance?.present || 0}</Text>
+                  <Text style={styles.gridLbl}>Days Present</Text>
+               </View>
+               <View style={styles.gridBox}>
+                  <Text style={[styles.gridVal, {color: '#EF4444'}]}>
+                    {(dashStats.attendance?.total || 0) - (dashStats.attendance?.present || 0)}
+                  </Text>
+                  <Text style={styles.gridLbl}>Days Absent</Text>
+               </View>
            </View>
         </Animated.View>
 
@@ -155,51 +239,87 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
            <Text style={styles.cardHeader}>Subject Performance</Text>
            <View style={styles.cardDivider} />
            
-           <View style={styles.subjectBox}>
-             <View style={styles.subjectRowBetween}>
-                <Text style={styles.subjectName}>Mathematics</Text>
-                <Text style={styles.subjectGrade}>A</Text>
-             </View>
-             
-             <View style={[styles.progressBarBg, {marginBottom: 16}]}>
-               <View style={[styles.progressBarFill, { width: '92%', backgroundColor: '#F97316' }]} />
-             </View>
-             
-             <View style={styles.subjectRowBetween2}>
-                <Text style={styles.subjectSubText}>Score: 92%</Text>
-                <Text style={styles.subjectSubText}>Rank: 1st</Text>
-             </View>
-             
-             <View style={[styles.improvingPill, {paddingLeft: 0, marginTop: 4}]}>
-                <Ionicons name="arrow-up" size={14} color="#10B981" />
-                <Text style={[styles.improvingText, {marginLeft: 4, color: '#10B981'}]}>Improved by 5%</Text>
-             </View>
+           <View style={styles.subjectsContainer}>
+             <ScrollView 
+               style={styles.subjectsScroll} 
+               showsVerticalScrollIndicator={false}
+               nestedScrollEnabled={true}
+             >
+               {(performance?.grades?.subjects || []).length > 0 ? (
+                 performance.grades.subjects.map((subj: any, sIdx: number) => {
+                   const scoreVal = subj.percentage || (subj.score && subj.total && Math.round((subj.score/subj.total)*100)) || 0;
+                   const colorIdx = sIdx % 4;
+                   const colors = ['#F97316', '#3B82F6', '#9333EA', '#10B981'];
+                   
+                   return (
+                     <View key={sIdx} style={[styles.subjectBox, { borderLeftColor: colors[colorIdx], marginBottom: 12 }]}>
+                       <View style={styles.subjectRowBetween}>
+                          <Text style={styles.subjectName}>{subj.name}</Text>
+                          <Text style={[styles.subjectGrade, { color: colors[colorIdx] }]}>{subj.grade || 'N/A'}</Text>
+                       </View>
+                       
+                       <View style={[styles.progressBarBg, {marginBottom: 16}]}>
+                         <View style={[styles.progressBarFill, { width: `${scoreVal}%`, backgroundColor: colors[colorIdx] }]} />
+                       </View>
+                       
+                       <View style={styles.subjectRowBetween2}>
+                          <Text style={styles.subjectSubText}>Score: {scoreVal}%</Text>
+                          <Text style={styles.subjectSubText}>Rank: {subj.rank || `${sIdx + 1}${sIdx === 0 ? 'st' : sIdx === 1 ? 'nd' : sIdx === 2 ? 'rd' : 'th'}`}</Text>
+                       </View>
+                       
+                       <View style={[styles.improvingPill, {paddingLeft: 0, marginTop: 4}]}>
+                          <Ionicons 
+                            name={scoreVal >= 75 ? "arrow-up" : "trending-down"} 
+                            size={14} 
+                            color={scoreVal >= 75 ? "#10B981" : "#EF4444"} 
+                          />
+                          <Text style={[styles.improvingText, {marginLeft: 4, color: scoreVal >= 75 ? '#10B981' : '#EF4444'}]}>
+                            {scoreVal >= 75 ? 'Improved by' : 'Down by'} {Math.abs(scoreVal - 85)}%
+                          </Text>
+                       </View>
+                     </View>
+                   );
+                 })
+               ) : (
+                 <View style={{ padding: 20, alignItems: 'center' }}>
+                   <Text style={{ color: '#6B7280', fontSize: 12 }}>No subject data tracked for this period</Text>
+                 </View>
+               )}
+             </ScrollView>
            </View>
 
-           <View style={styles.scrollMoreRow}>
-             <Ionicons name="chevron-down" size={14} color="#6B7280" />
-             <Text style={styles.scrollMoreText}>Scroll for more subjects</Text>
-           </View>
+           {(performance?.grades?.subjects || []).length > 2 && (
+             <View style={styles.scrollMoreRow}>
+               <Ionicons name="chevron-down" size={14} color="#6B7280" />
+               <Text style={styles.scrollMoreText}>Scroll for more subjects</Text>
+             </View>
+           )}
         </Animated.View>
 
-        {/* Card 5: Attendance Analysis */}
+        {/* Card 5: Academic Growth Analysis */}
         <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.card}>
-           <Text style={styles.cardHeader}>Attendance Analysis</Text>
+           <Text style={styles.cardHeader}>Academic Growth Analysis</Text>
            <View style={styles.cardDivider} />
-
-           <View style={styles.chartContainer}>
-              {[ 'Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'].map((lbl, idx) => (
-                <View key={idx} style={styles.chartCol}>
-                   <Text style={styles.chartTopLabel}>95%</Text>
-                   <View style={styles.chartBarWrapper}>
-                      <View style={{height: '15%', backgroundColor: '#2DD4BF'}} />
-                      <View style={{height: '35%', backgroundColor: '#0EA5E9'}} />
-                      <View style={{height: '50%', backgroundColor: '#0284C7'}} />
-                   </View>
-                   <Text style={styles.chartBotLabel}>{lbl}</Text>
-                </View>
-              ))}
-           </View>
+           
+           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
+              <View style={[styles.chartContainer, { minWidth: (perfMetrics.monthlyScores || []).length * 80 }]}>
+                {(perfMetrics.monthlyScores || []).map((item: any, idx: number) => (
+                  <View key={idx} style={styles.chartCol}>
+                    <Text style={styles.chartTopLabel}>{item.score}%</Text>
+                    <View style={styles.chartBarWrapper}>
+                       <View style={{height: `${100 - item.score}%`, backgroundColor: '#F3F4F6'}} />
+                       <View style={{height: `${item.score}%`, backgroundColor: '#4F46E5'}} />
+                    </View>
+                    <Text style={styles.chartBotLabel}>{item.month}</Text>
+                  </View>
+                ))}
+                {(!perfMetrics.monthlyScores || perfMetrics.monthlyScores.length === 0) && (
+                  <Text style={{ textAlign: 'center', width: '100%', color: '#6B7280', fontSize: 12 }}>
+                    Analyzing historical data for trends...
+                  </Text>
+                )}
+              </View>
+           </ScrollView>
         </Animated.View>
 
       </ScrollView>
@@ -311,6 +431,8 @@ const styles = StyleSheet.create({
   chartTopLabel: { fontSize: 13, fontWeight: '800', color: '#111827', marginBottom: 12 },
   chartBotLabel: { fontSize: 11, fontWeight: '600', color: '#111827', marginTop: 12 },
   chartBarWrapper: { width: 42, height: 110, borderRadius: 6, overflow: 'hidden' },
+  subjectsContainer: { height: 280, marginTop: 10 },
+  subjectsScroll: { flex: 1 },
 });
 
 export default PerformanceScreen;

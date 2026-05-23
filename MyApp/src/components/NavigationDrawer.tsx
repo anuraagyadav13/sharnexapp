@@ -13,7 +13,8 @@ import { Gesture, GestureDetector, TouchableOpacity } from 'react-native-gesture
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../App';
+import { RootStackParamList } from '../types/navigation';
+import { useAuth } from '../store/AuthContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DRAWER_WIDTH = SCREEN_WIDTH * 0.75;
@@ -43,6 +44,7 @@ const STUDENT_MENU: MenuItem[] = [
   { id: '6', label: 'Attendance', icon: 'calendar-outline' },
   { id: '7', label: 'Announcements', icon: 'chatbox-ellipses-outline' },
   { id: '8', label: 'Grades & Reports', icon: 'document-text-outline' },
+  { id: 'result-mgmt', label: 'Official Result', icon: 'reader-outline' },
   { id: '9', label: 'Fees Portal', icon: 'receipt-outline' },
   { id: 'div2', label: '', icon: '', isDivider: true },
   { id: '10', label: 'Account Settings', icon: 'settings-outline' },
@@ -60,27 +62,35 @@ const PRINCIPAL_MENU: MenuItem[] = [
   { id: '8', label: 'Performance', icon: 'document-text-outline' },
   { id: '9', label: 'Announcements', icon: 'document-outline' },
   { id: '10', label: 'Fees & Payments', icon: 'document-outline' },
+  { id: '11', label: 'Result Management', icon: 'reader-outline' },
   { id: 'div1', label: '', icon: '', isDivider: true },
-  { id: '11', label: 'Account Settings', icon: 'settings-outline' },
-  { id: '12', label: 'Logout', icon: 'log-out-outline' },
+  { id: '12', label: 'Account Settings', icon: 'settings-outline' },
+  { id: '13', label: 'Logout', icon: 'log-out-outline' },
 ];
 
 const TEACHER_MENU: MenuItem[] = [
   { id: '1', label: 'Home', icon: 'grid-outline' },
-  { id: '2', label: 'Attendance', icon: 'checkmark-circle-outline' },
+  { id: 'timetable', label: 'Timetable', icon: 'calendar-clear-outline' },
+  { id: '2', label: 'Class Attendance', icon: 'people-outline' },
   { id: '3', label: 'Assignments', icon: 'document-text-outline' },
-  { id: '4', label: 'Quizzes', icon: 'time-outline' },
-  { id: '5', label: 'Live Monitor', icon: 'pulse-outline' },
+  { id: '4', label: 'Exams', icon: 'time-outline' },
+  { id: '5', label: 'Study Material', icon: 'book-outline' },
+  { id: '6', label: 'Performance Report', icon: 'trending-up-outline' },
+  { id: '7', label: 'Announcements', icon: 'megaphone-outline' },
+  { id: '8', label: 'Equipment', icon: 'hammer-outline' },
+  { id: 'result-mgmt', label: 'Result Management', icon: 'reader-outline' },
+  { id: 'my-attendance', label: 'My Attendance', icon: 'person-check-outline' },
   { id: 'div1', label: '', icon: '', isDivider: true },
-  { id: '6', label: 'Account Settings', icon: 'settings-outline' },
-  { id: '7', label: 'Logout', icon: 'log-out-outline' },
+  { id: '9', label: 'Account Settings', icon: 'settings-outline' },
+  { id: '10', label: 'Logout', icon: 'log-out-outline' },
 ];
 
 export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onClose, role = 'student' }) => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { logout } = useAuth();
   const route = useRoute();
   const currentRouteName = route.name;
-  
+
   const [isRendered, setIsRendered] = useState(false);
   const translateX = useSharedValue(-DRAWER_WIDTH);
 
@@ -155,16 +165,23 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
         case 'Subjects': return currentRouteName === 'PrincipalSubjects';
         case 'Staff Management': return currentRouteName === 'PrincipalStaff';
         case 'Staff Details': case 'Students details': return currentRouteName === 'PrincipalStudentDetails';
-        case 'Academic Calendar': return currentRouteName === 'PrincipalCalendar' || currentRouteName === 'Calendar'; 
+        case 'Academic Calendar': return currentRouteName === 'PrincipalCalendar' || currentRouteName === 'Calendar';
         case 'Time Table': case 'Timetable': return currentRouteName === 'PrincipalTimetable' || currentRouteName === 'Timetable';
         case 'Performance': return currentRouteName === 'PrincipalPerformance' || currentRouteName === 'Performance';
         case 'Announcements': return currentRouteName === 'PrincipalAnnouncements' || currentRouteName === 'Announcements';
         case 'Fees & Payments': case 'Fees Portal': return currentRouteName === 'PrincipalFees' || currentRouteName === 'Fees';
+        case 'Result Management': return currentRouteName === 'PrincipalRSM' || currentRouteName === 'ResultManagement' || currentRouteName === 'TeacherResultManagement';
         case 'Account Settings': return currentRouteName === 'AccountSettings';
-        case 'Attendance': return currentRouteName === 'TeacherAttendance' || currentRouteName === 'Attendance';
+        case 'Attendance': case 'Class Attendance': return currentRouteName === 'TeacherAttendance' || currentRouteName === 'Attendance' || currentRouteName === 'TeacherViewAttendance';
         case 'Assignments': return currentRouteName === 'TeacherAssignment' || currentRouteName === 'Assignments';
-        case 'Quizzes': case 'Quizzes & Tests': return currentRouteName === 'TeacherQuiz' || currentRouteName === 'Quizzes';
+        case 'Quizzes': case 'Quizzes & Tests': case 'Exams': return currentRouteName === 'TeacherQuiz' || currentRouteName === 'Quizzes';
+        case 'Time Table': case 'Timetable': return currentRouteName === 'PrincipalTimetable' || currentRouteName === 'Timetable' || currentRouteName === 'TeacherTimetable';
         case 'Live Monitor': return currentRouteName === 'TeacherMonitorLive';
+        case 'Study Material': return currentRouteName === 'StudyMaterial';
+        case 'Performance Report': return currentRouteName === 'Performance';
+        case 'Announcements': return currentRouteName === 'Announcements';
+        case 'Result Management': return currentRouteName === 'PrincipalRSM' || currentRouteName === 'ResultManagement' || currentRouteName === 'TeacherResultManagement';
+        case 'My Attendance': return currentRouteName === 'TeacherSelfAttendance';
         default: return false;
       }
     };
@@ -183,7 +200,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
           style={[styles.menuItem, isActive && styles.menuItemActive]}
           onPress={() => {
             onClose();
-            
+
             setTimeout(() => {
               if (item.label === 'Home' || item.label === 'Student Dashboard' || item.label === 'Dashboard') {
                 if (role === 'principal') navigation.navigate('PrincipalDashboard');
@@ -200,20 +217,26 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
               } else if (item.label === 'Assignments') {
                 if (role === 'teacher') navigation.navigate('TeacherAssignment');
                 else navigation.navigate('Assignments');
-              } else if (item.label === 'Quizzes & Tests' || item.label === 'Quizzes') {
+              } else if (item.label === 'Quizzes & Tests' || item.label === 'Quizzes' || item.label === 'Exams') {
                 if (role === 'teacher') navigation.navigate('TeacherQuiz');
                 else navigation.navigate('Quizzes');
-              } else if (item.label === 'Performance Trend') {
-                navigation.navigate('Performance');
+              } else if (item.label === 'Performance Trend' || item.label === 'Performance Report') {
+                if (role === 'teacher') navigation.navigate('TeacherPerformance');
+                else navigation.navigate('Performance');
               } else if (item.label === 'Performance') {
                 navigation.navigate('PrincipalPerformance');
               } else if (item.label === 'Study Material') {
-                navigation.navigate('StudyMaterial');
-              } else if (item.label === 'Attendance') {
+                if (role === 'teacher') navigation.navigate('TeacherStudyMaterial');
+                else navigation.navigate('StudyMaterial');
+              } else if (item.label === 'Attendance' || item.label === 'Class Attendance') {
                 if (role === 'teacher') navigation.navigate('TeacherAttendance');
                 else navigation.navigate('Attendance');
+              } else if (item.label === 'My Attendance') {
+                navigation.navigate('TeacherSelfAttendance');
               } else if (item.label === 'Live Monitor') {
                 navigation.navigate('TeacherMonitorLive', { quizId: '1' });
+              } else if (item.label === 'Academic Calendar') {
+                if (role === 'principal') navigation.navigate('PrincipalCalendar');
               } else if (item.label === 'Announcements') {
                 if (role === 'principal') navigation.navigate('PrincipalAnnouncements');
                 else navigation.navigate('Announcements');
@@ -224,12 +247,20 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
                 else navigation.navigate('Fees');
               } else if (item.label === 'Time Table' || item.label === 'Timetable') {
                 if (role === 'principal') navigation.navigate('PrincipalTimetable');
+                else if (role === 'teacher') navigation.navigate('TeacherTimetable');
                 else navigation.navigate('Timetable');
+              } else if (item.label === 'Result Management') {
+                if (role === 'principal') navigation.navigate('PrincipalRSM');
+                else if (role === 'teacher') navigation.navigate('TeacherResultManagement');
+                else navigation.navigate('ResultManagement');
+              } else if (item.label === 'Equipment') {
+                navigation.navigate('TeacherEquipment');
+              } else if (item.label === 'My Attendance') {
+                navigation.navigate('TeacherSelfAttendance');
               } else if (item.label === 'Account Settings') {
                 navigation.navigate('AccountSettings');
               } else if (item.label === 'Logout') {
-                // Return to login for now
-                navigation.reset({ index: 0, routes: [{name: 'Login'}] });
+                logout();
               }
             }, 250);
           }}
@@ -279,7 +310,7 @@ const styles = StyleSheet.create({
     left: 0,
     width: DRAWER_WIDTH,
     // Base transparent, relying on the pseudo gradient
-    backgroundColor: 'transparent', 
+    backgroundColor: 'transparent',
     zIndex: 100,
     paddingTop: 50,
   },

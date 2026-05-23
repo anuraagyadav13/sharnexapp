@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Platform, ActivityIndicator } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type TimetableNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Timetable'>;
 
@@ -11,53 +14,10 @@ interface Props {
   navigation: TimetableNavigationProp;
 }
 
-const TIMES = ['09:00', '09:45', '10:30', '11:15', '12:00', '12:45', '13:30'];
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
-const SCHEDULE_DATA = [
-  { day: 'MON', time: '09:45', subject: 'Science', teacher: 'Shubham Mangal' },
-  { day: 'MON', time: '10:30', subject: 'Maths', teacher: 'John Doe Updated' },
-  { day: 'MON', time: '12:00', subject: 'Computer', teacher: 'Manish Mangal' },
-  { day: 'MON', time: '12:45', subject: 'Computer', teacher: 'Manish Mangal' },
-  { day: 'MON', time: '13:30', subject: 'english', teacher: 'Shubham Mangal' },
-
-  { day: 'TUE', time: '09:00', subject: 'Science', teacher: 'Shubham Mangal' },
-  { day: 'TUE', time: '09:45', subject: 'Maths', teacher: 'John Doe Updated' },
-  { day: 'TUE', time: '12:00', subject: 'Hindi', teacher: 'manish chotia' },
-  { day: 'TUE', time: '12:45', subject: 'Computer', teacher: 'Manish Mangal' },
-  { day: 'TUE', time: '13:30', subject: 'english', teacher: 'Shubham Mangal' },
-
-  { day: 'WED', time: '09:00', subject: 'english', teacher: 'Shubham Mangal' },
-  { day: 'WED', time: '09:45', subject: 'english', teacher: 'Shubham Mangal' },
-  { day: 'WED', time: '10:30', subject: 'Science', teacher: 'Shubham Mangal' },
-  { day: 'WED', time: '12:45', subject: 'Hindi', teacher: 'manish chotia' },
-
-  { day: 'THU', time: '09:00', subject: 'english', teacher: 'Shubham Mangal' },
-  { day: 'THU', time: '09:45', subject: 'Computer', teacher: 'Manish Mangal' },
-  { day: 'THU', time: '10:30', subject: 'Hindi', teacher: 'manish chotia' },
-  { day: 'THU', time: '12:00', subject: 'Science', teacher: 'Shubham Mangal' },
-  { day: 'THU', time: '12:45', subject: 'Maths', teacher: 'John Doe Updated' },
-
-  { day: 'FRI', time: '09:00', subject: 'Science', teacher: 'Shubham Mangal' },
-  { day: 'FRI', time: '09:45', subject: 'Hindi', teacher: 'manish chotia' },
-  { day: 'FRI', time: '10:30', subject: 'Computer', teacher: 'Manish Mangal' },
-  { day: 'FRI', time: '12:00', subject: 'Maths', teacher: 'John Doe Updated' },
-  { day: 'FRI', time: '12:45', subject: 'Hindi', teacher: 'manish chotia' },
-  { day: 'FRI', time: '13:30', subject: 'Maths', teacher: 'John Doe Updated' },
-
-  { day: 'SAT', time: '09:00', subject: 'Hindi', teacher: 'manish chotia' },
-  { day: 'SAT', time: '09:45', subject: 'english', teacher: 'Shubham Mangal' },
-  { day: 'SAT', time: '10:30', subject: 'Maths', teacher: 'John Doe Updated' },
-  { day: 'SAT', time: '12:00', subject: 'Computer', teacher: 'Manish Mangal' },
-  { day: 'SAT', time: '13:30', subject: 'Science', teacher: 'Shubham Mangal' }
-];
-
-const getCellData = (day: string, time: string) => {
-  return SCHEDULE_DATA.find(d => d.day === day && d.time === time);
-};
-
-const getSubjectColors = (subject: string) => {
-  const norm = subject.toLowerCase().trim();
+const getSubjectColors = (subject?: string) => {
+  const norm = typeof subject === 'string' ? subject.toLowerCase().trim() : '';
   if (norm.includes('science')) return { bg: '#EEF2FF', text: '#4338CA', accent: '#6366F1' };
   if (norm.includes('maths')) return { bg: '#FFF1F2', text: '#BE123C', accent: '#F43F5E' };
   if (norm.includes('english')) return { bg: '#F0FDF4', text: '#15803D', accent: '#22C55E' };
@@ -67,7 +27,185 @@ const getSubjectColors = (subject: string) => {
 };
 
 const TimetableScreen: React.FC<Props> = ({ navigation }) => {
+  const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [schedule, setSchedule] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const currentDayKey = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][new Date().getDay()];
+
+  const normalizeTime = React.useCallback((value: string) => {
+    if (!value) return '';
+    const match = value.match(/(\d{1,2}):(\d{2})/);
+    if (!match) return value.trim().slice(0, 5);
+    let [_, hours, minutes] = match;
+    if (hours.length === 1) hours = `0${hours}`;
+    return `${hours}:${minutes}`;
+  }, []);
+
+  const calculateStatus = (startTime: string, endTime: string) => {
+    try {
+      if (!startTime || !endTime) return 'Upcoming';
+      const now = new Date();
+      const nStart = normalizeTime(startTime);
+      const nEnd = normalizeTime(endTime);
+      const [startH, startM] = nStart.split(':').map(Number);
+      const [endH, endM] = nEnd.split(':').map(Number);
+      
+      const start = new Date(now); start.setHours(startH, startM, 0);
+      const end = new Date(now); end.setHours(endH, endM, 0);
+      
+      if (now >= start && now <= end) return 'Ongoing';
+      if (now > end) return 'Completed';
+      return 'Upcoming';
+    } catch (e) { return 'Upcoming'; }
+  };
+
+  const normalizeApiData = (data: any) => {
+    let rawDailySchedules: any[] = [];
+    if (Array.isArray(data)) rawDailySchedules = data;
+    else if (data?.schedule && Array.isArray(data.schedule)) rawDailySchedules = data.schedule;
+    else if (data?.timetable) rawDailySchedules = [{ slots: data.timetable }];
+    else rawDailySchedules = [];
+
+    const flattenedSlots: any[] = [];
+    rawDailySchedules.forEach((dayData: any) => {
+      const slots = dayData.slots || [];
+      const dateStr = dayData.date || '';
+      const dayKey = dateStr ? ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][new Date(dateStr).getDay()] : '';
+      
+      slots.forEach((slot: any) => {
+        const start = slot.startTime || slot.time || slot.period?.start || '';
+        const end = slot.endTime || slot.period?.end || '';
+        const slotDay = slot.dayOfWeek || dayKey || currentDayKey;
+        const status = (slotDay === currentDayKey) ? calculateStatus(start, end) : 'Upcoming';
+
+        flattenedSlots.push({
+          ...slot,
+          day: slotDay,
+          startTime: start,
+          endTime: end,
+          status: slot.status || status
+        });
+      });
+    });
+
+    return flattenedSlots;
+  };
+
+  const fetchTimetable = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Resolve studentId from Profile
+      const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+      const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id || '';
+
+      if (!studentId) throw new Error('Could not identify student account.');
+
+      const dashRes = await apiClient.get(ENDPOINTS.STUDENT.DASHBOARD(studentId));
+      const classId = dashRes.normalized?.data?.student?.classId;
+
+      if (classId) {
+        try {
+          const now = new Date();
+          const day = now.getDay();
+          const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+          const monday = new Date(now.setDate(diff)).toISOString().split('T')[0];
+          const res = await apiClient.get(`${ENDPOINTS.STUDENT.CLASS_SCHEDULE(classId)}?week=${monday}`);
+          setSchedule(normalizeApiData(res.normalized?.data));
+          return;
+        } catch (weekErr) { console.warn('Weekly fetch failed, using fallback.'); }
+      }
+
+      const res = await apiClient.get(ENDPOINTS.STUDENT.SCHEDULE(studentId));
+      setSchedule(normalizeApiData(res.normalized?.data));
+
+    } catch (err: any) {
+      console.error('Failed to fetch timetable:', err);
+      setError(err.message || 'Failed to load timetable.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchTimetable(); }, []);
+
+  const dynamicTimes = React.useMemo(() => {
+    const times = new Set<string>();
+    schedule.forEach(item => {
+      if (item.startTime) times.add(normalizeTime(item.startTime));
+    });
+    // Add lunch break as a special marker if you have one, or just sort them
+    const sorted = Array.from(times).sort();
+    return sorted.length > 0 ? sorted : ['09:00', '10:00', '11:00', '12:00'];
+  }, [schedule, normalizeTime]);
+
+  const scheduleMap = React.useMemo(() => {
+    const dayMap: { [key: string]: string } = {
+      'monday': 'MON', 'tuesday': 'TUE', 'wednesday': 'WED',
+      'thursday': 'THU', 'friday': 'FRI', 'saturday': 'SAT',
+      'mon': 'MON', 'tue': 'TUE', 'wed': 'WED', 'thu': 'THU', 'fri': 'FRI', 'sat': 'SAT'
+    };
+
+    const map: Record<string, any> = {};
+    schedule.forEach(item => {
+      let itemDay = typeof item.day === 'string' ? item.day.trim().toLowerCase() : '';
+      const normalizedDay = dayMap[itemDay] || itemDay.toUpperCase();
+      const itemStart = typeof item.startTime === 'string' ? normalizeTime(item.startTime) : '';
+      map[`${normalizedDay}-${itemStart}`] = item;
+    });
+    return map;
+  }, [schedule, normalizeTime]);
+
+  const getCellData = React.useCallback((day: string, time: string) => {
+    return scheduleMap[`${day}-${time}`];
+  }, [scheduleMap]);
+
+  if (isLoading && schedule.length === 0) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }]}>
+        <Ionicons name="alert-circle" size={64} color="#EF4444" style={{ marginBottom: 16 }} />
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', textAlign: 'center' }}>Unable to Load Timetable</Text>
+        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>{error}</Text>
+        <TouchableOpacity
+          style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
+          onPress={() => {
+            setError(null);
+            fetchTimetable();
+          }}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (!isLoading && schedule.length === 0) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }]}>
+        <Ionicons name="calendar-outline" size={64} color="#4F46E5" style={{ marginBottom: 16 }} />
+        <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', textAlign: 'center' }}>No Data Available</Text>
+        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>Your timetable is empty or not available for today.</Text>
+        <TouchableOpacity
+          style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
+          onPress={fetchTimetable}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Reload</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -85,7 +223,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
 
         <View style={styles.centerHeaderContainer}>
           <Text style={styles.headerTitle}>Weekly Timetable</Text>
-          <Text style={styles.headerSubtitle}>Fall Semester</Text>
+          <Text style={styles.headerSubtitle}>Standard View</Text>
         </View>
 
         <View style={styles.headerRight}>
@@ -98,9 +236,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
-          >
-            <View style={[styles.avatar, { marginLeft: 12 }]}><Text style={styles.avatarText}>A</Text></View>
-          </TouchableOpacity>
+          ><View style={[styles.avatar, { marginLeft: 12 }]}><Text style={styles.avatarText}>{String(authState.user?.name ?? 'S').charAt(0)}</Text></View></TouchableOpacity>
         </View>
       </View>
 
@@ -111,11 +247,8 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
           <View style={{ flexDirection: 'row', paddingTop: 10 }}>
             {/* Left Time Column Fixed */}
             <View style={styles.timeColumn}>
-              <View style={{ height: 40 }} /> {/* Top left corner offset for Day Headers */}
-              {TIMES.map(time => {
-                if (time === '11:15') {
-                  return <View key={time} style={styles.lunchTimeCell}><Text style={styles.timeText}>{time}</Text></View>;
-                }
+              <View style={{ height: 40 }} />{/* Top left corner offset for Day Headers */}
+              {dynamicTimes.map(time => {
                 return (
                   <View key={time} style={styles.timeCell}>
                     <Text style={styles.timeText}>{time}</Text>
@@ -130,11 +263,11 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
                 {/* Header Row (Days) */}
                 <View style={styles.daysHeaderRow}>
                   {DAYS.map(day => {
-                    const isToday = day === 'MON';
+                    const isToday = day === ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][new Date().getDay()];
                     return (
                       <View key={day} style={styles.dayHeaderCell}>
                         <View style={[styles.dayBadge, isToday && styles.dayBadgeActive]}>
-                          <Text style={[styles.dayHeaderText, isToday && styles.dayHeaderTextActive]}>{day}</Text>
+                          <Text style={[styles.dayHeaderText, isToday && styles.dayBadgeActive && {color: '#FFF'}]}>{day}</Text>
                         </View>
                       </View>
                     )
@@ -142,19 +275,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
                 </View>
 
                 {/* Schedule Rows */}
-                {TIMES.map(time => {
-                  if (time === '11:15') {
-                    return (
-                      <View key={time} style={styles.lunchRowOuter}>
-                        <View style={styles.lunchLineIndicator} />
-                        <View style={styles.lunchBarWrapper}>
-                          <Ionicons name="fast-food-outline" size={14} color="#6B7280" style={{ marginRight: 6 }} />
-                          <Text style={styles.lunchText}>LUNCH BREAK</Text>
-                        </View>
-                      </View>
-                    );
-                  }
-
+                {dynamicTimes.map(time => {
                   return (
                     <View key={time} style={styles.gridRow}>
                       {/* Dashed background row line */}
@@ -162,17 +283,56 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
 
                       {DAYS.map(day => {
                         const data = getCellData(day, time);
+                        const subjectLabel = typeof data?.subject === 'string' ? data.subject : 'Subject';
+                        
+                        // Handle Teacher Object + Substitution Logic
+                        const teacherObj = data?.teacher;
+                        const substitutionObj = data?.substitution;
+                        const teacherLabel = substitutionObj ? substitutionObj.name : (teacherObj?.name || '-');
+                        const isSubstituted = !!substitutionObj;
+                        
+                        // Live Status tracking
+                        const isOngoing = data?.status === 'Ongoing';
+                        const isCompleted = data?.status === 'Completed';
+
+                        const colors = isOngoing 
+                           ? { bg: '#ECFDF5', accent: '#10B981', text: '#064E3B' } // Vibrant Green for Ongoing
+                           : getSubjectColors(subjectLabel);
 
                         return (
                           <View key={day} style={styles.cellOuter}>
                             {data ? (
-                              <View style={[styles.card, { backgroundColor: getSubjectColors(data.subject).bg }]}>
-                                <View style={[styles.cardAccentLine, { backgroundColor: getSubjectColors(data.subject).accent }]} />
-                                <Text style={[styles.subjectText, { color: getSubjectColors(data.subject).text }]}>{data.subject}</Text>
+                              <View style={[
+                                styles.card, 
+                                { backgroundColor: colors.bg },
+                                isOngoing && { borderColor: '#10B981', borderWidth: 2, shadowColor: '#10B981', shadowOpacity: 0.3 }
+                              ]}>
+                                <View style={[styles.cardAccentLine, { backgroundColor: colors.accent }]} />
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                  <Text style={[
+                                    styles.subjectText, 
+                                    { color: colors.text, flex: 1 },
+                                    isCompleted && { textDecorationLine: 'line-through', opacity: 0.6 }
+                                  ]} numberOfLines={1}>
+                                    {subjectLabel}
+                                  </Text>
+                                  <View style={{ flexDirection: 'row', gap: 2 }}>
+                                    {isOngoing && (
+                                      <View style={{ backgroundColor: '#10B981', borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 }}>
+                                        <Text style={{ fontSize: 7, fontWeight: '900', color: '#FFF' }}>LIVE</Text>
+                                      </View>
+                                    )}
+                                    {isSubstituted && (
+                                      <View style={{ backgroundColor: '#F59E0B', borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 }}>
+                                        <Text style={{ fontSize: 7, fontWeight: '900', color: '#FFF' }}>SUB</Text>
+                                      </View>
+                                    )}
+                                  </View>
+                                </View>
                                 <View style={styles.teacherRow}>
-                                  <Ionicons name="person" size={10} color={getSubjectColors(data.subject).accent} style={{ marginRight: 4, opacity: 0.6 }} />
-                                  <Text style={[styles.teacherText, { color: getSubjectColors(data.subject).text, opacity: 0.8 }]} numberOfLines={1}>
-                                    {data.teacher}
+                                  <Ionicons name="person" size={10} color={colors.accent} style={{ marginRight: 4, opacity: 0.6 }} />
+                                  <Text style={[styles.teacherText, { color: colors.text, opacity: isCompleted ? 0.4 : 0.8 }]} numberOfLines={1}>
+                                    {teacherLabel}
                                   </Text>
                                 </View>
                               </View>

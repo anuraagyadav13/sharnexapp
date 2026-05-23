@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,17 @@ import {
   Platform,
   StatusBar,
   TextInput,
-  Modal
+  Modal,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 const TOP_TABS = ['Weekly Dashboard', 'Timetable Builder', 'Leave Management', 'Academic Setup', 'Period Settings'];
 
@@ -36,16 +41,47 @@ const PERIODS = [
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
 
 const PrincipalTimetableScreen = ({ navigation }: any) => {
+  const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('Weekly Dashboard');
   const [activeWeek, setActiveWeek] = useState('This Week');
   const [isAddPeriodOpen, setIsAddPeriodOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [timetableData, setTimetableData] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Time Picker States
   const [timePickerTarget, setTimePickerTarget] = useState<string | null>(null);
   const [newPeriodStart, setNewPeriodStart] = useState('');
   const [newPeriodEnd, setNewPeriodEnd] = useState('');
   const [tempHour, setTempHour] = useState('09');
+
+  // Fetch timetable data
+  useEffect(() => {
+    const fetchTimetableData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const res = await apiClient.get(ENDPOINTS.PRINCIPAL.TIMETABLE);
+        const data = res.data.data || res.data;
+        setTimetableData(data);
+      } catch (error: any) {
+        console.error('Failed to fetch timetable data:', error);
+        setError('Failed to load timetable data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchTimetableData();
+  }, []);
+
+  const handleRetry = () => {
+    setError(null);
+    setIsLoading(true);
+    // Re-trigger useEffect
+    setTimetableData(null);
+  };
   const [tempMin, setTempMin] = useState('00');
   const [tempAmPm, setTempAmPm] = useState('AM');
 
@@ -130,10 +166,10 @@ const PrincipalTimetableScreen = ({ navigation }: any) => {
 
       <Animated.View entering={FadeInUp.duration(300)} style={styles.statsRow}>
         <View style={styles.statsGrid}>
-          {STATS.map(stat => (
+          {(timetableData?.stats || STATS).map((stat: any) => (
             <View key={stat.id} style={styles.statCard}>
-              <View style={[styles.statIconBox, { backgroundColor: stat.bg }]}>
-                <Ionicons name={stat.icon} size={18} color={stat.color} />
+              <View style={[styles.statIconBox, { backgroundColor: stat.bg || '#F5F3FF' }]}>
+                <Ionicons name={stat.icon || 'calendar'} size={18} color={stat.color || '#8B5CF6'} />
               </View>
               <View style={styles.statTextContainer}>
                 <Text style={styles.statLabel} numberOfLines={1}>{stat.label}</Text>
@@ -149,7 +185,7 @@ const PrincipalTimetableScreen = ({ navigation }: any) => {
           <View style={{flexDirection: 'row'}}>
             <View style={styles.daysColumn}>
               <View style={styles.cornerCell} />
-              {DAYS.map(day => (
+              {(timetableData?.days || DAYS).map((day: any) => (
                 <View key={day} style={styles.dayCell}>
                   <Text style={styles.dayText}>{day}</Text>
                 </View>
@@ -159,7 +195,7 @@ const PrincipalTimetableScreen = ({ navigation }: any) => {
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View style={styles.gridContentWrapper}>
                 <View style={styles.periodsHeaderRow}>
-                  {PERIODS.map(period => (
+                  {(timetableData?.periods || PERIODS).map((period: any) => (
                     <View key={period.id} style={period.isBreak ? styles.breakHeaderCell : styles.periodCell}>
                       {!period.isBreak && <Text style={styles.periodName}>{period.name}</Text>}
                       <Text style={styles.periodTime}>{period.time}</Text>
@@ -525,11 +561,11 @@ const PrincipalTimetableScreen = ({ navigation }: any) => {
         >
           <Ionicons name="menu" size={26} color="#111827" />
         </ScaleButton>
-        <Text style={styles.topHeaderTitle} numberOfLines={1}>Welcome back, Anurag</Text>
+        <Text style={styles.topHeaderTitle} numberOfLines={1}>Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.iconBtnTransparent}><Ionicons name="notifications-outline" size={20} color="#111827" /></TouchableOpacity>
           <TouchableOpacity style={styles.iconBtnTransparent} onPress={() => navigation.navigate('AccountSettings')}><Ionicons name="settings-outline" size={20} color="#111827" /></TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}><View style={styles.avatar}><Text style={styles.avatarText}>A</Text></View></TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}><View style={styles.avatar}><Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text></View></TouchableOpacity>
         </View>
       </View>
 
@@ -607,30 +643,56 @@ const PrincipalTimetableScreen = ({ navigation }: any) => {
 
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
-        <View style={styles.tabsContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsScroll}>
-            {TOP_TABS.map(tab => (
-              <TouchableOpacity 
-                key={tab} 
-                style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]}
-                onPress={() => setActiveTab(tab)}
-              >
-                {tab === 'Weekly Dashboard' ? <Ionicons name="grid-outline" size={14} color={activeTab === tab ? '#FFF' : '#6B7280'} style={styles.tabIcon} /> :
-                 tab === 'Timetable Builder' ? <Ionicons name="calendar-outline" size={14} color={activeTab === tab ? '#FFF' : '#6B7280'} style={styles.tabIcon} /> :
-                 tab === 'Leave Management' ? <Ionicons name="people-outline" size={14} color={activeTab === tab ? '#FFF' : '#6B7280'} style={styles.tabIcon} /> :
-                 <Ionicons name="settings-outline" size={14} color={activeTab === tab ? '#FFF' : '#6B7280'} style={styles.tabIcon} />
-                }
-                <Text style={[styles.tabBtnText, activeTab === tab && styles.tabBtnTextActive]}>{tab}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+        {/* Loading State */}
+        {isLoading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4F46E5" />
+            <Text style={styles.loadingText}>Loading timetable data...</Text>
+          </View>
+        )}
 
-        {activeTab === 'Weekly Dashboard' && renderWeeklyDashboard()}
-        {activeTab === 'Timetable Builder' && renderTimetableBuilder()}
-        {activeTab === 'Leave Management' && renderLeaveManagement()}
-        {activeTab === 'Academic Setup' && renderAcademicSetup()}
-        {activeTab === 'Period Settings' && renderPeriodSettings()}
+        {/* Error State */}
+        {error && !isLoading && (
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+            <Text style={styles.errorTitle}>Failed to Load Data</Text>
+            <Text style={styles.errorMessage}>{error}</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={handleRetry}>
+              <Ionicons name="refresh" size={16} color="#FFF" style={{ marginRight: 8 }} />
+              <Text style={styles.retryBtnText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Main Content */}
+        {!isLoading && !error && (
+          <>
+            <View style={styles.tabsContainer}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsScroll}>
+                {TOP_TABS.map(tab => (
+                  <TouchableOpacity 
+                    key={tab} 
+                    style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]}
+                    onPress={() => setActiveTab(tab)}
+                  >
+                    {tab === 'Weekly Dashboard' ? <Ionicons name="grid-outline" size={14} color={activeTab === tab ? '#FFF' : '#6B7280'} style={styles.tabIcon} /> :
+                     tab === 'Timetable Builder' ? <Ionicons name="calendar-outline" size={14} color={activeTab === tab ? '#FFF' : '#6B7280'} style={styles.tabIcon} /> :
+                     tab === 'Leave Management' ? <Ionicons name="people-outline" size={14} color={activeTab === tab ? '#FFF' : '#6B7280'} style={styles.tabIcon} /> :
+                     <Ionicons name="settings-outline" size={14} color={activeTab === tab ? '#FFF' : '#6B7280'} style={styles.tabIcon} />
+                    }
+                    <Text style={[styles.tabBtnText, activeTab === tab && styles.tabBtnTextActive]}>{tab}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {activeTab === 'Weekly Dashboard' && renderWeeklyDashboard()}
+            {activeTab === 'Timetable Builder' && renderTimetableBuilder()}
+            {activeTab === 'Leave Management' && renderLeaveManagement()}
+            {activeTab === 'Academic Setup' && renderAcademicSetup()}
+            {activeTab === 'Period Settings' && renderPeriodSettings()}
+          </>
+        )}
 
       </ScrollView>
 
@@ -643,6 +705,60 @@ const styles = StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: '#FAFAFA' },
   container: { flex: 1 },
   scrollContent: { paddingBottom: 40 },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6B7280',
+  },
+
+  errorContainer: {
+    marginHorizontal: 16,
+    marginTop: 20,
+    padding: 24,
+    borderRadius: 16,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    alignItems: 'center',
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#DC2626',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: '#7F1D1D',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4F46E5',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    shadowColor: '#4F46E5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  retryBtnText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 
   topHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 50 : 20, paddingBottom: 16, backgroundColor: '#FFF', zIndex: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 4 },
   menuHandle: { paddingRight: 4, paddingVertical: 8 }, 

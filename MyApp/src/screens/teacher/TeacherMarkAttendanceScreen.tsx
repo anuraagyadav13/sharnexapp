@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,39 +6,98 @@ import {
   StatusBar,
   ScrollView,
   TouchableOpacity,
-  Platform
+  Platform,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherMarkAttendance'>;
 
-const MOCK_STUDENTS_DATA = [
-  { id: 1, name: 'Alex Johnson', stdId: 'STU-2025-001' },
-  { id: 2, name: 'Alex Johnson', stdId: 'STU-2025-001' },
-  { id: 3, name: 'Alex Johnson', stdId: 'STU-2025-001' },
-  { id: 4, name: 'Alex Johnson', stdId: 'STU-2025-001' },
-  { id: 5, name: 'Alex Johnson', stdId: 'STU-2025-001' },
-  { id: 6, name: 'Alex Johnson', stdId: 'STU-2025-001' },
-  { id: 7, name: 'Alex Johnson', stdId: 'STU-2025-001' },
-  { id: 8, name: 'Alex Johnson', stdId: 'STU-2025-001' },
-];
+const TeacherMarkAttendanceScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { classId, className } = route.params;
+  const { authState } = useAuth();
+  const [students, setStudents] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [attendanceState, setAttendanceState] = useState<Record<string, 'P' | 'A' | 'L'>>({});
 
-const TeacherMarkAttendanceScreen: React.FC<Props> = ({ navigation }) => {
-  const [attendanceState, setAttendanceState] = useState<Record<number, 'P' | 'A' | 'L'>>({});
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        setIsLoading(true);
+        const dateStr = new Date().toISOString().split('T')[0];
+        
+        const [studentsRes, attendanceRes] = await Promise.all([
+          apiClient.get(ENDPOINTS.TEACHER.CLASS_STUDENTS(classId)),
+          apiClient.get(`${ENDPOINTS.TEACHER.ATTENDANCE(classId)}?date=${dateStr}`)
+        ]);
+        
+        const studentsData = studentsRes.data.data || [];
+        setStudents(studentsData);
+
+        // Pre-fill attendance state if records exist
+        const existingRecords = attendanceRes.data.attendance || [];
+        if (existingRecords.length > 0) {
+          const prevState: Record<string, 'P' | 'A' | 'L'> = {};
+          existingRecords.forEach((rec: any) => {
+            prevState[rec.studentId] = rec.status === 'present' ? 'P' : rec.status === 'absent' ? 'A' : 'L';
+          });
+          setAttendanceState(prevState);
+        }
+      } catch (error) {
+        console.error('Failed to fetch initial marking data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchInitialData();
+  }, [classId]);
 
   const markAll = (status: 'P' | 'A') => {
-    const newState: Record<number, 'P' | 'A' | 'L'> = {};
-    MOCK_STUDENTS_DATA.forEach(s => {
+    const newState: Record<string, 'P' | 'A' | 'L'> = {};
+    students.forEach(s => {
       newState[s.id] = status;
     });
     setAttendanceState(newState);
   };
 
-  const toggleStatus = (id: number, status: 'P' | 'A' | 'L') => {
+  const toggleStatus = (id: string, status: 'P' | 'A' | 'L') => {
     setAttendanceState(prev => ({ ...prev, [id]: status }));
+  };
+
+  const handleSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+      const data = Object.entries(attendanceState).map(([id, status]) => ({
+        studentId: id,
+        status: status === 'P' ? 'present' : status === 'A' ? 'absent' : 'late'
+      }));
+
+      if (data.length === 0) {
+        Alert.alert('Error', 'Please mark attendance for at least one student');
+        return;
+      }
+
+      await apiClient.post(ENDPOINTS.TEACHER.MARK_ATTENDANCE(classId), { 
+        date: new Date().toISOString().split('T')[0],
+        attendanceRecords: data 
+      });
+
+      Alert.alert('Success', 'Attendance marked successfully');
+      navigation.goBack();
+    } catch (error) {
+      console.error('Failed to submit attendance:', error);
+      Alert.alert('Error', 'Failed to submit attendance');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -48,13 +107,13 @@ const TeacherMarkAttendanceScreen: React.FC<Props> = ({ navigation }) => {
       {/* Global Header */}
       <View style={styles.globalHeader}>
         <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={22} color="#1F2937" />
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
           </View>
         </View>
       </View>
@@ -66,12 +125,12 @@ const TeacherMarkAttendanceScreen: React.FC<Props> = ({ navigation }) => {
          </TouchableOpacity>
          <Text style={styles.blueTitle}>Mark Attendance</Text>
          <View style={styles.classRow}>
-            <Text style={styles.classTitle}>Class - 1</Text>
+            <Text style={styles.classTitle}>{className || 'Class'}</Text>
             <View style={styles.todayBtn}>
                <Text style={styles.todayBtnText}>Today</Text>
             </View>
          </View>
-         <Text style={styles.blueSubtitle}>Class Teacher - Mr. John • 35 Students</Text>
+         <Text style={styles.blueSubtitle}>{students.length} Students</Text>
       </Animated.View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -102,90 +161,101 @@ const TeacherMarkAttendanceScreen: React.FC<Props> = ({ navigation }) => {
               </TouchableOpacity>
            </View>
 
-           {/* Title */}
-           <Text style={[styles.cardTitle, {marginTop: 24, marginBottom: 20}]}>Students</Text>
-
            {/* List */}
-           {MOCK_STUDENTS_DATA.map((student, index) => {
-             const initials = student.name.split(' ').map(n => n[0]).join('');
-             const currentStatus = attendanceState[student.id];
-             
-             return (
-               <Animated.View key={index} entering={FadeInUp.delay(150 + index * 50).springify()} style={styles.studentRow}>
-                  <View style={styles.studentInfoLeft}>
-                     <View style={styles.avatarCircle}>
-                        <Text style={styles.avatarInitials}>{initials}</Text>
-                     </View>
-                     <View>
-                        <Text style={styles.studentName}>{student.name}</Text>
-                        <Text style={styles.studentId}>ID: {student.stdId}</Text>
-                     </View>
-                  </View>
-                  
-                  {/* Status Toggles */}
-                  <View style={styles.toggleGroup}>
-                     {/* P Toggle */}
-                     <TouchableOpacity 
-                        style={[
-                           styles.toggleBtn, 
-                           currentStatus === 'P' ? styles.toggleBtnPresentActive : styles.toggleBtnPresent
-                        ]}
-                        activeOpacity={0.8}
-                        onPress={() => toggleStatus(student.id, 'P')}
-                     >
-                        <Text style={[
-                           styles.toggleText,
-                           currentStatus === 'P' ? styles.toggleTextActive : styles.toggleTextPresent
-                        ]}>P</Text>
-                     </TouchableOpacity>
-
-                     {/* A Toggle */}
-                     <TouchableOpacity 
-                        style={[
-                           styles.toggleBtn, 
-                           currentStatus === 'A' ? styles.toggleBtnAbsentActive : styles.toggleBtnAbsent
-                        ]}
-                        activeOpacity={0.8}
-                        onPress={() => toggleStatus(student.id, 'A')}
-                     >
-                        <Text style={[
-                           styles.toggleText,
-                           currentStatus === 'A' ? styles.toggleTextActive : styles.toggleTextAbsent
-                        ]}>A</Text>
-                     </TouchableOpacity>
-
-                     {/* L Toggle */}
-                     <TouchableOpacity 
-                        style={[
-                           styles.toggleBtn, 
-                           // Note: matching screenshot perfectly where 'L' is filled orange all the time
-                           // or just when selected. We will make it filled orange if selected or default to match screen.
-                           // Actually the screenshot has L solid orange. We'll set it here to match.
-                           currentStatus === 'L' || !currentStatus ? styles.toggleBtnLeaveActive : styles.toggleBtnLeave
-                        ]}
-                        activeOpacity={0.8}
-                        onPress={() => toggleStatus(student.id, 'L')}
-                     >
-                        <Text style={[
-                           styles.toggleText,
-                           currentStatus === 'L' || !currentStatus ? styles.toggleTextActive : styles.toggleTextLeave
-                        ]}>L</Text>
-                     </TouchableOpacity>
-                  </View>
-               </Animated.View>
-             );
-           })}
+           {isLoading ? (
+             <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 20 }} />
+           ) : students.length === 0 ? (
+             <Text style={styles.emptyText}>No students found in this class.</Text>
+           ) : (
+             students.map((student, index) => {
+               const initials = student.name.split(' ').map((n: string) => n[0]).join('');
+               const currentStatus = attendanceState[student.id];
+               
+               return (
+                 <Animated.View key={student.id} entering={FadeInUp.delay(150 + index * 50).springify()} style={styles.studentRow}>
+                    <View style={styles.studentInfoLeft}>
+                       <View style={styles.avatarCircle}>
+                          <Text style={styles.avatarInitials}>{initials}</Text>
+                       </View>
+                       <View>
+                          <Text style={styles.studentName}>{student.name}</Text>
+                          <Text style={styles.studentId}>ID: {student.roll_no || student.id.slice(0, 8)}</Text>
+                       </View>
+                    </View>
+                    
+                    {/* Status Toggles */}
+                    <View style={styles.toggleGroup}>
+                       {/* P Toggle */}
+                       <TouchableOpacity 
+                          style={[
+                             styles.toggleBtn, 
+                             currentStatus === 'P' ? styles.toggleBtnPresentActive : styles.toggleBtnPresent
+                          ]}
+                          activeOpacity={0.8}
+                          onPress={() => toggleStatus(student.id, 'P')}
+                       >
+                          <Text style={[
+                             styles.toggleText,
+                             currentStatus === 'P' ? styles.toggleTextActive : styles.toggleTextPresent
+                          ]}>P</Text>
+                       </TouchableOpacity>
+  
+                       {/* A Toggle */}
+                       <TouchableOpacity 
+                          style={[
+                             styles.toggleBtn, 
+                             currentStatus === 'A' ? styles.toggleBtnAbsentActive : styles.toggleBtnAbsent
+                          ]}
+                          activeOpacity={0.8}
+                          onPress={() => toggleStatus(student.id, 'A')}
+                       >
+                          <Text style={[
+                             styles.toggleText,
+                             currentStatus === 'A' ? styles.toggleTextActive : styles.toggleTextAbsent
+                          ]}>A</Text>
+                       </TouchableOpacity>
+  
+                       {/* L Toggle */}
+                       <TouchableOpacity 
+                          style={[
+                             styles.toggleBtn, 
+                             currentStatus === 'L' ? styles.toggleBtnLeaveActive : styles.toggleBtnLeave
+                          ]}
+                          activeOpacity={0.8}
+                          onPress={() => toggleStatus(student.id, 'L')}
+                       >
+                          <Text style={[
+                             styles.toggleText,
+                             currentStatus === 'L' ? styles.toggleTextActive : styles.toggleTextLeave
+                          ]}>L</Text>
+                       </TouchableOpacity>
+                    </View>
+                 </Animated.View>
+               );
+             })
+           )}
 
         </Animated.View>
       </ScrollView>
 
       {/* Bottom Fixed Action Bar */}
       <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.bottomBar}>
-         <TouchableOpacity style={styles.submitBtn} activeOpacity={0.8} onPress={() => navigation.goBack()}>
-            <Ionicons name="checkmark" size={18} color="#FFFFFF" style={{marginRight: 6}} />
-            <Text style={styles.submitBtnText}>Submit Attendance</Text>
+         <TouchableOpacity 
+            style={[styles.submitBtn, isSubmitting && { opacity: 0.7 }]} 
+            activeOpacity={0.8} 
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+         >
+            {isSubmitting ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <>
+                <Ionicons name="checkmark" size={18} color="#FFFFFF" style={{marginRight: 6}} />
+                <Text style={styles.submitBtnText}>Submit Attendance</Text>
+              </>
+            )}
          </TouchableOpacity>
-         <TouchableOpacity style={styles.cancelBtn} activeOpacity={0.8} onPress={() => navigation.goBack()}>
+         <TouchableOpacity style={styles.cancelBtn} activeOpacity={0.8} onPress={() => navigation.goBack()} disabled={isSubmitting}>
             <Text style={styles.cancelBtnText}>Cancel</Text>
          </TouchableOpacity>
       </Animated.View>
@@ -389,8 +459,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   toggleBtn: {
-    width: 26,
-    height: 26,
+    width: 36,
+    height: 36,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
@@ -463,6 +533,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#111827',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 20,
+    fontWeight: '500',
   },
 });
 

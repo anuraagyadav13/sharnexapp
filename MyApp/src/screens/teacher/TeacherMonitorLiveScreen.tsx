@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,29 +6,53 @@ import {
   StatusBar,
   ScrollView,
   TouchableOpacity,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../App';
+import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherMonitorLive'>;
 
-const MOCK_PARTICIPANTS = Array.from({ length: 4 }).map((_, i) => ({
-  id: i.toString(),
-  name: 'Alex Johnson',
-  initials: 'AJ',
-  rollNo: '101',
-  progress: '100 %',
-  stats: [
-    { label: 'Score', value: '40/40' },
-    { label: 'Score', value: '40/40' },
-    { label: 'Score', value: '40/40' },
-  ]
-}));
+const TeacherMonitorLiveScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { authState } = useAuth();
+  const { quizId } = route.params;
+  const [data, setData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-const TeacherMonitorLiveScreen: React.FC<Props> = ({ navigation }) => {
+  const fetchLiveStatus = async (showLoading = false) => {
+    try {
+      if (showLoading) setIsLoading(true);
+      const res = await apiClient.get(ENDPOINTS.TEACHER.QUIZ_LIVE(quizId));
+      setData(res.data);
+    } catch (error) {
+      console.error('Failed to monitor live quiz:', error);
+    } finally {
+      if (showLoading) setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveStatus(true);
+    
+    // Set up polling every 10 seconds
+    intervalRef.current = setInterval(() => {
+      fetchLiveStatus();
+    }, 10000);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [quizId]);
+
+  const students = data?.students || [];
+
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
@@ -36,13 +60,13 @@ const TeacherMonitorLiveScreen: React.FC<Props> = ({ navigation }) => {
       {/* Global Header */}
       <View style={styles.globalHeader}>
         <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={22} color="#1F2937" />
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
           </View>
         </View>
       </View>
@@ -52,45 +76,77 @@ const TeacherMonitorLiveScreen: React.FC<Props> = ({ navigation }) => {
          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
          </TouchableOpacity>
-         <Text style={styles.blueTitle}>Live Exam Monitoring</Text>
-         <Text style={styles.blueSubtitle}>English • Grammar Test - Tenses • Completed on Oct 20, 2023</Text>
+         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View>
+              <Text style={styles.blueTitle}>Live Exam Monitoring</Text>
+              <Text style={styles.blueSubtitle}>
+                {data?.submitted || 0}/{data?.totalStudents || 0} Submitted • {data?.inProgress || 0} Active
+              </Text>
+            </View>
+            <View style={styles.liveBadge}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveText}>LIVE</Text>
+            </View>
+         </View>
       </Animated.View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
          
          <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.contentWrapper}>
-            <Text style={styles.sectionTitle}>Active Participants</Text>
+            <Text style={styles.sectionTitle}>Room Activity ({data?.totalStudents || 0})</Text>
 
             {/* List */}
-            {MOCK_PARTICIPANTS.map((participant, index) => (
-               <View key={participant.id} style={styles.participantCard}>
-                  
-                  {/* Header */}
-                  <View style={styles.cardHeader}>
-                     <View style={styles.participantAvatar}>
-                        <Text style={styles.participantAvatarText}>{participant.initials}</Text>
-                     </View>
-                     <View style={styles.nameInfo}>
-                        <Text style={styles.name}>{participant.name}</Text>
-                        <Text style={styles.rollNo}>Roll No: {participant.rollNo}</Text>
-                     </View>
-                     <View style={styles.progressPill}>
-                        <Text style={styles.progressPillText}>{participant.progress}</Text>
-                     </View>
-                  </View>
-
-                  {/* Stats Grid */}
-                  <View style={styles.statsGrid}>
-                     {participant.stats.map((stat, sIndex) => (
-                        <View key={sIndex} style={styles.statBox}>
-                           <Text style={styles.statLabel}>{stat.label}</Text>
-                           <Text style={styles.statValue}>{stat.value}</Text>
+            {isLoading && !data ? (
+               <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
+            ) : students.length === 0 ? (
+               <Text style={styles.emptyText}>No students in this class.</Text>
+            ) : (
+               students.map((participant: any, index: number) => (
+                  <View key={index} style={styles.participantCard}>
+                     
+                     {/* Header */}
+                     <View style={styles.cardHeader}>
+                        <View style={styles.participantAvatar}>
+                           <Text style={styles.participantAvatarText}>
+                             {participant.name?.charAt(0) || 'S'}
+                           </Text>
                         </View>
-                     ))}
-                  </View>
+                        <View style={styles.nameInfo}>
+                           <Text style={styles.name}>{participant.name}</Text>
+                           <Text style={styles.rollNo}>Progress: {participant.progress}</Text>
+                        </View>
+                        <View style={[
+                          styles.progressPill, 
+                          participant.status === 'Submitted' && { backgroundColor: '#D1FAE5' },
+                          participant.status === 'In Progress' && { backgroundColor: '#DBEAFE' },
+                          participant.status === 'Not Started' && { backgroundColor: '#F3F4F6' },
+                        ]}>
+                           <Text style={[
+                             styles.progressPillText,
+                             participant.status === 'Submitted' && { color: '#10B981' },
+                             participant.status === 'In Progress' && { color: '#3B82F6' },
+                             participant.status === 'Not Started' && { color: '#9CA3AF' },
+                           ]}>
+                             {participant.status}
+                           </Text>
+                        </View>
+                     </View>
 
-               </View>
-            ))}
+                     {/* Stats Grid */}
+                     <View style={styles.statsGrid}>
+                        <View style={styles.statBox}>
+                           <Text style={styles.statLabel}>Current Progress</Text>
+                           <Text style={styles.statValue}>{participant.progress}</Text>
+                        </View>
+                        <View style={styles.statBox}>
+                           <Text style={styles.statLabel}>Time Remaining</Text>
+                           <Text style={styles.statValue}>{participant.timeRemaining}</Text>
+                        </View>
+                     </View>
+
+                  </View>
+               ))
+            )}
 
          </Animated.View>
 
@@ -99,6 +155,7 @@ const TeacherMonitorLiveScreen: React.FC<Props> = ({ navigation }) => {
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
@@ -172,6 +229,28 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#E0E7FF',
   },
+  liveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EF4444',
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#EF4444',
+    marginRight: 6,
+  },
+  liveText: {
+    color: '#EF4444',
+    fontSize: 10,
+    fontWeight: '800',
+  },
 
   contentWrapper: {
     paddingHorizontal: 16,
@@ -187,8 +266,6 @@ const styles = StyleSheet.create({
   participantCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
     padding: 24,
     marginBottom: 20,
     shadowColor: '#1E293B',
@@ -267,7 +344,13 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontWeight: '800',
   },
-
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 40,
+    color: '#6B7280',
+    fontSize: 14,
+    fontWeight: '500',
+  },
 });
 
 export default TeacherMonitorLiveScreen;

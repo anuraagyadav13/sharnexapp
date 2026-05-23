@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,21 +9,20 @@ import {
   Platform,
   StatusBar,
   Modal,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  ActivityIndicator
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
-const dummyStaff = [
-  { id: '1', name: 'John Dwivedi', initial: 'j' },
-  { id: '2', name: 'Akshat Dwivedi', initial: 'A' },
-  { id: '3', name: 'Manish sharma', initial: 'M' },
-  { id: '4', name: 'manish chotia', initial: 'm' },
-];
 
 const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
+  const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [searchStaff, setSearchStaff] = useState('');
   const [searchLogs, setSearchLogs] = useState('');
@@ -33,6 +32,26 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState('03/31/2026');
+  const [staffList, setStaffList] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        setIsLoading(true);
+        const res = await apiClient.get(ENDPOINTS.PRINCIPAL.STAFF);
+        const data = res.data.data || res.data;
+        setStaffList(data.staff || data || []);
+      } catch (error) {
+        console.error('Failed to fetch staff:', error);
+        setStaffList([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchStaff();
+  }, []);
 
   const toggleStaffSelection = (id: string) => {
     setSelectedStaffIds(prev => 
@@ -41,10 +60,10 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
   };
 
   const toggleSelectAll = () => {
-    if (selectedStaffIds.length === dummyStaff.length) {
+    if (selectedStaffIds.length === staffList.length) {
       setSelectedStaffIds([]);
     } else {
-      setSelectedStaffIds(dummyStaff.map(s => s.id));
+      setSelectedStaffIds(staffList.map(s => s.id));
     }
   };
 
@@ -55,7 +74,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
       {/* Header */}
       <View style={styles.globalHeader}>
         <View style={styles.headerRight}>
-          <Text style={styles.headerTitle}>Welcome back, Anurag</Text>
+          <Text style={styles.headerTitle}>Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}</Text>
           <TouchableOpacity style={styles.iconBtnTransparent}>
             <Ionicons name="notifications-outline" size={22} color="#111827" />
           </TouchableOpacity>
@@ -74,7 +93,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
           >
             <View style={styles.avatarContainer}>
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>A</Text>
+                <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text>
               </View>
             </View>
           </TouchableOpacity>
@@ -152,7 +171,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
               <Text style={styles.cardTitle}>Quick Mark</Text>
               <TouchableOpacity onPress={toggleSelectAll}>
                 <Text style={styles.selectAllText}>
-                  {selectedStaffIds.length === dummyStaff.length ? 'DESELECT ALL' : 'SELECT ALL'}
+                  {selectedStaffIds.length === staffList.length ? 'DESELECT ALL' : 'SELECT ALL'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -177,29 +196,38 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
             )}
 
             <View style={styles.staffListContainer}>
-              {dummyStaff.map((staff, idx) => {
-                const isSelected = selectedStaffIds.includes(staff.id);
-                return (
-                  <TouchableOpacity 
-                    key={staff.id} 
-                    style={[styles.staffListItem, isSelected && styles.staffListItemSelected]}
-                    onPress={() => toggleStaffSelection(staff.id)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.staffAvatar, isSelected && styles.staffAvatarSelected]}>
-                      <Text style={[styles.staffAvatarText, isSelected && styles.staffAvatarTextSelected]}>
-                        {staff.initial.toUpperCase()}
-                      </Text>
-                    </View>
-                    <Text style={styles.staffNameText}>{staff.name}</Text>
-                    {isSelected && (
-                      <View style={styles.checkmarkIconBox}>
-                        <Ionicons name="checkmark-circle" size={18} color="#4F46E5" />
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#4F46E5" style={{ marginVertical: 20 }} />
+              ) : staffList.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="people-outline" size={48} color="#D1D5DB" />
+                  <Text style={styles.emptyText}>No staff found</Text>
+                </View>
+              ) : (
+                staffList.map((staff, idx) => {
+                  const isSelected = selectedStaffIds.includes(staff.id);
+                  return (
+                    <TouchableOpacity 
+                      key={staff.id} 
+                      style={[styles.staffListItem, isSelected && styles.staffListItemSelected]}
+                      onPress={() => toggleStaffSelection(staff.id)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.staffAvatar, isSelected && styles.staffAvatarSelected]}>
+                        <Text style={[styles.staffAvatarText, isSelected && styles.staffAvatarTextSelected]}>
+                          {staff.name?.charAt(0).toUpperCase() || 'S'}
+                        </Text>
                       </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
+                      <Text style={styles.staffNameText}>{staff.name}</Text>
+                      {isSelected && (
+                        <View style={styles.checkmarkIconBox}>
+                          <Ionicons name="checkmark-circle" size={18} color="#4F46E5" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })
+              )}
             </View>
           </Animated.View>
 
@@ -750,6 +778,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#FFF',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#999',
   },
 
 });

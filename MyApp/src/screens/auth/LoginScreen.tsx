@@ -17,6 +17,9 @@ import FadeInView from '../../components/animations/FadeInView';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { RootStackParamList } from '../../types/navigation';
 import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
+
 
 
 const ChevronBackIcon = ({ width = 18, height = 18 }) => (
@@ -56,32 +59,62 @@ interface Props {
 }
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
 
-  const handleLogin = () => {
-    if (password !== 'Krushna123') {
-      Alert.alert('Login Failed', 'Invalid password. Please use Krushna123');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleLogin = async () => {
+    if (!identifier || !password) {
+      Alert.alert('Error', 'Please enter both email / student ID and password');
       return;
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    setIsSubmitting(true);
+    try {
+      const response = await apiClient.post(ENDPOINTS.AUTH.LOGIN, {
+        identifier: identifier.trim(),
+        password,
+      });
 
-    if (normalizedEmail === 'student@sharnex.com') {
-      login('dummy_student_token', 'student');
-      navigation?.reset({ index: 0, routes: [{ name: 'StudentDashboard' as any }] });
-    } else if (normalizedEmail === 'teacher@sharnex.com') {
-      login('dummy_teacher_token', 'teacher');
-      navigation?.reset({ index: 0, routes: [{ name: 'TeacherDashboard' as any }] });
-    } else if (normalizedEmail === 'principal@sharnex.com') {
-      login('dummy_principal_token', 'principal');
-      navigation?.reset({ index: 0, routes: [{ name: 'PrincipalDashboard' as any }] });
-    } else {
-      Alert.alert('Login Failed', 'Please use student@sharnex.com, teacher@sharnex.com, or principal@sharnex.com');
+      // Handle standardized response format
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Login failed');
+      }
+
+      const payload = response.data.data;
+      if (!payload || !payload.tokens || !payload.tokens.accessToken) {
+        throw new Error('Invalid login response from server');
+      }
+
+      const { tokens, user } = payload;
+
+      let appRole: 'student' | 'teacher' | 'principal' = 'student';
+      const backendRole = user.role;
+      if (backendRole === 'TEACHER' || backendRole === 'STAFF') appRole = 'teacher';
+      else if (backendRole === 'INSTITUTION_ADMIN' || backendRole === 'CENTRAL_ADMIN' || backendRole === 'PRINCIPAL') appRole = 'principal';
+
+      login(tokens.accessToken, tokens.refreshToken, appRole, user);
+    } catch (error: any) {
+      console.error('Login Error:', error);
+      let message = 'Something went wrong. Please try again.';
+      
+      if (error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error.message) {
+        message = error.message;
+      }
+      
+      // Only show first 100 chars to keep alert readable
+      const displayMessage = message.length > 100 ? message.substring(0, 97) + '...' : message;
+      Alert.alert('Login Failed', displayMessage);
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
 
   return (
     <View style={styles.container}>
@@ -125,12 +158,11 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    placeholder="Email Address"
+                    placeholder="Email or Student ID"
                     placeholderTextColor="#A0AEC0"
-                    keyboardType="email-address"
                     autoCapitalize="none"
-                    value={email}
-                    onChangeText={setEmail}
+                    value={identifier}
+                    onChangeText={setIdentifier}
                   />
                 </View>
               </FadeInView>
@@ -161,8 +193,12 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
               </FadeInView>
 
               <FadeInView delay={600}>
-                <ScaleButton style={styles.loginButton} onPress={handleLogin} activeOpacity={0.85}>
-                  <Text style={styles.loginButtonText}>Login</Text>
+                <ScaleButton 
+                  style={[styles.loginButton, isSubmitting && { opacity: 0.7 }]} 
+                  onPress={handleLogin} 
+                  disabled={isSubmitting}
+                  activeOpacity={0.85}>
+                  <Text style={styles.loginButtonText}>{isSubmitting ? 'Loading...' : 'Login'}</Text>
                 </ScaleButton>
               </FadeInView>
 
@@ -188,14 +224,14 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                 </View>
               </FadeInView>
 
-              <FadeInView delay={900}>
+              {/* <FadeInView delay={900}>
                 <View style={styles.bottomRow}>
                   <Text style={styles.bottomText}>Don't have an account? </Text>
                   <TouchableOpacity onPress={() => navigation?.navigate('Register')}>
                     <Text style={styles.signUpText}>Sign Up Now</Text>
                   </TouchableOpacity>
                 </View>
-              </FadeInView>
+              </FadeInView> */}
             </View>
           </FadeInView>
         </ScrollView>

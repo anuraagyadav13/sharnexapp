@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,21 +9,24 @@ import {
   Platform,
   StatusBar,
   Modal,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 
-const StatCard = React.memo(({ color, iconBg, icon, value, label }: any) => (
-  <View style={styles.statCard}>
-    <View style={[styles.statIconBox, { backgroundColor: iconBg }]}>
-      <Ionicons name={icon} size={20} color={color} />
-    </View>
+const StatCard = React.memo(({ color, value, label, subtext }: any) => (
+  <View style={[styles.statCard, { borderLeftColor: color, borderLeftWidth: 4 }]}>
     <View style={styles.statContent}>
-      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statLabel} numberOfLines={2}>{label}</Text>
+      {subtext ? <Text style={styles.statSubtext}>{subtext}</Text> : null}
       <Text style={styles.statValue}>{value}</Text>
     </View>
   </View>
@@ -72,18 +75,52 @@ const ClassCard = ({ item, delay }: any) => (
   </Animated.View>
 );
 
-const DUMMY_CLASSES = [
-  { id: '1', code: 'C1', className: 'Class 1', section: '---', grade: '--', academicYear: '2026', students: '--', teacher: 'ANURAG YADAV' },
-  { id: '2', code: 'C1', className: 'Class 1', section: '---', grade: '--', academicYear: '2026', students: '--', teacher: 'ANURAG YADAV' },
-  { id: '3', code: 'C1', className: 'Class 1', section: '---', grade: '--', academicYear: '2026', students: '--', teacher: 'ANURAG YADAV' },
-  { id: '4', code: 'C1', className: 'Class 1', section: '---', grade: '--', academicYear: '2026', students: '--', teacher: 'ANURAG YADAV' },
-  { id: '5', code: 'C1', className: 'Class 1', section: '---', grade: '--', academicYear: '2026', students: '--', teacher: 'ANURAG YADAV' },
-];
 
 const PrincipalClassesScreen = ({ navigation }: any) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const { authState } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [classSubjects, setClassSubjects] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [classesData, setClassesData] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch classes data
+  useEffect(() => {
+    const fetchClassesData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const res = await apiClient.get(ENDPOINTS.PRINCIPAL.CLASSES);
+        const data = res.data.data || res.data;
+        setClassesData(data);
+      } catch (error: any) {
+        console.error('Failed to fetch classes data:', error);
+        setError('Failed to load classes data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchClassesData();
+  }, []);
+
+  const handleRetry = () => {
+    setError(null);
+    setIsLoading(true);
+    // Re-trigger useEffect
+    setClassesData(null);
+  };
+
+  const handleAddSubjectToClass = () => {
+    const newSubject = {
+      id: Date.now().toString(),
+      name: 'New Assigned Subject',
+      teacher: 'Assign Teacher',
+    };
+    setClassSubjects([...classSubjects, newSubject]);
+  };
 
   return (
     <View style={styles.mainContainer}>
@@ -102,7 +139,7 @@ const PrincipalClassesScreen = ({ navigation }: any) => {
         </ScaleButton>
 
         <Text style={styles.headerTitle} numberOfLines={1}>
-          Welcome back, Anurag
+          Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}
         </Text>
 
         <View style={styles.headerRight}>
@@ -123,7 +160,7 @@ const PrincipalClassesScreen = ({ navigation }: any) => {
             onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
           >
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>A</Text>
+              <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -131,7 +168,31 @@ const PrincipalClassesScreen = ({ navigation }: any) => {
 
 
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.sectionPadding}>
+        
+        {/* Loading State */}
+        {isLoading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4F46E5" />
+            <Text style={styles.loadingText}>Loading classes data...</Text>
+          </View>
+        )}
+
+        {/* Error State */}
+        {error && !isLoading && (
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+            <Text style={styles.errorTitle}>Failed to Load Data</Text>
+            <Text style={styles.errorMessage}>{error}</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={handleRetry}>
+              <Ionicons name="refresh" size={16} color="#FFF" style={{ marginRight: 8 }} />
+              <Text style={styles.retryBtnText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Main Content */}
+        {!isLoading && !error && (
+          <View style={styles.sectionPadding}>
           {/* Title and Add Button */}
           <View style={styles.titleSection}>
             <View style={styles.titleRow}>
@@ -145,9 +206,21 @@ const PrincipalClassesScreen = ({ navigation }: any) => {
 
           {/* Stat Cards Row */}
           <View style={styles.statCardsRow}>
-            <StatCard color="#A855F7" iconBg="#F3E8FF" icon="school" value="5" label="Total Classes" />
-            <StatCard color="#3B82F6" iconBg="#EFF6FF" icon="school" value="5" label="Total Classes" />
-            <StatCard color="#10B981" iconBg="#ECFDF5" icon="school" value="5" label="Total Classes" />
+            <StatCard 
+              color="#3B82F6" 
+              value={classesData?.stats?.totalClasses || "5"} 
+              label="Total Classes" 
+            />
+            <StatCard 
+              color="#10B981" 
+              value={classesData?.stats?.activeClasses || "5"} 
+              label="Active Classes" 
+            />
+            <StatCard 
+              color="#EF4444" 
+              value={classesData?.stats?.totalStudents || "150"} 
+              label="Total Students" 
+            />
           </View>
 
           {/* Search Bar */}
@@ -167,11 +240,15 @@ const PrincipalClassesScreen = ({ navigation }: any) => {
 
           {/* Class Cards List */}
           <View style={styles.listContainer}>
-            {DUMMY_CLASSES.filter(c => c.className.toLowerCase().includes(searchQuery.toLowerCase())).map((item, index) => (
+            {(classesData?.classes || []).filter((c: any) => 
+              c.className?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              c.code?.toLowerCase().includes(searchQuery.toLowerCase())
+            ).map((item: any, index: number) => (
               <ClassCard key={item.id} item={item} delay={100 + index * 50} />
             ))}
           </View>
         </View>
+        )}
       </ScrollView>
 
       {/* Navigation Drawer */}
@@ -216,14 +293,31 @@ const PrincipalClassesScreen = ({ navigation }: any) => {
 
             <View style={styles.modalSectionHeader}>
               <Text style={styles.modalSectionTitle}>SUBJECTS & TEACHERS</Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={handleAddSubjectToClass}>
                 <Text style={styles.addSubjectText}>+Add Subject</Text>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.emptySubjectContainer}>
-              <Text style={styles.emptySubjectText}>No subjects added yet. Add subjects to define the academic structure.</Text>
-            </View>
+            {classSubjects.length === 0 ? (
+              <View style={styles.emptySubjectContainer}>
+                <Text style={styles.emptySubjectText}>No subjects added yet. Add subjects to define the academic structure.</Text>
+              </View>
+            ) : (
+              <View style={{ gap: 8, marginBottom: 24 }}>
+                {classSubjects.map((sub: any) => (
+                  <View key={sub.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB' }}>
+                    <Ionicons name="book-outline" size={16} color="#4F46E5" style={{ marginRight: 12 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: '#111827' }}>{sub.name}</Text>
+                      <Text style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>{sub.teacher}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setClassSubjects(classSubjects.filter((s: any) => s.id !== sub.id))} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                      <Ionicons name="close-circle" size={20} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
 
             <View style={styles.modalFooter}>
               <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setIsAddModalOpen(false)}>
@@ -240,11 +334,65 @@ const PrincipalClassesScreen = ({ navigation }: any) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
   container: { flex: 1 },
   scrollContent: { paddingBottom: 40 },
   sectionPadding: { paddingHorizontal: 16 },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6B7280',
+  },
+
+  errorContainer: {
+    marginHorizontal: 16,
+    marginTop: 20,
+    padding: 24,
+    borderRadius: 16,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    alignItems: 'center',
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#DC2626',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: '#7F1D1D',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4F46E5',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    shadowColor: '#4F46E5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  retryBtnText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 
   // Header 
   globalHeader: {
@@ -273,44 +421,44 @@ const styles = StyleSheet.create({
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
 
   // Title Section
-  titleSection: { marginTop: 24, marginBottom: 20 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  screenTitle: { fontSize: 22, fontWeight: '700', color: '#3B82F6', letterSpacing: -0.25 },
+  titleSection: { marginTop: 20, marginBottom: 16 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  screenTitle: { fontSize: 20, fontWeight: '700', color: '#3B82F6', letterSpacing: -0.25 },
   screenSubtitle: { color: '#6B7280', fontSize: 12 },
   addClassBtn: {
     backgroundColor: '#3B82F6',
     borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4
   },
-  addClassBtnText: { color: '#FFF', fontWeight: '600', fontSize: 13 },
+  addClassBtnText: { color: '#FFF', fontWeight: '600', fontSize: 12 },
 
   // Stat cards row
   statCardsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, gap: 10 },
   statCard: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    padding: 24,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 0,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
     shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
     elevation: 6,
   },
-  statIconBox: { width: 32, height: 32, borderRadius: 6, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
   statContent: { flex: 1, justifyContent: 'center' },
-  statLabel: { fontSize: 10, color: '#9CA3AF', fontWeight: '500', marginBottom: 2 },
-  statValue: { fontSize: 18, fontWeight: '800', color: '#111827' },
+  statLabel: { fontSize: 11, color: '#111827', fontWeight: '600', marginBottom: 4 },
+  statSubtext: { fontSize: 9, color: '#9CA3AF', marginBottom: 4 },
+  statValue: { fontSize: 22, fontWeight: '800', color: '#111827', marginTop: 4 },
 
   // Search bar
   searchBarRow: {
@@ -337,13 +485,15 @@ const styles = StyleSheet.create({
   classCard: {
     backgroundColor: '#FFF',
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    padding: 24,
+    borderWidth: 0,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4F46E5',
+    paddingVertical: 20,
+    paddingHorizontal: 18,
     shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
     elevation: 6
   },
   classCardHeaderRow: { flexDirection: 'row', alignItems: 'center' },
@@ -367,6 +517,9 @@ const styles = StyleSheet.create({
   classCardTeacherName: { fontSize: 12, color: '#111827', fontWeight: '600' },
 
   // Add Modal Styles
+});
+
+const modalStyles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(31, 41, 55, 0.8)', // Very dark gray, like screenshot
@@ -483,5 +636,7 @@ const styles = StyleSheet.create({
   },
 
 });
+
+const styles = { ...baseStyles, ...modalStyles };
 
 export default PrincipalClassesScreen;

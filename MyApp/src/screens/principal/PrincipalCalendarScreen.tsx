@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,33 +8,54 @@ import {
   Platform,
   StatusBar,
   Modal,
-  TextInput
+  TextInput,
+  ActivityIndicator
 } from 'react-native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../types/navigation';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
-const DUMMY_TERMS = [
-  { title: 'First Term', date: 'Aug 26 - Dec 20, 2024', days: '75 Days' },
-  { title: 'First Term', date: 'Aug 26 - Dec 20, 2024', days: '75 Days' },
-  { title: 'First Term', date: 'Aug 26 - Dec 20, 2024', days: '75 Days' },
-];
+type PrincipalCalendarNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PrincipalCalendar'>;
 
-const DUMMY_HOLIDAYS = [
-  { title: 'Winter Break', date: 'Dec 23, 2024 - Jan 3, 2025', count: '10' },
-  { title: 'Winter Break', date: 'Dec 23, 2024 - Jan 3, 2025', count: '10' },
-  { title: 'Winter Break', date: 'Dec 23, 2024 - Jan 3, 2025', count: '10' },
-];
+interface Props {
+  navigation: PrincipalCalendarNavigationProp;
+}
 
-const DUMMY_EXAMS = [
-  { term: 'First-Term', date: 'Apr 8 - 12, 2025', marks: '20', subjects: 'All Subjects', duration: '5 Days' },
-  { term: 'First-Term', date: 'Apr 8 - 12, 2025', marks: '20', subjects: 'All Subjects', duration: '5 Days' },
-  { term: 'First-Term', date: 'Apr 8 - 12, 2025', marks: '20', subjects: 'All Subjects', duration: '5 Days' },
-];
 
-const PrincipalCalendarScreen = ({ navigation }: any) => {
+
+const PrincipalCalendarScreen: React.FC<Props> = ({ navigation }) => {
+  const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [calendarData, setCalendarData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const fetchCalendarData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const currentDate = new Date();
+        const month = currentDate.getMonth() + 1;
+        const year = currentDate.getFullYear();
+        const res = await apiClient.get(`${ENDPOINTS.PRINCIPAL.CALENDAR}?month=${month}&year=${year}`);
+        const data = res.data.data || res.data;
+        setCalendarData(data);
+      } catch (err: any) {
+        console.error('Failed to fetch calendar data:', err);
+        setError('Failed to load calendar data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchCalendarData();
+  }, []);
   
   // Modal states
   const [isEventModalVisible, setEventModalVisible] = useState(false);
@@ -92,14 +113,14 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
         </ScaleButton>
 
         <Text style={styles.topHeaderTitle} numberOfLines={1}>
-          Welcome back, Anurag
+          Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}
         </Text>
 
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.iconBtnTransparent}><Ionicons name="notifications-outline" size={20} color="#111827" /></TouchableOpacity>
           <TouchableOpacity style={styles.iconBtnTransparent} onPress={() => navigation.navigate('AccountSettings')}><Ionicons name="settings-outline" size={20} color="#111827" /></TouchableOpacity>
           <TouchableOpacity style={styles.iconBtnTransparent}><Ionicons name="moon-outline" size={20} color="#111827" /></TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}><View style={styles.avatar}><Text style={styles.avatarText}>A</Text></View></TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}><View style={styles.avatar}><Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text></View></TouchableOpacity>
         </View>
       </View>
 
@@ -121,17 +142,23 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
           <View style={styles.academicHeader}>
             <Text style={styles.academicHeaderText}>Academic Overview</Text>
           </View>
-          {DUMMY_TERMS.map((item, index) => (
-            <View key={index} style={[styles.termRow, index === DUMMY_TERMS.length - 1 && { borderBottomWidth: 0 }]}>
-              <View>
-                <Text style={styles.termTitle}>{item.title}</Text>
-                <Text style={styles.termDate}>{item.date}</Text>
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#4F46E5" style={{ marginVertical: 20 }} />
+          ) : calendarData?.terms ? (
+            calendarData.terms.map((item: any, index: number) => (
+              <View key={index} style={[styles.termRow, index === calendarData.terms.length - 1 && { borderBottomWidth: 0 }]}>
+                <View>
+                  <Text style={styles.termTitle}>{item.title}</Text>
+                  <Text style={styles.termDate}>{item.date}</Text>
+                </View>
+                <View style={styles.daysBadge}>
+                  <Text style={styles.daysBadgeText}>{item.days}</Text>
+                </View>
               </View>
-              <View style={styles.daysBadge}>
-                <Text style={styles.daysBadgeText}>{item.days}</Text>
-              </View>
-            </View>
-          ))}
+            ))
+          ) : (
+            <Text style={styles.emptyText}>No academic terms found</Text>
+          )}
         </Animated.View>
 
         {/* 2. Upcoming Events Section */}
@@ -167,18 +194,24 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
         </View>
 
         <Animated.View entering={FadeInUp.duration(500)}>
-          {DUMMY_HOLIDAYS.map((item, index) => (
-            <View key={index} style={styles.holidayCard}>
-              <View>
-                <Text style={styles.holidayTitle}>{item.title}</Text>
-                <Text style={styles.holidayDate}>{item.date}</Text>
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#4F46E5" style={{ marginVertical: 20 }} />
+          ) : calendarData?.holidays ? (
+            calendarData.holidays.map((item: any, index: number) => (
+              <View key={index} style={styles.holidayCard}>
+                <View>
+                  <Text style={styles.holidayTitle}>{item.title}</Text>
+                  <Text style={styles.holidayDate}>{item.date}</Text>
+                </View>
+                <View style={styles.holidayBox}>
+                  <Text style={styles.holidayBoxNum}>{item.count}</Text>
+                  <Text style={styles.holidayBoxText}>Days</Text>
+                </View>
               </View>
-              <View style={styles.holidayBox}>
-                <Text style={styles.holidayBoxNum}>{item.count}</Text>
-                <Text style={styles.holidayBoxText}>Days</Text>
-              </View>
-            </View>
-          ))}
+            ))
+          ) : (
+            <Text style={styles.emptyText}>No holidays found</Text>
+          )}
         </Animated.View>
 
         {/* 4. Exam Schedule Section */}
@@ -193,33 +226,39 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
         </View>
 
         <Animated.View entering={FadeInUp.duration(600)}>
-          {DUMMY_EXAMS.map((item, index) => (
-            <View key={index} style={styles.card}>
-              <View style={styles.examTopRow}>
-                <View style={styles.examPill}>
-                  <Text style={styles.examPillText}>{item.term}</Text>
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#4F46E5" style={{ marginVertical: 20 }} />
+          ) : calendarData?.exams ? (
+            calendarData.exams.map((item: any, index: number) => (
+              <View key={index} style={styles.card}>
+                <View style={styles.examTopRow}>
+                  <View style={styles.examPill}>
+                    <Text style={styles.examPillText}>{item.term}</Text>
+                  </View>
+                  <Text style={styles.examDateRight}>{item.date}</Text>
                 </View>
-                <Text style={styles.examDateRight}>{item.date}</Text>
+                
+                <View style={styles.examStatsRow}>
+                  <View style={[styles.examStatCol, { flex: 0.8 }]}>
+                    <Text style={styles.examStatLabel}>MARKS</Text>
+                    <Text style={styles.examStatValue}>{item.marks}</Text>
+                  </View>
+                  <View style={styles.verticalDivider} />
+                  <View style={[styles.examStatCol, { flex: 1.2 }]}>
+                    <Text style={styles.examStatLabel}>Subjects</Text>
+                    <Text style={styles.examStatValue}>{item.subjects}</Text>
+                  </View>
+                  <View style={styles.verticalDivider} />
+                  <View style={[styles.examStatCol, { flex: 1 }]}>
+                    <Text style={styles.examStatLabel}>Duration</Text>
+                    <Text style={styles.examStatValue}>{item.duration}</Text>
+                  </View>
+                </View>
               </View>
-              
-              <View style={styles.examStatsRow}>
-                <View style={[styles.examStatCol, { flex: 0.8 }]}>
-                  <Text style={styles.examStatLabel}>MARKS</Text>
-                  <Text style={styles.examStatValue}>{item.marks}</Text>
-                </View>
-                <View style={styles.verticalDivider} />
-                <View style={[styles.examStatCol, { flex: 1.2 }]}>
-                  <Text style={styles.examStatLabel}>Subjects</Text>
-                  <Text style={styles.examStatValue}>{item.subjects}</Text>
-                </View>
-                <View style={styles.verticalDivider} />
-                <View style={[styles.examStatCol, { flex: 1 }]}>
-                  <Text style={styles.examStatLabel}>Duration</Text>
-                  <Text style={styles.examStatValue}>{item.duration}</Text>
-                </View>
-              </View>
-            </View>
-          ))}
+            ))
+          ) : (
+            <Text style={styles.emptyText}>No exams scheduled</Text>
+          )}
         </Animated.View>
 
       </ScrollView>
@@ -942,6 +981,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#3B82F6',
     fontWeight: '600',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#999',
   },
 
 });

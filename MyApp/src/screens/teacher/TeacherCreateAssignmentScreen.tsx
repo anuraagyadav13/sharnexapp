@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,17 +7,89 @@ import {
   ScrollView,
   TouchableOpacity,
   Platform,
-  TextInput
+  TextInput,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherCreateAssignment'>;
 
 const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
+  const { authState } = useAuth();
   const [selectedType, setSelectedType] = useState('Homework');
+  const [title, setTitle] = useState('');
+  const [classId, setClassId] = useState('');
+  const [course, setCourse] = useState('');
+  const [instruction, setInstruction] = useState('');
+  const [learningObjectives, setLearningObjectives] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [maxMarks, setMaxMarks] = useState('100');
+  const [classes, setClasses] = useState<any[]>([]);
+  const [isPublishing, setIsPublishing] = useState(false);
+
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const teacherId = authState.user?.id;
+        if (!teacherId) return;
+        const res = await apiClient.get(ENDPOINTS.TEACHER.CLASSES(teacherId));
+        // More robust parsing for proxied response
+        const data = res.data || res;
+        const fetchedClasses = Array.isArray(data) ? data : (data.classes || []);
+        
+        setClasses(fetchedClasses);
+        if (fetchedClasses.length > 0) {
+          setClassId(fetchedClasses[0].id);
+          setCourse(fetchedClasses[0].subject || '');
+        }
+      } catch (e) {
+        console.error('Failed to fetch classes:', e);
+      }
+    };
+    fetchClasses();
+  }, [authState.user?.id]);
+
+  const handlePublish = async () => {
+    if (!title || !classId) {
+      Alert.alert('Error', 'Please enter a title and select a class.');
+      return;
+    }
+
+    try {
+      const teacherId = authState.user?.id;
+      if (!teacherId) {
+        Alert.alert('Error', 'Unable to identify teacher account. Please sign in again.');
+        return;
+      }
+      setIsPublishing(true);
+      await apiClient.post(ENDPOINTS.TEACHER.CREATE_ASSIGNMENT(teacherId), {
+        title,
+        description: instruction,
+        dueDate: dueDate || new Date(Date.now() + 86400000 * 7).toISOString(),
+        classId,
+        subject: course,
+        maxMarks: parseInt(maxMarks) || 100,
+        type: selectedType.toLowerCase(),
+        teacherId,
+        institutionId: authState.user?.institutionId
+      });
+      Alert.alert('Success', 'Assignment published successfully!');
+      navigation.goBack();
+    } catch (e: any) {
+      console.error('Failed to publish assignment:', e);
+      const errorMessage = e.response?.normalized?.message || e.response?.data?.message || e.message || 'Failed to publish assignment. Please try again.';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsPublishing(false);
+    }
+  };
 
   return (
     <View style={styles.mainContainer}>
@@ -26,13 +98,13 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
       {/* Global Header */}
       <View style={styles.globalHeader}>
         <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={22} color="#1F2937" />
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
           </View>
         </View>
       </View>
@@ -60,21 +132,48 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
 
            {/* Assignment Title */}
            <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Assignment Tittle</Text>
+              <Text style={styles.fieldLabel}>Assignment Title</Text>
               <TextInput 
                  style={styles.textInput}
-                 placeholder="Calculus Derivatives"
+                 placeholder="e.g. Calculus Derivatives"
                  placeholderTextColor="#9CA3AF"
+                 value={title}
+                 onChangeText={setTitle}
               />
+           </View>
+
+           {/* Class Select (Simplified) */}
+           <View style={styles.fieldContainer}>
+              <Text style={styles.fieldLabel}>Target Class</Text>
+              <View style={styles.radioGroup}>
+                 {classes.map((c) => (
+                    <TouchableOpacity 
+                      key={c.id}
+                      style={[styles.radioItem, classId === c.id && styles.radioItemSelected]} 
+                      onPress={() => {
+                        setClassId(c.id);
+                        setCourse(c.subject || '');
+                      }}
+                    >
+                       <Ionicons 
+                          name={classId === c.id ? 'radio-button-on' : 'radio-button-off'} 
+                          size={18} color={classId === c.id ? '#5266EB' : '#D1D5DB'} 
+                       />
+                       <Text style={[styles.radioTitle, { marginLeft: 8 }]}>{c.name} - {c.subject}</Text>
+                    </TouchableOpacity>
+                 ))}
+              </View>
            </View>
 
            {/* Course */}
            <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Course</Text>
+              <Text style={styles.fieldLabel}>Course / Subject</Text>
               <TextInput 
                  style={styles.textInput}
-                 placeholder="Mathematics"
+                 placeholder="e.g. Mathematics"
                  placeholderTextColor="#9CA3AF"
+                 value={course}
+                 onChangeText={setCourse}
               />
            </View>
 
@@ -82,59 +181,22 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
            <View style={styles.fieldContainer}>
               <Text style={styles.fieldLabel}>Assignment Type</Text>
               <View style={styles.radioGroup}>
-                 {/* Quiz */}
-                 <TouchableOpacity 
-                    style={[styles.radioItem, selectedType === 'Quiz' && styles.radioItemSelected]} 
-                    activeOpacity={0.8}
-                    onPress={() => setSelectedType('Quiz')}
-                 >
-                    <Ionicons 
-                       name={selectedType === 'Quiz' ? 'radio-button-on' : 'radio-button-off'} 
-                       size={20} 
-                       color={selectedType === 'Quiz' ? '#5266EB' : '#D1D5DB'} 
-                       style={styles.radioIcon} 
-                    />
-                    <View>
-                       <Text style={styles.radioTitle}>Quiz</Text>
-                       <Text style={styles.radioSubtitle}>Multiple Choice, Short Answer Question</Text>
-                    </View>
-                 </TouchableOpacity>
-
-                 {/* Homework */}
-                 <TouchableOpacity 
-                    style={[styles.radioItem, selectedType === 'Homework' && styles.radioItemSelected]} 
-                    activeOpacity={0.8}
-                    onPress={() => setSelectedType('Homework')}
-                 >
-                    <Ionicons 
-                       name={selectedType === 'Homework' ? 'radio-button-on' : 'radio-button-off'} 
-                       size={20} 
-                       color={selectedType === 'Homework' ? '#5266EB' : '#D1D5DB'} 
-                       style={styles.radioIcon} 
-                    />
-                    <View>
-                       <Text style={styles.radioTitle}>Homework</Text>
-                       <Text style={styles.radioSubtitle}>Problem set, Worksheet, Excercise</Text>
-                    </View>
-                 </TouchableOpacity>
-
-                 {/* Projects */}
-                 <TouchableOpacity 
-                    style={[styles.radioItem, selectedType === 'Projects' && styles.radioItemSelected]} 
-                    activeOpacity={0.8}
-                    onPress={() => setSelectedType('Projects')}
-                 >
-                    <Ionicons 
-                       name={selectedType === 'Projects' ? 'radio-button-on' : 'radio-button-off'} 
-                       size={20} 
-                       color={selectedType === 'Projects' ? '#5266EB' : '#D1D5DB'} 
-                       style={styles.radioIcon} 
-                    />
-                    <View>
-                       <Text style={styles.radioTitle}>Projects</Text>
-                       <Text style={styles.radioSubtitle}>Research Papers, Presentation, Labs</Text>
-                    </View>
-                 </TouchableOpacity>
+                 {['Quiz', 'Homework', 'Projects'].map(type => (
+                   <TouchableOpacity 
+                      key={type}
+                      style={[styles.radioItem, selectedType === type && styles.radioItemSelected]} 
+                      activeOpacity={0.8}
+                      onPress={() => setSelectedType(type)}
+                   >
+                      <Ionicons 
+                         name={selectedType === type ? 'radio-button-on' : 'radio-button-off'} 
+                         size={20} 
+                         color={selectedType === type ? '#5266EB' : '#D1D5DB'} 
+                         style={styles.radioIcon} 
+                      />
+                      <Text style={styles.radioTitle}>{type}</Text>
+                   </TouchableOpacity>
+                 ))}
               </View>
            </View>
 
@@ -143,36 +205,32 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={styles.fieldLabel}>Instruction</Text>
               <TextInput 
                  style={[styles.textInput, styles.textArea]}
-                 placeholder="- Please answer all questions to the best of your ability&#10;- Show your work for partial credit&#10;- Submit before the deadline"
+                 placeholder="Enter assignment instructions..."
                  placeholderTextColor="#9CA3AF"
                  multiline
                  numberOfLines={4}
+                 value={instruction}
+                 onChangeText={setInstruction}
               />
            </View>
 
-           {/* Learning Objectives */}
+           {/* Due Date */}
            <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Learning Objectives</Text>
-              <TextInput 
-                 style={[styles.textInput, styles.textArea]}
-                 placeholder="- Understand derivative concepts&#10;- Apply differentiation rules&#10;- Solve real-world problems"
-                 placeholderTextColor="#9CA3AF"
-                 multiline
-                 numberOfLines={4}
-              />
-           </View>
-
-           {/* Due Date & Time */}
-           <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Due Date & Time</Text>
-              <View style={styles.inputWithIcon}>
+              <Text style={styles.fieldLabel}>Due Date (YYYY-MM-DD)</Text>
+              <TouchableOpacity 
+                style={styles.inputWithIcon} 
+                activeOpacity={0.7} 
+                onPress={() => Alert.alert('Date Picker', 'Date picker implementation coming soon. For now, please enter the date in YYYY-MM-DD format.')}
+              >
                  <TextInput 
                     style={[styles.textInput, { flex: 1, borderWidth: 0, paddingHorizontal: 0 }]}
-                    placeholder="15 - 10 - 2025"
+                    placeholder="2025-10-15"
                     placeholderTextColor="#9CA3AF"
+                    value={dueDate}
+                    onChangeText={setDueDate}
                  />
                  <Ionicons name="calendar-outline" size={18} color="#111827" />
-              </View>
+              </TouchableOpacity>
            </View>
 
            {/* Total Points */}
@@ -183,21 +241,9 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
                  placeholder="100"
                  placeholderTextColor="#9CA3AF"
                  keyboardType="numeric"
+                 value={maxMarks}
+                 onChangeText={setMaxMarks}
               />
-           </View>
-
-           {/* Attachments */}
-           <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Attachments</Text>
-              <View style={styles.dashedUploadBox}>
-                 <Ionicons name="cloud-upload" size={32} color="#5266EB" style={{marginBottom: 8}} />
-                 <Text style={styles.dragDropTitle}>Drag and Drop your files here</Text>
-                 <Text style={styles.dragDropSubtitle}>or click the button below to browse files</Text>
-                 <TouchableOpacity style={styles.browseButton} activeOpacity={0.8}>
-                    <Ionicons name="folder-open-outline" size={14} color="#FFFFFF" style={{marginRight: 6}} />
-                    <Text style={styles.browseButtonText}>Browse files</Text>
-                 </TouchableOpacity>
-              </View>
            </View>
 
            {/* Action Buttons Row */}
@@ -206,8 +252,17 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
                  <Text style={styles.actionBtnCancelText}>Cancel</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.actionBtnPublish} activeOpacity={0.8}>
-                 <Text style={styles.actionBtnPublishText}>Publish Assignment</Text>
+              <TouchableOpacity 
+                style={[styles.actionBtnPublish, isPublishing && { opacity: 0.7 }]} 
+                activeOpacity={0.8}
+                onPress={handlePublish}
+                disabled={isPublishing}
+              >
+                 {isPublishing ? (
+                   <ActivityIndicator color="#FFF" size="small" />
+                 ) : (
+                   <Text style={styles.actionBtnPublishText}>Publish Assignment</Text>
+                 )}
               </TouchableOpacity>
            </View>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,40 +8,136 @@ import {
   Platform,
   StatusBar,
   Modal,
-  TextInput
+  TextInput,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
-const ANNOUNCEMENTS = [
-  {
-    id: 1,
-    title: 'School Holiday Notice',
-    status: 'PUBLISHED',
-    date: 'Jan 21, 2026',
-    author: 'Anurag',
-    role: 'Principal',
-    content: 'School will remain closed on December 25th for Christmas. All staff and students are requested to note this change.',
-    tags: [
-      { id: '1', label: 'Update', type: 'blue' },
-      { id: '2', label: 'medium priority', type: 'yellow' },
-      { id: '3', label: 'all', type: 'lightBlue' }
-    ]
-  }
-];
+// Announcements will be fetched from API
 
 const PrincipalAnnouncementsScreen = ({ navigation }: any) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const { authState } = useAuth();
   const [activeTab, setActiveTab] = useState('All');
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+
+  // Form input states
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('general');
+  const [priority, setPriority] = useState('medium');
+  const [status, setStatus] = useState('published');
+  const [targetAudience, setTargetAudience] = useState('all');
+  const [expiryDate, setExpiryDate] = useState('');
 
   // Date Picker States
   const [datePickerTarget, setDatePickerTarget] = useState<boolean>(false);
-  const [expiryDate, setExpiryDate] = useState('');
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // Fetch Announcements
+  useEffect(() => {
+    const fetchAnnouncements = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const res = await apiClient.get(ENDPOINTS.PRINCIPAL.ANNOUNCEMENTS);
+        const data = res.data.data || res.data;
+        setAnnouncements(data.announcements || []);
+      } catch (error: any) {
+        console.error('Failed to fetch announcements:', error);
+        setError('Failed to load announcements');
+        setAnnouncements([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchAnnouncements();
+  }, []);
+
+  // Handle Publish Announcement
+  const handlePublishAnnouncement = async () => {
+    if (!title.trim() || !content.trim()) {
+      Alert.alert('Error', 'Please fill in title and content');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const announcementData = {
+        title,
+        content,
+        category: selectedCategory,
+        priority,
+        status,
+        targetAudience,
+        expiryDate: expiryDate || null
+      };
+
+      const res = await apiClient.post(ENDPOINTS.PRINCIPAL.CREATE_ANNOUNCEMENT, announcementData);
+      
+      Alert.alert('Success', 'Announcement published successfully');
+      setIsNewModalOpen(false);
+      
+      // Reset form
+      setTitle('');
+      setContent('');
+      setSelectedCategory('general');
+      setPriority('medium');
+      setStatus('published');
+      setTargetAudience('all');
+      setExpiryDate('');
+      
+      // Refresh list
+      const refreshRes = await apiClient.get(ENDPOINTS.PRINCIPAL.ANNOUNCEMENTS);
+      const data = refreshRes.data.data || refreshRes.data;
+      setAnnouncements(data.announcements || []);
+    } catch (error: any) {
+      console.error('Failed to publish announcement:', error);
+      Alert.alert('Error', error.response?.data?.message || 'Failed to publish announcement');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteAnnouncement = async (announcementId: string) => {
+    Alert.alert('Confirm', 'Are you sure you want to delete this announcement?', [
+      { text: 'Cancel', onPress: () => {} },
+      {
+        text: 'Delete',
+        onPress: async () => {
+          try {
+            await apiClient.delete(`${ENDPOINTS.PRINCIPAL.ANNOUNCEMENTS}/${announcementId}`);
+            Alert.alert('Success', 'Announcement deleted');
+            // Refresh list
+            const refreshRes = await apiClient.get(ENDPOINTS.PRINCIPAL.ANNOUNCEMENTS);
+            const data = refreshRes.data.data || refreshRes.data;
+            setAnnouncements(data.announcements || []);
+          } catch (error: any) {
+            Alert.alert('Error', 'Failed to delete announcement');
+          }
+        }
+      }
+    ]);
+  };
+
+  // Filter announcements by status
+  const getFilteredAnnouncements = () => {
+    if (activeTab === 'All') return announcements;
+    if (activeTab === 'Published') return announcements.filter(a => a.status === 'PUBLISHED');
+    if (activeTab === 'Drafts') return announcements.filter(a => a.status === 'DRAFT');
+    return announcements;
+  };
 
   const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
   const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
@@ -96,7 +192,7 @@ const PrincipalAnnouncementsScreen = ({ navigation }: any) => {
         </ScaleButton>
 
         <Text style={styles.topHeaderTitle} numberOfLines={1}>
-          Welcome back, Anurag
+          Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}
         </Text>
 
         <View style={styles.headerRight}>
@@ -107,7 +203,7 @@ const PrincipalAnnouncementsScreen = ({ navigation }: any) => {
             <Ionicons name="settings-outline" size={20} color="#111827" />
           </TouchableOpacity>
           <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}>
-            <View style={styles.avatar}><Text style={styles.avatarText}>A</Text></View>
+            <View style={styles.avatar}><Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text></View>
           </TouchableOpacity>
         </View>
       </View>
@@ -141,12 +237,19 @@ const PrincipalAnnouncementsScreen = ({ navigation }: any) => {
 
         {/* --- Announcement Card / Empty State --- */}
         <Animated.View entering={FadeInUp.duration(400).delay(200)} style={styles.cardsContainer}>
-          {activeTab === 'Drafts' ? (
+          {isLoading ? (
+            <ActivityIndicator size="large" color="#8B5CF6" style={{ marginTop: 40 }} />
+          ) : error ? (
+            <View style={styles.emptyStateContainer}>
+              <Ionicons name="alert-circle-outline" size={48} color="#EF4444" style={{ marginBottom: 12 }} />
+              <Text style={styles.emptyStateText}>{error}</Text>
+            </View>
+          ) : getFilteredAnnouncements().length === 0 ? (
             <View style={styles.emptyStateContainer}>
               <Text style={styles.emptyStateText}>No announcements yet. Create your first announcement!</Text>
             </View>
           ) : (
-            ANNOUNCEMENTS.map(item => (
+            getFilteredAnnouncements().map(item => (
               <View key={item.id} style={styles.announcementCard}>
                  
                  {/* Header Row */}
@@ -173,7 +276,7 @@ const PrincipalAnnouncementsScreen = ({ navigation }: any) => {
 
                  {/* Tags */}
                  <View style={styles.tagsContainer}>
-                   {item.tags.map(tag => renderTag(tag))}
+                   {(item.tags as string[]).map((tag: string) => renderTag(tag))}
                  </View>
 
                  <View style={styles.cardDivider} />
@@ -185,7 +288,7 @@ const PrincipalAnnouncementsScreen = ({ navigation }: any) => {
                      <Text style={styles.actionBtnOutlineText}>Edit Announcement</Text>
                    </TouchableOpacity>
 
-                   <TouchableOpacity style={styles.actionBtnSolidDanger}>
+                   <TouchableOpacity style={styles.actionBtnSolidDanger} onPress={() => handleDeleteAnnouncement(item.id)}>
                      <Ionicons name="trash" size={14} color="#FFF" style={{marginRight: 6}} />
                      <Text style={styles.actionBtnSolidDangerText}>Delete</Text>
                    </TouchableOpacity>
@@ -214,12 +317,26 @@ const PrincipalAnnouncementsScreen = ({ navigation }: any) => {
               
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Title</Text>
-                <TextInput style={styles.modalTextInput} placeholder="Enter Announcement Title" placeholderTextColor="#94A3B8" />
+                <TextInput 
+                  style={styles.modalTextInput} 
+                  placeholder="Enter Announcement Title" 
+                  placeholderTextColor="#94A3B8"
+                  value={title}
+                  onChangeText={setTitle}
+                />
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Content</Text>
-                <TextInput style={[styles.modalTextInput, styles.modalTextArea]} multiline placeholder="Enter Announcement Details" placeholderTextColor="#94A3B8" textAlignVertical="top" />
+                <TextInput 
+                  style={[styles.modalTextInput, styles.modalTextArea]} 
+                  multiline 
+                  placeholder="Enter Announcement Details" 
+                  placeholderTextColor="#94A3B8" 
+                  textAlignVertical="top"
+                  value={content}
+                  onChangeText={setContent}
+                />
               </View>
 
               <View style={styles.inputGroup}>
@@ -244,14 +361,14 @@ const PrincipalAnnouncementsScreen = ({ navigation }: any) => {
                 <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
                   <Text style={styles.inputLabel}>Priority</Text>
                   <TouchableOpacity style={styles.dropdownBox}>
-                    <Text style={styles.dropdownText}>Medium</Text>
+                    <Text style={styles.dropdownText}>{priority}</Text>
                     <Ionicons name="chevron-down" size={16} color="#1E293B" />
                   </TouchableOpacity>
                 </View>
                 <View style={[styles.inputGroup, { flex: 1 }]}>
                   <Text style={styles.inputLabel}>Status</Text>
                   <TouchableOpacity style={styles.dropdownBox}>
-                    <Text style={styles.dropdownText}>Published</Text>
+                    <Text style={styles.dropdownText}>{status}</Text>
                     <Ionicons name="chevron-down" size={16} color="#1E293B" />
                   </TouchableOpacity>
                 </View>
@@ -261,7 +378,7 @@ const PrincipalAnnouncementsScreen = ({ navigation }: any) => {
                 <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
                   <Text style={styles.inputLabel}>Target Audience</Text>
                   <TouchableOpacity style={styles.dropdownBox}>
-                    <Text style={styles.dropdownText}>All (Staff, Students)</Text>
+                    <Text style={styles.dropdownText}>{targetAudience}</Text>
                     <Ionicons name="chevron-down" size={16} color="#1E293B" />
                   </TouchableOpacity>
                 </View>
@@ -280,8 +397,16 @@ const PrincipalAnnouncementsScreen = ({ navigation }: any) => {
                 <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsNewModalOpen(false)}>
                   <Text style={styles.cancelBtnText}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.publishBtn} onPress={() => setIsNewModalOpen(false)}>
-                  <Text style={styles.publishBtnText}>Publish Announcement</Text>
+                <TouchableOpacity 
+                  style={[styles.publishBtn, isSubmitting && {opacity: 0.7}]} 
+                  disabled={isSubmitting}
+                  onPress={handlePublishAnnouncement}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <Text style={styles.publishBtnText}>Publish Announcement</Text>
+                  )}
                 </TouchableOpacity>
               </View>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,16 @@ import {
   TouchableOpacity,
   TextInput,
   Platform,
-  StatusBar
+  StatusBar,
+  ActivityIndicator
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 const StatCard = React.memo(({ icon, value, label }: any) => (
   <View style={styles.statCard}>
@@ -28,11 +32,86 @@ const StatCard = React.memo(({ icon, value, label }: any) => (
   </View>
 ));
 
-const DUMMY_CLASSES = ['Class 1(0)', 'Class 1(0)', 'Class 1(0)', 'Class 1(0)', 'Class 1(0)', 'Class 1(0)'];
 
 const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
+  const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [classes, setClasses] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
   const [activeClassIndex, setActiveClassIndex] = useState(0);
+  const [isLoadingClasses, setIsLoadingClasses] = useState(true);
+  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [stats, setStats] = useState({ totalStudents: 0, avgScore: 0, attendanceRate: 0, activeClasses: 0 });
+
+  // Fetch all classes on mount
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        setIsLoadingClasses(true);
+        const res = await apiClient.get(ENDPOINTS.PRINCIPAL.CLASSES);
+        
+        if (!res.data.success) {
+          throw new Error(res.data.message || 'Failed to fetch classes');
+        }
+        
+        const classList = res.data.data || [];
+        setClasses(classList);
+        
+        // Compute stats
+        setStats({
+          totalStudents: classList.reduce((sum: number, c: any) => sum + (c.totalStudents || 0), 0),
+          avgScore: 88.7, // This would come from a dedicated API if available
+          attendanceRate: 96,
+          activeClasses: classList.length
+        });
+        
+        // Fetch students for first class if available
+        if (classList.length > 0) {
+          await fetchStudentsForClass(classList[0].id || classList[0].name);
+        }
+      } catch (error) {
+        console.error('Failed to fetch classes:', error);
+      } finally {
+        setIsLoadingClasses(false);
+      }
+    };
+    fetchClasses();
+  }, []);
+
+  // Fetch students when active class changes
+  const fetchStudentsForClass = async (classIdentifier: string) => {
+    try {
+      setIsLoadingStudents(true);
+      const res = await apiClient.get(ENDPOINTS.PRINCIPAL.STUDENTS, {
+        params: { class: classIdentifier }
+      });
+      
+      if (!res.data.success) {
+        throw new Error(res.data.message || 'Failed to fetch students');
+      }
+      
+      setStudents(res.data.data || []);
+    } catch (error) {
+      console.error('Failed to fetch students:', error);
+    } finally {
+      setIsLoadingStudents(false);
+    }
+  };
+
+  const handleClassChange = (index: number) => {
+    setActiveClassIndex(index);
+    if (classes.length > index) {
+      fetchStudentsForClass(classes[index].id || classes[index].name);
+    }
+  };
+
+  const filteredStudents = students.filter(s =>
+    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.rollNo?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const currentClass = classes.length > activeClassIndex ? classes[activeClassIndex] : null;
 
   return (
     <View style={styles.mainContainer}>
@@ -51,14 +130,14 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
         </ScaleButton>
 
         <Text style={styles.topHeaderTitle} numberOfLines={1}>
-          Welcome back, Anurag
+          Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}
         </Text>
 
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.iconBtnTransparent}><Ionicons name="notifications-outline" size={20} color="#111827" /></TouchableOpacity>
           <TouchableOpacity style={styles.iconBtnTransparent} onPress={() => navigation.navigate('AccountSettings')}><Ionicons name="settings-outline" size={20} color="#111827" /></TouchableOpacity>
           <TouchableOpacity style={styles.iconBtnTransparent}><Ionicons name="moon-outline" size={20} color="#111827" /></TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}><View style={styles.avatar}><Text style={styles.avatarText}>A</Text></View></TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}><View style={styles.avatar}><Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text></View></TouchableOpacity>
         </View>
       </View>
 
@@ -74,42 +153,48 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
           {/* Stat Cards 2x2 Grid */}
           <View style={styles.statCardsGrid}>
             <View style={styles.statCardRow}>
-              <StatCard icon="school-outline" value="3" label="Total Students" />
-              <StatCard icon="school-outline" value="4" label="Average Score" />
+              <StatCard icon="school-outline" value={stats.totalStudents.toString()} label="Total Students" />
+              <StatCard icon="school-outline" value={stats.avgScore.toString()} label="Average Score" />
             </View>
             <View style={styles.statCardRow}>
-              <StatCard icon="school-outline" value="4" label="Attendance Rate" />
-              <StatCard icon="school-outline" value="4" label="Active Classes" />
+              <StatCard icon="school-outline" value={`${stats.attendanceRate}%`} label="Attendance Rate" />
+              <StatCard icon="school-outline" value={stats.activeClasses.toString()} label="Active Classes" />
             </View>
           </View>
 
           {/* Class Tabs */}
           <View style={styles.classTabsContainer}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {DUMMY_CLASSES.map((cls, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[styles.classTabBtn, activeClassIndex === index && styles.classTabBtnActive]}
-                  onPress={() => setActiveClassIndex(index)}
-                >
-                  <Text style={[styles.classTabBtnText, activeClassIndex === index && styles.classTabBtnTextActive]}>
-                    {activeClassIndex === index ? 'Class 1(0)' : cls}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {isLoadingClasses ? (
+                <ActivityIndicator size="small" color="#4F46E5" style={{ marginTop: 8 }} />
+              ) : classes.length === 0 ? (
+                <Text style={styles.emptyText}>No classes found</Text>
+              ) : (
+                classes.map((cls, index) => (
+                  <TouchableOpacity
+                    key={cls.id || index}
+                    style={[styles.classTabBtn, activeClassIndex === index && styles.classTabBtnActive]}
+                    onPress={() => handleClassChange(index)}
+                  >
+                    <Text style={[styles.classTabBtnText, activeClassIndex === index && styles.classTabBtnTextActive]}>
+                      {cls.name} ({cls.totalStudents || 0})
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
             </ScrollView>
           </View>
 
           {/* Purple Hero Card */}
           <Animated.View entering={FadeInUp.duration(300)} style={styles.heroCard}>
-            <Text style={styles.heroTitle}>Class 1</Text>
+            <Text style={styles.heroTitle}>{currentClass?.name || 'Select a Class'}</Text>
             <View style={styles.heroTeacherRow}>
               <Ionicons name="people" size={16} color="#FFF" style={{ marginRight: 6 }} />
-              <Text style={styles.heroTeacherText}>Class Teacher : Sarah Wilson</Text>
+              <Text style={styles.heroTeacherText}>Class Teacher : {currentClass?.classTeacher || 'N/A'}</Text>
             </View>
             <View style={styles.heroStatsRow}>
               <View style={styles.heroStatItem}>
-                <Text style={styles.heroStatValue}>48</Text>
+                <Text style={styles.heroStatValue}>{currentClass?.totalStudents || 0}</Text>
                 <Text style={styles.heroStatLabel}>Students</Text>
               </View>
               <View style={styles.heroStatItem}>
@@ -121,7 +206,7 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
                 <Text style={styles.heroStatLabel}>Attendance</Text>
               </View>
               <View style={styles.heroStatItem}>
-                <Text style={styles.heroStatValue}>Alex</Text>
+                <Text style={styles.heroStatValue}>--</Text>
                 <Text style={styles.heroStatLabel}>Top performer</Text>
               </View>
             </View>
@@ -132,8 +217,10 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
             <Ionicons name="search" size={16} color="#6B7280" style={{ marginLeft: 12, marginRight: 8 }} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search Student in class 1"
+              placeholder={`Search Student in ${currentClass?.name || 'class'}`}
               placeholderTextColor="#9CA3AF"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
             />
           </View>
 
@@ -163,7 +250,24 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
               <Text style={[styles.tableHeaderText, { flex: 1, textAlign: 'right' }]}>Actions</Text>
             </View>
             <View style={styles.tableBodyEmpty}>
-              {/* Empty state for now since image shows empty area below header */}
+              {isLoadingStudents ? (
+                <ActivityIndicator size="large" color="#4F46E5" style={{ marginVertical: 40 }} />
+              ) : filteredStudents.length === 0 ? (
+                <Text style={styles.emptyText}>No students found in this class</Text>
+              ) : (
+                filteredStudents.map((student: any) => (
+                  <View key={student.id} style={styles.tableRow}>
+                    <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={1}>{student.name}</Text>
+                    <Text style={[styles.tableCell, { flex: 1.5 }]} numberOfLines={1}>{student.rollNo || '-'}</Text>
+                    <Text style={[styles.tableCell, { flex: 1.5 }]} numberOfLines={1}>{student.cgpa ? student.cgpa.toFixed(1) : '-'}</Text>
+                    <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={1}>{student.attendanceRate ? `${student.attendanceRate}%` : '-'}</Text>
+                    <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={1}>{student.performance || 'Good'}</Text>
+                    <TouchableOpacity style={{ flex: 1, alignItems: 'flex-end', paddingRight: 12 }}>
+                      <Ionicons name="ellipsis-vertical" size={16} color="#4F46E5" />
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
             </View>
           </View>
 
@@ -332,6 +436,26 @@ const styles = StyleSheet.create({
   tableHeaderText: { color: '#9CA3AF', fontSize: 10, fontWeight: '600' },
   tableBodyEmpty: {
     flex: 1,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    alignItems: 'center',
+  },
+  tableCell: {
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#9CA3AF',
+    fontSize: 13,
+    marginTop: 30,
+    fontWeight: '500',
   },
 
 });

@@ -14,6 +14,10 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
+import { ActivityIndicator } from 'react-native';
 
 type AttendanceScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Attendance'>;
 
@@ -22,17 +26,119 @@ interface Props {
 }
 
 const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
+  const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [attendanceData, setAttendanceData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showAllRecords, setShowAllRecords] = useState(false);
+
+  React.useEffect(() => {
+    const fetchAttendance = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        // 1. Resolve student ID reliably
+        const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+        const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
+
+        if (!studentId) {
+          throw new Error('Student ID not found');
+        }
+
+        // 2. Fetch specific student attendance
+        const res = await apiClient.get(ENDPOINTS.STUDENT.ATTENDANCE(studentId));
+        // Handle various response types including normalized
+        const attendancePayload = res.normalized?.data || res.data?.data || res.data;
+        setAttendanceData(attendancePayload);
+      } catch (err: any) {
+        console.error('Failed to fetch attendance:', err);
+        setError('Failed to load attendance data. Please try again.');
+        setAttendanceData(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchAttendance();
+  }, [authState.user?.id]);
 
   // Calendar data starting 1 on Sunday, padded to 35 slots to prevent flex wrap spreading
   const daysInMonth = Array.from({ length: 35 }, (_, i) => i < 31 ? i + 1 : null);
 
-  const getDayStyle = (day: number) => {
-    // 1st column is Sunday
-    if ([1, 8, 15, 22, 29].includes(day)) return 'weekend';
-    if ([16, 18].includes(day)) return 'absent';
-    return 'present'; 
+  const getDayStyle = (day: number | null) => {
+    if (day === null) return null;
+    
+    // Get current month/year for matching
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
+    
+    if (attendanceData?.records) {
+      const dateStr = `${currentYear}-${currentMonth}-${day.toString().padStart(2, '0')}`;
+      const record = attendanceData.records.find((r: any) => r.date && r.date.startsWith(dateStr));
+      if (record) {
+        const status = record.status?.toLowerCase();
+        if (status === 'present' || status === 'late') return 'present';
+        if (status === 'absent') return 'absent';
+      }
+    }
+    return 'none';
   };
+
+  if (isLoading && !attendanceData) {
+    return (
+      <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#3B82F6" />
+      </View>
+    );
+  }
+
+  if (error && !attendanceData) {
+    return (
+      <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }]}>
+        <Ionicons name="alert-circle" size={64} color="#EF4444" style={{ marginBottom: 16 }} />
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', textAlign: 'center' }}>Unable to Load Attendance</Text>
+        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>{error}</Text>
+        <ScaleButton
+          style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#3B82F6', borderRadius: 8 }}
+          onPress={() => {
+            setError(null);
+            setIsLoading(true);
+            const fetchAttendance = async () => {
+              try {
+                const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+                const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
+                if (!studentId) throw new Error('Student ID not found');
+                const res = await apiClient.get(ENDPOINTS.STUDENT.ATTENDANCE(studentId));
+                const attendancePayload = res.normalized?.data || res.data?.data || res.data;
+                setAttendanceData(attendancePayload);
+              } catch (err: any) {
+                setError('Failed to load attendance data. Please try again.');
+              } finally {
+                setIsLoading(false);
+              }
+            };
+            fetchAttendance();
+          }}
+          scaleTo={0.95}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
+        </ScaleButton>
+      </View>
+    );
+  }
+
+  const formatDate = (dateVal: any) => {
+    if (!dateVal) return '----';
+    try {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return '----';
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (e) { return '----'; }
+  };
+
+  const stats = attendanceData || {};
+  const recentRecords = showAllRecords ? (attendanceData?.records || []) : (attendanceData?.records?.slice(0, 5) || []);
 
   return (
     <View style={styles.mainContainer}>
@@ -49,13 +155,17 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
         >
           <Ionicons name="menu" size={28} color="#1F2937" />
         </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
         <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
+          <TouchableOpacity onPress={() => {}}>
+            <Ionicons name="notifications-outline" size={22} color="#1F2937" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Preferences' })}>
+            <Ionicons name="settings-outline" size={22} color="#1F2937" />
+          </TouchableOpacity>
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
           </View>
         </View>
       </View>
@@ -75,47 +185,49 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
            <View style={styles.statsRow}>
               <View style={[styles.statBox, {borderLeftColor: '#3B82F6'}]}>
                  <Text style={styles.statBoxTitle} numberOfLines={1} adjustsFontSizeToFit>Attendance Rate</Text>
-                 <Text style={styles.statBoxVal} adjustsFontSizeToFit numberOfLines={1}>95.5 %</Text>
+                 <Text style={styles.statBoxVal} adjustsFontSizeToFit numberOfLines={1}>{stats.attendancePercentage?.toFixed(1) || '0.0'} %</Text>
               </View>
-
+ 
               <View style={[styles.statBox, styles.statBoxMid, {borderLeftColor: '#10B981'}]}>
                  <Text style={styles.statBoxTitle} numberOfLines={1} adjustsFontSizeToFit>Days Present</Text>
-                 <Text style={styles.statBoxSub} numberOfLines={2}>Total for 2024 - 2025</Text>
-                 <Text style={styles.statBoxVal} adjustsFontSizeToFit numberOfLines={1}>142</Text>
+                 <Text style={styles.statBoxSub} numberOfLines={2}>Academic Session</Text>
+                 <Text style={styles.statBoxVal} adjustsFontSizeToFit numberOfLines={1}>{stats.presentDays || 0}</Text>
               </View>
-
+ 
               <View style={[styles.statBox, {borderLeftColor: '#EF4444'}]}>
                  <Text style={styles.statBoxTitle} numberOfLines={1} adjustsFontSizeToFit>Days Absent</Text>
                  <Text style={styles.statBoxSub} numberOfLines={2}>Requires Attention</Text>
-                 <Text style={styles.statBoxVal} adjustsFontSizeToFit numberOfLines={1}>8</Text>
+                 <Text style={styles.statBoxVal} adjustsFontSizeToFit numberOfLines={1}>{stats.absentDays || 0}</Text>
               </View>
            </View>
         </Animated.View>
-
+ 
         {/* Card 2: Calendar */}
         <Animated.View entering={FadeInUp.delay(150).springify()} style={styles.card}>
            <View style={styles.cardRowBetween}>
               <View style={{flexDirection: 'row', alignItems: 'center'}}>
                  <Ionicons name="calendar-outline" size={18} color="#111827" style={{marginRight: 6}} />
-                 <Text style={styles.cardHeader}>Dec 2025</Text>
+                 <Text style={styles.cardHeader}>
+                    {new Date().toLocaleString('en-US', { month: 'short', year: 'numeric' })}
+                 </Text>
               </View>
               <View style={styles.calArrows}>
                  <TouchableOpacity style={styles.calBtn}>
-                   <Ionicons name="chevron-back" size={14} color="#111827" />
+                    <Ionicons name="chevron-back" size={14} color="#111827" />
                  </TouchableOpacity>
                  <TouchableOpacity style={styles.calBtn}>
-                   <Ionicons name="chevron-forward" size={14} color="#111827" />
+                    <Ionicons name="chevron-forward" size={14} color="#111827" />
                  </TouchableOpacity>
               </View>
            </View>
-
+ 
            {/* Days of week */}
            <View style={styles.calDaysHeader}>
              {['SUN','MON','TUE','WED','THU','FRI','SAT'].map(d => (
                <Text key={d} style={styles.calDayText}>{d}</Text>
              ))}
            </View>
-
+ 
            {/* Grid */}
            <View style={styles.calGrid}>
              {daysInMonth.map((day, index) => {
@@ -139,7 +251,7 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
                )
              })}
            </View>
-
+ 
            <View style={styles.calDivider} />
            
            <View style={styles.calLegend}>
@@ -153,46 +265,46 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
              </View>
            </View>
         </Animated.View>
-
+ 
         {/* Card 3: Recent Records */}
         <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.card}>
            <View style={styles.cardRowBetween}>
               <View style={{flexDirection: 'row', alignItems: 'center'}}>
                  <Ionicons name="time-outline" size={18} color="#111827" style={{marginRight: 6}} />
-                 <Text style={styles.cardHeader}>Recent Attendance Records</Text>
+                 <Text style={styles.cardHeader}>{showAllRecords ? 'Full Attendance History' : 'Recent Attendance Records'}</Text>
               </View>
-              <TouchableOpacity style={styles.viewAllBtn}>
-                 <Text style={styles.viewAllText}>View all</Text>
+              <TouchableOpacity 
+                style={styles.viewAllBtn}
+                onPress={() => setShowAllRecords(!showAllRecords)}
+              >
+                 <Text style={styles.viewAllText}>{showAllRecords ? 'Show less' : 'View all'}</Text>
               </TouchableOpacity>
            </View>
-
+ 
            <View style={styles.table}>
-             {/* Header */}
-             <View style={styles.tableHeaderRow}>
-               <Text style={[styles.thText, {flex: 1.5}]}>Date</Text>
-               <Text style={[styles.thText, {flex: 1}]}>Day</Text>
-               <Text style={[styles.thText, {flex: 1}]}>Status</Text>
-               <Text style={[styles.thText, {flex: 1.2}]}>Remark</Text>
-             </View>
-             
-             {/* Rows */}
-             {[
-               { date: 'Dec 22, 2025', day: 'Monday', status: 'Present', remark: '----' },
-               { date: 'Dec 22, 2025', day: 'Monday', status: 'Present', remark: '----' },
-               { date: 'Dec 22, 2025', day: 'Monday', status: 'Present', remark: '----' },
-               { date: 'Dec 22, 2025', day: 'Monday', status: 'Absent', remark: 'Medical leave' },
-             ].map((row, idx) => (
-               <View key={idx} style={styles.tableRow}>
-                 <Text style={[styles.tdTextBold, {flex: 1.5}]}>{row.date}</Text>
-                 <Text style={[styles.tdText, {flex: 1}]}>{row.day}</Text>
-                 <View style={[{flex: 1}, styles.tdPillWrap]}>
-                   <View style={row.status === 'Present' ? styles.statusPresent : styles.statusAbsent}>
-                     <Text style={row.status === 'Present' ? styles.statusTextPresent : styles.statusTextAbsent}>{row.status}</Text>
-                   </View>
-                 </View>
-                 <Text style={[styles.tdText, {flex: 1.2}]}>{row.remark}</Text>
-               </View>
-             ))}
+              {/* Header */}
+              <View style={styles.tableHeaderRow}>
+                <Text style={[styles.thText, {flex: 1.5}]}>Date</Text>
+                <Text style={[styles.thText, {flex: 1.2}]}>Status</Text>
+                <Text style={[styles.thText, {flex: 1.2}]}>Remark</Text>
+              </View>
+              
+              {/* Rows */}
+              {recentRecords.length === 0 ? (
+                <Text style={styles.emptyText}>No recent records found.</Text>
+              ) : (
+                recentRecords.map((row: any, idx: number) => (
+                  <View key={idx} style={styles.tableRow}>
+                    <Text style={[styles.tdTextBold, {flex: 1.5}]}>{formatDate(row.date)}</Text>
+                    <View style={[{flex: 1.2}, styles.tdPillWrap]}>
+                      <View style={row.status.toLowerCase() === 'present' ? styles.statusPresent : styles.statusAbsent}>
+                        <Text style={row.status.toLowerCase() === 'present' ? styles.statusTextPresent : styles.statusTextAbsent}>{row.status}</Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.tdText, {flex: 1.2}]} numberOfLines={1}>{row.notes || '----'}</Text>
+                  </View>
+                ))
+              )}
            </View>
         </Animated.View>
 
@@ -205,17 +317,17 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
 
            <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12}}>
               <Text style={styles.targetTitle}>Target : 95 % Attendance</Text>
-              <Text style={styles.targetPercent}>94.7 %</Text>
+              <Text style={styles.targetPercent}>{stats.attendancePercentage?.toFixed(1) || '0.0'} %</Text>
            </View>
 
            <View style={styles.progressBarBg}>
-             <View style={[styles.progressBarFill, {width: '94.7%'}]} />
+             <View style={[styles.progressBarFill, {width: `${Math.min(100, stats.attendancePercentage || 0)}%`}]} />
            </View>
 
            <View style={styles.progressMetrics}>
-              <Text style={styles.metricText}>Current : 94.7 %</Text>
-              <Text style={styles.metricText}>Class Avg : 94.7 %</Text>
-              <Text style={styles.metricText}>Remaining : 0.7 %</Text>
+              <Text style={styles.metricText}>Current : {stats.attendancePercentage?.toFixed(1) || '0.0'} %</Text>
+              <Text style={styles.metricText}>Goal : 95.0 %</Text>
+              <Text style={styles.metricText}>Gap : {Math.max(0, 95 - (stats.attendancePercentage || 0)).toFixed(1)} %</Text>
            </View>
         </Animated.View>
 
@@ -349,6 +461,7 @@ const styles = StyleSheet.create({
   progressBarFill: { height: '100%', borderRadius: 3, backgroundColor: '#3B82F6' },
   progressMetrics: { flexDirection: 'row', justifyContent: 'space-between' },
   metricText: { fontSize: 10, color: '#9CA3AF', fontWeight: '500' },
+  emptyText: { textAlign: 'center', color: '#9CA3AF', marginTop: 20, fontSize: 13 },
 });
 
 export default AttendanceScreen;

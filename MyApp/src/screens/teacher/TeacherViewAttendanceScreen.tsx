@@ -6,29 +6,100 @@ import {
   StatusBar,
   ScrollView,
   TouchableOpacity,
-  Platform
+  Platform,
+  Dimensions,
+  ActivityIndicator,
+  Modal,
 } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
+import { NavigationDrawer } from '../../components/NavigationDrawer';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherViewAttendance'>;
 
-const MOCK_STUDENTS = [
-  { id: 1, name: 'Alex Johnson', stdId: 'STU-2025-001', status: 'Present' },
-  { id: 2, name: 'Alex Johnson', stdId: 'STU-2025-001', status: 'Present' },
-  { id: 3, name: 'Alex Johnson', stdId: 'STU-2025-001', status: 'Absent' },
-  { id: 4, name: 'Alex Johnson', stdId: 'STU-2025-001', status: 'Absent' },
-  { id: 5, name: 'Alex Johnson', stdId: 'STU-2025-001', status: 'Present' },
-  { id: 6, name: 'Alex Johnson', stdId: 'STU-2025-001', status: 'Present' },
-  { id: 7, name: 'Alex Johnson', stdId: 'STU-2025-001', status: 'Present' },
-  { id: 8, name: 'Alex Johnson', stdId: 'STU-2025-001', status: 'Present' },
-  { id: 9, name: 'Alex Johnson', stdId: 'STU-2025-001', status: 'Present' },
-];
+const CustomCalendarPickerOverlay = ({ visible, onClose, onSelect, selectedDate }: any) => {
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const [currentDate, setCurrentDate] = React.useState(new Date(selectedDate));
 
-const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation }) => {
+  const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+  const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
+
+  const handlePrevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  const handleNextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+
+  const daysInMonth = getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth());
+  const firstDay = getFirstDayOfMonth(currentDate.getFullYear(), currentDate.getMonth());
+
+  const calendarDays = [];
+  for (let i = 0; i < firstDay; i++) calendarDays.push(null);
+  for (let i = 1; i <= daysInMonth; i++) calendarDays.push(i);
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} />
+        <Animated.View entering={FadeIn.duration(300)} style={{ backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, width: '100%', maxWidth: 400, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 15 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <TouchableOpacity onPress={handlePrevMonth} style={{ padding: 10 }}><Ionicons name="chevron-back" size={20} color="#4F46E5" /></TouchableOpacity>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E293B' }}>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</Text>
+            <TouchableOpacity onPress={handleNextMonth} style={{ padding: 10 }}><Ionicons name="chevron-forward" size={20} color="#4F46E5" /></TouchableOpacity>
+          </View>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10 }}>
+            {days.map(d => <Text key={d} style={{ width: `${100 / 7}%`, textAlign: 'center', fontSize: 12, fontWeight: '700', color: '#94A3B8', marginBottom: 10 }}>{d}</Text>)}
+            {calendarDays.map((d, i) => {
+              const isToday = d && new Date().toDateString() === new Date(currentDate.getFullYear(), currentDate.getMonth(), d).toDateString();
+              const isSelected = d && new Date(selectedDate).toDateString() === new Date(currentDate.getFullYear(), currentDate.getMonth(), d).toDateString();
+              return (
+                <TouchableOpacity key={i} disabled={!d} onPress={() => { if (d) { onSelect(new Date(currentDate.getFullYear(), currentDate.getMonth(), d)); onClose(); } }} style={{ width: `${100 / 7}%`, height: 45, justifyContent: 'center', alignItems: 'center', borderRadius: 12, backgroundColor: isSelected ? '#4F46E5' : 'transparent', borderWidth: isToday ? 1 : 0, borderColor: '#4F46E5' }}>
+                  {d && <Text style={{ fontSize: 14, fontWeight: isSelected || isToday ? '900' : '500', color: isSelected ? '#FFFFFF' : isToday ? '#4F46E5' : '#1E293B' }}>{d}</Text>}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <TouchableOpacity onPress={onClose} style={{ marginTop: 10, padding: 15, backgroundColor: '#F1F5F9', borderRadius: 16, alignItems: 'center' }}><Text style={{ color: '#64748B', fontWeight: '800' }}>Cancel</Text></TouchableOpacity>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+};
+
+const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { classId } = route.params;
+  const { authState } = useAuth();
+  const [selectedDate, setSelectedDate] = React.useState(new Date());
+  const [isCalendarVisible, setIsCalendarVisible] = React.useState(false);
+  const [attendance, setAttendance] = React.useState<any[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [stats, setStats] = React.useState({ total: 0, present: 0, absent: 0 });
+
+  const fetchAttendance = async () => {
+    try {
+      setIsLoading(true);
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      const res = await apiClient.get(`${ENDPOINTS.TEACHER.ATTENDANCE(classId)}?date=${dateStr}`);
+        const data = res.data.attendance || [];
+        setAttendance(data);
+        
+        setStats({
+          total: data.length,
+          present: data.filter((a: any) => a.status === 'present' || a.status === 'late').length,
+          absent: data.filter((a: any) => a.status === 'absent').length,
+        });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchAttendance();
+  }, [classId, selectedDate]);
+
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
@@ -36,25 +107,33 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation }) => {
       {/* Global Header */}
       <View style={styles.globalHeader}>
         <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={22} color="#1F2937" />
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
+             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
           </View>
         </View>
       </View>
 
-      {/* Blue Header Section */}
-      <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
-         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
-         </TouchableOpacity>
-         <Text style={styles.blueTitle}>Attendance Details - Class - 1</Text>
-         <Text style={styles.blueSubtitle}>Class Teacher - Mr. John • 35 Students • December 15, 2025</Text>
-      </Animated.View>
+       {/* Blue Header Section */}
+       <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+             <View>
+                <Text style={styles.blueTitle}>Attendance Details</Text>
+                <Text style={styles.blueSubtitle}>{stats.total} Students Recorded • {selectedDate.toLocaleDateString()}</Text>
+             </View>
+             <TouchableOpacity style={styles.dateSelector} onPress={() => setIsCalendarVisible(true)}>
+                <Ionicons name="calendar" size={18} color="#FFF" />
+                <Text style={styles.dateSelectorText}>Select Date</Text>
+             </TouchableOpacity>
+          </View>
+       </Animated.View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
@@ -64,15 +143,15 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation }) => {
            {/* Summary Stats Grid */}
            <View style={styles.statsRow}>
               <View style={[styles.statBox, { borderTopColor: '#4F46E5' }]}>
-                 <Text style={styles.statNumber}>32</Text>
+                 <Text style={styles.statNumber}>{stats.total}</Text>
                  <Text style={styles.statLabel}>Students</Text>
               </View>
               <View style={[styles.statBox, { borderTopColor: '#EF4444' }]}>
-                 <Text style={styles.statNumber}>2</Text>
+                 <Text style={styles.statNumber}>{stats.absent}</Text>
                  <Text style={styles.statLabel}>Absent</Text>
               </View>
               <View style={[styles.statBox, { borderTopColor: '#22C55E' }]}>
-                 <Text style={styles.statNumber}>30</Text>
+                 <Text style={styles.statNumber}>{stats.present}</Text>
                  <Text style={styles.statLabel}>Present</Text>
               </View>
            </View>
@@ -81,29 +160,35 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation }) => {
            <Text style={styles.sectionTitle}>Student Attendance</Text>
 
            {/* List */}
-           {MOCK_STUDENTS.map((student, index) => {
-             const initials = student.name.split(' ').map(n => n[0]).join('');
-             const isPresent = student.status === 'Present';
-             
-             return (
-               <Animated.View key={index} entering={FadeInUp.delay(150 + index * 50).springify()} style={styles.studentRow}>
-                  <View style={styles.studentInfoLeft}>
-                     <View style={styles.avatarCircle}>
-                        <Text style={styles.avatarInitials}>{initials}</Text>
-                     </View>
-                     <View>
-                        <Text style={styles.studentName}>{student.name}</Text>
-                        <Text style={styles.studentId}>ID: {student.stdId}</Text>
-                     </View>
-                  </View>
-                  <View style={[styles.statusPill, isPresent ? styles.statusPillPresent : styles.statusPillAbsent]}>
-                     <Text style={[styles.statusText, isPresent ? styles.statusTextPresent : styles.statusTextAbsent]}>
-                        {student.status}
-                     </Text>
-                  </View>
-               </Animated.View>
-             );
-           })}
+           {isLoading ? (
+             <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 20 }} />
+           ) : attendance.length === 0 ? (
+             <Text style={styles.emptyText}>No attendance records found for today.</Text>
+           ) : (
+             attendance.map((student, index) => {
+               const initials = student.studentName ? student.studentName.split(' ').map((n: string) => n[0]).join('') : 'S';
+               const isPresent = student.status === 'present' || student.status === 'late';
+               
+               return (
+                 <Animated.View key={index} entering={FadeInUp.delay(150 + index * 50).springify()} style={styles.studentRow}>
+                    <View style={styles.studentInfoLeft}>
+                       <View style={styles.avatarCircle}>
+                          <Text style={styles.avatarInitials}>{initials}</Text>
+                       </View>
+                       <View>
+                          <Text style={styles.studentName}>{student.studentName}</Text>
+                          <Text style={styles.studentId}>ID: {student.rollNo || student.studentId.slice(0, 8)}</Text>
+                       </View>
+                    </View>
+                    <View style={[styles.statusPill, isPresent ? styles.statusPillPresent : styles.statusPillAbsent]}>
+                       <Text style={[styles.statusText, isPresent ? styles.statusTextPresent : styles.statusTextAbsent]}>
+                          {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
+                       </Text>
+                    </View>
+                 </Animated.View>
+               );
+             })
+           )}
 
         </Animated.View>
       </ScrollView>
@@ -119,6 +204,13 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.doneBtnText}>Done</Text>
          </TouchableOpacity>
       </Animated.View>
+
+      <CustomCalendarPickerOverlay 
+         visible={isCalendarVisible} 
+         onClose={() => setIsCalendarVisible(false)} 
+         onSelect={setSelectedDate} 
+         selectedDate={selectedDate}
+      />
 
     </View>
   );
@@ -194,6 +286,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     color: '#E0E7FF',
+  },
+  dateSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 8,
+  },
+  dateSelectorText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
 
   mainCard: {
@@ -358,6 +464,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 20,
+    fontWeight: '500',
   },
 });
 

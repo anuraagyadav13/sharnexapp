@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,17 @@ import {
   TextInput,
   Platform,
   StatusBar,
-  Modal
+  Modal,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { useAuth } from '../../store/AuthContext';
+import ScaleButton from '../../components/animations/ScaleButton';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 const StatCard = React.memo(({ iconBg, iconColor, icon, value, label }: any) => (
   <View style={styles.statCard}>
@@ -95,20 +101,122 @@ const ClassAssignmentCard = ({ item, delay, onAssign }: any) => (
   </Animated.View>
 );
 
-const DUMMY_STAFF = Array(4).fill({
-  idNumber: '001', code: 'C1', name: 'Ashish Singh', department: 'English', position: 'Teacher', faceEnrollment: 'Enrolled', status: 'Active', email: 'Sara.Sinphon@Gmail.com'
-});
-
-const DUMMY_ASSIGNMENTS = Array(4).fill({
-  className: 'Class 1', teacherName: 'Ms. Sarah Wilson', status: 'Assigned'
-});
-
 const PrincipalStaffScreen = ({ navigation }: any) => {
+  const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAssignModalOpen, setAssignModalOpen] = useState(false);
+  const [staffList, setStaffList] = useState<any[]>([]);
+  const [assignmentsList, setAssignmentsList] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingAssignments, setIsLoadingAssignments] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedTeacher, setSelectedTeacher] = useState('');
   
-  // Calendars (used for other things, but keep if needed, actually we can remove them if only used for add staff)
+  // Fetch staff from API
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const res = await apiClient.get(ENDPOINTS.PRINCIPAL.STAFF);
+        const data = res.data.data || res.data;
+        // Map API response to component's expected format
+        const staff = data.staff || data || [];
+        setStaffList(staff);
+      } catch (err: any) {
+        console.error('Failed to fetch staff:', err);
+        setError(err.message || 'Failed to load staff data');
+        setStaffList([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const fetchAssignments = async () => {
+      try {
+        setIsLoadingAssignments(true);
+        const res = await apiClient.get(ENDPOINTS.PRINCIPAL.CLASSES);
+        const data = res.data.data || res.data;
+        // Map API response to component's expected format
+        const assignments = (data.classes || data || []).map((cls: any) => ({
+          className: cls.name || cls.className,
+          teacherName: cls.classTeacher?.name || 'Not Assigned',
+          status: cls.classTeacher ? 'Assigned' : 'Not Assigned',
+          classId: cls.id,
+          teacherId: cls.classTeacher?.id
+        }));
+        setAssignmentsList(assignments);
+      } catch (err: any) {
+        console.error('Failed to fetch assignments:', err);
+        setError(err.message || 'Failed to load assignments data');
+        setAssignmentsList([]);
+      } finally {
+        setIsLoadingAssignments(false);
+      }
+    };
+
+    fetchStaff();
+    fetchAssignments();
+  }, []);
+
+  // Handle assign class teacher
+  const handleAssignTeacher = async () => {
+    if (!selectedClass || !selectedTeacher) {
+      Alert.alert('Error', 'Please select both class and teacher');
+      return;
+    }
+
+    try {
+      await apiClient.post(`${ENDPOINTS.PRINCIPAL.CLASSES}/${selectedClass}/assign-teacher`, {
+        teacherId: selectedTeacher
+      });
+
+      // Update assignments list
+      setAssignmentsList(assignmentsList.map(assignment =>
+        assignment.classId === selectedClass
+          ? { ...assignment, teacherName: staffList.find(s => s.id === selectedTeacher)?.name || 'Assigned', status: 'Assigned' }
+          : assignment
+      ));
+
+      setAssignModalOpen(false);
+      setSelectedClass('');
+      setSelectedTeacher('');
+      Alert.alert('Success', 'Class teacher assigned successfully');
+    } catch (err: any) {
+      console.error('Failed to assign teacher:', err);
+      Alert.alert('Error', 'Failed to assign class teacher');
+    }
+  };
+
+  // Retry function
+  const handleRetry = () => {
+    setError(null);
+    setIsLoading(true);
+    // Re-fetch data
+    const fetchStaff = async () => {
+      try {
+        const res = await apiClient.get(ENDPOINTS.PRINCIPAL.STAFF);
+        const data = res.data.data || res.data;
+        const staff = data.staff || data || [];
+        setStaffList(staff);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load staff data');
+        setStaffList([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchStaff();
+  };
+
+  // Filter staff by search
+  const filteredStaff = staffList.filter(s => 
+    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.department?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.code?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <View style={styles.mainContainer}>
@@ -121,14 +229,14 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
         </TouchableOpacity>
 
         <Text style={styles.headerTitle} numberOfLines={1}>
-          Welcome back, Anurag
+          Welcome back, {authState.user?.name?.split(' ')[0] || 'Admin'}
         </Text>
 
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.iconBtnTransparent}><Ionicons name="notifications-outline" size={20} color="#4B5563" /></TouchableOpacity>
           <TouchableOpacity style={styles.iconBtnTransparent} onPress={() => navigation.navigate('AccountSettings')}><Ionicons name="settings-outline" size={20} color="#4B5563" /></TouchableOpacity>
           <TouchableOpacity style={styles.iconBtnTransparent}><Ionicons name="moon-outline" size={20} color="#4B5563" /></TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}><View style={styles.avatar}><Text style={styles.avatarText}>A</Text></View></TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}><View style={styles.avatar}><Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'A'}</Text></View></TouchableOpacity>
         </View>
       </View>
 
@@ -150,9 +258,27 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
 
           {/* Stat Cards */}
           <View style={styles.statCardsRow}>
-            <StatCard iconBg="#F3E8FF" iconColor="#A855F7" icon="add" value="5" label="Total Teachers" />
-            <StatCard iconBg="#EFF6FF" iconColor="#3B82F6" icon="add" value="5" label="Department Heads" />
-            <StatCard iconBg="#ECFDF5" iconColor="#10B981" icon="add" value="5" label="New This Year" />
+            <StatCard
+              iconBg="#F3E8FF"
+              iconColor="#A855F7"
+              icon="people"
+              value={staffList.length.toString()}
+              label="Total Teachers"
+            />
+            <StatCard
+              iconBg="#EFF6FF"
+              iconColor="#3B82F6"
+              icon="school"
+              value={assignmentsList.filter(a => a.status === 'Assigned').length.toString()}
+              label="Assigned Classes"
+            />
+            <StatCard
+              iconBg="#ECFDF5"
+              iconColor="#10B981"
+              icon="person-add"
+              value={staffList.filter(s => s.status === 'Active').length.toString()}
+              label="Active Staff"
+            />
           </View>
 
           {/* Search Bar */}
@@ -185,17 +311,51 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
           {/* Staff Directory */}
           <Text style={styles.sectionHeading}>Staff Directory</Text>
           <View style={styles.listContainer}>
-            {DUMMY_STAFF.map((item, index) => (
-              <StaffCard key={index} item={item} delay={100 + index * 50} />
-            ))}
+            {isLoading ? (
+              <ActivityIndicator size="large" color="#4F46E5" style={{ marginVertical: 40 }} />
+            ) : error && filteredStaff.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+                <Text style={styles.emptyText}>Failed to load staff</Text>
+                <TouchableOpacity onPress={handleRetry}>
+                  <Text style={styles.retryText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : filteredStaff.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="people-outline" size={48} color="#9CA3AF" />
+                <Text style={styles.emptyText}>No staff found</Text>
+              </View>
+            ) : (
+              filteredStaff.map((item, index) => (
+                <StaffCard key={item.id} item={item} delay={100 + index * 50} />
+              ))
+            )}
           </View>
 
           {/* Assignments */}
           <Text style={[styles.sectionHeading, { marginTop: 24 }]}>Class Teacher Assignments</Text>
           <View style={styles.assignmentsGridContainer}>
-            {DUMMY_ASSIGNMENTS.map((item, index) => (
-              <ClassAssignmentCard key={index} item={item} delay={200 + index * 50} onAssign={() => setAssignModalOpen(true)} />
-            ))}
+            {isLoadingAssignments ? (
+              <ActivityIndicator size="large" color="#4F46E5" style={{ marginVertical: 40 }} />
+            ) : assignmentsList.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="school-outline" size={48} color="#9CA3AF" />
+                <Text style={styles.emptyText}>No classes found</Text>
+              </View>
+            ) : (
+              assignmentsList.map((item, index) => (
+                <ClassAssignmentCard
+                  key={item.classId || index}
+                  item={item}
+                  delay={200 + index * 50}
+                  onAssign={() => {
+                    setSelectedClass(item.classId);
+                    setAssignModalOpen(true);
+                  }}
+                />
+              ))
+            )}
           </View>
 
         </View>
@@ -209,28 +369,36 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
         <View style={styles.modalOverlay}>
           <Animated.View entering={FadeInUp.duration(200)} style={styles.modalContent}>
             <Text style={styles.modalTitle}>Assign Class Teacher</Text>
-            
+
             <View style={styles.modalFormRow}>
               <Text style={styles.modalLabel}>Class</Text>
-              <View style={styles.modalSelect}>
-                <Text style={styles.modalSelectText}>class 9 A</Text>
+              <TouchableOpacity style={styles.modalSelect} onPress={() => {}}>
+                <Text style={styles.modalSelectText}>
+                  {assignmentsList.find(a => a.classId === selectedClass)?.className || 'Select Class'}
+                </Text>
                 <Ionicons name="chevron-down" size={16} color="#111827" />
-              </View>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.modalFormRow}>
               <Text style={styles.modalLabel}>Teacher</Text>
-              <View style={styles.modalSelect}>
-                <Text style={styles.modalSelectText}>Nidhi Yadav (nidsy.33@gmail.com)</Text>
+              <TouchableOpacity style={styles.modalSelect} onPress={() => {}}>
+                <Text style={styles.modalSelectText}>
+                  {staffList.find(s => s.id === selectedTeacher)?.name || 'Select Teacher'}
+                </Text>
                 <Ionicons name="chevron-down" size={16} color="#111827" />
-              </View>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.modalFooter}>
-              <TouchableOpacity onPress={() => setAssignModalOpen(false)}>
+              <TouchableOpacity onPress={() => {
+                setAssignModalOpen(false);
+                setSelectedClass('');
+                setSelectedTeacher('');
+              }}>
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modalSaveBtn} onPress={() => setAssignModalOpen(false)}>
+              <TouchableOpacity style={styles.modalSaveBtn} onPress={handleAssignTeacher}>
                 <Text style={styles.modalSaveBtnText}>Save</Text>
               </TouchableOpacity>
             </View>
@@ -355,6 +523,23 @@ const styles = StyleSheet.create({
   
   // Staff Card
   listContainer: { gap: 12 },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+    marginTop: 12,
+  },
+  retryText: {
+    fontSize: 13,
+    color: '#3B82F6',
+    fontWeight: '600',
+    marginTop: 8,
+  },
   staffCard: {
     backgroundColor: '#FFF',
     borderRadius: 16,

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
+import { useAuth } from '../../store/AuthContext';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -20,6 +21,7 @@ interface Props {
 }
 
 const ViewQuizDetailScreen: React.FC<Props> = ({ navigation }) => {
+  const { authState } = useAuth();
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFAFF" />
@@ -27,13 +29,13 @@ const ViewQuizDetailScreen: React.FC<Props> = ({ navigation }) => {
       {/* Global Header */}
       <View style={styles.globalHeader}>
         <View style={{ width: 28 }} />
-        <Text style={styles.headerTitle} numberOfLines={1}>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1}>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={20} color="#1F2937" />
           <Ionicons name="settings-outline" size={20} color="#1F2937" />
           <Ionicons name="moon-outline" size={20} color="#1F2937" />
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>A</Text>
+            <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
           </View>
         </View>
       </View>
@@ -98,7 +100,7 @@ const ViewQuizDetailScreen: React.FC<Props> = ({ navigation }) => {
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoRowLeft}>Teacher</Text>
-              <Text style={styles.infoRowRight}>Dr. Sarah Johnson</Text>
+              <Text style={styles.infoRowRight}>Dr. Priya Sharma</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoRowLeft}>Marks</Text>

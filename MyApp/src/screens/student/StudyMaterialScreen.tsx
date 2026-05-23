@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   StatusBar,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -13,6 +14,9 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { useAuth } from '../../store/AuthContext';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
 
 type StudyMaterialScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'StudyMaterial'>;
 
@@ -50,12 +54,52 @@ const MaterialCard = ({ delay, type, title, desc, tags }: any) => {
 
 const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const { authState } = useAuth();
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMaterials = async () => {
+      try {
+        setIsLoading(true);
+        // 1. Resolve student ID reliably
+        const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+        const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
+
+        if (!studentId) {
+          throw new Error('Student ID not found');
+        }
+
+        // 2. Fetch materials using the the resolved ID
+        const res = await apiClient.get(ENDPOINTS.STUDENT.STUDY_MATERIALS(studentId));
+        // Handle various response types including normalized
+        const materialData = res.normalized?.data?.materials || res.normalized?.data || res.data?.materials || res.data?.data || [];
+        setMaterials(Array.isArray(materialData) ? materialData : []);
+      } catch (err: any) {
+        console.error('Failed to fetch materials:', err);
+        setMaterials([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchMaterials();
+  }, [authState.user?.id]);
+
+  if (isLoading && materials.length === 0) {
+    return (
+      <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
+  const firstMaterialSubject = materials.length > 0 ? (materials[0].subject || 'Applied Subjects') : 'Applied Subjects';
 
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAF9F9" />
 
-      {/* Global Header matched with AssignmentsScreen */}
+      {/* Global Header */}
       <View style={styles.globalHeader}>
         <ScaleButton 
           style={styles.menuHandle} 
@@ -66,14 +110,11 @@ const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
         >
           <Ionicons name="menu" size={28} color="#1F2937" />
         </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, Anurag</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
         <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-             <Text style={styles.avatarText}>A</Text>
-          </View>
+             <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
+             </View>
         </View>
       </View>
 
@@ -82,27 +123,34 @@ const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
         {/* Page Title */}
         <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
            <Text style={styles.pageTitle}>Study Material</Text>
-           <Text style={styles.pageSubtitle}>View the study material</Text>
+           <Text style={styles.pageSubtitle}>View your learning resources</Text>
         </Animated.View>
 
         {/* Info Banner */}
         <Animated.View entering={FadeIn.delay(100).duration(400)} style={styles.infoBanner}>
            <Text style={styles.infoBannerText}>
-             Access comprehensive study materials for Class 10 Mathematics. Download PDF notes for offline study and exam preparation.
+             Access comprehensive study materials for {firstMaterialSubject}. Download resources for offline study and exam preparation.
            </Text>
         </Animated.View>
 
         {/* List of study materials */}
-        { [1,2,3].map((item, index) => (
-           <MaterialCard 
-             key={index}
-             delay={150 + index * 50}
-             type="PDF Notes"
-             title="Algebra Complete Guide"
-             desc="Comprehensive notes covering all algebra concepts with solved examples and practice problems. Perfect for exam preparation."
-             tags={['Class 10', 'Mathematics']}
-           />
-        ))}
+        {materials.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="document-text-outline" size={60} color="#E5E7EB" />
+            <Text style={styles.emptyText}>No study materials found</Text>
+          </View>
+        ) : (
+          materials.map((item, index) => (
+            <MaterialCard 
+              key={item.id || index}
+              delay={150 + index * 50}
+              type={item.file_type || 'PDF'}
+              title={item.title}
+              desc={item.description}
+              tags={[item.subject || 'General', item.teacher_name || 'Staff']}
+            />
+          ))
+        )}
 
       </ScrollView>
 
@@ -258,7 +306,19 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 13,
-  }
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 60,
+    opacity: 0.5,
+  },
+  emptyText: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
 });
 
 export default StudyMaterialScreen;
