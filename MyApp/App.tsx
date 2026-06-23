@@ -1,5 +1,12 @@
 import React from 'react';
-import { StatusBar, StyleSheet, useColorScheme, View, ActivityIndicator, LogBox } from 'react-native';
+import {
+  StatusBar,
+  StyleSheet,
+  useColorScheme,
+  View,
+  ActivityIndicator,
+  LogBox,
+} from 'react-native';
 
 LogBox.ignoreAllLogs(); // Ignore all log notifications
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -87,6 +94,7 @@ import PrincipalEditSubject from './src/screens/principal/PrincipalEditSubjectSc
 import PrincipalAddClass from './src/screens/principal/PrincipalAddClassScreen';
 import PrincipalManageClass from './src/screens/principal/PrincipalManageClassScreen';
 import PrincipalEditClass from './src/screens/principal/PrincipalEditClassScreen';
+import LibraryScreen from './src/screens/library/LibraryScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -120,7 +128,10 @@ function RootNavigator() {
         <>
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+          <Stack.Screen
+            name="ForgotPassword"
+            component={ForgotPasswordScreen}
+          />
           <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
         </>
       ) : (
@@ -128,24 +139,51 @@ function RootNavigator() {
           {/* Student Case */}
           {effectiveRole === 'student' && (
             <>
-              <Stack.Screen name="StudentDashboard" component={StudentDashboard} />
+              <Stack.Screen
+                name="StudentDashboard"
+                component={StudentDashboard}
+              />
               <Stack.Screen name="Quizzes" component={QuizzesScreen} />
               <Stack.Screen name="QuizDetails" component={QuizDetailsScreen} />
               <Stack.Screen name="StartQuiz" component={StartQuizScreen} />
               <Stack.Screen name="QuizResult" component={QuizResultScreen} />
-              <Stack.Screen name="ViewQuizDetail" component={ViewQuizDetailScreen} />
+              <Stack.Screen
+                name="ViewQuizDetail"
+                component={ViewQuizDetailScreen}
+              />
               <Stack.Screen name="Assignments" component={AssignmentsScreen} />
-              <Stack.Screen name="AssignmentDetails" component={AssignmentDetailsScreen} />
-              <Stack.Screen name="AssignmentSubmit" component={AssignmentSubmitScreen} />
-              <Stack.Screen name="AssignmentGrade" component={AssignmentGradeScreen} />
+              <Stack.Screen
+                name="AssignmentDetails"
+                component={AssignmentDetailsScreen}
+              />
+              <Stack.Screen
+                name="AssignmentSubmit"
+                component={AssignmentSubmitScreen}
+              />
+              <Stack.Screen
+                name="AssignmentGrade"
+                component={AssignmentGradeScreen}
+              />
               <Stack.Screen name="Performance" component={PerformanceScreen} />
-              <Stack.Screen name="StudyMaterial" component={StudyMaterialScreen} />
+              <Stack.Screen
+                name="StudyMaterial"
+                component={StudyMaterialScreen}
+              />
               <Stack.Screen name="Attendance" component={AttendanceScreen} />
-              <Stack.Screen name="Announcements" component={AnnouncementScreen} />
+              <Stack.Screen
+                name="Announcements"
+                component={AnnouncementScreen}
+              />
               <Stack.Screen name="Grades" component={GradesScreen} />
               <Stack.Screen name="Fees" component={FeesScreen} />
-              <Stack.Screen name="ResultManagement" component={ResultManagementScreen} />
-              <Stack.Screen name="OfficialResult" component={OfficialResultScreen} />
+              <Stack.Screen
+                name="ResultManagement"
+                component={ResultManagementScreen}
+              />
+              <Stack.Screen
+                name="OfficialResult"
+                component={OfficialResultScreen}
+              />
               <Stack.Screen name="Timetable" component={TimetableScreen} />
             </>
           )}
@@ -153,67 +191,208 @@ function RootNavigator() {
           {/* Teacher Case */}
           {effectiveRole === 'teacher' && (
             <>
-              <Stack.Screen name="TeacherDashboard" component={TeacherDashboard} />
-              <Stack.Screen name="TeacherAttendance" component={TeacherAttendanceScreen} />
-              <Stack.Screen name="TeacherViewAttendance" component={TeacherViewAttendanceScreen} />
-              <Stack.Screen name="TeacherMarkAttendance" component={TeacherMarkAttendanceScreen} />
-              <Stack.Screen name="TeacherAssignment" component={TeacherAssignmentScreen} />
-              <Stack.Screen name="TeacherViewSubmission" component={TeacherViewSubmissionScreen} />
-              <Stack.Screen name="TeacherCreateAssignment" component={TeacherCreateAssignmentScreen} />
-              <Stack.Screen name="TeacherEditAssignment" component={TeacherEditAssignmentScreen} />
+              <Stack.Screen
+                name="TeacherDashboard"
+                component={TeacherDashboard}
+              />
+              <Stack.Screen
+                name="TeacherAttendance"
+                component={TeacherAttendanceScreen}
+              />
+              <Stack.Screen
+                name="TeacherViewAttendance"
+                component={TeacherViewAttendanceScreen}
+              />
+              <Stack.Screen
+                name="TeacherMarkAttendance"
+                component={TeacherMarkAttendanceScreen}
+              />
+              <Stack.Screen
+                name="TeacherAssignment"
+                component={TeacherAssignmentScreen}
+              />
+              <Stack.Screen
+                name="TeacherViewSubmission"
+                component={TeacherViewSubmissionScreen}
+              />
+              <Stack.Screen
+                name="TeacherCreateAssignment"
+                component={TeacherCreateAssignmentScreen}
+              />
+              <Stack.Screen
+                name="TeacherEditAssignment"
+                component={TeacherEditAssignmentScreen}
+              />
               <Stack.Screen name="TeacherQuiz" component={TeacherQuizScreen} />
-              <Stack.Screen name="TeacherCreateQuiz" component={TeacherCreateQuizScreen} />
-              <Stack.Screen name="TeacherCreateQuizStep2" component={TeacherCreateQuizStep2Screen} />
-              <Stack.Screen name="TeacherAddQuestion" component={TeacherAddQuestionScreen} />
-              <Stack.Screen name="TeacherCreateQuizStep3" component={TeacherCreateQuizStep3Screen} />
-              <Stack.Screen name="TeacherViewQuizResult" component={TeacherViewQuizResultScreen} />
-              <Stack.Screen name="TeacherMonitorLive" component={TeacherMonitorLiveScreen} />
-              <Stack.Screen name="TeacherResultManagement" component={TeacherResultManagementScreen} />
-              <Stack.Screen name="TeacherMarksEntry" component={TeacherMarksEntryScreen} />
-              <Stack.Screen name="TeacherReviewSubmission" component={TeacherReviewSubmissionScreen} />
-              <Stack.Screen name="TeacherTimetable" component={TeacherTimetableScreen} />
-              <Stack.Screen name="TeacherSelfAttendance" component={TeacherSelfAttendanceScreen} />
-              <Stack.Screen name="TeacherEquipment" component={TeacherEquipmentScreen} />
-              <Stack.Screen name="TeacherAddEquipmentRequest" component={TeacherAddEquipmentRequestScreen} />
-              <Stack.Screen name="TeacherEquipmentDetail" component={TeacherEquipmentDetailScreen} />
-              <Stack.Screen name="TeacherPerformance" component={TeacherPerformanceScreen} />
-              <Stack.Screen name="TeacherStudyMaterial" component={TeacherStudyMaterialScreen} />
-              <Stack.Screen name="Announcements" component={AnnouncementScreen} />
+              <Stack.Screen
+                name="TeacherCreateQuiz"
+                component={TeacherCreateQuizScreen}
+              />
+              <Stack.Screen
+                name="TeacherCreateQuizStep2"
+                component={TeacherCreateQuizStep2Screen}
+              />
+              <Stack.Screen
+                name="TeacherAddQuestion"
+                component={TeacherAddQuestionScreen}
+              />
+              <Stack.Screen
+                name="TeacherCreateQuizStep3"
+                component={TeacherCreateQuizStep3Screen}
+              />
+              <Stack.Screen
+                name="TeacherViewQuizResult"
+                component={TeacherViewQuizResultScreen}
+              />
+              <Stack.Screen
+                name="TeacherMonitorLive"
+                component={TeacherMonitorLiveScreen}
+              />
+              <Stack.Screen
+                name="TeacherResultManagement"
+                component={TeacherResultManagementScreen}
+              />
+              <Stack.Screen
+                name="TeacherMarksEntry"
+                component={TeacherMarksEntryScreen}
+              />
+              <Stack.Screen
+                name="TeacherReviewSubmission"
+                component={TeacherReviewSubmissionScreen}
+              />
+              <Stack.Screen
+                name="TeacherTimetable"
+                component={TeacherTimetableScreen}
+              />
+              <Stack.Screen
+                name="TeacherSelfAttendance"
+                component={TeacherSelfAttendanceScreen}
+              />
+              <Stack.Screen
+                name="TeacherEquipment"
+                component={TeacherEquipmentScreen}
+              />
+              <Stack.Screen
+                name="TeacherAddEquipmentRequest"
+                component={TeacherAddEquipmentRequestScreen}
+              />
+              <Stack.Screen
+                name="TeacherEquipmentDetail"
+                component={TeacherEquipmentDetailScreen}
+              />
+              <Stack.Screen
+                name="TeacherPerformance"
+                component={TeacherPerformanceScreen}
+              />
+              <Stack.Screen
+                name="TeacherStudyMaterial"
+                component={TeacherStudyMaterialScreen}
+              />
+              <Stack.Screen
+                name="Announcements"
+                component={AnnouncementScreen}
+              />
             </>
           )}
 
           {/* Principal Case */}
           {effectiveRole === 'principal' && (
             <>
-              <Stack.Screen name="PrincipalDashboard" component={PrincipalDashboard} />
-              <Stack.Screen name="PrincipalClasses" component={PrincipalClasses} />
-              <Stack.Screen name="PrincipalSubjects" component={PrincipalSubjects} />
+              <Stack.Screen
+                name="PrincipalDashboard"
+                component={PrincipalDashboard}
+              />
+              <Stack.Screen
+                name="PrincipalClasses"
+                component={PrincipalClasses}
+              />
+              <Stack.Screen
+                name="PrincipalSubjects"
+                component={PrincipalSubjects}
+              />
               <Stack.Screen name="PrincipalStaff" component={PrincipalStaff} />
-              <Stack.Screen name="PrincipalMarkStaffAttendance" component={PrincipalMarkStaffAttendance} />
-              <Stack.Screen name="PrincipalAddStaff" component={PrincipalAddStaff} />
-              <Stack.Screen name="PrincipalStaffDetails" component={PrincipalStaffDetails} />
-              <Stack.Screen name="PrincipalEditStaff" component={PrincipalEditStaff} />
-              <Stack.Screen name="PrincipalStudentDetails" component={PrincipalStudentDetails} />
-              <Stack.Screen name="PrincipalAddStudent" component={PrincipalAddStudentScreen} />
-              <Stack.Screen name="PrincipalEditStudent" component={PrincipalEditStudentScreen} />
-              <Stack.Screen name="PrincipalViewStudent" component={PrincipalViewStudentScreen} />
-              <Stack.Screen name="PrincipalCalendar" component={PrincipalCalendarScreen} />
-              <Stack.Screen name="PrincipalTimetable" component={PrincipalTimetable} />
-              <Stack.Screen name="PrincipalPerformance" component={PrincipalPerformance} />
-              <Stack.Screen name="PrincipalAnnouncements" component={PrincipalAnnouncements} />
+              <Stack.Screen
+                name="PrincipalMarkStaffAttendance"
+                component={PrincipalMarkStaffAttendance}
+              />
+              <Stack.Screen
+                name="PrincipalAddStaff"
+                component={PrincipalAddStaff}
+              />
+              <Stack.Screen
+                name="PrincipalStaffDetails"
+                component={PrincipalStaffDetails}
+              />
+              <Stack.Screen
+                name="PrincipalEditStaff"
+                component={PrincipalEditStaff}
+              />
+              <Stack.Screen
+                name="PrincipalStudentDetails"
+                component={PrincipalStudentDetails}
+              />
+              <Stack.Screen
+                name="PrincipalAddStudent"
+                component={PrincipalAddStudentScreen}
+              />
+              <Stack.Screen
+                name="PrincipalEditStudent"
+                component={PrincipalEditStudentScreen}
+              />
+              <Stack.Screen
+                name="PrincipalViewStudent"
+                component={PrincipalViewStudentScreen}
+              />
+              <Stack.Screen
+                name="PrincipalCalendar"
+                component={PrincipalCalendarScreen}
+              />
+              <Stack.Screen
+                name="PrincipalTimetable"
+                component={PrincipalTimetable}
+              />
+              <Stack.Screen
+                name="PrincipalPerformance"
+                component={PrincipalPerformance}
+              />
+              <Stack.Screen
+                name="PrincipalAnnouncements"
+                component={PrincipalAnnouncements}
+              />
               <Stack.Screen name="PrincipalFees" component={PrincipalFees} />
               <Stack.Screen name="PrincipalRSM" component={PrincipalRSM} />
-              <Stack.Screen name="PrincipalCreateExam" component={PrincipalCreateExam} />
-              <Stack.Screen name="PrincipalAddSubject" component={PrincipalAddSubject} />
-              <Stack.Screen name="PrincipalEditSubject" component={PrincipalEditSubject} />
-              <Stack.Screen name="PrincipalAddClass" component={PrincipalAddClass} />
-              <Stack.Screen name="PrincipalManageClass" component={PrincipalManageClass} />
-              <Stack.Screen name="PrincipalEditClass" component={PrincipalEditClass} />
+              <Stack.Screen
+                name="PrincipalCreateExam"
+                component={PrincipalCreateExam}
+              />
+              <Stack.Screen
+                name="PrincipalAddSubject"
+                component={PrincipalAddSubject}
+              />
+              <Stack.Screen
+                name="PrincipalEditSubject"
+                component={PrincipalEditSubject}
+              />
+              <Stack.Screen
+                name="PrincipalAddClass"
+                component={PrincipalAddClass}
+              />
+              <Stack.Screen
+                name="PrincipalManageClass"
+                component={PrincipalManageClass}
+              />
+              <Stack.Screen
+                name="PrincipalEditClass"
+                component={PrincipalEditClass}
+              />
             </>
           )}
 
           {/* Shared Screens */}
-          <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
+          <Stack.Screen
+            name="AccountSettings"
+            component={AccountSettingsScreen}
+          />
         </>
       )}
     </Stack.Navigator>
@@ -224,10 +403,10 @@ function ThemedApp() {
   const { isDarkMode } = useTheme();
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar 
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'} 
-        backgroundColor="transparent" 
-        translucent 
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent
       />
       <NavigationContainer theme={isDarkMode ? DarkNavigationTheme : undefined}>
         <RootNavigator />
@@ -261,6 +440,7 @@ function App(): React.JSX.Element {
         <ToastProvider>
           <AuthProvider>
             <ThemedApp />
+            {/* <LibraryScreen /> */}
           </AuthProvider>
         </ToastProvider>
       </ThemeProvider>
@@ -275,4 +455,3 @@ const styles = StyleSheet.create({
 });
 
 export default App;
-

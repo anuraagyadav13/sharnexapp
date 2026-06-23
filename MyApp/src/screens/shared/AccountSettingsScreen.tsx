@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   TextInput,
   Modal,
-  Switch
+  Switch,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -22,45 +22,78 @@ import { useAuth } from '../../store/AuthContext';
 type Props = NativeStackScreenProps<RootStackParamList, 'AccountSettings'>;
 
 // Reusable Input Field inline component matching the requested UI exactly
-const InputField = ({ label, labelIcon, inputIcon, placeholder, rightIcon, multiline, value, onRightIconPress, prefixComponent, secureTextEntry }: any) => (
+const InputField = ({
+  label,
+  labelIcon,
+  inputIcon,
+  placeholder,
+  rightIcon,
+  multiline,
+  value,
+  onRightIconPress,
+  prefixComponent,
+  secureTextEntry,
+}: any) => (
   <View style={styles.fieldContainer}>
-     <View style={styles.labelRow}>
-        <Ionicons name={labelIcon} size={12} color="#3B82F6" />
-        <Text style={styles.labelText}>{label}</Text>
-     </View>
-     <View style={[styles.inputWrapper, multiline && styles.inputWrapperMultiline]}>
-        {prefixComponent ? prefixComponent : (
-           <Ionicons name={inputIcon} size={16} color="#6B7280" style={[styles.inputLeftIcon, multiline && {marginTop: 14}]} />
-        )}
-        <TextInput 
-           style={[styles.textInput, multiline && styles.textInputMultiline]} 
-           placeholder={placeholder} 
-           placeholderTextColor="#9CA3AF" 
-           multiline={multiline} 
-           value={value}
-           secureTextEntry={secureTextEntry}
+    <View style={styles.labelRow}>
+      <Ionicons name={labelIcon} size={12} color="#3B82F6" />
+      <Text style={styles.labelText}>{label}</Text>
+    </View>
+    <View
+      style={[styles.inputWrapper, multiline && styles.inputWrapperMultiline]}
+    >
+      {prefixComponent ? (
+        prefixComponent
+      ) : (
+        <Ionicons
+          name={inputIcon}
+          size={16}
+          color="#6B7280"
+          style={[styles.inputLeftIcon, multiline && { marginTop: 14 }]}
         />
-        {rightIcon && (
-          <TouchableOpacity onPress={onRightIconPress} hitSlop={{top:15, bottom:15, left:15, right:15}}>
-            <Ionicons name={rightIcon} size={18} color="#111827" style={styles.inputRightIcon} />
-          </TouchableOpacity>
-        )}
-     </View>
+      )}
+      <TextInput
+        style={[styles.textInput, multiline && styles.textInputMultiline]}
+        placeholder={placeholder}
+        placeholderTextColor="#9CA3AF"
+        multiline={multiline}
+        value={value}
+        secureTextEntry={secureTextEntry}
+      />
+      {rightIcon && (
+        <TouchableOpacity
+          onPress={onRightIconPress}
+          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+        >
+          <Ionicons
+            name={rightIcon}
+            size={18}
+            color="#111827"
+            style={styles.inputRightIcon}
+          />
+        </TouchableOpacity>
+      )}
+    </View>
   </View>
 );
 
-const PreferenceToggle = ({ title, description, value, onValueChange }: any) => (
+const PreferenceToggle = ({
+  title,
+  description,
+  value,
+  onValueChange,
+}: any) => (
   <View style={styles.toggleCard}>
-     <View style={{flex: 1, paddingRight: 10}}>
-        <Text style={styles.toggleTitle}>{title}</Text>
-        <Text style={styles.toggleDesc}>{description}</Text>
-     </View>
-     <Switch 
-       value={value} 
-       onValueChange={onValueChange} 
-       trackColor={{ false: '#E5E7EB', true: '#22C55E' }} 
-       thumbColor="#FFFFFF" 
-     />
+    <View style={{ flex: 1, paddingRight: 10 }}>
+      <Text style={styles.toggleTitle}>{title}</Text>
+      <Text style={styles.toggleDesc}>{description}</Text>
+    </View>
+    <Switch
+      value={value}
+      onValueChange={onValueChange}
+      trackColor={{ false: '#E5E7EB', true: '#22C55E' }}
+      thumbColor="#FFFFFF"
+    />
   </View>
 );
 
@@ -69,15 +102,27 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
   const role = authState.role;
   const isTeacher = role === 'teacher';
   const isInstitution = role === 'principal';
-  const roleTitle = isInstitution ? 'Institution' : isTeacher ? 'Teacher' : 'Student';
-  const secondaryTabTitle = isInstitution ? 'Institution Info' : isTeacher ? 'Professional Info' : 'Parent Information';
-  const idLabel = isInstitution ? 'PRN2023-01X' : isTeacher ? 'EMP2023-12A' : 'CS2023-789';
+  const roleTitle = isInstitution
+    ? 'Institution'
+    : isTeacher
+      ? 'Teacher'
+      : 'Student';
+  const secondaryTabTitle = isInstitution
+    ? 'Institution Info'
+    : isTeacher
+      ? 'Professional Info'
+      : 'Parent Information';
+  const idLabel = isInstitution
+    ? 'PRN2023-01X'
+    : isTeacher
+      ? 'EMP2023-12A'
+      : 'CS2023-789';
 
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [dob, setDob] = useState('');
   const [activeTab, setActiveTab] = useState<string>(
-    route.params?.targetTab || 'Personal Details'
+    route.params?.targetTab || 'Personal Details',
   );
 
   // Preferences State
@@ -92,343 +137,636 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
 
       {/* Global Header */}
       <View style={styles.globalHeader}>
-        <ScaleButton 
-          style={styles.menuHandle} 
+        <ScaleButton
+          style={styles.menuHandle}
           onPress={() => setDrawerOpen(true)}
-          hitSlop={{top: 20, bottom: 20, left: 20, right: 20}}
+          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
           activeOpacity={0.7}
           scaleTo={0.85}
         >
           <Ionicons name="menu" size={28} color="#1F2937" />
         </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'User'}</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>
+          Welcome back, {authState.user?.name?.split(' ')[0] || 'User'}
+        </Text>
         <View style={styles.headerRight}>
           <Ionicons name="notifications-outline" size={22} color="#1F2937" />
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'U'}</Text>
+            <Text style={styles.avatarText}>
+              {authState.user?.name?.charAt(0) || 'U'}
+            </Text>
           </View>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Page Title */}
-        <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
-           <Text style={styles.pageTitle}>Account Settings</Text>
-           <Text style={styles.pageSubtitle}>Manage your {roleTitle} account and preferences</Text>
+        <Animated.View
+          entering={FadeIn.duration(400)}
+          style={styles.pageTitleWrapper}
+        >
+          <Text style={styles.pageTitle}>Account Settings</Text>
+          <Text style={styles.pageSubtitle}>
+            Manage your {roleTitle} account and preferences
+          </Text>
         </Animated.View>
 
         {/* Hero ID Card */}
-        <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.heroCard}>
-           <ScaleButton activeOpacity={0.8} scaleTo={0.92} style={styles.heroAvatarContainer}>
-              <View style={styles.heroAvatar}>
-                 <Text style={styles.heroAvatarText}>{authState.user?.name?.charAt(0) || 'U'}</Text>
-              </View>
-              <View style={styles.cameraIconBadge}>
-                 <Ionicons name="camera-outline" size={12} color="#4F46E5" />
-              </View>
-           </ScaleButton>
-            <View style={styles.heroInfo}>
-              <Text style={styles.heroName}>{authState.user?.name || 'User Name'}</Text>
-              <Text style={styles.heroDetails}>{authState.user?.email || 'Email.com'} | ID: {idLabel}</Text>
-              <View style={styles.heroStatusPill}>
-                 <Text style={styles.heroStatusText}>Active {roleTitle}</Text>
-              </View>
-           </View>
+        <Animated.View
+          entering={FadeInUp.delay(100).springify()}
+          style={styles.heroCard}
+        >
+          <ScaleButton
+            activeOpacity={0.8}
+            scaleTo={0.92}
+            style={styles.heroAvatarContainer}
+          >
+            <View style={styles.heroAvatar}>
+              <Text style={styles.heroAvatarText}>
+                {authState.user?.name?.charAt(0) || 'U'}
+              </Text>
+            </View>
+            <View style={styles.cameraIconBadge}>
+              <Ionicons name="camera-outline" size={12} color="#4F46E5" />
+            </View>
+          </ScaleButton>
+          <View style={styles.heroInfo}>
+            <Text style={styles.heroName}>
+              {authState.user?.name || 'User Name'}
+            </Text>
+            <Text style={styles.heroDetails}>
+              {authState.user?.email || 'Email.com'} | ID: {idLabel}
+            </Text>
+            <View style={styles.heroStatusPill}>
+              <Text style={styles.heroStatusText}>Active {roleTitle}</Text>
+            </View>
+          </View>
         </Animated.View>
 
         {/* Form Container */}
-        <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.formContainerCard}>
-           
-           {/* Navigation Tabs */}
-           <View style={styles.tabsRow}>
-             <TouchableOpacity style={[styles.tabBtn, activeTab === 'Personal Details' && styles.tabActive]} onPress={() => setActiveTab('Personal Details')}>
-                <Ionicons name="person" size={12} color={activeTab === 'Personal Details' ? '#3B82F6' : '#9CA3AF'} />
-                <Text style={[styles.tabText, activeTab === 'Personal Details' && styles.tabTextActive]}>Personal Details</Text>
-             </TouchableOpacity>
-             <TouchableOpacity style={[styles.tabBtn, activeTab === secondaryTabTitle && styles.tabActive]} onPress={() => setActiveTab(secondaryTabTitle)}>
-                <Ionicons name="people" size={12} color={activeTab === secondaryTabTitle ? '#3B82F6' : '#9CA3AF'} />
-                <Text style={[styles.tabText, activeTab === secondaryTabTitle && styles.tabTextActive]}>{secondaryTabTitle}</Text>
-             </TouchableOpacity>
-             <TouchableOpacity style={[styles.tabBtn, activeTab === 'Preferences' && styles.tabActive]} onPress={() => setActiveTab('Preferences')}>
-                <Ionicons name="options" size={12} color={activeTab === 'Preferences' ? '#3B82F6' : '#9CA3AF'} />
-                <Text style={[styles.tabText, activeTab === 'Preferences' && styles.tabTextActive]}>Preferences</Text>
-             </TouchableOpacity>
-           </View>
+        <Animated.View
+          entering={FadeInUp.delay(200).springify()}
+          style={styles.formContainerCard}
+        >
+          {/* Navigation Tabs */}
+          <View style={styles.tabsRow}>
+            <TouchableOpacity
+              style={[
+                styles.tabBtn,
+                activeTab === 'Personal Details' && styles.tabActive,
+              ]}
+              onPress={() => setActiveTab('Personal Details')}
+            >
+              <Ionicons
+                name="person"
+                size={12}
+                color={activeTab === 'Personal Details' ? '#3B82F6' : '#9CA3AF'}
+              />
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === 'Personal Details' && styles.tabTextActive,
+                ]}
+              >
+                Personal Details
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.tabBtn,
+                activeTab === secondaryTabTitle && styles.tabActive,
+              ]}
+              onPress={() => setActiveTab(secondaryTabTitle)}
+            >
+              <Ionicons
+                name="people"
+                size={12}
+                color={activeTab === secondaryTabTitle ? '#3B82F6' : '#9CA3AF'}
+              />
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === secondaryTabTitle && styles.tabTextActive,
+                ]}
+              >
+                {secondaryTabTitle}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.tabBtn,
+                activeTab === 'Preferences' && styles.tabActive,
+              ]}
+              onPress={() => setActiveTab('Preferences')}
+            >
+              <Ionicons
+                name="options"
+                size={12}
+                color={activeTab === 'Preferences' ? '#3B82F6' : '#9CA3AF'}
+              />
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === 'Preferences' && styles.tabTextActive,
+                ]}
+              >
+                Preferences
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-           {activeTab === 'Personal Details' ? (
-             <>
-               {/* Section Header */}
-               <View style={styles.sectionHeader}>
-                  <Ionicons name="school-outline" size={16} color="#3B82F6" />
-                  <Text style={styles.sectionTitle}>{roleTitle} Information</Text>
-               </View>
-               
-               <View style={styles.divider} />
+          {activeTab === 'Personal Details' ? (
+            <>
+              {/* Section Header */}
+              <View style={styles.sectionHeader}>
+                <Ionicons name="school-outline" size={16} color="#3B82F6" />
+                <Text style={styles.sectionTitle}>{roleTitle} Information</Text>
+              </View>
 
-               {/* Fields Loop */}
-               <InputField label="First Name" labelIcon="person-outline" inputIcon="person" placeholder="Enter First Name" />
-               <InputField label="Last name" labelIcon="person-outline" inputIcon="person" placeholder="Enter Last Name" />
+              <View style={styles.divider} />
 
-               {/* Static Student ID Block */}
-               <View style={styles.fieldContainer}>
-                 <View style={styles.labelRow}>
-                    <Ionicons name="id-card-outline" size={12} color="#3B82F6" />
-                    <Text style={styles.labelText}>{roleTitle} ID</Text>
-                 </View>
-                 <View style={styles.staticFieldWrapper}>
-                    <Ionicons name="business" size={16} color="#6B7280" style={{marginRight: 10}} />
-                    <Text style={styles.staticFieldText}>{idLabel}</Text>
-                 </View>
-               </View>
+              {/* Fields Loop */}
+              <InputField
+                label="First Name"
+                labelIcon="person-outline"
+                inputIcon="person"
+                placeholder="Enter First Name"
+              />
+              <InputField
+                label="Last name"
+                labelIcon="person-outline"
+                inputIcon="person"
+                placeholder="Enter Last Name"
+              />
 
-               <InputField label="Phone number" labelIcon="call-outline" inputIcon="call" placeholder="Enter Phone Number" />
-               
-               <InputField label="Email Address" labelIcon="mail-outline" inputIcon="mail" placeholder="Enter Email Address" />
-               <InputField 
-                  label="Date of Birth" 
-                  labelIcon="calendar-outline" 
-                  inputIcon="calendar" 
-                  placeholder="MM/DD/YYYY" 
-                  value={dob}
-                  rightIcon="calendar" 
-                  onRightIconPress={() => setShowCalendar(true)}
-               />
-               
-               <InputField 
-                  label="Current Address" 
-                  labelIcon="location-outline" 
-                  inputIcon="home"
-                  placeholder="Enter Full Address" 
-                  multiline={true} 
-               />
+              {/* Static Student ID Block */}
+              <View style={styles.fieldContainer}>
+                <View style={styles.labelRow}>
+                  <Ionicons name="id-card-outline" size={12} color="#3B82F6" />
+                  <Text style={styles.labelText}>{roleTitle} ID</Text>
+                </View>
+                <View style={styles.staticFieldWrapper}>
+                  <Ionicons
+                    name="business"
+                    size={16}
+                    color="#6B7280"
+                    style={{ marginRight: 10 }}
+                  />
+                  <Text style={styles.staticFieldText}>{idLabel}</Text>
+                </View>
+              </View>
 
-               <View style={styles.divider} />
+              <InputField
+                label="Phone number"
+                labelIcon="call-outline"
+                inputIcon="call"
+                placeholder="Enter Phone Number"
+              />
 
-               {/* Action Buttons */}
-               <View style={styles.buttonsRow}>
-                 <ScaleButton activeOpacity={0.8} scaleTo={0.96} style={styles.cancelBtn}>
-                   <Text style={styles.cancelBtnText}>Cancel</Text>
-                 </ScaleButton>
-                 <ScaleButton activeOpacity={0.9} scaleTo={0.96} style={styles.saveBtn}>
-                   <Ionicons name="save" size={14} color="#FFFFFF" style={{marginRight: 6}} />
-                   <Text style={styles.saveBtnText}>Save Personal Details</Text>
-                 </ScaleButton>
-               </View>
-             </>
-           ) : activeTab === secondaryTabTitle ? (
-             <>
-               {/* Parent Section Header */}
-               <View style={styles.sectionHeader}>
-                  <Ionicons name="school-outline" size={16} color="#3B82F6" />
-                  <Text style={styles.sectionTitle}>{secondaryTabTitle}</Text>
-               </View>
-               
-               <View style={styles.divider} />
+              <InputField
+                label="Email Address"
+                labelIcon="mail-outline"
+                inputIcon="mail"
+                placeholder="Enter Email Address"
+              />
+              <InputField
+                label="Date of Birth"
+                labelIcon="calendar-outline"
+                inputIcon="calendar"
+                placeholder="MM/DD/YYYY"
+                value={dob}
+                rightIcon="calendar"
+                onRightIconPress={() => setShowCalendar(true)}
+              />
 
-               <InputField label="Parent/Guardian Name" labelIcon="person-outline" inputIcon="person" placeholder="Enter Full Name" />
-               <InputField label="Relationship" labelIcon="people-outline" inputIcon="person" placeholder="Enter Relationship" />
-               <InputField label="Email Address" labelIcon="mail-outline" inputIcon="mail" placeholder="Enter Email Address" />
-               <InputField label="Phone number" labelIcon="call-outline" inputIcon="call" placeholder="Enter Phone Number" />
-               <InputField label="Current Address" labelIcon="location-outline" inputIcon="home" placeholder="Enter Full Address" multiline={true} />
+              <InputField
+                label="Current Address"
+                labelIcon="location-outline"
+                inputIcon="home"
+                placeholder="Enter Full Address"
+                multiline={true}
+              />
 
-               {/* Emergency Section Header */}
-               <View style={[styles.sectionHeader, { paddingTop: 8 }]}>
-                  <Ionicons name="call-outline" size={16} color="#3B82F6" />
-                  <Text style={styles.sectionTitle}>Emergency Contact Information</Text>
-               </View>
-               
-               <View style={styles.divider} />
+              <View style={styles.divider} />
 
-               <InputField label="Emergency Contact Name" labelIcon="person-outline" inputIcon="person" placeholder="Enter Full Name" />
-               <InputField label="Relationship" labelIcon="people-outline" inputIcon="person" placeholder="Enter Relationship" />
-               <InputField label="Email Address" labelIcon="mail-outline" inputIcon="mail" placeholder="Enter Email Address" />
-               <InputField label="Phone number" labelIcon="call-outline" inputIcon="call" placeholder="Enter Phone Number" />
+              {/* Action Buttons */}
+              <View style={styles.buttonsRow}>
+                <ScaleButton
+                  activeOpacity={0.8}
+                  scaleTo={0.96}
+                  style={styles.cancelBtn}
+                >
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </ScaleButton>
+                <ScaleButton
+                  activeOpacity={0.9}
+                  scaleTo={0.96}
+                  style={styles.saveBtn}
+                >
+                  <Ionicons
+                    name="save"
+                    size={14}
+                    color="#FFFFFF"
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={styles.saveBtnText}>Save Personal Details</Text>
+                </ScaleButton>
+              </View>
+            </>
+          ) : activeTab === secondaryTabTitle ? (
+            <>
+              {/* Parent Section Header */}
+              <View style={styles.sectionHeader}>
+                <Ionicons name="school-outline" size={16} color="#3B82F6" />
+                <Text style={styles.sectionTitle}>{secondaryTabTitle}</Text>
+              </View>
 
-               <View style={styles.divider} />
+              <View style={styles.divider} />
 
-               {/* Action Buttons */}
-               <View style={styles.buttonsRow}>
-                 <ScaleButton activeOpacity={0.8} scaleTo={0.96} style={styles.cancelBtn}>
-                   <Text style={styles.cancelBtnText}>Cancel</Text>
-                 </ScaleButton>
-                 <ScaleButton activeOpacity={0.9} scaleTo={0.96} style={styles.saveBtn}>
-                   <Ionicons name="save" size={14} color="#FFFFFF" style={{marginRight: 6}} />
-                   <Text style={styles.saveBtnText}>Save {secondaryTabTitle}</Text>
-                 </ScaleButton>
-               </View>
-             </>
-           ) : activeTab === 'Preferences' ? (
-             <>
-               {/* Section Header */}
-               <View style={styles.sectionHeader}>
-                  <Ionicons name="options" size={16} color="#3B82F6" />
-                  <Text style={styles.sectionTitle}>Account Preference & Security</Text>
-               </View>
-               
-               <View style={styles.divider} />
+              <InputField
+                label="Parent/Guardian Name"
+                labelIcon="person-outline"
+                inputIcon="person"
+                placeholder="Enter Full Name"
+              />
+              <InputField
+                label="Relationship"
+                labelIcon="people-outline"
+                inputIcon="person"
+                placeholder="Enter Relationship"
+              />
+              <InputField
+                label="Email Address"
+                labelIcon="mail-outline"
+                inputIcon="mail"
+                placeholder="Enter Email Address"
+              />
+              <InputField
+                label="Phone number"
+                labelIcon="call-outline"
+                inputIcon="call"
+                placeholder="Enter Phone Number"
+              />
+              <InputField
+                label="Current Address"
+                labelIcon="location-outline"
+                inputIcon="home"
+                placeholder="Enter Full Address"
+                multiline={true}
+              />
 
-               {/* Toggles */}
-               <PreferenceToggle 
-                 title="Grade Notifications" 
-                 description="Get notified when new grades are posted" 
-                 value={gradeNotif} 
-                 onValueChange={setGradeNotif} 
-               />
-               <PreferenceToggle 
-                 title="Assignment Reminders" 
-                 description="Receive reminders for upcoming assignments" 
-                 value={assignNotif} 
-                 onValueChange={setAssignNotif} 
-               />
-               <PreferenceToggle 
-                 title="Class Announcements" 
-                 description="Get notifications for class announcements" 
-                 value={classNotif} 
-                 onValueChange={setClassNotif} 
-               />
+              {/* Emergency Section Header */}
+              <View style={[styles.sectionHeader, { paddingTop: 8 }]}>
+                <Ionicons name="call-outline" size={16} color="#3B82F6" />
+                <Text style={styles.sectionTitle}>
+                  Emergency Contact Information
+                </Text>
+              </View>
 
-               <View style={{height: 12}} />
+              <View style={styles.divider} />
 
-               {/* Dropdowns */}
-               <InputField 
-                 label="Language Preference" 
-                 labelIcon="language" 
-                 inputIcon="language" 
-                 value="English" 
-                 rightIcon="chevron-down" 
-               />
-               <InputField 
-                 label="Communication Preference" 
-                 labelIcon="chatbubbles-outline" 
-                 inputIcon="chatbubbles-outline" 
-                 value="Email Only" 
-                 rightIcon="chevron-down" 
-               />
+              <InputField
+                label="Emergency Contact Name"
+                labelIcon="person-outline"
+                inputIcon="person"
+                placeholder="Enter Full Name"
+              />
+              <InputField
+                label="Relationship"
+                labelIcon="people-outline"
+                inputIcon="person"
+                placeholder="Enter Relationship"
+              />
+              <InputField
+                label="Email Address"
+                labelIcon="mail-outline"
+                inputIcon="mail"
+                placeholder="Enter Email Address"
+              />
+              <InputField
+                label="Phone number"
+                labelIcon="call-outline"
+                inputIcon="call"
+                placeholder="Enter Phone Number"
+              />
 
-               <View style={styles.divider} />
+              <View style={styles.divider} />
 
-               {/* Action Buttons */}
-               <View style={styles.buttonsRow}>
-                 <ScaleButton activeOpacity={0.8} scaleTo={0.96} style={[styles.cancelBtn, {flex: 1.2, flexDirection: 'row', gap: 6}]} onPress={() => setShowPasswordModal(true)}>
-                   <Ionicons name="key-outline" size={14} color="#111827" />
-                   <Text style={[styles.cancelBtnText, {color: '#111827'}]}>Change Password</Text>
-                 </ScaleButton>
-                 <ScaleButton activeOpacity={0.9} scaleTo={0.96} style={styles.saveBtn}>
-                   <Ionicons name="save" size={14} color="#FFFFFF" style={{marginRight: 6}} />
-                   <Text style={styles.saveBtnText}>Save Preferences</Text>
-                 </ScaleButton>
-               </View>
-             </>
-           ) : null}
+              {/* Action Buttons */}
+              <View style={styles.buttonsRow}>
+                <ScaleButton
+                  activeOpacity={0.8}
+                  scaleTo={0.96}
+                  style={styles.cancelBtn}
+                >
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </ScaleButton>
+                <ScaleButton
+                  activeOpacity={0.9}
+                  scaleTo={0.96}
+                  style={styles.saveBtn}
+                >
+                  <Ionicons
+                    name="save"
+                    size={14}
+                    color="#FFFFFF"
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={styles.saveBtnText}>
+                    Save {secondaryTabTitle}
+                  </Text>
+                </ScaleButton>
+              </View>
+            </>
+          ) : activeTab === 'Preferences' ? (
+            <>
+              {/* Section Header */}
+              <View style={styles.sectionHeader}>
+                <Ionicons name="options" size={16} color="#3B82F6" />
+                <Text style={styles.sectionTitle}>
+                  Account Preference & Security
+                </Text>
+              </View>
 
+              <View style={styles.divider} />
+
+              {/* Toggles */}
+              <PreferenceToggle
+                title="Grade Notifications"
+                description="Get notified when new grades are posted"
+                value={gradeNotif}
+                onValueChange={setGradeNotif}
+              />
+              <PreferenceToggle
+                title="Assignment Reminders"
+                description="Receive reminders for upcoming assignments"
+                value={assignNotif}
+                onValueChange={setAssignNotif}
+              />
+              <PreferenceToggle
+                title="Class Announcements"
+                description="Get notifications for class announcements"
+                value={classNotif}
+                onValueChange={setClassNotif}
+              />
+
+              <View style={{ height: 12 }} />
+
+              {/* Dropdowns */}
+              <InputField
+                label="Language Preference"
+                labelIcon="language"
+                inputIcon="language"
+                value="English"
+                rightIcon="chevron-down"
+              />
+              <InputField
+                label="Communication Preference"
+                labelIcon="chatbubbles-outline"
+                inputIcon="chatbubbles-outline"
+                value="Email Only"
+                rightIcon="chevron-down"
+              />
+
+              <View style={styles.divider} />
+
+              {/* Action Buttons */}
+              <View style={styles.buttonsRow}>
+                <ScaleButton
+                  activeOpacity={0.8}
+                  scaleTo={0.96}
+                  style={[
+                    styles.cancelBtn,
+                    { flex: 1.2, flexDirection: 'row', gap: 6 },
+                  ]}
+                  onPress={() => setShowPasswordModal(true)}
+                >
+                  <Ionicons name="key-outline" size={14} color="#111827" />
+                  <Text style={[styles.cancelBtnText, { color: '#111827' }]}>
+                    Change Password
+                  </Text>
+                </ScaleButton>
+                <ScaleButton
+                  activeOpacity={0.9}
+                  scaleTo={0.96}
+                  style={styles.saveBtn}
+                >
+                  <Ionicons
+                    name="save"
+                    size={14}
+                    color="#FFFFFF"
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={styles.saveBtnText}>Save Preferences</Text>
+                </ScaleButton>
+              </View>
+            </>
+          ) : null}
         </Animated.View>
-
       </ScrollView>
 
       {/* Calendar Overlay Modal */}
-      <Modal visible={showCalendar} transparent animationType="fade" onRequestClose={() => setShowCalendar(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowCalendar(false)}>
-          <TouchableOpacity activeOpacity={1} style={styles.calendarModalContent}>
-             <View style={styles.calendarHeader}>
-                <TouchableOpacity><Ionicons name="chevron-back" size={20} color="#111827" /></TouchableOpacity>
-                <Text style={styles.calendarMonth}>October 2023</Text>
-                <TouchableOpacity><Ionicons name="chevron-forward" size={20} color="#111827" /></TouchableOpacity>
-             </View>
-             
-             <View style={styles.calendarDaysRow}>
-                {['S','M','T','W','T','F','S'].map((d,i) => <Text key={i} style={styles.calDayName}>{d}</Text>)}
-             </View>
-             
-             <View style={styles.calendarGrid}>
-                {Array.from({length: 31}).map((_, i) => {
-                   const day = i + 1;
-                   const isActive = day === 15;
-                   return (
-                     <TouchableOpacity 
-                       key={i} 
-                       style={[styles.calDayBox, isActive && styles.calDayActive]}
-                       onPress={() => {
-                          setDob(`10/${day.toString().padStart(2, '0')}/2023`);
-                          setShowCalendar(false);
-                       }}
-                     >
-                        <Text style={[styles.calDayText, isActive && styles.calDayTextActive]}>{day}</Text>
-                     </TouchableOpacity>
-                   );
-                })}
-             </View>
+      <Modal
+        visible={showCalendar}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCalendar(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowCalendar(false)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            style={styles.calendarModalContent}
+          >
+            <View style={styles.calendarHeader}>
+              <TouchableOpacity>
+                <Ionicons name="chevron-back" size={20} color="#111827" />
+              </TouchableOpacity>
+              <Text style={styles.calendarMonth}>October 2023</Text>
+              <TouchableOpacity>
+                <Ionicons name="chevron-forward" size={20} color="#111827" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.calendarDaysRow}>
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                <Text key={i} style={styles.calDayName}>
+                  {d}
+                </Text>
+              ))}
+            </View>
+
+            <View style={styles.calendarGrid}>
+              {Array.from({ length: 31 }).map((_, i) => {
+                const day = i + 1;
+                const isActive = day === 15;
+                return (
+                  <TouchableOpacity
+                    key={i}
+                    style={[styles.calDayBox, isActive && styles.calDayActive]}
+                    onPress={() => {
+                      setDob(`10/${day.toString().padStart(2, '0')}/2023`);
+                      setShowCalendar(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.calDayText,
+                        isActive && styles.calDayTextActive,
+                      ]}
+                    >
+                      {day}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
 
       {/* Update Password Modal */}
-      <Modal visible={showPasswordModal} transparent animationType="fade" onRequestClose={() => setShowPasswordModal(false)}>
+      <Modal
+        visible={showPasswordModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPasswordModal(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.passwordModalContent}>
-             <View style={styles.pwdHeader}>
-                <View style={styles.pwdHeaderIcon}>
-                   <Ionicons name="key" size={20} color="#FFFFFF" />
-                </View>
-                <View style={styles.pwdHeaderTextContainer}>
-                   <Text style={styles.pwdHeaderTitle}>Update Password</Text>
-                   <Text style={styles.pwdHeaderSubtitle}>Last changed: 45 days ago</Text>
-                </View>
-                <TouchableOpacity onPress={() => setShowPasswordModal(false)} style={styles.pwdCloseBtn}>
-                   <Ionicons name="close" size={20} color="#FFFFFF" />
-                </TouchableOpacity>
-             </View>
+            <View style={styles.pwdHeader}>
+              <View style={styles.pwdHeaderIcon}>
+                <Ionicons name="key" size={20} color="#FFFFFF" />
+              </View>
+              <View style={styles.pwdHeaderTextContainer}>
+                <Text style={styles.pwdHeaderTitle}>Update Password</Text>
+                <Text style={styles.pwdHeaderSubtitle}>
+                  Last changed: 45 days ago
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowPasswordModal(false)}
+                style={styles.pwdCloseBtn}
+              >
+                <Ionicons name="close" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
 
-             <View style={styles.pwdBody}>
-                {/* Requirements overlapping box */}
-                <View style={styles.pwdReqBox}>
-                   <View style={styles.pwdReqHeaderRow}>
-                      <Ionicons name="document-text-outline" size={14} color="#3B82F6" style={{marginRight: 6}} />
-                      <Text style={styles.pwdReqTitle}>Password Requirements</Text>
-                   </View>
-                   <View style={styles.pwdReqColumns}>
-                      <View style={styles.pwdReqCol}>
-                         <View style={styles.pwdReqRow}><View style={styles.pwdReqDot}/><Text style={styles.pwdReqText}>At least 8 characters</Text></View>
-                         <View style={styles.pwdReqRow}><View style={styles.pwdReqDot}/><Text style={styles.pwdReqText}>One lowercase letter</Text></View>
-                         <View style={styles.pwdReqRow}><View style={styles.pwdReqDot}/><Text style={styles.pwdReqText}>One special character</Text></View>
-                      </View>
-                      <View style={styles.pwdReqCol}>
-                         <View style={styles.pwdReqRow}><View style={styles.pwdReqDot}/><Text style={styles.pwdReqText}>One uppercase letter</Text></View>
-                         <View style={styles.pwdReqRow}><View style={styles.pwdReqDot}/><Text style={styles.pwdReqText}>One number</Text></View>
-                         <View style={styles.pwdReqRow}><View style={styles.pwdReqDot}/><Text style={styles.pwdReqText}>Passwords must match</Text></View>
-                      </View>
-                   </View>
+            <View style={styles.pwdBody}>
+              {/* Requirements overlapping box */}
+              <View style={styles.pwdReqBox}>
+                <View style={styles.pwdReqHeaderRow}>
+                  <Ionicons
+                    name="document-text-outline"
+                    size={14}
+                    color="#3B82F6"
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={styles.pwdReqTitle}>Password Requirements</Text>
                 </View>
-
-                {/* Inputs */}
-                <InputField 
-                   label="Current Password" labelIcon="lock-closed" inputIcon="key" 
-                   placeholder="Enter your current password" rightIcon="eye" secureTextEntry={true} 
-                />
-                <InputField 
-                   label="New Password" labelIcon="lock-closed" inputIcon="lock-closed" 
-                   placeholder="Create a strong new password" rightIcon="eye" secureTextEntry={true} 
-                />
-                <InputField 
-                   label="Confirm New Password" labelIcon="lock-closed" inputIcon="lock-closed" 
-                   placeholder="Re - enter your new password" rightIcon="eye" secureTextEntry={true} 
-                />
-
-                <View style={styles.divider} />
-
-                {/* Buttons */}
-                <View style={[styles.buttonsRow, {paddingBottom: 20}]}>
-                  <ScaleButton activeOpacity={0.8} scaleTo={0.96} style={styles.cancelBtn} onPress={() => setShowPasswordModal(false)}>
-                    <Text style={styles.cancelBtnText}>Cancel</Text>
-                  </ScaleButton>
-                  <ScaleButton activeOpacity={0.9} scaleTo={0.96} style={styles.saveBtn}>
-                    <Ionicons name="save" size={14} color="#FFFFFF" style={{marginRight: 6}} />
-                    <Text style={styles.saveBtnText}>Update Password</Text>
-                  </ScaleButton>
+                <View style={styles.pwdReqColumns}>
+                  <View style={styles.pwdReqCol}>
+                    <View style={styles.pwdReqRow}>
+                      <View style={styles.pwdReqDot} />
+                      <Text style={styles.pwdReqText}>
+                        At least 8 characters
+                      </Text>
+                    </View>
+                    <View style={styles.pwdReqRow}>
+                      <View style={styles.pwdReqDot} />
+                      <Text style={styles.pwdReqText}>
+                        One lowercase letter
+                      </Text>
+                    </View>
+                    <View style={styles.pwdReqRow}>
+                      <View style={styles.pwdReqDot} />
+                      <Text style={styles.pwdReqText}>
+                        One special character
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.pwdReqCol}>
+                    <View style={styles.pwdReqRow}>
+                      <View style={styles.pwdReqDot} />
+                      <Text style={styles.pwdReqText}>
+                        One uppercase letter
+                      </Text>
+                    </View>
+                    <View style={styles.pwdReqRow}>
+                      <View style={styles.pwdReqDot} />
+                      <Text style={styles.pwdReqText}>One number</Text>
+                    </View>
+                    <View style={styles.pwdReqRow}>
+                      <View style={styles.pwdReqDot} />
+                      <Text style={styles.pwdReqText}>
+                        Passwords must match
+                      </Text>
+                    </View>
+                  </View>
                 </View>
-             </View>
+              </View>
+
+              {/* Inputs */}
+              <InputField
+                label="Current Password"
+                labelIcon="lock-closed"
+                inputIcon="key"
+                placeholder="Enter your current password"
+                rightIcon="eye"
+                secureTextEntry={true}
+              />
+              <InputField
+                label="New Password"
+                labelIcon="lock-closed"
+                inputIcon="lock-closed"
+                placeholder="Create a strong new password"
+                rightIcon="eye"
+                secureTextEntry={true}
+              />
+              <InputField
+                label="Confirm New Password"
+                labelIcon="lock-closed"
+                inputIcon="lock-closed"
+                placeholder="Re - enter your new password"
+                rightIcon="eye"
+                secureTextEntry={true}
+              />
+
+              <View style={styles.divider} />
+
+              {/* Buttons */}
+              <View style={[styles.buttonsRow, { paddingBottom: 20 }]}>
+                <ScaleButton
+                  activeOpacity={0.8}
+                  scaleTo={0.96}
+                  style={styles.cancelBtn}
+                  onPress={() => setShowPasswordModal(false)}
+                >
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </ScaleButton>
+                <ScaleButton
+                  activeOpacity={0.9}
+                  scaleTo={0.96}
+                  style={styles.saveBtn}
+                >
+                  <Ionicons
+                    name="save"
+                    size={14}
+                    color="#FFFFFF"
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={styles.saveBtnText}>Update Password</Text>
+                </ScaleButton>
+              </View>
+            </View>
           </View>
         </View>
       </Modal>
@@ -437,7 +775,7 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
       <NavigationDrawer
         isOpen={isDrawerOpen}
         onClose={() => setDrawerOpen(false)}
-        role={role as any || "student"}
+        role={(role as any) || 'student'}
       />
     </View>
   );
@@ -452,9 +790,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40, 
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF', 
+    backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -466,7 +804,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5', 
+    color: '#4F46E5',
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -488,7 +826,12 @@ const styles = StyleSheet.create({
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   pageTitleWrapper: { marginBottom: 16, paddingHorizontal: 20, marginTop: 10 },
-  pageTitle: { fontSize: 24, fontWeight: '800', color: '#3B82F6', marginBottom: 4 },
+  pageTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#3B82F6',
+    marginBottom: 4,
+  },
   pageSubtitle: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
 
   /* Hero ID Card */
@@ -877,7 +1220,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   pwdReqBox: {
-    backgroundColor: '#F8FAFC', 
+    backgroundColor: '#F8FAFC',
     borderRadius: 12,
     marginHorizontal: 20,
     marginTop: -32,
@@ -923,7 +1266,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#4B5563',
     fontWeight: '600',
-  }
+  },
 });
 
 export default AccountSettingsScreen;
