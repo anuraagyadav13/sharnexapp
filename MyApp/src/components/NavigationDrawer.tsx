@@ -54,9 +54,9 @@ const STUDENT_MENU: MenuItem[] = [
 
 const PRINCIPAL_MENU: MenuItem[] = [
   { id: '1', label: 'Home', icon: 'grid-outline' },
-  { 
-    id: 'academic', 
-    label: 'Academic Structure', 
+  {
+    id: 'academic',
+    label: 'Academic Structure',
     icon: 'school-outline',
     subItems: [
       { id: 'classes', label: 'Classes' },
@@ -163,7 +163,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
   const [expandedItems, setExpandedItems] = useState<string[]>(['academic']);
 
   const toggleExpand = (id: string) => {
-    setExpandedItems(prev => 
+    setExpandedItems(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
@@ -171,7 +171,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
   const renderMenu = () => {
     let menuItems = STUDENT_MENU;
     if (role === 'teacher') menuItems = TEACHER_MENU;
-    if (role === 'admin') menuItems = STUDENT_MENU; 
+    if (role === 'admin') menuItems = STUDENT_MENU;
     if (role === 'principal') menuItems = PRINCIPAL_MENU;
 
     const getIsActive = (label: string): boolean => {
@@ -183,11 +183,19 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
         case 'Students details': return currentRouteName === 'PrincipalStudentDetails';
         case 'Academic Calendar': return currentRouteName === 'PrincipalCalendar' || currentRouteName === 'Calendar';
         case 'Timetable': return currentRouteName === 'PrincipalTimetable' || currentRouteName === 'Timetable' || currentRouteName === 'TeacherTimetable';
+        case 'Class Attendance': return currentRouteName === 'TeacherAttendance' || currentRouteName === 'TeacherViewAttendance' || currentRouteName === 'TeacherMarkAttendance';
+        case 'Exams': return currentRouteName === 'TeacherQuiz' || currentRouteName === 'TeacherCreateQuiz' || currentRouteName === 'TeacherCreateQuizStep2' || currentRouteName === 'TeacherCreateQuizStep3' || currentRouteName === 'TeacherAddQuestion' || currentRouteName === 'TeacherViewQuizResult' || currentRouteName === 'TeacherMonitorLive';
+        case 'Study Material': return currentRouteName === 'StudyMaterial' || currentRouteName === 'TeacherStudyMaterial';
         case 'Performance': return currentRouteName === 'PrincipalPerformance' || currentRouteName === 'Performance' || currentRouteName === 'TeacherPerformance';
+        case 'Performance Report': return currentRouteName === 'TeacherPerformance';
+        case 'My Attendance': return currentRouteName === 'TeacherSelfAttendance';
         case 'Announcements': return currentRouteName === 'PrincipalAnnouncements' || currentRouteName === 'Announcements';
         case 'Fees & Payments': return currentRouteName === 'PrincipalFees' || currentRouteName === 'Fees';
+        case 'Equipment': return currentRouteName === 'TeacherEquipment' || currentRouteName === 'TeacherAddEquipmentRequest' || currentRouteName === 'TeacherEquipmentDetail';
+        case 'Equipment Requests': return false;
         case 'Result Management': return currentRouteName === 'PrincipalRSM' || currentRouteName === 'ResultManagement' || currentRouteName === 'TeacherResultManagement';
         case 'Account Settings': return currentRouteName === 'AccountSettings';
+        case 'Attendance': return currentRouteName === 'Attendance';
         default: return false;
       }
     };
@@ -199,6 +207,37 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
           if (role === 'principal') navigation.navigate('PrincipalDashboard');
           else if (role === 'teacher') navigation.navigate('TeacherDashboard');
           else navigation.navigate('StudentDashboard');
+        } //added assignment avigation
+        else if (label == 'Assignments') {
+          if (role === 'teacher') navigation.navigate('TeacherAssignment')
+          else navigation.navigate('Assignments')
+        }//added quizzes screen navigation
+        else if (label === 'Quizzes & Tests') {
+          navigation.navigate('Quizzes');
+        } else if (label === 'Class Attendance') {
+          navigation.navigate('TeacherAttendance');
+        } else if (label === 'Exams') {
+          navigation.navigate('TeacherQuiz');
+        } else if (label === 'Study Material') {
+          if (role === 'teacher') navigation.navigate('TeacherStudyMaterial');
+          else navigation.navigate('StudyMaterial');
+        } else if (label === 'Performance Report') {
+          navigation.navigate('TeacherPerformance');
+        } else if (label === 'My Attendance') {
+          navigation.navigate('TeacherSelfAttendance');
+        }
+        //added perormance treand
+        else if (label === 'Performance Trend') {
+          navigation.navigate('Performance');
+        }//handel attendence navigation
+        else if (label === 'Attendance') {
+          navigation.navigate('Attendance');
+        } //official result
+        else if (label === 'Official Result') {
+          navigation.navigate('ResultManagement');
+        } // fees portal
+        else if (label === 'Fees Portal') {
+          navigation.navigate('Fees');
         } else if (label === 'Classes') navigation.navigate('PrincipalClasses');
         else if (label === 'Subjects') navigation.navigate('PrincipalSubjects');
         else if (label === 'Staff Management') navigation.navigate('PrincipalStaff');
@@ -213,6 +252,8 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
           if (role === 'principal') navigation.navigate('PrincipalAnnouncements');
           else navigation.navigate('Announcements');
         } else if (label === 'Fees & Payments') navigation.navigate('PrincipalFees');
+        else if (label === 'Equipment') navigation.navigate('TeacherEquipment');
+        else if (label === 'Equipment Requests') navigation.navigate('PrincipalDashboard');
         else if (label === 'Result Management') {
           if (role === 'principal') navigation.navigate('PrincipalRSM');
           else if (role === 'teacher') navigation.navigate('TeacherResultManagement');
@@ -245,11 +286,11 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
                 <Ionicons name={item.icon} size={22} color={isActive ? '#FFFFFF' : 'rgba(255,255,255,0.8)'} />
                 <Text style={[styles.menuText, isActive && styles.menuTextActive]}>{item.label}</Text>
                 {item.subItems && (
-                  <Ionicons 
-                    name={isExpanded ? "chevron-up" : "chevron-down"} 
-                    size={18} 
-                    color="rgba(255,255,255,0.6)" 
-                    style={{ marginLeft: 'auto' }} 
+                  <Ionicons
+                    name={isExpanded ? "chevron-up" : "chevron-down"}
+                    size={18}
+                    color="rgba(255,255,255,0.6)"
+                    style={{ marginLeft: 'auto' }}
                   />
                 )}
               </TouchableOpacity>
@@ -395,3 +436,7 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
 });
+
+
+
+

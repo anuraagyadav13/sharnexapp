@@ -38,8 +38,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect, Circle } from 'react-native-svg';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import studentService from '../../services/studentService';
 import Skeleton from '../../components/common/Skeleton';
 
 const DashboardSkeleton = () => {
@@ -330,14 +329,14 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
     const fetchAllData = async () => {
       try {
         setIsLoading(true);
-        const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+        const profileRes = await studentService.getProfile();
         const resolvedId = profileRes.normalized?.data?.id || authState.user?.id;
         if (!resolvedId) throw new Error('No ID');
 
         const [dashRes, scheduleRes, assignRes] = await Promise.all([
-          apiClient.get(ENDPOINTS.STUDENT.DASHBOARD(resolvedId)),
-          apiClient.get(ENDPOINTS.STUDENT.SCHEDULE(resolvedId)),
-          apiClient.get(ENDPOINTS.STUDENT.ASSIGNMENTS(resolvedId))
+          studentService.getDashboard(resolvedId),
+          studentService.getSchedule(resolvedId),
+          studentService.getAssignments(resolvedId),
         ]);
 
         const dbPayload = dashRes.normalized?.data || {};

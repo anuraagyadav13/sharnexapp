@@ -62,7 +62,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     setIsSubmitting(true);
     try {
       const response = await apiClient.post(ENDPOINTS.AUTH.LOGIN, {
-        identifier: identifier.trim(),
+        email: identifier.trim(),
         password,
       });
 
@@ -71,22 +71,50 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         throw new Error(response.data.message || 'Login failed');
       }
 
-      const payload = response.data.data;
-      if (!payload || !payload.tokens || !payload.tokens.accessToken) {
-        throw new Error('Invalid login response from server');
-      }
+     // ======================================================
+// TEMP FIX (2026-06-26)
+// Backend now returns only the authenticated user.
+// JWTs are delivered via HttpOnly cookies instead of
+// response.data.tokens.
+// ======================================================
 
-      const { tokens, user } = payload;
+const payload = response.data.data;
+
+if (!payload || !payload.user) {
+    throw new Error("Invalid login response from server");
+}
+
+const user = payload.user;
+//changes made till here
 
       let appRole: 'student' | 'teacher' | 'principal' = 'student';
       const backendRole = user.role;
       if (backendRole === 'TEACHER' || backendRole === 'STAFF') appRole = 'teacher';
       else if (backendRole === 'INSTITUTION_ADMIN' || backendRole === 'CENTRAL_ADMIN' || backendRole === 'PRINCIPAL') appRole = 'principal';
 
-      showToast('Login successful! Welcome back.', 'success');
-      login(tokens.accessToken, tokens.refreshToken, appRole, user);
+     // ======================================================
+// TEMP FIX (2026-06-26)
+// Backend migrated to cookie authentication.
+// Tokens are no longer returned in login response.
+// Passing empty strings temporarily until AuthContext
+// is updated.
+// ======================================================
+
+showToast('Login successful! Welcome back.', 'success');
+await apiClient.get('/auth/csrf');
+console.log(
+  '[Login Set-Cookie]',
+  response.headers['set-cookie']
+);
+console.log(
+  JSON.stringify(response.headers['set-cookie'], null, 2)
+);
+
+login('', '', appRole, user);
+//changes till here
     } catch (error: any) {
       console.error('Login Error:', error);
+      console.log("STATUS:", error.response?.status);
       let message = 'Something went wrong. Please try again.';
       
       if (error.response?.data?.message) {

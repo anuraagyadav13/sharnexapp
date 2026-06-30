@@ -18,8 +18,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import studentService from '../../services/studentService';
 
 type QuizzesNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Quizzes'>;
 
@@ -109,6 +108,7 @@ const QuizCard = ({
 }
 
 const QuizzesScreen: React.FC<Props> = ({ navigation }) => {
+    console.log('[Quizzes] screen mounted');
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [quizzes, setQuizzes] = useState<any[]>([]);
@@ -126,10 +126,28 @@ const QuizzesScreen: React.FC<Props> = ({ navigation }) => {
       try {
         setIsLoading(true);
         setError(null);
-        const res = await apiClient.get(ENDPOINTS.STUDENT.QUIZZES);
+                console.log('[Quizzes] starting fetch');
+        const res = await studentService.getQuizzes();
+                console.log('[Quizzes] raw response:', JSON.stringify(res.normalized?.data));
+        // const data = res.normalized?.data ?? null;
+        // const quizzesArray = Array.isArray(data) ? data : Array.isArray(data?.quizzes) ? data.quizzes : [];
+        // setQuizzes(quizzesArray);
         const data = res.normalized?.data ?? null;
-        const quizzesArray = Array.isArray(data) ? data : Array.isArray(data?.quizzes) ? data.quizzes : [];
-        setQuizzes(quizzesArray);
+const rawQuizzes = Array.isArray(data)
+  ? data
+  : Array.isArray(data?.quizzes)
+    ? data.quizzes
+    : [];
+
+const quizzesArray = rawQuizzes.map((quiz: any) => ({
+  ...quiz,
+  derivedStatus:
+    quiz.derivedStatus ||
+    quiz.status ||
+    (quiz.hasAttempt ? 'completed' : 'available'),
+}));
+
+setQuizzes(quizzesArray);
 
         // Compute summary
         setStats({
@@ -139,7 +157,7 @@ const QuizzesScreen: React.FC<Props> = ({ navigation }) => {
           grades: quizzesArray.filter((q: any) => q.hasAttempt && (q.score !== undefined || q.percentage !== undefined)).length
         });
       } catch (err: any) {
-        console.error('Failed to fetch quizzes:', err);
+       console.error('[Quizzes] failed:', err?.response || err?.message || err);
         setError('Failed to load quizzes');
         setQuizzes([]);
       } finally {
@@ -206,7 +224,7 @@ const QuizzesScreen: React.FC<Props> = ({ navigation }) => {
                    setIsLoading(true);
                    const fetchQuizzes = async () => {
                      try {
-                       const res = await apiClient.get(ENDPOINTS.STUDENT.QUIZZES);
+                      const res = await studentService.getQuizzes();
                        const data = res.normalized?.data ?? null;
                        const quizzesArray = Array.isArray(data) ? data : Array.isArray(data?.quizzes) ? data.quizzes : [];
                        setQuizzes(quizzesArray);
@@ -291,7 +309,7 @@ const QuizzesScreen: React.FC<Props> = ({ navigation }) => {
                ))}
 
                {/* Section 3: Recently Completed */}
-               {quizzes.filter(q => q.hasAttempt).map((q, i) => (
+               {quizzes.filter(q => q.hasAttempt || q.derivedStatus === 'completed').map((q, i)  => (
                  <QuizCard 
                    key={q.id}
                    delay={500 + i * 50}

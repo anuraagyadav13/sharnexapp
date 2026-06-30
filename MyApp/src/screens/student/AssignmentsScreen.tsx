@@ -18,8 +18,7 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import studentService from '../../services/studentService';
 
 type AssignmentsNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Assignments'>;
 
@@ -93,6 +92,7 @@ const AssignmentCard = ({ category, status, title, subtitle, dueDate, deadlineRe
 };
 
 const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
+    console.log('[Assignments] screen mounted');
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [assignments, setAssignments] = useState<any[]>([]);
@@ -106,43 +106,103 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
   });
 
   useEffect(() => {
-    const fetchAssignments = async () => {
+    // const fetchAssignments = async () => {
+    //   try {
+    //     setIsLoading(true);
+    //     setError(null);
+    //     // 1. Get student profile to find database ID
+    //     const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+    //     const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
+
+    //     if (!studentId) {
+    //       throw new Error('Student ID not found in profile');
+    //     }
+
+    //     // 2. Fetch assignments
+    //     const res = await apiClient.get(ENDPOINTS.STUDENT.ASSIGNMENTS(studentId));
+    //     const data = res.data?.assignments || res.data?.data || res.data || [];
+        
+    //     // Ensure data is an array
+    //     const assignmentsArray = Array.isArray(data) ? data : [];
+    //     setAssignments(assignmentsArray);
+
+    //     // 3. Compute summary
+    //     const stats = {
+    //       pending: assignmentsArray.filter((a: any) => a.status?.toLowerCase() === 'pending' || a.status?.toLowerCase() === 'overdue').length,
+    //       submitted: assignmentsArray.filter((a: any) => a.submission_id || a.is_submitted).length,
+    //       graded: assignmentsArray.filter((a: any) => a.graded_at || a.grade).length,
+    //       upcoming: assignmentsArray.filter((a: any) => a.status?.toLowerCase() === 'upcoming').length,
+    //     };
+    //     setSummary(stats);
+    //   } catch (err: any) {
+    //     console.error('Failed to fetch assignments:', err);
+    //     setError('Failed to load assignments. Please try again.');
+    //     setAssignments([]);
+    //   } finally {
+    //     setIsLoading(false);
+    //   }
+    // };
+
+    // fetchAssignments();
+        console.log('[Assignments] useEffect running');//debug
+        const fetchAssignments = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        // 1. Get student profile to find database ID
-        const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
-        const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
+                console.log('[Assignments] starting fetch');//debug
+        const meRes = await studentService.getMe();
+        const meData = meRes.normalized?.data;
+
+        console.log('[Assignments] /auth/me data:', JSON.stringify(meData));
+
+         const studentId = meData?.id || '';
 
         if (!studentId) {
-          throw new Error('Student ID not found in profile');
+          throw new Error('Student account ID not found in /auth/me');
         }
 
-        // 2. Fetch assignments
-        const res = await apiClient.get(ENDPOINTS.STUDENT.ASSIGNMENTS(studentId));
-        const data = res.data?.assignments || res.data?.data || res.data || [];
-        
-        // Ensure data is an array
+        const res = await studentService.getAssignments(studentId);
+
+        console.log('[Assignments] raw data:', JSON.stringify(res.normalized?.data));
+
+        const rawData = res.normalized?.data;
+        const data =
+          rawData?.assignments ||
+          rawData?.data ||
+          rawData ||
+          [];
+
         const assignmentsArray = Array.isArray(data) ? data : [];
         setAssignments(assignmentsArray);
 
-        // 3. Compute summary
         const stats = {
-          pending: assignmentsArray.filter((a: any) => a.status?.toLowerCase() === 'pending' || a.status?.toLowerCase() === 'overdue').length,
-          submitted: assignmentsArray.filter((a: any) => a.submission_id || a.is_submitted).length,
-          graded: assignmentsArray.filter((a: any) => a.graded_at || a.grade).length,
-          upcoming: assignmentsArray.filter((a: any) => a.status?.toLowerCase() === 'upcoming').length,
+          pending: assignmentsArray.filter((a: any) => {
+            const status = String(a.status || '').toLowerCase();
+            return status === 'pending' || status === 'overdue';
+          }).length,
+          submitted: assignmentsArray.filter((a: any) => {
+            const status = String(a.status || '').toLowerCase();
+            return Boolean(a.submission_id || a.submissionId || a.is_submitted || a.isSubmitted || status === 'submitted');
+          }).length,
+          graded: assignmentsArray.filter((a: any) => {
+            const status = String(a.status || '').toLowerCase();
+            return Boolean(a.graded_at || a.gradedAt || a.grade || status === 'graded');
+          }).length,
+          upcoming: assignmentsArray.filter((a: any) => {
+            const status = String(a.status || '').toLowerCase();
+            return status === 'upcoming';
+          }).length,
         };
+
         setSummary(stats);
       } catch (err: any) {
-        console.error('Failed to fetch assignments:', err);
-        setError('Failed to load assignments. Please try again.');
+        console.error('[Assignments] failed:', err?.response || err?.message || err);
+        setError(err.message || 'Failed to load assignments. Please try again.');
         setAssignments([]);
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchAssignments();
   }, []);
 
@@ -200,7 +260,7 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.emptyContainer}>
               <Ionicons name="alert-circle" size={60} color="#EF4444" />
               <Text style={styles.emptyText}>{error}</Text>
-              <ScaleButton 
+              {/* <ScaleButton 
                 style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
                 onPress={() => {
                   setError(null);
@@ -231,7 +291,17 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
                 scaleTo={0.95}
               >
                 <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
-              </ScaleButton>
+              </ScaleButton> */}
+              <ScaleButton
+  style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
+  onPress={() => {
+    setError(null);
+    setIsLoading(false);
+  }}
+  scaleTo={0.95}
+>
+  <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
+</ScaleButton>
             </View>
           ) : assignments.length === 0 ? (
             <View style={styles.emptyContainer}>

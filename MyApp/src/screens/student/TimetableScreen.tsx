@@ -5,8 +5,7 @@ import { RootStackParamList } from '../../../App';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import studentService from '../../services/studentService';
 
 type TimetableNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Timetable'>;
 
@@ -14,7 +13,8 @@ interface Props {
   navigation: TimetableNavigationProp;
 }
 
-const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+// const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+const ALL_DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 const getSubjectColors = (subject?: string) => {
   const norm = typeof subject === 'string' ? subject.toLowerCase().trim() : '';
@@ -29,11 +29,18 @@ const getSubjectColors = (subject?: string) => {
 const TimetableScreen: React.FC<Props> = ({ navigation }) => {
   const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'day' | 'week'>('week');
   const [schedule, setSchedule] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 
   const currentDayKey = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][new Date().getDay()];
+  const days = React.useMemo(() => {
+    if (viewMode === 'week') return ALL_DAYS; // always MON→SAT in order
+    // Day mode: show only today, or all if today is weekend
+    return ALL_DAYS.includes(currentDayKey) ? [currentDayKey] : ALL_DAYS;
+  }, [currentDayKey, viewMode]);
 
   const normalizeTime = React.useCallback((value: string) => {
     if (!value) return '';
@@ -52,10 +59,10 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
       const nEnd = normalizeTime(endTime);
       const [startH, startM] = nStart.split(':').map(Number);
       const [endH, endM] = nEnd.split(':').map(Number);
-      
+
       const start = new Date(now); start.setHours(startH, startM, 0);
       const end = new Date(now); end.setHours(endH, endM, 0);
-      
+
       if (now >= start && now <= end) return 'Ongoing';
       if (now > end) return 'Completed';
       return 'Upcoming';
@@ -63,75 +70,184 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const normalizeApiData = (data: any) => {
-    let rawDailySchedules: any[] = [];
-    if (Array.isArray(data)) rawDailySchedules = data;
-    else if (data?.schedule && Array.isArray(data.schedule)) rawDailySchedules = data.schedule;
-    else if (data?.timetable) rawDailySchedules = [{ slots: data.timetable }];
-    else rawDailySchedules = [];
-
+    const DAY_MAP_IDX = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
     const flattenedSlots: any[] = [];
-    rawDailySchedules.forEach((dayData: any) => {
-      const slots = dayData.slots || [];
-      const dateStr = dayData.date || '';
-      const dayKey = dateStr ? ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][new Date(dateStr).getDay()] : '';
-      
-      slots.forEach((slot: any) => {
-        const start = slot.startTime || slot.time || slot.period?.start || '';
-        const end = slot.endTime || slot.period?.end || '';
-        const slotDay = slot.dayOfWeek || dayKey || currentDayKey;
-        const status = (slotDay === currentDayKey) ? calculateStatus(start, end) : 'Upcoming';
 
-        flattenedSlots.push({
-          ...slot,
-          day: slotDay,
-          startTime: start,
-          endTime: end,
-          status: slot.status || status
+    // WEEK view shape: { schedule: [ { date: "2026-06-22", slots: [...] } ] }
+    if (Array.isArray(data?.schedule)) {
+      data.schedule.forEach((dayData: any) => {
+        const dateStr: string = dayData.date || '';
+        const dayKey = dateStr
+          ? DAY_MAP_IDX[new Date(dateStr + 'T00:00:00').getDay()]
+          : currentDayKey;
+
+        (dayData.slots || []).forEach((slot: any) => {
+          const start = slot.period?.start || slot.startTime || slot.time || '';
+          const end = slot.period?.end || slot.endTime || '';
+          const status = dayKey === currentDayKey
+            ? calculateStatus(start, end)
+            : 'Upcoming';
+
+          flattenedSlots.push({
+            ...slot,
+            day: dayKey,
+            subject: typeof slot.subject === 'string'
+              ? slot.subject
+              : slot.subject?.name || 'Subject',
+            teacher: slot.teacher || { name: '-' },
+            startTime: normalizeTime(start.slice(0, 5)),
+            endTime: normalizeTime(end.slice(0, 5)),
+            status: slot.status || status,
+          });
         });
       });
+      return flattenedSlots;
+    }
+
+    // DAY view shape: array of slots OR { data: [...] }
+    let slots: any[] = [];
+    if (Array.isArray(data)) slots = data;
+    else if (Array.isArray(data?.data)) slots = data.data;
+
+    return slots.map((slot: any) => {
+      // Day API returns slot.time as start, slot.endTime as end
+      // Week API returns slot.period.start / slot.period.end
+      const start = slot.period?.start || slot.startTime || slot.time || '';
+      const end = slot.period?.end || slot.endTime || '';
+      const day = slot.day || slot.weekDay || slot.dayOfWeek || currentDayKey;
+
+      // Day API returns teacher as plain string; week API returns { id, name }
+      const teacherRaw = slot.teacher;
+      const teacher = typeof teacherRaw === 'string'
+        ? { name: teacherRaw }
+        : teacherRaw || { name: slot.teacherName || '-' };
+
+      return {
+        ...slot,
+        day,
+        subject: typeof slot.subject === 'string'
+          ? slot.subject
+          : slot.subject?.name || slot.subjectName || 'Subject',
+        teacher,
+        startTime: normalizeTime(start.slice(0, 5)),
+        endTime: normalizeTime(end.slice(0, 5)),
+        status: slot.status || calculateStatus(start, end),
+      };
     });
+  };//normalize
 
-    return flattenedSlots;
-  };
+  // const fetchTimetable = async () => {
+  //   try {
+  //     setIsLoading(true);
+  //     setError(null);
 
+  //     // Resolve studentId from Profile
+  //     const profileRes = await studentService.getProfile();;
+
+  //     const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id || '';
+
+  //     if (!studentId) throw new Error('Could not identify student account.');
+
+  //    const dashRes = await studentService.getDashboard(studentId);
+
+  //     const classId = dashRes.normalized?.data?.student?.classId;
+
+  //     // if (classId) {
+  //     //   try {
+  //     //     const now = new Date();
+  //     //     const day = now.getDay();
+  //     //     const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+  //     //     const monday = new Date(now.setDate(diff)).toISOString().split('T')[0];
+  //     //     const res = await apiClient.get(`${ENDPOINTS.STUDENT.CLASS_SCHEDULE(classId)}?week=${monday}`);
+  //     //     console.log('CLASS SCHEDULE RESPONSE:', res.normalized?.data);
+  //     //     setSchedule(normalizeApiData(res.normalized?.data));
+  //     //     return;
+  //     //   } catch (weekErr) { console.warn('Weekly fetch failed, using fallback.'); }
+  //     // }
+  //     // Skip weekly class schedule for now.
+  //     // Use the same API flow as the website.
+
+  //     // const res = await apiClient.get(ENDPOINTS.STUDENT.SCHEDULE(studentId));
+  //    const res = await studentService.getSchedule(studentId);
+
+  //     setSchedule(normalizeApiData(res.normalized?.data));
+
+  //   } catch (err: any) {
+  //     console.error('Failed to fetch timetable:', err);
+  //     setError(err.message || 'Failed to load timetable.');
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
   const fetchTimetable = async () => {
     try {
       setIsLoading(true);
       setError(null);
+      setSchedule([]); // clear stale data before fetching
 
-      // Resolve studentId from Profile
-      const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
-      const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id || '';
+      // Use /auth/me — HAR-confirmed: returns student.id and classId
+      const meRes = await studentService.getMe();
+      const meData = meRes.normalized?.data;
 
-      if (!studentId) throw new Error('Could not identify student account.');
 
-      const dashRes = await apiClient.get(ENDPOINTS.STUDENT.DASHBOARD(studentId));
-      const classId = dashRes.normalized?.data?.student?.classId;
+      const studentId = meData?.student?.id || '';
+      const classId = meData?.student?.classId || meData?.classId || '';
+      if (viewMode == 'day') {
+        if (!classId) throw new Error('Could not resolve classId from /auth/me');
 
-      if (classId) {
-        try {
-          const now = new Date();
-          const day = now.getDay();
-          const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-          const monday = new Date(now.setDate(diff)).toISOString().split('T')[0];
-          const res = await apiClient.get(`${ENDPOINTS.STUDENT.CLASS_SCHEDULE(classId)}?week=${monday}`);
-          setSchedule(normalizeApiData(res.normalized?.data));
-          return;
-        } catch (weekErr) { console.warn('Weekly fetch failed, using fallback.'); }
+        // Day mode: reuse the working week endpoint, then filter to today client-side
+        const now = new Date();
+        const day = now.getDay();
+        const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+        const monday = new Date(now);
+        monday.setDate(diff);
+        const weekStart = monday.toISOString().split('T')[0];
+
+        const res = await studentService.getClassSchedule(classId, weekStart);
+
+        // normalizeApiData will flatten all week slots; then filter to today
+        const allSlots = normalizeApiData({ schedule: res.normalized?.data });
+        const todaySlots = allSlots.filter((slot: any) => slot.day === currentDayKey);
+
+
+        setSchedule(todaySlots);
+        return;
       }
 
-      const res = await apiClient.get(ENDPOINTS.STUDENT.SCHEDULE(studentId));
-      setSchedule(normalizeApiData(res.normalized?.data));
+      if (!classId) throw new Error('Could not resolve classId from /auth/me');
+
+      const now = new Date();
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(now);
+      monday.setDate(diff);
+      const weekStart = monday.toISOString().split('T')[0];
+      const res = await studentService.getClassSchedule(classId, weekStart);
+
+
+
+      const normalized = normalizeApiData({ schedule: res.normalized?.data });
+      setSchedule(normalized);
+      return;
+
 
     } catch (err: any) {
       console.error('Failed to fetch timetable:', err);
+      console.error('[Timetable] error details:', {
+        message: err?.message,
+        status: err?.response?.status,
+        data: JSON.stringify(err?.response?.data),
+        code: err?.code,
+      });
       setError(err.message || 'Failed to load timetable.');
     } finally {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => { fetchTimetable(); }, []);
+  //changes till here
+  useEffect(() => {
+    fetchTimetable();
+  }, [viewMode]);
 
   const dynamicTimes = React.useMemo(() => {
     const times = new Set<string>();
@@ -174,35 +290,104 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
 
   if (error) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }]}>
-        <Ionicons name="alert-circle" size={64} color="#EF4444" style={{ marginBottom: 16 }} />
-        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', textAlign: 'center' }}>Unable to Load Timetable</Text>
-        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>{error}</Text>
-        <TouchableOpacity
-          style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
-          onPress={() => {
-            setError(null);
-            fetchTimetable();
-          }}
-        >
-          <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
-        </TouchableOpacity>
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FAF9F9" />
+        <View style={styles.globalHeader}>
+          <TouchableOpacity style={styles.menuHandle} onPress={() => setDrawerOpen(true)}>
+            <Ionicons name="menu" size={26} color="#111827" />
+          </TouchableOpacity>
+          <View style={styles.centerHeaderContainer}>
+            <Text style={styles.headerTitle}>
+              {viewMode === 'week' ? 'Weekly Timetable' : 'Today Timetable'}
+            </Text>
+            <View style={styles.modeToggle}>
+              <TouchableOpacity
+                style={[styles.modeButton, viewMode === 'day' && styles.modeButtonActive]}
+                onPress={() => setViewMode('day')}
+              >
+                <Text style={[styles.modeButtonText, viewMode === 'day' && styles.modeButtonTextActive]}>Day</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modeButton, viewMode === 'week' && styles.modeButtonActive]}
+                onPress={() => setViewMode('week')}
+              >
+                <Text style={[styles.modeButtonText, viewMode === 'week' && styles.modeButtonTextActive]}>Week</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={styles.headerRight}>
+            <TouchableOpacity style={styles.iconBtn}>
+              <Ionicons name="settings-outline" size={22} color="#111827" />
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
+          <Ionicons name="alert-circle" size={64} color="#EF4444" style={{ marginBottom: 16 }} />
+          <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', textAlign: 'center' }}>Unable to Load Timetable</Text>
+          <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>{error}</Text>
+          <TouchableOpacity
+            style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
+            onPress={() => { setError(null); fetchTimetable(); }}
+          >
+            <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+        <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="student" />
       </View>
     );
   }
 
-  if (!isLoading && schedule.length === 0) {
+  if (!isLoading && !error && schedule.length === 0) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }]}>
-        <Ionicons name="calendar-outline" size={64} color="#4F46E5" style={{ marginBottom: 16 }} />
-        <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', textAlign: 'center' }}>No Data Available</Text>
-        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>Your timetable is empty or not available for today.</Text>
-        <TouchableOpacity
-          style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
-          onPress={fetchTimetable}
-        >
-          <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Reload</Text>
-        </TouchableOpacity>
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FAF9F9" />
+        {/* Header with toggle so user can switch modes */}
+        <View style={styles.globalHeader}>
+          <TouchableOpacity style={styles.menuHandle} onPress={() => setDrawerOpen(true)}>
+            <Ionicons name="menu" size={26} color="#111827" />
+          </TouchableOpacity>
+          <View style={styles.centerHeaderContainer}>
+            <Text style={styles.headerTitle}>
+              {viewMode === 'week' ? 'Weekly Timetable' : 'Today Timetable'}
+            </Text>
+            <View style={styles.modeToggle}>
+              <TouchableOpacity
+                style={[styles.modeButton, viewMode === 'day' && styles.modeButtonActive]}
+                onPress={() => setViewMode('day')}
+              >
+                <Text style={[styles.modeButtonText, viewMode === 'day' && styles.modeButtonTextActive]}>Day</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modeButton, viewMode === 'week' && styles.modeButtonActive]}
+                onPress={() => setViewMode('week')}
+              >
+                <Text style={[styles.modeButtonText, viewMode === 'week' && styles.modeButtonTextActive]}>Week</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={styles.headerRight}>
+            <TouchableOpacity style={styles.iconBtn}>
+              <Ionicons name="settings-outline" size={22} color="#111827" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Empty state */}
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
+          <Ionicons name="calendar-outline" size={64} color="#4F46E5" style={{ marginBottom: 16 }} />
+          <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', textAlign: 'center' }}>No Data Available</Text>
+          <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>
+            {viewMode === 'day' ? 'No classes scheduled for today.' : 'No timetable available for this week.'}
+          </Text>
+          <TouchableOpacity
+            style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
+            onPress={() => { setError(null); setSchedule([]); fetchTimetable(); }}
+          >
+            <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Reload</Text>
+          </TouchableOpacity>
+        </View>
+
+        <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="student" />
       </View>
     );
   }
@@ -220,10 +405,47 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
         >
           <Ionicons name="menu" size={26} color="#111827" />
         </TouchableOpacity>
-
+        {/* toogle button */}
         <View style={styles.centerHeaderContainer}>
-          <Text style={styles.headerTitle}>Weekly Timetable</Text>
-          <Text style={styles.headerSubtitle}>Standard View</Text>
+          <Text style={styles.headerTitle}>
+            {viewMode === 'week' ? 'Weekly Timetable' : 'Today Timetable'}
+          </Text>
+
+          <View style={styles.modeToggle}>
+            <TouchableOpacity
+              style={[
+                styles.modeButton,
+                viewMode === 'day' && styles.modeButtonActive,
+              ]}
+              onPress={() => setViewMode('day')}
+            >
+              <Text
+                style={[
+                  styles.modeButtonText,
+                  viewMode === 'day' && styles.modeButtonTextActive,
+                ]}
+              >
+                Day
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.modeButton,
+                viewMode === 'week' && styles.modeButtonActive,
+              ]}
+              onPress={() => setViewMode('week')}
+            >
+              <Text
+                style={[
+                  styles.modeButtonText,
+                  viewMode === 'week' && styles.modeButtonTextActive,
+                ]}
+              >
+                Week
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.headerRight}>
@@ -262,12 +484,12 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
               <View>
                 {/* Header Row (Days) */}
                 <View style={styles.daysHeaderRow}>
-                  {DAYS.map(day => {
+                  {days.map(day => {
                     const isToday = day === ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][new Date().getDay()];
                     return (
                       <View key={day} style={styles.dayHeaderCell}>
                         <View style={[styles.dayBadge, isToday && styles.dayBadgeActive]}>
-                          <Text style={[styles.dayHeaderText, isToday && styles.dayBadgeActive && {color: '#FFF'}]}>{day}</Text>
+                          <Text style={[styles.dayHeaderText, isToday && styles.dayBadgeActive && { color: '#FFF' }]}>{day}</Text>
                         </View>
                       </View>
                     )
@@ -281,36 +503,44 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
                       {/* Dashed background row line */}
                       <View style={styles.rowDashedLine} />
 
-                      {DAYS.map(day => {
+                      {days.map(day => {
                         const data = getCellData(day, time);
                         const subjectLabel = typeof data?.subject === 'string' ? data.subject : 'Subject';
-                        
+
                         // Handle Teacher Object + Substitution Logic
-                        const teacherObj = data?.teacher;
+                        // const teacherObj = data?.teacher;
+                        // const substitutionObj = data?.substitution;
+                        // const teacherLabel = substitutionObj ? substitutionObj.name : (teacherObj?.name || '-');
+                        // const isSubstituted = !!substitutionObj;
+                        const teacherValue = data?.teacher;
                         const substitutionObj = data?.substitution;
-                        const teacherLabel = substitutionObj ? substitutionObj.name : (teacherObj?.name || '-');
+                        const teacherLabel = substitutionObj
+                          ? substitutionObj.name
+                          : typeof teacherValue === 'string'
+                            ? teacherValue
+                            : teacherValue?.name || '-';
                         const isSubstituted = !!substitutionObj;
-                        
+
                         // Live Status tracking
                         const isOngoing = data?.status === 'Ongoing';
                         const isCompleted = data?.status === 'Completed';
 
-                        const colors = isOngoing 
-                           ? { bg: '#ECFDF5', accent: '#10B981', text: '#064E3B' } // Vibrant Green for Ongoing
-                           : getSubjectColors(subjectLabel);
+                        const colors = isOngoing
+                          ? { bg: '#ECFDF5', accent: '#10B981', text: '#064E3B' } // Vibrant Green for Ongoing
+                          : getSubjectColors(subjectLabel);
 
                         return (
                           <View key={day} style={styles.cellOuter}>
                             {data ? (
                               <View style={[
-                                styles.card, 
+                                styles.card,
                                 { backgroundColor: colors.bg },
                                 isOngoing && { borderColor: '#10B981', borderWidth: 2, shadowColor: '#10B981', shadowOpacity: 0.3 }
                               ]}>
                                 <View style={[styles.cardAccentLine, { backgroundColor: colors.accent }]} />
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                   <Text style={[
-                                    styles.subjectText, 
+                                    styles.subjectText,
                                     { color: colors.text, flex: 1 },
                                     isCompleted && { textDecorationLine: 'line-through', opacity: 0.6 }
                                   ]} numberOfLines={1}>
@@ -587,7 +817,30 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#6B7280',
     letterSpacing: 1.5,
-  }
+  },
+  modeToggle: {
+    flexDirection: 'row',
+    marginTop: 6,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    padding: 2,
+  },
+  modeButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  modeButtonActive: {
+    backgroundColor: '#4F46E5',
+  },
+  modeButtonText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  modeButtonTextActive: {
+    color: '#FFFFFF',
+  },
 });
 
 export default TimetableScreen;

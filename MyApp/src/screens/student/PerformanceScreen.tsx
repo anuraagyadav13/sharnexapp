@@ -16,8 +16,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useState } from 'react';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import studentService from '../../services/studentService';
 
 type PerformanceScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Performance'>;
 
@@ -39,28 +38,29 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
         setError(null);
 
         // Resolve absolute Student ID
-        const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
-        const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
+        const meRes = await studentService.getMe();
+        const meData = meRes.normalized?.data;
+        const studentId = meData?.student?.id || '';
 
-        if (!studentId) throw new Error('Student ID not found');
+        if (!studentId) throw new Error('Student record ID not found in /auth/me');
 
-        const [dashRes, perfRes, gradesRes] = await Promise.all([
-          apiClient.get(ENDPOINTS.STUDENT.DASHBOARD(studentId)),
-          apiClient.get(ENDPOINTS.STUDENT.PERFORMANCE(studentId)),
-          apiClient.get(ENDPOINTS.STUDENT.GRADES)
-        ]);
+        // const [dashRes, perfRes, gradesRes] = await Promise.all([
+        //   studentService.getDashboard(studentId),
+        //   studentService.getPerformance(studentId),
+        //   studentService.getGrades(),
+        // ]);
+        console.log('[Performance] studentId:', studentId);
 
-        const dashData = dashRes.normalized?.data || dashRes.data;
-        const perfData = perfRes.normalized?.data?.performance || perfRes.data?.performance;
-        const gradesData = gradesRes.normalized?.data?.grades || gradesRes.data?.grades;
+const dashRes = await studentService.getDashboard(studentId);
+const dashData = dashRes.normalized?.data || dashRes.data;
 
-        setPerformance({
-          ...dashData,
-          performanceMetrics: perfData,
-          grades: gradesData
-        });
+setPerformance({
+  ...dashData,
+  performanceMetrics: dashData?.performanceMetrics || {},
+  grades: dashData?.grades || {},
+});
       } catch (err: any) {
-        console.error('Failed to fetch performance:', err);
+        console.error('[Performance] failed:', err?.response || err?.message || err);
         setError('Failed to load performance data.');
       } finally {
         setIsLoading(false);
@@ -90,10 +90,10 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
             setIsLoading(true);
             const fetchPerformance = async () => {
               try {
-                const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+                const profileRes = await studentService.getMe();
                 const studentId = profileRes.data?.id;
                 if (!studentId) throw new Error('Student ID not found');
-                const res = await apiClient.get(ENDPOINTS.STUDENT.DASHBOARD(studentId));
+                const res = await studentService.getDashboard(studentId);
                 setPerformance(res.data?.data || res.data?.stats || res.data);
               } catch (err: any) {
                 setError('Failed to load performance data. Please try again.');
@@ -116,7 +116,24 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
   
   const attendanceRate = dashStats.attendance?.percentage || 0;
   const assignmentRate = dashStats.stats?.assignmentRate || 75; // Fallback for missing backend field
-  const quizRate = perfMetrics.overallScore || 0;
+  // 
+  const quizAttempts = Array.isArray(dashStats.quizzes?.attempts)
+  ? dashStats.quizzes.attempts
+  : [];
+
+const scoredQuizAttempts = quizAttempts.filter(
+  (attempt: any) => typeof attempt.score === 'number',
+);
+
+const quizRate =
+  scoredQuizAttempts.length > 0
+    ? Math.round(
+        scoredQuizAttempts.reduce(
+          (sum: number, attempt: any) => sum + attempt.score,
+          0,
+        ) / scoredQuizAttempts.length,
+      )
+    : 0;
   const trendStatus = perfMetrics.trend || 'improving';
 
   return (

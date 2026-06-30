@@ -45,13 +45,45 @@ const normalizeResponse = (response: any): NormalizedResponse => {
   }
 
   // Handle legacy error format: { error: "message" }
-  if (response && typeof response === 'object' && 'error' in response) {
-    return {
-      data: null,
-      message: response.error,
-      success: false
-    };
-  }
+  // ======================================================
+// TEMP FIX (2026-06-26)
+// Backend now returns:
+// {
+//   data: {...},
+//   message: "...",
+//   error: null
+// }
+// instead of:
+// {
+//   success: true,
+//   data: {...}
+// }
+//old code
+// if (response && typeof response === 'object' && 'error' in response) {
+//     return {
+//       data: null,
+//       message: response.error,
+//       success: false
+//     };
+//   }
+// Remove when API contracts are unified.
+
+// ======================================================
+
+if (
+  response &&
+  typeof response === 'object' &&
+  'error' in response &&
+  'data' in response
+) {
+  return {
+    success: response.error == null,
+    message: response.message ?? null,
+    data: response.data ?? null,
+  };
+}
+  
+  //changes till here
 
   // Handle legacy direct data formats: { classes: [...], students: [...], etc. }
   if (response && typeof response === 'object') {
@@ -221,6 +253,12 @@ apiClient.interceptors.request.use(
       });
       // Continue without token rather than failing the request
     }
+    console.log(
+  '[API Request Headers]',
+  JSON.stringify(config.headers, null, 2)
+);
+
+console.log('[API Request URL]', config.url);
     return config;
   },
   (error) => {

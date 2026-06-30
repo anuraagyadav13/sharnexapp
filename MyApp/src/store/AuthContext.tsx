@@ -58,36 +58,76 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     loadStoredState();
   }, []);
 
-  const login = async (accessToken: string, refreshToken: string, role: Role, user: any) => {
-    try {
-      // Store tokens separately for apiClient
-      await storeTokens(accessToken, refreshToken);
+  // const login = async (accessToken: string, refreshToken: string, role: Role, user: any) => {
+  //   try {
+  //     // Store tokens separately for apiClient
+  //     await storeTokens(accessToken, refreshToken);
 
-      // Store auth state
-      const stateToStore = {
-        token: accessToken,
-        refreshToken,
-        role,
-        user,
-      };
-      await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(stateToStore));
+  //     // Store auth state
+  //     const stateToStore = {
+  //       token: accessToken,
+  //       refreshToken,
+  //       role,
+  //       user,
+  //     };
+  //     await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(stateToStore));
 
-      // Update context state
-      setAuthState({
-        token: accessToken,
-        refreshToken,
-        role,
-        user,
-        isLoading: false,
-      });
+  //     // Update context state
+  //     setAuthState({
+  //       token: accessToken,
+  //       refreshToken,
+  //       role,
+  //       user,
+  //       isLoading: false,
+  //     });
 
-      // Set token in axios defaults
-      setAuthToken(accessToken);
-    } catch (error) {
-      console.error('Error during login:', error);
-    }
-  };
+  //     // Set token in axios defaults
+  //     setAuthToken(accessToken);
+  //   } catch (error) {
+  //     console.error('Error during login:', error);
+  //   }
+  // };
+const login = async (accessToken: string, refreshToken: string, role: Role, user: any) => {
+  try {
+    // ======================================================
+    // TEMP FIX (2026-06-26)
+    // Backend now authenticates using HttpOnly cookies.
+    // It does not return JWT tokens in the response body.
+    // Use a placeholder token so the app treats the user as
+    // authenticated until the auth flow is fully migrated.
+    // ======================================================
 
+    const effectiveAccessToken = accessToken || "COOKIE_AUTH";
+    const effectiveRefreshToken = refreshToken || "COOKIE_AUTH";
+
+    await storeTokens(effectiveAccessToken, effectiveRefreshToken);
+
+    const stateToStore = {
+      token: effectiveAccessToken,
+      refreshToken: effectiveRefreshToken,
+      role,
+      user,
+    };
+
+    await AsyncStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify(stateToStore)
+    );
+
+    setAuthState({
+      token: effectiveAccessToken,
+      refreshToken: effectiveRefreshToken,
+      role,
+      user,
+      isLoading: false,
+    });
+
+    setAuthToken(effectiveAccessToken);
+  } catch (error) {
+    console.error("Error during login:", error);
+  }
+};
+//changes till here
   const logout = async () => {
     try {
       // Clear all stored tokens and state

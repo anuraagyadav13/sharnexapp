@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,9 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
+import accountService from '../../services/accountService';
+import { ActivityIndicator, Alert } from 'react-native';
+import axios from 'axios';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AccountSettings'>;
 
@@ -30,6 +33,7 @@ const InputField = ({
   rightIcon,
   multiline,
   value,
+  onChangeText,
   onRightIconPress,
   prefixComponent,
   secureTextEntry,
@@ -54,11 +58,12 @@ const InputField = ({
       )}
       <TextInput
         style={[styles.textInput, multiline && styles.textInputMultiline]}
-        placeholder={placeholder}
-        placeholderTextColor="#9CA3AF"
-        multiline={multiline}
-        value={value}
-        secureTextEntry={secureTextEntry}
+  placeholder={placeholder}
+  placeholderTextColor="#9CA3AF"
+  multiline={multiline}
+  value={value}
+  onChangeText={onChangeText}
+  secureTextEntry={secureTextEntry}
       />
       {rightIcon && (
         <TouchableOpacity
@@ -124,6 +129,131 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
   const [activeTab, setActiveTab] = useState<string>(
     route.params?.targetTab || 'Personal Details',
   );
+  const [profileData, setProfileData] = useState({
+  firstName: '',
+  lastName: '',
+  phone: '',
+  email: '',
+  dob: '',
+  address: '',
+});
+//parent data state
+const [parentData, setParentData] = useState({
+  name: '',
+  relationship: '',
+  email: '',
+  phone: '',
+  address: '',
+});
+//emergency data
+const [emergencyData, setEmergencyData] = useState({
+  name: '',
+  relationship: '',
+  email: '',
+  phone: '',
+});
+
+const [isLoading, setIsLoading] = useState(false);
+useEffect(() => {
+  fetchProfile();
+}, []);
+
+const fetchProfile = async () => {
+  try {
+    setIsLoading(true);
+
+   const response = await accountService.getStudentInfo();
+   const parentResponse = await accountService.getParentInfo();
+   const parent = parentResponse.data?.data ?? parentResponse.data ?? {};
+
+setParentData({
+  name: parent.parentName || '',
+  relationship: parent.parentRelationship || '',
+  email: parent.parentEmail || '',
+  phone: parent.parentPhone || '',
+  address: '',
+});
+
+const emergencyResponse = await accountService.getEmergencyContact();
+
+const emergency =
+  emergencyResponse.data?.data ?? emergencyResponse.data ?? {};
+
+setEmergencyData({
+  name: emergency.emergencyName || '',
+  relationship: emergency.emergencyRelationship || '',
+  email: emergency.emergencyEmail || '',
+  phone: emergency.emergencyPhone || '',
+});
+
+console.log(
+  '[Account Settings] Emergency Response:',
+  JSON.stringify(emergency, null, 2),
+);
+
+    const data = response.data?.data ?? response.data ?? {};
+
+    const fullName = data.name ?? '';
+const nameParts = fullName.trim().split(' ');
+
+setProfileData({
+  firstName: nameParts[0] || '',
+  lastName: nameParts.slice(1).join(' ') || '',
+  phone: data.phone || '',
+  email: data.email || '',
+  dob: data.dateOfBirth
+  ? new Date(data.dateOfBirth).toLocaleDateString('en-GB')
+  : '',
+  address: data.address || '',
+});
+  } catch (error) {
+    console.log('Profile fetch failed', error);
+  } finally {
+    setIsLoading(false);
+  }
+};
+const saveParentInfo = async () => {
+  try {
+    setIsLoading(true);
+
+    const payload = {
+      parentName: parentData.name,
+      parentRelationship: parentData.relationship,
+      parentEmail: parentData.email,
+      parentPhone: parentData.phone,
+    };
+
+    console.log(
+      '[Account Settings] Parent Update Payload:',
+      JSON.stringify(payload, null, 2),
+    );
+
+    const response = await accountService.updateParentInfo(payload);
+
+    console.log(
+      '[Account Settings] Parent Update Response:',
+      JSON.stringify(response.data, null, 2),
+    );
+
+    Alert.alert('Success', 'Parent information updated successfully.');
+
+    // Refresh the latest data from the backend
+    fetchProfile();
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+  console.log(
+    '[Parent Update Error]',
+    JSON.stringify(error.response?.data, null, 2),
+  );
+  console.log('[Parent Update Status]', error.response?.status);
+} else {
+  console.log(error);
+}
+    Alert.alert('Error', 'Failed to update parent information.');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Preferences State
   const [gradeNotif, setGradeNotif] = useState(true);
@@ -292,16 +422,24 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
 
               {/* Fields Loop */}
               <InputField
-                label="First Name"
-                labelIcon="person-outline"
-                inputIcon="person"
-                placeholder="Enter First Name"
+               label="First Name"
+  labelIcon="person-outline"
+  inputIcon="person"
+  placeholder="Enter First Name"
+  value={profileData.firstName}
+  onChangeText={(text: string) =>
+    setProfileData({ ...profileData, firstName: text })
+  }
               />
               <InputField
                 label="Last name"
-                labelIcon="person-outline"
-                inputIcon="person"
-                placeholder="Enter Last Name"
+  labelIcon="person-outline"
+  inputIcon="person"
+  placeholder="Enter Last Name"
+  value={profileData.lastName}
+  onChangeText={(text: string) =>
+    setProfileData({ ...profileData, lastName: text })
+  }
               />
 
               {/* Static Student ID Block */}
@@ -323,34 +461,49 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
 
               <InputField
                 label="Phone number"
-                labelIcon="call-outline"
-                inputIcon="call"
-                placeholder="Enter Phone Number"
+  labelIcon="call-outline"
+  inputIcon="call"
+  placeholder="Enter Phone Number"
+  value={profileData.phone}
+  onChangeText={(text: string) =>
+    setProfileData({ ...profileData, phone: text })
+  }
               />
 
               <InputField
-                label="Email Address"
-                labelIcon="mail-outline"
-                inputIcon="mail"
-                placeholder="Enter Email Address"
-              />
+  label="Email Address"
+  labelIcon="mail-outline"
+  inputIcon="mail"
+  placeholder="Enter Email Address"
+  value={profileData.email}
+  onChangeText={(text: string) =>
+    setProfileData({ ...profileData, email: text })
+  }
+/>
               <InputField
                 label="Date of Birth"
                 labelIcon="calendar-outline"
                 inputIcon="calendar"
                 placeholder="MM/DD/YYYY"
-                value={dob}
+                value={profileData.dob}                
                 rightIcon="calendar"
                 onRightIconPress={() => setShowCalendar(true)}
+                onChangeText={(text: string) =>
+                setProfileData({ ...profileData, dob: text })
+                  }
               />
 
               <InputField
-                label="Current Address"
-                labelIcon="location-outline"
-                inputIcon="home"
-                placeholder="Enter Full Address"
-                multiline={true}
-              />
+  label="Current Address"
+  labelIcon="location-outline"
+  inputIcon="home"
+  placeholder="Enter Full Address"
+  multiline
+  value={profileData.address}
+  onChangeText={(text: string) =>
+    setProfileData({ ...profileData, address: text })
+  }
+/>
 
               <View style={styles.divider} />
 
@@ -374,7 +527,7 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
                     color="#FFFFFF"
                     style={{ marginRight: 6 }}
                   />
-                  <Text style={styles.saveBtnText}>Save Personal Details</Text>
+                  <Text style={styles.saveBtnText} >Save Personal Details</Text>
                 </ScaleButton>
               </View>
             </>
@@ -389,36 +542,56 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
               <View style={styles.divider} />
 
               <InputField
-                label="Parent/Guardian Name"
-                labelIcon="person-outline"
-                inputIcon="person"
-                placeholder="Enter Full Name"
-              />
+  label="Parent/Guardian Name"
+  labelIcon="person-outline"
+  inputIcon="person"
+  placeholder="Enter Full Name"
+  value={parentData.name}
+  onChangeText={(text: string) =>
+    setParentData({ ...parentData, name: text })
+  }
+/>
               <InputField
-                label="Relationship"
-                labelIcon="people-outline"
-                inputIcon="person"
-                placeholder="Enter Relationship"
-              />
+  label="Relationship"
+  labelIcon="people-outline"
+  inputIcon="person"
+  placeholder="Enter Relationship"
+  value={parentData.relationship}
+  onChangeText={(text: string) =>
+    setParentData({ ...parentData, relationship: text })
+  }
+/>
               <InputField
-                label="Email Address"
-                labelIcon="mail-outline"
-                inputIcon="mail"
-                placeholder="Enter Email Address"
-              />
+  label="Email Address"
+  labelIcon="mail-outline"
+  inputIcon="mail"
+  placeholder="Enter Email Address"
+  value={parentData.email}
+  onChangeText={(text: string) =>
+    setParentData({ ...parentData, email: text })
+  }
+/>
               <InputField
-                label="Phone number"
-                labelIcon="call-outline"
-                inputIcon="call"
-                placeholder="Enter Phone Number"
-              />
+  label="Phone number"
+  labelIcon="call-outline"
+  inputIcon="call"
+  placeholder="Enter Phone Number"
+  value={parentData.phone}
+  onChangeText={(text: string) =>
+    setParentData({ ...parentData, phone: text })
+  }
+/>
               <InputField
-                label="Current Address"
-                labelIcon="location-outline"
-                inputIcon="home"
-                placeholder="Enter Full Address"
-                multiline={true}
-              />
+  label="Current Address"
+  labelIcon="location-outline"
+  inputIcon="home"
+  placeholder="Enter Address"
+  multiline
+  value={parentData.address}
+  onChangeText={(text: string) =>
+    setParentData({ ...parentData, address: text })
+  }
+/>
 
               {/* Emergency Section Header */}
               <View style={[styles.sectionHeader, { paddingTop: 8 }]}>
@@ -431,29 +604,45 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
               <View style={styles.divider} />
 
               <InputField
-                label="Emergency Contact Name"
-                labelIcon="person-outline"
-                inputIcon="person"
-                placeholder="Enter Full Name"
-              />
+  label="Emergency Contact Name"
+  labelIcon="person-outline"
+  inputIcon="person"
+  placeholder="Enter Name"
+  value={emergencyData.name}
+  onChangeText={(text: string) =>
+    setEmergencyData({ ...emergencyData, name: text })
+  }
+/>
               <InputField
-                label="Relationship"
-                labelIcon="people-outline"
-                inputIcon="person"
-                placeholder="Enter Relationship"
-              />
+  label="Relationship"
+  labelIcon="people-outline"
+  inputIcon="person"
+  placeholder="Enter Relationship"
+  value={emergencyData.relationship}
+  onChangeText={(text: string) =>
+    setEmergencyData({ ...emergencyData, relationship: text })
+  }
+/>
               <InputField
-                label="Email Address"
-                labelIcon="mail-outline"
-                inputIcon="mail"
-                placeholder="Enter Email Address"
-              />
+  label="Email Address"
+  labelIcon="mail-outline"
+  inputIcon="mail"
+  placeholder="Enter Email Address"
+  value={emergencyData.email}
+  onChangeText={(text: string) =>
+    setEmergencyData({ ...emergencyData, email: text })
+  }
+/>
               <InputField
-                label="Phone number"
-                labelIcon="call-outline"
-                inputIcon="call"
-                placeholder="Enter Phone Number"
-              />
+  label="Phone number"
+  labelIcon="call-outline"
+  inputIcon="call"
+  placeholder="Enter Phone Number"
+  value={emergencyData.phone}
+  onChangeText={(text: string) =>
+    setEmergencyData({ ...emergencyData, phone: text })
+  }
+/>
 
               <View style={styles.divider} />
 
@@ -467,10 +656,11 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
                   <Text style={styles.cancelBtnText}>Cancel</Text>
                 </ScaleButton>
                 <ScaleButton
-                  activeOpacity={0.9}
-                  scaleTo={0.96}
-                  style={styles.saveBtn}
-                >
+  activeOpacity={0.9}
+  scaleTo={0.96}
+  style={styles.saveBtn}
+  onPress={saveParentInfo}
+>
                   <Ionicons
                     name="save"
                     size={14}

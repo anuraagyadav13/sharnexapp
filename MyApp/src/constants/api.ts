@@ -30,8 +30,7 @@ const API_HOST =
   (Platform.OS === 'android' ? '10.0.2.2' : 'localhost');
 const API_PORT = expoExtra.API_PORT ?? '3000';
 
-export const API_BASE_URL = `http://${API_HOST}:${API_PORT}/api`;
-
+export const API_BASE_URL = 'https://www.sharnex.com/api';
 export const ENDPOINTS = {
   AUTH: {
     LOGIN: '/auth/login',
@@ -44,6 +43,14 @@ export const ENDPOINTS = {
     RESET_PASSWORD: '/auth/reset-password',
     CHANGE_PASSWORD: '/account/password',
     PREFERENCES: '/auth/preferences',
+  },
+  ACCOUNT: {
+    PROFILE: '/account/profile',
+    STUDENT: '/account/student',
+    PARENT: '/account/student/parent',
+    EMERGENCY: '/account/student/emergency',
+    CHANGE_PASSWORD: '/account/password',
+    PREFERENCES: '/account/preferences',
   },
   STUDENT: {
     DASHBOARD: (id: string) => `/students/${id}/dashboard`,
@@ -70,7 +77,6 @@ export const ENDPOINTS = {
     ANNOUNCEMENTS: '/announcements',
     TIMETABLE: '/timetable',
     CLASS_SCHEDULE: (classId: string) => `/classes/${classId}/schedule`,
-    PERFORMANCE: (id: string) => `/students/${id}/performance`,
     OFFICIAL_RESULT: (id: string) => `/rms/results/${id}`,
     OFFICIAL_RESULT_LIST: '/rms/results/student',
     START_QUIZ: (quizId: string) => `/quizzes/${quizId}/start`,
