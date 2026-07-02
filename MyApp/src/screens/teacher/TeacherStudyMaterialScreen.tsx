@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import {
   Alert,
   Modal,
   Dimensions,
-  FlatList
+  FlatList,
+  RefreshControl
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -37,6 +38,7 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
   const [classes, setClasses] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('All Material');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Modal State
   const [isUploadModalVisible, setUploadModalVisible] = useState(false);
@@ -50,12 +52,12 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
   const categories = ['All Material', 'PDFs', 'Videos', 'Documents', 'Notes'];
 
   useEffect(() => {
-    fetchInitialData();
-  }, []);
+    fetchInitialData(false);
+  }, [authState.user?.id]);
 
-  const fetchInitialData = async () => {
+  const fetchInitialData = useCallback(async (isRefresh = false) => {
     try {
-      setIsLoading(true);
+      if (!isRefresh) setIsLoading(true);
       const teacherId = authState.user?.id;
       if (!teacherId) return;
 
@@ -73,9 +75,15 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
     } catch (err) {
       console.error('Failed to fetch initial data:', err);
     } finally {
-      setIsLoading(false);
+      if (!isRefresh) setIsLoading(false);
     }
-  };
+  }, [authState.user?.id]);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchInitialData(true);
+    setIsRefreshing(false);
+  }, [fetchInitialData]);
 
   const ensureDocumentPicker = () => {
     if (DocumentPicker && DocumentPickerTypes) return;
@@ -247,7 +255,10 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
         </View>
       </View>
 
-      <View style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+      >
         {/* Search Bar */}
         <View style={styles.searchSection}>
           <View style={styles.searchContainer}>
@@ -293,10 +304,10 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
             renderItem={({ item }) => <MaterialItem item={item} />}
             keyExtractor={item => item.id}
             contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
+            scrollEnabled={false}
           />
         )}
-      </View>
+      </ScrollView>
 
       {/* Upload Modal */}
       <Modal

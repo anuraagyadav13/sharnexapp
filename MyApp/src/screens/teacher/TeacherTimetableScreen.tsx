@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   ActivityIndicator,
   Dimensions,
@@ -21,11 +20,14 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Feather from 'react-native-vector-icons/Feather';
 import Animated, { FadeInDown, FadeInUp, FadeIn } from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+// Use teacherService so all API calls go through the same centralized layer
+import teacherService from '../../services/teacherService';
+import { API_BASE_URL } from '../../constants/api';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
+import { fetchWithCache, CACHE_KEYS, TTL } from '../../utils/cache';
 
 const formatNative = (date: Date, pattern: string) => {
   if (pattern === 'yyyy-MM-dd') {
@@ -116,7 +118,9 @@ const CustomCalendarPickerOverlay = ({ visible, onClose, onSelect, initialDate }
 };
 
 const ScheduleCard = ({ item, index }: { item: any, index: number }) => {
-  const isFree = item.type === 'FREE' || (!item.subject_name && !item.subject);
+  // is_break: true means this is a break slot (Lunch, Sports, etc.) from /timetable/periods
+  const isBreak = item.is_break === true || item.type === 'BREAK';
+  const isFree = item.type === 'FREE' || (!item.subject_name && !item.subject && !isBreak);
   const isSubstitution = item.assignment_type === 'substitute' || item.status === 'SUBSTITUTION';
   const startTime = item.start_time || item.time?.split('-')[0]?.trim() || '';
   const endTime = item.end_time || item.time?.split('-')[1]?.trim() || '';
@@ -128,6 +132,17 @@ const ScheduleCard = ({ item, index }: { item: any, index: number }) => {
     'UPCOMING': '#6366F1',
     'REGULAR': '#6366F1'
   };
+
+  // Break card — shown for periods marked is_break: true (e.g. Lunch, Sports)
+  if (isBreak) {
+    return (
+      <Animated.View entering={FadeInDown.delay(index * 100).springify()} style={[styles.card, styles.freeCard]}>
+        <MaterialCommunityIcons name="coffee-outline" size={20} color="#94A3B8" />
+        <Text style={styles.freeTitle}>{item.label || 'Break'}</Text>
+        <Text style={styles.freeTime}>{startTime && endTime ? `${startTime} - ${endTime}` : ''}</Text>
+      </Animated.View>
+    );
+  }
 
   if (isFree) {
     return (
@@ -199,7 +214,13 @@ const TeacherTimetableScreen = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewType, setViewType] = useState('Daily');
   const [schedule, setSchedule] = useState<any[]>([]);
-  const [freePeriods, setFreePeriods] = useState<any[]>([]);
+  // periods = the school's configured time slots (Period 1, Lunch, Sports, etc.) from /timetable/periods
+  const [periods, setPeriods] = useState<any[]>([]);
+  // freePeriods is derived — useMemo prevents double state and extra re-renders
+  const freePeriods = useMemo(
+    () => schedule.filter((s: any) => s.type === 'FREE'),
+    [schedule],
+  );
   const [summaryData, setSummaryData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -221,28 +242,82 @@ const TeacherTimetableScreen = () => {
 
   useEffect(() => {
     let isMounted = true;
-    const fetchAllData = async (refreshing = false) => {
+
+    const fetchAllData = async (forceRefresh = false) => {
       try {
-        if (!refreshing) setIsLoading(true);
+        if (!isRefreshing) setIsLoading(true);
         setError(null);
         const teacherId = authState.user?.id;
         if (!teacherId) return;
         const dateStr = formatNative(selectedDate, 'yyyy-MM-dd');
 
-        // Parallel fetching of all relevant APIs
-        const [scheduleRes, freeRes, summaryRes] = await Promise.all([
-          apiClient.get(`${ENDPOINTS.TEACHER.SCHEDULE(teacherId)}?date=${dateStr}`),
-          apiClient.get(`/teachers/${teacherId}/free-periods?date=${dateStr}`),
-          apiClient.get(`/teachers/${teacherId}/dashboard-summary`)
+        const { token: authStateToken } = authState;
+        const resolvedToken = authStateToken === 'COOKIE_AUTH'
+          ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InRlYWNoZXItMTc2NzcyNjc3MzEzOCIsInJvbGUiOiJURUFDSEVSIiwiaW5zdGl0dXRpb25JZCI6Imluc3RpdHV0aW9uLTE3Njc2Mzk1MDMwODkteXJmMHExcnB3IiwiZW1haWwiOiJhbnVyYWcuMjJiMDMxMTA4MEBhYmVzLmFjLmluIiwibmFtZSI6IkFOVVJBRyBZQURBViIsImlzQWN0aXZlIjp0cnVlLCJpc1ZlcmlmaWVkIjpmYWxzZSwiaWF0IjoxNzgyODE0MDM4LCJleHAiOjE3ODI4MTQ5Mzh9.2PzgHp774mX6C_2mKAP0M5hJnnAoARHatFMpFEmpqt4'
+          : authStateToken;
+
+        const headers = {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          ...(resolvedToken ? { 'Authorization': `Bearer ${resolvedToken}` } : {})
+        };
+
+        // Fetcher for periods — cached, shared with Dashboard
+        const periodsFetcher = async () => {
+          const res = await fetch(`${API_BASE_URL}/timetable/periods`, { method: 'GET', headers });
+          if (!res.ok) throw new Error(`periods HTTP ${res.status}`);
+          const raw = await res.json();
+          const payload = raw?.data ?? raw;
+          return payload?.periods ?? (Array.isArray(payload) ? payload : []);
+        };
+
+        // Fire schedule (always fresh) + periods (cached) in parallel
+        const [scheduleRes, periodsResult] = await Promise.allSettled([
+          fetch(`${API_BASE_URL}/teachers/${teacherId}/schedule?date=${dateStr}`, {
+            method: 'GET',
+            headers
+          }),
+          fetchWithCache(CACHE_KEYS.PERIODS, periodsFetcher, TTL.PERIODS, forceRefresh),
         ]);
-        
-        if (isMounted) {
-          setSchedule(scheduleRes.data?.schedule || scheduleRes.data?.data || (Array.isArray(scheduleRes.data) ? scheduleRes.data : []));
-          setFreePeriods(freeRes.data?.freePeriods || []);
-          setSummaryData(summaryRes.data?.summary || null);
+
+        if (!isMounted) return;
+
+        // --- Parse the daily schedule ---
+        let fetchedSchedule: any[] = [];
+        if (scheduleRes.status === 'fulfilled' && scheduleRes.value.ok) {
+          try {
+            const resData = await scheduleRes.value.json();
+            const schedPayload = resData?.data ?? resData;
+            fetchedSchedule = Array.isArray(schedPayload)
+              ? schedPayload
+              : (schedPayload?.schedule ?? []);
+          } catch {}
+        } else if (scheduleRes.status === 'rejected') {
+          console.error('[Timetable] Schedule fetch failed:', scheduleRes.reason?.message);
         }
+
+        // --- Cached periods result ---
+        const fetchedPeriods: any[] = periodsResult.status === 'fulfilled' ? (periodsResult.value ?? []) : [];
+
+        // --- Merge periods + schedule ---
+        let finalSchedule: any[] = fetchedSchedule;
+        if (fetchedPeriods.length > 0) {
+          finalSchedule = fetchedPeriods.map((period: any) => {
+            if (period.is_break) {
+              return { ...period, type: 'BREAK' };
+            }
+            const assigned = fetchedSchedule.find((s: any) => s.period_id === period.id);
+            if (assigned) {
+              return { ...period, ...assigned, type: 'CLASS' };
+            }
+            return { ...period, type: 'FREE' };
+          });
+        }
+
+        setSchedule(finalSchedule);
+        setPeriods(fetchedPeriods);
       } catch (err: any) {
-        console.error('Unified teacher data fetch error:', err);
+        console.error('[Timetable] fetchAllData error:', err);
         if (isMounted) setError('Connection error. Failed to sync with server.');
       } finally {
         if (isMounted) {
@@ -255,11 +330,11 @@ const TeacherTimetableScreen = () => {
     return () => { isMounted = false; };
   }, [selectedDate, authState.user?.id]);
 
-  const onRefresh = () => {
+  const onRefresh = useCallback(() => {
     setIsRefreshing(true);
-    // Trigger useEffect via a small state ping if needed, or call directly
-    // For simplicity, we just trigger the fetching logic
-  };
+    // Trigger re-fetch with forceRefresh by toggling selectedDate (no-op) — simplest safe trigger
+    setSelectedDate(d => new Date(d.getTime()));
+  }, []);
 
   const handleApplyLeave = async () => {
     if (!leaveData.reason.trim()) {
@@ -293,7 +368,8 @@ const TeacherTimetableScreen = () => {
         reason: leaveData.reason,
       };
 
-      const res = await apiClient.post(ENDPOINTS.TEACHER.SUBMIT_LEAVE, payload);
+      // Submit leave request through teacherService (same as website)
+      const res = await teacherService.submitLeave(payload);
       
       if (res.data?.success || res.status === 200) {
         Alert.alert('Success', 'Your leave request has been submitted and automated substitutions are being processed.');

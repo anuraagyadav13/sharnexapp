@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,10 @@ import {
   ActivityIndicator,
   Dimensions,
   RefreshControl,
+  TextInput,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn, Layout } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
@@ -34,27 +36,64 @@ const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
   const [workItems, setWorkItems] = useState<any[]>([]);
   const [reviewItems, setReviewItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async (isRefresh = false) => {
     try {
-      setIsLoading(true);
+      if (!isRefresh) setIsLoading(true);
+      setError(null);
       const [workRes, reviewRes] = await Promise.all([
         apiClient.get(ENDPOINTS.TEACHER.RMS_WORK_ITEMS).catch(() => ({ data: { items: [] } })),
         apiClient.get(ENDPOINTS.TEACHER.RMS_REVIEW_ITEMS).catch(() => ({ data: { items: [] } })),
       ]);
-      
-      setWorkItems(workRes.data.items || workRes.data.data?.items || []);
-      setReviewItems(reviewRes.data.items || reviewRes.data.data?.items || []);
-    } catch (error) {
-      console.error('Failed to fetch RMS data:', error);
+
+      const workData = workRes.data?.items || workRes.data?.data?.items || (Array.isArray(workRes.data) ? workRes.data : []);
+      const reviewData = reviewRes.data?.items || reviewRes.data?.data?.items || (Array.isArray(reviewRes.data) ? reviewRes.data : []);
+
+      setWorkItems(workData);
+      setReviewItems(reviewData);
+    } catch (err: any) {
+      console.error('Failed to fetch RMS data:', err);
+      setError('Failed to load result management data. Please try again.');
     } finally {
-      setIsLoading(false);
+      if (!isRefresh) setIsLoading(false);
     }
-  };
+  }, [searchQuery, statusFilter]);
+
+  useEffect(() => {
+    fetchData(false);
+  }, []); // Ignore deps to only fetch on mount for useEffect
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchData(true);
+    }, [fetchData])
+  );
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchData(true);
+    setIsRefreshing(false);
+  }, [fetchData]);
+
+  const filteredWorkItems = workItems.filter(item => {
+    const matchesSearch = !searchQuery ||
+      item.subjectName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.className?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.examName?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'ALL' || (item.status || 'DRAFT').toUpperCase() === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const filteredReviewItems = reviewItems.filter(item => {
+    const matchesSearch = !searchQuery ||
+      item.className?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.examName?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
 
   const getStatusColor = (status: string) => {
     switch (status?.toUpperCase()) {
@@ -74,43 +113,55 @@ const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </View>
 
-      {workItems.length === 0 && !isLoading ? (
+      {filteredWorkItems.length === 0 && !isLoading ? (
         <View style={styles.emptyState}>
           <Ionicons name="document-text-outline" size={48} color={theme.border} />
-          <Text style={[styles.emptyText, { color: theme.subtext }]}>No assigned examinations found for marks entry.</Text>
+          <Text style={[styles.emptyText, { color: theme.subtext }]}>
+            {searchQuery || statusFilter !== 'ALL'
+              ? 'No examinations matching your filter criteria.'
+              : 'No assigned examinations found for marks entry.'}
+          </Text>
+          {(searchQuery || statusFilter !== 'ALL') && (
+            <TouchableOpacity
+              style={[styles.retryBtn, { marginTop: 16 }]}
+              onPress={() => { setSearchQuery(''); setStatusFilter('ALL'); }}
+            >
+              <Text style={styles.retryBtnText}>Reset Filters</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         <View style={styles.grid}>
-          {workItems.map((item, index) => (
-            <Animated.View 
-              key={`${item.examId}-${item.classId}-${item.subjectId}`} 
-              entering={FadeInUp.delay(index * 50).springify()} 
+          {filteredWorkItems.map((item, index) => (
+            <Animated.View
+              key={`${item.examId}-${item.classId}-${item.subjectId}-${index}`}
+              entering={FadeInUp.delay(index * 50).springify()}
               style={styles.cardWrapper}
             >
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
                 activeOpacity={0.8}
-                onPress={() => navigation.navigate('TeacherMarksEntry', { 
-                  examId: item.examId, 
-                  classId: item.classId, 
+                onPress={() => navigation.navigate('TeacherMarksEntry', {
+                  examId: item.examId,
+                  classId: item.classId,
                   subjectId: item.subjectId,
-                  examName: item.examName,
-                  className: item.className,
-                  subjectName: item.subjectName
+                  examName: item.examName || 'Examination',
+                  className: item.className || 'Class',
+                  subjectName: item.subjectName || 'Subject'
                 })}
               >
                 <View style={styles.cardHeader}>
                   <View style={[styles.subjectCircle, { backgroundColor: theme.primary + '15' }]}>
-                    <Text style={[styles.subjectInitial, { color: theme.primary }]}>{item.subjectName?.charAt(0)}</Text>
+                    <Text style={[styles.subjectInitial, { color: theme.primary }]}>{item.subjectName?.charAt(0) || 'S'}</Text>
                   </View>
                   <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '15' }]}>
                     <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{item.status || 'DRAFT'}</Text>
                   </View>
                 </View>
 
-                <Text style={[styles.cardSubject, { color: theme.text }]} numberOfLines={1}>{item.subjectName}</Text>
+                <Text style={[styles.cardSubject, { color: theme.text }]} numberOfLines={1}>{item.subjectName || 'Subject'}</Text>
                 <Text style={[styles.cardClass, { color: theme.subtext }]} numberOfLines={1}>{item.className} • {item.examName}</Text>
-                
+
                 <View style={styles.cardFooter}>
                   <Text style={styles.cardDate}>{item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : 'N/A'}</Text>
                   <TouchableOpacity style={styles.enterMarksBtn}>
@@ -135,43 +186,50 @@ const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </View>
 
-      {reviewItems.length === 0 && !isLoading ? (
+      {filteredReviewItems.length === 0 && !isLoading ? (
         <View style={styles.emptyState}>
           <Ionicons name="checkmark-done-circle-outline" size={48} color={theme.border} />
-          <Text style={[styles.emptyText, { color: theme.subtext }]}>No classes found for marks review.</Text>
+          <Text style={[styles.emptyText, { color: theme.subtext }]}>
+            {searchQuery ? 'No classes matching your search.' : 'No classes found for marks review.'}
+          </Text>
         </View>
       ) : (
         <View style={styles.grid}>
-          {reviewItems.map((item, index) => {
-            const progress = item.totalSubjects > 0 ? (item.approvedSubjects / item.totalSubjects) * 100 : 0;
+          {filteredReviewItems.map((item, index) => {
+            const itemSubjects = Array.isArray(item.subjects) ? item.subjects : null;
+            const totalSubjects = itemSubjects ? (itemSubjects.length || 1) : (item.totalSubjects ?? item.subjectsCount ?? 1);
+            const approvedSubjects = itemSubjects
+              ? (itemSubjects.filter((s: any) => s.status === 'APPROVED' || s.status === 'SUBMITTED').length || itemSubjects.length)
+              : (item.approvedSubjects ?? item.approvedCount ?? item.reviewedSubjects ?? item.submittedSubjects ?? item.completedSubjects ?? item.readySubjects ?? totalSubjects);
+            const progress = totalSubjects > 0 ? (approvedSubjects / totalSubjects) * 100 : 0;
             return (
-              <Animated.View 
-                key={`${item.examId}-${item.classId}`} 
-                entering={FadeInUp.delay(index * 50).springify()} 
+              <Animated.View
+                key={`${item.examId}-${item.classId}-${index}`}
+                entering={FadeInUp.delay(index * 50).springify()}
                 style={styles.cardWrapper}
               >
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
                   activeOpacity={0.8}
-                  onPress={() => navigation.navigate('TeacherReviewSubmission', { 
-                    examId: item.examId, 
+                  onPress={() => navigation.navigate('TeacherReviewSubmission', {
+                    examId: item.examId,
                     classId: item.classId,
-                    examName: item.examName,
-                    className: item.className
+                    examName: item.examName || 'Examination',
+                    className: item.className || 'Class'
                   })}
                 >
                   <View style={styles.cardHeader}>
                     <View style={[styles.subjectCircle, { backgroundColor: '#3B82F615' }]}>
-                      <Text style={[styles.subjectInitial, { color: '#3B82F6' }]}>{item.className?.charAt(0)}</Text>
+                      <Text style={[styles.subjectInitial, { color: '#3B82F6' }]}>{item.className?.charAt(0) || 'C'}</Text>
                     </View>
                     <View style={[styles.statusBadge, { backgroundColor: '#10B98115' }]}>
-                      <Text style={[styles.statusText, { color: '#10B981' }]}>{item.approvedSubjects}/{item.totalSubjects} OK</Text>
+                      <Text style={[styles.statusText, { color: '#10B981' }]}>{approvedSubjects}/{totalSubjects} OK</Text>
                     </View>
                   </View>
 
-                  <Text style={[styles.cardSubject, { color: theme.text }]} numberOfLines={1}>{item.className}</Text>
-                  <Text style={[styles.cardClass, { color: theme.subtext }]} numberOfLines={1}>{item.examName}</Text>
-                  
+                  <Text style={[styles.cardSubject, { color: theme.text }]} numberOfLines={1}>{item.className || 'Class'}</Text>
+                  <Text style={[styles.cardClass, { color: theme.subtext }]} numberOfLines={1}>{item.examName || 'Examination'}</Text>
+
                   <View style={styles.progressContainer}>
                     <View style={styles.progressLabelRow}>
                       <Text style={styles.progressLabel}>READY FOR REVIEW</Text>
@@ -183,7 +241,7 @@ const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
                   </View>
 
                   <View style={styles.cardFooter}>
-                    <Text style={[styles.reviewDoneText, { color: '#10B981' }]}>FULLY REVIEWED</Text>
+                    <Text style={[styles.reviewDoneText, { color: '#10B981' }]}>REVIEW SUBJECTS →</Text>
                   </View>
                 </TouchableOpacity>
               </Animated.View>
@@ -217,7 +275,7 @@ const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
           <TouchableOpacity onPress={() => navigation.navigate('AccountSettings')} style={styles.iconBtn}>
             <Ionicons name="settings-outline" size={22} color="#111827" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => {}} style={styles.iconBtn}>
+          <TouchableOpacity onPress={() => { }} style={styles.iconBtn}>
             <Ionicons name="moon-outline" size={22} color="#111827" />
           </TouchableOpacity>
           <View style={[styles.avatar, { backgroundColor: '#A855F7' }]}>
@@ -228,38 +286,79 @@ const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
 
       {/* Tabs */}
       <View style={styles.tabBar}>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'entry' && styles.activeTab]} 
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'entry' && styles.activeTab]}
           onPress={() => setActiveTab('entry')}
         >
-          <Ionicons 
-            name="create-outline" 
-            size={18} 
-            color={activeTab === 'entry' ? '#7C3AED' : '#6B7280'} 
+          <Ionicons
+            name="create-outline"
+            size={18}
+            color={activeTab === 'entry' ? '#7C3AED' : '#6B7280'}
           />
           <Text style={[styles.tabText, activeTab === 'entry' && styles.activeTabText]}>Marks Entry</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'review' && styles.activeTab]} 
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'review' && styles.activeTab]}
           onPress={() => setActiveTab('review')}
         >
-          <Ionicons 
-            name="checkmark-done-circle-outline" 
-            size={18} 
-            color={activeTab === 'review' ? '#7C3AED' : '#6B7280'} 
+          <Ionicons
+            name="checkmark-done-circle-outline"
+            size={18}
+            color={activeTab === 'review' ? '#7C3AED' : '#6B7280'}
           />
           <Text style={[styles.tabText, activeTab === 'review' && styles.activeTabText]}>Review Marks</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent} 
+      {/* Search Bar & Filter Chips */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search-outline" size={18} color="#9CA3AF" />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search by subject, class, or exam name..."
+          placeholderTextColor="#9CA3AF"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {activeTab === 'entry' && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+          {['ALL', 'DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED'].map((status) => (
+            <TouchableOpacity
+              key={status}
+              style={[styles.filterChip, statusFilter === status && styles.filterChipActive]}
+              onPress={() => setStatusFilter(status)}
+            >
+              <Text style={[styles.filterChipText, statusFilter === status && styles.filterChipTextActive]}>
+                {status}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={fetchData} tintColor={theme.primary} />
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={theme.primary} />
         }
       >
-        {isLoading && workItems.length === 0 && reviewItems.length === 0 ? (
+        {error ? (
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={fetchData}>
+              <Text style={styles.retryBtnText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : isLoading && workItems.length === 0 && reviewItems.length === 0 ? (
           <View style={styles.loaderContainer}>
             <ActivityIndicator size="large" color={theme.primary} />
             <Text style={[styles.loaderText, { color: theme.subtext }]}>Loading data...</Text>
@@ -388,7 +487,7 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
   cardSubject: { fontSize: 15, fontWeight: '800', marginBottom: 2 },
   cardClass: { fontSize: 11, fontWeight: '500', marginBottom: 12 },
-  
+
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -414,6 +513,75 @@ const styles = StyleSheet.create({
   emptyText: { textAlign: 'center', marginTop: 16, fontSize: 14, lineHeight: 20 },
   loaderContainer: { alignItems: 'center', justifyContent: 'center', marginTop: 100 },
   loaderText: { marginTop: 12, fontSize: 14, fontWeight: '500' },
+
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    height: 46,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#1F2937',
+  },
+  filterScroll: {
+    paddingHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 6,
+    maxHeight: 40,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  filterChipActive: {
+    backgroundColor: '#7C3AED15',
+    borderColor: '#7C3AED',
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  filterChipTextActive: {
+    color: '#7C3AED',
+  },
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#EF4444',
+    textAlign: 'center',
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  retryBtn: {
+    backgroundColor: '#7C3AED',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  retryBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
+  },
 });
 
 export default TeacherResultManagementScreen;

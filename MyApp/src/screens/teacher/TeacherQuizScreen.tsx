@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,11 @@ import {
   TouchableOpacity,
   Platform,
   ActivityIndicator,
-  Alert
+  Alert,
+  RefreshControl
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../App';
+import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -19,6 +20,7 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
+import RNFS from 'react-native-fs';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherQuiz'>;
 
@@ -28,10 +30,11 @@ const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const fetchQuizzes = async () => {
+  const fetchQuizzes = useCallback(async (isRefresh = false) => {
     try {
-      setIsLoading(true);
+      if (!isRefresh) setIsLoading(true);
       const teacherId = authState.user?.id;
       if (!teacherId) return;
 
@@ -40,13 +43,19 @@ const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
     } catch (error) {
       console.error('Failed to fetch quizzes:', error);
     } finally {
-      setIsLoading(false);
+      if (!isRefresh) setIsLoading(false);
     }
-  };
+  }, [authState.user?.id]);
 
   useEffect(() => {
-    fetchQuizzes();
-  }, [authState.user?.id]);
+    fetchQuizzes(false);
+  }, [fetchQuizzes]);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchQuizzes(true);
+    setIsRefreshing(false);
+  }, [fetchQuizzes]);
 
   const handleDeleteQuiz = (quizId: string) => {
     Alert.alert(
@@ -78,6 +87,30 @@ const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
       fetchQuizzes();
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.message || 'Failed to duplicate quiz');
+    }
+  };
+
+  const downloadQuizExport = async (quizId: string) => {
+    try {
+      Alert.alert('Exporting', 'Downloading exam data...');
+      const response = await apiClient.get(ENDPOINTS.TEACHER.QUIZ_ATTEMPTS_EXPORT(quizId), {
+        responseType: 'text' // usually CSV mapping
+      });
+
+      const exportData = response.data?.data || response.data;
+      const csvContent = typeof exportData === 'string' ? exportData : JSON.stringify(exportData);
+      
+      const fileName = `Exam_Export_${quizId.slice(0, 8)}.csv`;
+      const path = Platform.OS === 'android' 
+        ? `${RNFS.DownloadDirectoryPath}/${fileName}` 
+        : `${RNFS.DocumentDirectoryPath}/${fileName}`;
+        
+      await RNFS.writeFile(path, csvContent, 'utf8');
+      
+      Alert.alert('Success', `Export saved to downloads as ${fileName}\n\nPath: ${path}`);
+    } catch (error: any) {
+      console.error('Export error', error);
+      Alert.alert('Error', 'Failed to export exam data.');
     }
   };
 
@@ -132,7 +165,11 @@ const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+      >
 
         {/* Page Title Wrapper */}
         <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
@@ -249,6 +286,7 @@ const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
                       <TouchableOpacity 
                         style={[styles.btnExportImage, { flex: 0.5 }]} 
                         activeOpacity={0.8}
+                        onPress={() => downloadQuizExport(quiz.id.toString())}
                       >
                         <Text style={styles.btnExportText}>Export</Text>
                       </TouchableOpacity>

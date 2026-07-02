@@ -30,7 +30,7 @@ const API_HOST =
   (Platform.OS === 'android' ? '10.0.2.2' : 'localhost');
 const API_PORT = expoExtra.API_PORT ?? '3000';
 
-export const API_BASE_URL = 'https://www.sharnex.com/api';
+export const API_BASE_URL = 'https://sharnex.com/api';
 export const ENDPOINTS = {
   AUTH: {
     LOGIN: '/auth/login',
@@ -135,6 +135,8 @@ export const ENDPOINTS = {
     },
     ANNOUNCEMENTS: '/announcements',
     PENDING_TASKS: (id: string) => `/teachers/${id}/pending-tasks`,
+    // Timetable: periods config (same endpoint used by the website)
+    TIMETABLE_PERIODS: '/timetable/periods',
   },
   PRINCIPAL: {
     DASHBOARD: '/principal/dashboard',

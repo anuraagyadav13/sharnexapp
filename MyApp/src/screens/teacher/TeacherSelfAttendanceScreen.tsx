@@ -10,9 +10,10 @@ import {
   ActivityIndicator,
   RefreshControl,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../App';
+import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -69,7 +70,7 @@ const TeacherSelfAttendanceScreen: React.FC<Props> = ({ navigation }) => {
       fetchData();
     } catch (error) {
       console.error('Failed to mark attendance:', error);
-      alert('Failed to mark attendance. Please try again.');
+      Alert.alert('Error', 'Failed to mark attendance. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -256,7 +257,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#F1F5F9'
   },
   statsMain: { flexDirection: 'row', alignItems: 'center' },
-  progressCircle: { width: 80, height: 80, borderRadius: 40, borderOrigin: 'center', borderWidth: 6, borderColor: '#6366F1', justifyContent: 'center', alignItems: 'center' },
+  progressCircle: { width: 80, height: 80, borderRadius: 40, borderWidth: 6, borderColor: '#6366F1', justifyContent: 'center', alignItems: 'center' },
   percentText: { fontSize: 20, fontWeight: '900', color: '#1E293B' },
   percentLab: { fontSize: 8, fontWeight: '700', color: '#94A3B8' },
   statsGrid: { flex: 1, flexDirection: 'row', marginLeft: 20 },

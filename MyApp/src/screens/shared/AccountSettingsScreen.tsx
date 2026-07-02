@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   TextInput,
   Modal,
   Switch,
+  Image,
+  RefreshControl,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -19,6 +21,10 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
 import accountService from '../../services/accountService';
+import teacherService from '../../services/teacherService';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
+import { launchImageLibrary } from 'react-native-image-picker';
 import { ActivityIndicator, Alert } from 'react-native';
 import axios from 'axios';
 
@@ -58,12 +64,12 @@ const InputField = ({
       )}
       <TextInput
         style={[styles.textInput, multiline && styles.textInputMultiline]}
-  placeholder={placeholder}
-  placeholderTextColor="#9CA3AF"
-  multiline={multiline}
-  value={value}
-  onChangeText={onChangeText}
-  secureTextEntry={secureTextEntry}
+        placeholder={placeholder}
+        placeholderTextColor="#9CA3AF"
+        multiline={multiline}
+        value={value}
+        onChangeText={onChangeText}
+        secureTextEntry={secureTextEntry}
       />
       {rightIcon && (
         <TouchableOpacity
@@ -103,10 +109,10 @@ const PreferenceToggle = ({
 );
 
 const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
-  const { authState } = useAuth();
-  const role = authState.role;
+  const { authState, updateUser } = useAuth();
+  const role = authState.role?.toLowerCase() || '';
   const isTeacher = role === 'teacher';
-  const isInstitution = role === 'principal';
+  const isInstitution = role === 'institution' || role === 'principal';
   const roleTitle = isInstitution
     ? 'Institution'
     : isTeacher
@@ -117,149 +123,420 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
     : isTeacher
       ? 'Professional Info'
       : 'Parent Information';
+  const [rollNo, setRollNo] = useState('');
+
   const idLabel = isInstitution
     ? 'PRN2023-01X'
     : isTeacher
       ? 'EMP2023-12A'
-      : 'CS2023-789';
+      : rollNo || 'Loading...';
 
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
-  const [dob, setDob] = useState('');
   const [activeTab, setActiveTab] = useState<string>(
     route.params?.targetTab || 'Personal Details',
   );
   const [profileData, setProfileData] = useState({
-  firstName: '',
-  lastName: '',
-  phone: '',
-  email: '',
-  dob: '',
-  address: '',
-});
-//parent data state
-const [parentData, setParentData] = useState({
-  name: '',
-  relationship: '',
-  email: '',
-  phone: '',
-  address: '',
-});
-//emergency data
-const [emergencyData, setEmergencyData] = useState({
-  name: '',
-  relationship: '',
-  email: '',
-  phone: '',
-});
+    firstName: '',
+    lastName: '',
+    phone: '',
+    email: '',
+    dob: '',
+    address: '',
+    photo: '',
+  });
 
-const [isLoading, setIsLoading] = useState(false);
-useEffect(() => {
-  fetchProfile();
-}, []);
+  const [profData, setProfData] = useState({
+    employeeId: '',
+    qualification: '',
+    department: '',
+    designation: '',
+    experience: '',
+    joiningDate: '',
+    bio: '',
+  });
 
-const fetchProfile = async () => {
-  try {
-    setIsLoading(true);
+  const [bankData, setBankData] = useState({
+    bankName: '',
+    accountNumber: '',
+    accountHolderName: '',
+    accountType: '',
+    ifscCode: '',
+    salaryPaymentMethod: '',
+  });
 
-   const response = await accountService.getStudentInfo();
-   const parentResponse = await accountService.getParentInfo();
-   const parent = parentResponse.data?.data ?? parentResponse.data ?? {};
+  // parent data state
+  const [parentData, setParentData] = useState({
+    name: '',
+    relationship: '',
+    email: '',
+    phone: '',
+    address: '',
+  });
 
-setParentData({
-  name: parent.parentName || '',
-  relationship: parent.parentRelationship || '',
-  email: parent.parentEmail || '',
-  phone: parent.parentPhone || '',
-  address: '',
-});
+  // emergency data
+  const [emergencyData, setEmergencyData] = useState({
+    name: '',
+    relationship: '',
+    email: '',
+    phone: '',
+  });
 
-const emergencyResponse = await accountService.getEmergencyContact();
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
 
-const emergency =
-  emergencyResponse.data?.data ?? emergencyResponse.data ?? {};
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-setEmergencyData({
-  name: emergency.emergencyName || '',
-  relationship: emergency.emergencyRelationship || '',
-  email: emergency.emergencyEmail || '',
-  phone: emergency.emergencyPhone || '',
-});
+  useEffect(() => {
+    fetchProfile(false);
+  }, [authState.user?.id, role]);
 
-console.log(
-  '[Account Settings] Emergency Response:',
-  JSON.stringify(emergency, null, 2),
-);
+  const onRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchProfile(true);
+    setIsRefreshing(false);
+  };
 
-    const data = response.data?.data ?? response.data ?? {};
+  const fetchProfile = async (isRefresh = false) => {
+    try {
+      if (!isRefresh) setIsLoading(true);
 
-    const fullName = data.name ?? '';
-const nameParts = fullName.trim().split(' ');
+      const prefResponse = await accountService.getPreferences().catch(() => null);
+      if (prefResponse?.data?.data || prefResponse?.data) {
+        const pref = prefResponse.data.data || prefResponse.data;
+        setGradeNotif(pref.gradeNotif ?? true);
+        setAssignNotif(pref.assignNotif ?? true);
+        setClassNotif(pref.classNotif ?? true);
+      }
 
-setProfileData({
-  firstName: nameParts[0] || '',
-  lastName: nameParts.slice(1).join(' ') || '',
-  phone: data.phone || '',
-  email: data.email || '',
-  dob: data.dateOfBirth
-  ? new Date(data.dateOfBirth).toLocaleDateString('en-GB')
-  : '',
-  address: data.address || '',
-});
-  } catch (error) {
-    console.log('Profile fetch failed', error);
-  } finally {
-    setIsLoading(false);
-  }
-};
-const saveParentInfo = async () => {
-  try {
-    setIsLoading(true);
+      if (isTeacher || isInstitution) {
+        // Run both fetches simultaneously
+        const [personalResponse, profResponse] = await Promise.all([
+          teacherService.getPersonalInfo(),
+          teacherService.getProfile(),
+        ]);
 
-    const payload = {
-      parentName: parentData.name,
-      parentRelationship: parentData.relationship,
-      parentEmail: parentData.email,
-      parentPhone: parentData.phone,
-    };
+        const personalRaw = personalResponse.data?.data ?? personalResponse.data ?? {};
+        const profRaw = profResponse.data?.data ?? profResponse.data ?? {};
 
-    console.log(
-      '[Account Settings] Parent Update Payload:',
-      JSON.stringify(payload, null, 2),
-    );
+        const fullName = personalRaw.name || '';
+        const nameParts = fullName.trim().split(' ');
 
-    const response = await accountService.updateParentInfo(payload);
+        let dobString = '';
+        const rawDob = profRaw.dateOfBirth || profRaw.dob;
+        if (rawDob) {
+          dobString = new Date(rawDob).toLocaleDateString('en-GB');
+        }
 
-    console.log(
-      '[Account Settings] Parent Update Response:',
-      JSON.stringify(response.data, null, 2),
-    );
+        setProfileData({
+          firstName: nameParts[0] || '',
+          lastName: nameParts.slice(1).join(' ') || '',
+          phone: personalRaw.phone || '',
+          email: personalRaw.email || authState.user?.email || '',
+          dob: dobString,
+          address: personalRaw.address || '',
+          photo: personalRaw.photoUrl || '',
+        });
 
-    Alert.alert('Success', 'Parent information updated successfully.');
+        setProfData({
+          employeeId: profRaw.userId || '',
+          qualification: profRaw.highestQualification || '',
+          department: profRaw.department || '',
+          designation: profRaw.designation || '',
+          experience: String(profRaw.yearsOfExperience ?? ''),
+          joiningDate: profRaw.joiningDate ? new Date(profRaw.joiningDate).toLocaleDateString('en-GB') : '',
+          bio: profRaw.professionalBio || '',
+        });
 
-    // Refresh the latest data from the backend
-    fetchProfile();
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-  console.log(
-    '[Parent Update Error]',
-    JSON.stringify(error.response?.data, null, 2),
-  );
-  console.log('[Parent Update Status]', error.response?.status);
-} else {
-  console.log(error);
-}
-    Alert.alert('Error', 'Failed to update parent information.');
-  } finally {
-    setIsLoading(false);
-  }
-};
+        if (isTeacher) {
+          try {
+            const bankRes = await teacherService.getBankDetails();
+            const bData = bankRes.data?.data || bankRes.data || {};
+            setBankData({
+              bankName: bData.bankName || '',
+              accountNumber: bData.accountNumber || '',
+              accountHolderName: bData.accountHolderName || '',
+              accountType: bData.accountType || '',
+              ifscCode: bData.ifscCode || bData.ifsc || '',
+              salaryPaymentMethod: bData.salaryPaymentMethod || bData.paymentMethod || '',
+            });
+          } catch (err) {
+            console.log('[AccountSettings] Failed to fetch bank details separately');
+          }
+        }
+
+        // Push to global context so header avatar updates immediately
+        updateUser({
+          name: personalRaw.name || authState.user?.name || '',
+          photoUrl: personalRaw.photoUrl || ''
+        });
+      } else {
+        const [profileRes, studentRes, parentRes, emergencyRes] = await Promise.all([
+          accountService.getProfile(),
+          accountService.getStudentInfo(),
+          accountService.getParentInfo(),
+          accountService.getEmergencyContact(),
+        ]);
+
+        const profileRaw   = profileRes.data?.data   ?? profileRes.data   ?? {};
+        const studentRaw   = studentRes.data?.data   ?? studentRes.data   ?? {};
+        const parentRaw    = parentRes.data?.data    ?? parentRes.data    ?? {};
+        const emergencyRaw = emergencyRes.data?.data ?? emergencyRes.data ?? {};
+
+        const fullName = profileRaw.name || '';
+        const nameParts = fullName.trim().split(' ');
+
+        setProfileData({
+          firstName: nameParts[0] || '',
+          lastName:  nameParts.slice(1).join(' ') || '',
+          phone:     profileRaw.phone   || '',
+          email:     profileRaw.email   || '',
+          address:   profileRaw.address || '',
+          photo:     profileRaw.photoUrl || '',
+          dob: (() => {
+            const raw = studentRaw.dateOfBirth || '';
+            if (!raw) return '';
+            const parsed = new Date(raw);
+            return isNaN(parsed.getTime()) ? '' : parsed.toLocaleDateString('en-GB');
+          })(),
+        });
+
+        setRollNo(studentRaw.rollNo || '');
+
+        setParentData({
+          name:         parentRaw.parentName         || '',
+          relationship: parentRaw.parentRelationship || '',
+          email:        parentRaw.parentEmail        || '',
+          phone:        parentRaw.parentPhone        || '',
+          address:      '',
+        });
+
+        setEmergencyData({
+          name:         emergencyRaw.emergencyName         || '',
+          relationship: emergencyRaw.emergencyRelationship || '',
+          email:        emergencyRaw.emergencyEmail        || '',
+          phone:        emergencyRaw.emergencyPhone        || '',
+        });
+
+        updateUser({
+          name:     profileRaw.name     || '',
+          photoUrl: profileRaw.photoUrl || '',
+        });
+      }
+    } catch (error) {
+      console.error('[AccountSettings] Profile fetch failed', error);
+    } finally {
+      if (!isRefresh) setIsLoading(false);
+    }
+  };
+
+  const saveProfile = async () => {
+    try {
+      setIsLoading(true);
+      const payload = {
+        name: `${profileData.firstName} ${profileData.lastName}`.trim(),
+        phone: profileData.phone,
+        address: profileData.address,
+      };
+
+      if (isTeacher || isInstitution) {
+        await teacherService.updatePersonalInfo(payload);
+      } else {
+        await accountService.updateProfile(payload);
+      }
+
+      Alert.alert('Success', 'Profile updated successfully.');
+      fetchProfile();
+    } catch (error) {
+      console.error('[AccountSettings] Profile update error:', error);
+      Alert.alert('Error', 'Failed to update profile.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveProfDetails = async () => {
+    try {
+      setIsLoading(true);
+
+      // Prepare payload to handle exactly what the backend expects
+      // Uneditable fields (employeeId, designation, joiningDate) are omitted to avoid "Unknown fields" validation errors!
+      const payload: any = {
+        department: profData.department,
+        yearsOfExperience: parseInt(profData.experience) || 0,
+        highestQualification: profData.qualification,
+        professionalBio: profData.bio,
+      };
+
+      await apiClient.patch(ENDPOINTS.TEACHER.PROFILE, payload);
+
+      Alert.alert('Success', 'Professional Information updated successfully!');
+      fetchProfile();
+    } catch (e: any) {
+      console.error('[AccountSettings] Professional info update error:', e.response?.data || e.message || e);
+      const errData = e.response?.data?.message || e.response?.data || e.message;
+      const errMsg = Array.isArray(errData) ? errData.join(', ') : String(errData);
+      Alert.alert('Error', `Failed: ${errMsg}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveBankDetails = async () => {
+    try {
+      setIsLoading(true);
+      await teacherService.updateBankDetails(bankData);
+      Alert.alert('Success', 'Bank details updated successfully.');
+      fetchProfile();
+    } catch (error) {
+      console.error('[AccountSettings] Bank details update error:', error);
+      Alert.alert('Error', 'Failed to update bank details.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updatePreferences = async () => {
+    try {
+      setIsLoading(true);
+      await accountService.updatePreferences({
+        gradeNotif,
+        assignNotif,
+        classNotif
+      });
+      Alert.alert('Success', 'Preferences updated successfully.');
+    } catch (error) {
+      console.error('[AccountSettings] Preferences update error:', error);
+      Alert.alert('Error', 'Failed to update preferences.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const changePassword = async () => {
+    if (!passwordData.currentPassword || !passwordData.newPassword) {
+      Alert.alert('Error', 'Please enter your current and new password.');
+      return;
+    }
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      Alert.alert('Error', 'New passwords do not match.');
+      return;
+    }
+    try {
+      setIsLoading(true);
+      await accountService.changePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
+      Alert.alert('Success', 'Password changed successfully.');
+      setShowPasswordModal(false);
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error: any) {
+      console.error('[AccountSettings] Password change error:', error?.response?.data || error);
+      Alert.alert('Error', error?.response?.data?.message || 'Failed to change password.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const saveParentInfo = async () => {
+    try {
+      setIsLoading(true);
+
+      const payload = {
+        parentName: parentData.name,
+        parentRelationship: parentData.relationship,
+        parentEmail: parentData.email,
+        parentPhone: parentData.phone,
+      };
+
+      const response = await accountService.updateParentInfo(payload);
+      Alert.alert('Success', 'Parent information updated successfully.');
+
+      // Refresh the latest data from the backend
+      fetchProfile();
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error('[AccountSettings] Parent Update Error:', error.response?.data);
+      } else {
+        console.error('[AccountSettings] Parent Update Error:', error);
+      }
+      Alert.alert('Error', 'Failed to update parent information.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Preferences State
   const [gradeNotif, setGradeNotif] = useState(true);
   const [assignNotif, setAssignNotif] = useState(true);
   const [classNotif, setClassNotif] = useState(true);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+
+  const showPhotoOptions = () => {
+    Alert.alert('Profile Photo', 'Choose an action', [
+      { text: 'Upload Photo', onPress: handlePhotoUpload },
+      { text: 'Remove Photo', onPress: handlePhotoDelete, style: 'destructive' },
+      { text: 'Cancel', style: 'cancel' }
+    ]);
+  };
+
+  const handlePhotoUpload = async () => {
+    try {
+      const result = await launchImageLibrary({
+        mediaType: 'photo',
+        quality: 0.8,
+      });
+
+      if (result.didCancel || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const asset = result.assets[0];
+
+      const formData = new FormData();
+      formData.append('photo', {
+        uri: asset.uri,
+        type: asset.type || 'image/jpeg',
+        name: asset.fileName || 'profile_photo.jpg',
+      } as any);
+
+      setIsLoading(true);
+      if (isTeacher || isInstitution) {
+        await teacherService.uploadPhoto(formData);
+      } else {
+        await accountService.uploadPhoto(formData);
+      }
+      fetchProfile();
+      Alert.alert('Success', 'Profile photo updated successfully.');
+    } catch (error) {
+      console.error('[AccountSettings] Error uploading photo:', error);
+      Alert.alert('Error', 'Failed to upload photo.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePhotoDelete = async () => {
+    try {
+      setIsLoading(true);
+      if (isTeacher || isInstitution) {
+        await teacherService.deletePhoto();
+      } else {
+        await accountService.deletePhoto();
+      }
+      fetchProfile();
+      Alert.alert('Success', 'Profile photo removed.');
+    } catch (error) {
+      console.error('[AccountSettings] Error deleting photo:', error);
+      Alert.alert('Error', 'Failed to remove photo.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <View style={styles.mainContainer}>
@@ -284,9 +561,13 @@ const saveParentInfo = async () => {
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {authState.user?.name?.charAt(0) || 'U'}
-            </Text>
+            {authState.user?.photoUrl ? (
+              <Image source={{ uri: authState.user.photoUrl }} style={styles.headerAvatarImage} />
+            ) : (
+              <Text style={styles.avatarText}>
+                {authState.user?.name?.charAt(0) || 'U'}
+              </Text>
+            )}
           </View>
         </View>
       </View>
@@ -294,6 +575,7 @@ const saveParentInfo = async () => {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#6366F1']} />}
       >
         {/* Page Title */}
         <Animated.View
@@ -315,11 +597,16 @@ const saveParentInfo = async () => {
             activeOpacity={0.8}
             scaleTo={0.92}
             style={styles.heroAvatarContainer}
+            onPress={showPhotoOptions}
           >
             <View style={styles.heroAvatar}>
-              <Text style={styles.heroAvatarText}>
-                {authState.user?.name?.charAt(0) || 'U'}
-              </Text>
+              {authState.user?.photoUrl ? (
+                <Image source={{ uri: authState.user.photoUrl }} style={styles.heroAvatarImage} />
+              ) : (
+                <Text style={styles.heroAvatarText}>
+                  {authState.user?.name?.charAt(0) || 'U'}
+                </Text>
+              )}
             </View>
             <View style={styles.cameraIconBadge}>
               <Ionicons name="camera-outline" size={12} color="#4F46E5" />
@@ -374,7 +661,7 @@ const saveParentInfo = async () => {
               onPress={() => setActiveTab(secondaryTabTitle)}
             >
               <Ionicons
-                name="people"
+                name={isTeacher ? "briefcase" : "people"}
                 size={12}
                 color={activeTab === secondaryTabTitle ? '#3B82F6' : '#9CA3AF'}
               />
@@ -387,6 +674,29 @@ const saveParentInfo = async () => {
                 {secondaryTabTitle}
               </Text>
             </TouchableOpacity>
+            {isTeacher && (
+              <TouchableOpacity
+                style={[
+                  styles.tabBtn,
+                  activeTab === 'Bank Details' && styles.tabActive,
+                ]}
+                onPress={() => setActiveTab('Bank Details')}
+              >
+                <Ionicons
+                  name="card"
+                  size={12}
+                  color={activeTab === 'Bank Details' ? '#3B82F6' : '#9CA3AF'}
+                />
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeTab === 'Bank Details' && styles.tabTextActive,
+                  ]}
+                >
+                  Bank Details
+                </Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[
                 styles.tabBtn,
@@ -422,24 +732,24 @@ const saveParentInfo = async () => {
 
               {/* Fields Loop */}
               <InputField
-               label="First Name"
-  labelIcon="person-outline"
-  inputIcon="person"
-  placeholder="Enter First Name"
-  value={profileData.firstName}
-  onChangeText={(text: string) =>
-    setProfileData({ ...profileData, firstName: text })
-  }
+                label="First Name"
+                labelIcon="person-outline"
+                inputIcon="person"
+                placeholder="Enter First Name"
+                value={profileData.firstName}
+                onChangeText={(text: string) =>
+                  setProfileData({ ...profileData, firstName: text })
+                }
               />
               <InputField
                 label="Last name"
-  labelIcon="person-outline"
-  inputIcon="person"
-  placeholder="Enter Last Name"
-  value={profileData.lastName}
-  onChangeText={(text: string) =>
-    setProfileData({ ...profileData, lastName: text })
-  }
+                labelIcon="person-outline"
+                inputIcon="person"
+                placeholder="Enter Last Name"
+                value={profileData.lastName}
+                onChangeText={(text: string) =>
+                  setProfileData({ ...profileData, lastName: text })
+                }
               />
 
               {/* Static Student ID Block */}
@@ -461,49 +771,49 @@ const saveParentInfo = async () => {
 
               <InputField
                 label="Phone number"
-  labelIcon="call-outline"
-  inputIcon="call"
-  placeholder="Enter Phone Number"
-  value={profileData.phone}
-  onChangeText={(text: string) =>
-    setProfileData({ ...profileData, phone: text })
-  }
+                labelIcon="call-outline"
+                inputIcon="call"
+                placeholder="Enter Phone Number"
+                value={profileData.phone}
+                onChangeText={(text: string) =>
+                  setProfileData({ ...profileData, phone: text })
+                }
               />
 
               <InputField
-  label="Email Address"
-  labelIcon="mail-outline"
-  inputIcon="mail"
-  placeholder="Enter Email Address"
-  value={profileData.email}
-  onChangeText={(text: string) =>
-    setProfileData({ ...profileData, email: text })
-  }
-/>
+                label="Email Address"
+                labelIcon="mail-outline"
+                inputIcon="mail"
+                placeholder="Enter Email Address"
+                value={profileData.email}
+                onChangeText={(text: string) =>
+                  setProfileData({ ...profileData, email: text })
+                }
+              />
               <InputField
                 label="Date of Birth"
                 labelIcon="calendar-outline"
                 inputIcon="calendar"
                 placeholder="MM/DD/YYYY"
-                value={profileData.dob}                
+                value={profileData.dob}
                 rightIcon="calendar"
                 onRightIconPress={() => setShowCalendar(true)}
                 onChangeText={(text: string) =>
-                setProfileData({ ...profileData, dob: text })
-                  }
+                  setProfileData({ ...profileData, dob: text })
+                }
               />
 
               <InputField
-  label="Current Address"
-  labelIcon="location-outline"
-  inputIcon="home"
-  placeholder="Enter Full Address"
-  multiline
-  value={profileData.address}
-  onChangeText={(text: string) =>
-    setProfileData({ ...profileData, address: text })
-  }
-/>
+                label="Current Address"
+                labelIcon="location-outline"
+                inputIcon="home"
+                placeholder="Enter Full Address"
+                multiline
+                value={profileData.address}
+                onChangeText={(text: string) =>
+                  setProfileData({ ...profileData, address: text })
+                }
+              />
 
               <View style={styles.divider} />
 
@@ -513,6 +823,7 @@ const saveParentInfo = async () => {
                   activeOpacity={0.8}
                   scaleTo={0.96}
                   style={styles.cancelBtn}
+                  onPress={() => fetchProfile()}
                 >
                   <Text style={styles.cancelBtnText}>Cancel</Text>
                 </ScaleButton>
@@ -520,6 +831,7 @@ const saveParentInfo = async () => {
                   activeOpacity={0.9}
                   scaleTo={0.96}
                   style={styles.saveBtn}
+                  onPress={saveProfile}
                 >
                   <Ionicons
                     name="save"
@@ -533,143 +845,358 @@ const saveParentInfo = async () => {
             </>
           ) : activeTab === secondaryTabTitle ? (
             <>
-              {/* Parent Section Header */}
+              {/* Parent/Professional Section Header */}
               <View style={styles.sectionHeader}>
-                <Ionicons name="school-outline" size={16} color="#3B82F6" />
+                <Ionicons name={isTeacher ? "briefcase-outline" : "school-outline"} size={16} color="#3B82F6" />
                 <Text style={styles.sectionTitle}>{secondaryTabTitle}</Text>
               </View>
 
               <View style={styles.divider} />
 
-              <InputField
-  label="Parent/Guardian Name"
-  labelIcon="person-outline"
-  inputIcon="person"
-  placeholder="Enter Full Name"
-  value={parentData.name}
-  onChangeText={(text: string) =>
-    setParentData({ ...parentData, name: text })
-  }
-/>
-              <InputField
-  label="Relationship"
-  labelIcon="people-outline"
-  inputIcon="person"
-  placeholder="Enter Relationship"
-  value={parentData.relationship}
-  onChangeText={(text: string) =>
-    setParentData({ ...parentData, relationship: text })
-  }
-/>
-              <InputField
-  label="Email Address"
-  labelIcon="mail-outline"
-  inputIcon="mail"
-  placeholder="Enter Email Address"
-  value={parentData.email}
-  onChangeText={(text: string) =>
-    setParentData({ ...parentData, email: text })
-  }
-/>
-              <InputField
-  label="Phone number"
-  labelIcon="call-outline"
-  inputIcon="call"
-  placeholder="Enter Phone Number"
-  value={parentData.phone}
-  onChangeText={(text: string) =>
-    setParentData({ ...parentData, phone: text })
-  }
-/>
-              <InputField
-  label="Current Address"
-  labelIcon="location-outline"
-  inputIcon="home"
-  placeholder="Enter Address"
-  multiline
-  value={parentData.address}
-  onChangeText={(text: string) =>
-    setParentData({ ...parentData, address: text })
-  }
-/>
+              {isInstitution ? (
+                <View style={styles.fieldContainer}>
+                  <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 20 }}>
+                    Professional details are managed by the school administrator.
+                  </Text>
+                </View>
+              ) : isTeacher ? (
+                <>
+                  <InputField
+                    label="Employee ID (Read Only)"
+                    labelIcon="id-card-outline"
+                    inputIcon="barcode-outline"
+                    placeholder="Enter Employee ID"
+                    value={profData.employeeId}
+                    editable={false}
+                    onChangeText={(text: string) =>
+                      setProfData({ ...profData, employeeId: text })
+                    }
+                  />
+                  <InputField
+                    label="Department"
+                    labelIcon="business-outline"
+                    inputIcon="body"
+                    placeholder="Enter Department"
+                    value={profData.department}
+                    onChangeText={(text: string) =>
+                      setProfData({ ...profData, department: text })
+                    }
+                  />
+                  <InputField
+                    label="Highest Qualification"
+                    labelIcon="school-outline"
+                    inputIcon="document-text"
+                    placeholder="Enter Qualification"
+                    value={profData.qualification}
+                    onChangeText={(text: string) =>
+                      setProfData({ ...profData, qualification: text })
+                    }
+                  />
+                  <InputField
+                    label="Designation (Read Only)"
+                    labelIcon="star-outline"
+                    inputIcon="person"
+                    placeholder="Enter Designation"
+                    value={profData.designation}
+                    editable={false}
+                    onChangeText={(text: string) =>
+                      setProfData({ ...profData, designation: text })
+                    }
+                  />
+                  <InputField
+                    label="Years of Experience"
+                    labelIcon="time-outline"
+                    inputIcon="briefcase-outline"
+                    placeholder="Enter Years of Experience"
+                    value={profData.experience}
+                    onChangeText={(text: string) =>
+                      setProfData({ ...profData, experience: text })
+                    }
+                  />
+                  <InputField
+                    label="Joining Date (Read Only)"
+                    labelIcon="calendar-outline"
+                    inputIcon="today-outline"
+                    placeholder="Enter Joining Date"
+                    value={profData.joiningDate}
+                    editable={false}
+                    onChangeText={(text: string) =>
+                      setProfData({ ...profData, joiningDate: text })
+                    }
+                  />
+                  <InputField
+                    label="Professional Bio"
+                    labelIcon="information-circle-outline"
+                    inputIcon="document-text-outline"
+                    placeholder="Enter Professional Bio"
+                    multiline
+                    value={profData.bio}
+                    onChangeText={(text: string) =>
+                      setProfData({ ...profData, bio: text })
+                    }
+                  />
 
-              {/* Emergency Section Header */}
-              <View style={[styles.sectionHeader, { paddingTop: 8 }]}>
-                <Ionicons name="call-outline" size={16} color="#3B82F6" />
-                <Text style={styles.sectionTitle}>
-                  Emergency Contact Information
-                </Text>
+                  <View style={styles.divider} />
+
+                  <View style={styles.buttonsRow}>
+                    <ScaleButton
+                      activeOpacity={0.8}
+                      scaleTo={0.96}
+                      style={styles.cancelBtn}
+                      onPress={() => fetchProfile()}
+                    >
+                      <Text style={styles.cancelBtnText}>Cancel</Text>
+                    </ScaleButton>
+                    <ScaleButton
+                      activeOpacity={0.9}
+                      scaleTo={0.96}
+                      style={styles.saveBtn}
+                      onPress={saveProfDetails}
+                    >
+                      <Ionicons
+                        name="save"
+                        size={14}
+                        color="#FFFFFF"
+                        style={{ marginRight: 6 }}
+                      />
+                      <Text style={styles.saveBtnText}>Save Info</Text>
+                    </ScaleButton>
+                  </View>
+                </>
+              ) : (
+                <>
+
+                  <InputField
+                    label="Parent/Guardian Name"
+                    labelIcon="person-outline"
+                    inputIcon="person"
+                    placeholder="Enter Full Name"
+                    value={parentData.name}
+                    onChangeText={(text: string) =>
+                      setParentData({ ...parentData, name: text })
+                    }
+                  />
+                  <InputField
+                    label="Relationship"
+                    labelIcon="people-outline"
+                    inputIcon="person"
+                    placeholder="Enter Relationship"
+                    value={parentData.relationship}
+                    onChangeText={(text: string) =>
+                      setParentData({ ...parentData, relationship: text })
+                    }
+                  />
+                  <InputField
+                    label="Email Address"
+                    labelIcon="mail-outline"
+                    inputIcon="mail"
+                    placeholder="Enter Email Address"
+                    value={parentData.email}
+                    onChangeText={(text: string) =>
+                      setParentData({ ...parentData, email: text })
+                    }
+                  />
+                  <InputField
+                    label="Phone number"
+                    labelIcon="call-outline"
+                    inputIcon="call"
+                    placeholder="Enter Phone Number"
+                    value={parentData.phone}
+                    onChangeText={(text: string) =>
+                      setParentData({ ...parentData, phone: text })
+                    }
+                  />
+                  <InputField
+                    label="Current Address"
+                    labelIcon="location-outline"
+                    inputIcon="home"
+                    placeholder="Enter Address"
+                    multiline
+                    value={parentData.address}
+                    onChangeText={(text: string) =>
+                      setParentData({ ...parentData, address: text })
+                    }
+                  />
+
+                  {/* Emergency Section Header */}
+                  <View style={[styles.sectionHeader, { paddingTop: 8 }]}>
+                    <Ionicons name="call-outline" size={16} color="#3B82F6" />
+                    <Text style={styles.sectionTitle}>
+                      Emergency Contact Information
+                    </Text>
+                  </View>
+
+                  <View style={styles.divider} />
+
+                  <InputField
+                    label="Emergency Contact Name"
+                    labelIcon="person-outline"
+                    inputIcon="person"
+                    placeholder="Enter Name"
+                    value={emergencyData.name}
+                    onChangeText={(text: string) =>
+                      setEmergencyData({ ...emergencyData, name: text })
+                    }
+                  />
+                  <InputField
+                    label="Relationship"
+                    labelIcon="people-outline"
+                    inputIcon="person"
+                    placeholder="Enter Relationship"
+                    value={emergencyData.relationship}
+                    onChangeText={(text: string) =>
+                      setEmergencyData({ ...emergencyData, relationship: text })
+                    }
+                  />
+                  <InputField
+                    label="Email Address"
+                    labelIcon="mail-outline"
+                    inputIcon="mail"
+                    placeholder="Enter Email Address"
+                    value={emergencyData.email}
+                    onChangeText={(text: string) =>
+                      setEmergencyData({ ...emergencyData, email: text })
+                    }
+                  />
+                  <InputField
+                    label="Phone number"
+                    labelIcon="call-outline"
+                    inputIcon="call"
+                    placeholder="Enter Phone Number"
+                    value={emergencyData.phone}
+                    onChangeText={(text: string) =>
+                      setEmergencyData({ ...emergencyData, phone: text })
+                    }
+                  />
+                </>
+              )}
+
+              <View style={styles.divider} />
+
+              {/* Action Buttons */}
+              {!isTeacher && !isInstitution && (
+                <View style={styles.buttonsRow}>
+                  <ScaleButton
+                    activeOpacity={0.8}
+                    scaleTo={0.96}
+                    style={styles.cancelBtn}
+                    onPress={() => fetchProfile()}
+                  >
+                    <Text style={styles.cancelBtnText}>Cancel</Text>
+                  </ScaleButton>
+                  <ScaleButton
+                    activeOpacity={0.9}
+                    scaleTo={0.96}
+                    style={styles.saveBtn}
+                    onPress={saveParentInfo}
+                  >
+                    <Ionicons
+                      name="save"
+                      size={14}
+                      color="#FFFFFF"
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text style={styles.saveBtnText}>
+                      Save {secondaryTabTitle}
+                    </Text>
+                  </ScaleButton>
+                </View>
+              )}
+            </>
+          ) : activeTab === 'Bank Details' && isTeacher ? (
+            <>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="card" size={16} color="#3B82F6" />
+                <Text style={styles.sectionTitle}>Bank Account Details</Text>
               </View>
 
               <View style={styles.divider} />
 
               <InputField
-  label="Emergency Contact Name"
-  labelIcon="person-outline"
-  inputIcon="person"
-  placeholder="Enter Name"
-  value={emergencyData.name}
-  onChangeText={(text: string) =>
-    setEmergencyData({ ...emergencyData, name: text })
-  }
-/>
+                label="Bank Name"
+                labelIcon="business-outline"
+                inputIcon="business"
+                placeholder="Enter Bank Name"
+                value={bankData.bankName}
+                onChangeText={(text: string) =>
+                  setBankData({ ...bankData, bankName: text })
+                }
+              />
               <InputField
-  label="Relationship"
-  labelIcon="people-outline"
-  inputIcon="person"
-  placeholder="Enter Relationship"
-  value={emergencyData.relationship}
-  onChangeText={(text: string) =>
-    setEmergencyData({ ...emergencyData, relationship: text })
-  }
-/>
+                label="Account Holder Name"
+                labelIcon="person-outline"
+                inputIcon="person"
+                placeholder="Enter Account Holder Name"
+                value={bankData.accountHolderName}
+                onChangeText={(text: string) =>
+                  setBankData({ ...bankData, accountHolderName: text })
+                }
+              />
               <InputField
-  label="Email Address"
-  labelIcon="mail-outline"
-  inputIcon="mail"
-  placeholder="Enter Email Address"
-  value={emergencyData.email}
-  onChangeText={(text: string) =>
-    setEmergencyData({ ...emergencyData, email: text })
-  }
-/>
+                label="Account Number"
+                labelIcon="keypad-outline"
+                inputIcon="list"
+                placeholder="Enter Account Number"
+                value={bankData.accountNumber}
+                onChangeText={(text: string) =>
+                  setBankData({ ...bankData, accountNumber: text })
+                }
+              />
               <InputField
-  label="Phone number"
-  labelIcon="call-outline"
-  inputIcon="call"
-  placeholder="Enter Phone Number"
-  value={emergencyData.phone}
-  onChangeText={(text: string) =>
-    setEmergencyData({ ...emergencyData, phone: text })
-  }
-/>
+                label="IFSC Code"
+                labelIcon="barcode-outline"
+                inputIcon="code"
+                placeholder="Enter IFSC Code"
+                value={bankData.ifscCode}
+                onChangeText={(text: string) =>
+                  setBankData({ ...bankData, ifscCode: text })
+                }
+              />
+              <InputField
+                label="Account Type"
+                labelIcon="wallet-outline"
+                inputIcon="wallet"
+                placeholder="E.g. Savings, Current"
+                value={bankData.accountType}
+                onChangeText={(text: string) =>
+                  setBankData({ ...bankData, accountType: text })
+                }
+              />
+              <InputField
+                label="Salary Payment Method"
+                labelIcon="cash-outline"
+                inputIcon="cash"
+                placeholder="E.g. Bank Transfer"
+                value={bankData.salaryPaymentMethod}
+                onChangeText={(text: string) =>
+                  setBankData({ ...bankData, salaryPaymentMethod: text })
+                }
+              />
 
               <View style={styles.divider} />
 
-              {/* Action Buttons */}
               <View style={styles.buttonsRow}>
                 <ScaleButton
                   activeOpacity={0.8}
                   scaleTo={0.96}
                   style={styles.cancelBtn}
+                  onPress={() => fetchProfile()}
                 >
                   <Text style={styles.cancelBtnText}>Cancel</Text>
                 </ScaleButton>
                 <ScaleButton
-  activeOpacity={0.9}
-  scaleTo={0.96}
-  style={styles.saveBtn}
-  onPress={saveParentInfo}
->
+                  activeOpacity={0.9}
+                  scaleTo={0.96}
+                  style={styles.saveBtn}
+                  onPress={saveBankDetails}
+                >
                   <Ionicons
                     name="save"
                     size={14}
                     color="#FFFFFF"
                     style={{ marginRight: 6 }}
                   />
-                  <Text style={styles.saveBtnText}>
-                    Save {secondaryTabTitle}
-                  </Text>
+                  <Text style={styles.saveBtnText}>Save Bank Details</Text>
                 </ScaleButton>
               </View>
             </>
@@ -745,6 +1272,7 @@ const saveParentInfo = async () => {
                   activeOpacity={0.9}
                   scaleTo={0.96}
                   style={styles.saveBtn}
+                  onPress={updatePreferences}
                 >
                   <Ionicons
                     name="save"
@@ -803,7 +1331,8 @@ const saveParentInfo = async () => {
                     key={i}
                     style={[styles.calDayBox, isActive && styles.calDayActive]}
                     onPress={() => {
-                      setDob(`10/${day.toString().padStart(2, '0')}/2023`);
+                      const selected = `10/${day.toString().padStart(2, '0')}/2023`;
+                      setProfileData(prev => ({ ...prev, dob: selected }));
                       setShowCalendar(false);
                     }}
                   >
@@ -910,24 +1439,27 @@ const saveParentInfo = async () => {
                 labelIcon="lock-closed"
                 inputIcon="key"
                 placeholder="Enter your current password"
-                rightIcon="eye"
                 secureTextEntry={true}
+                value={passwordData.currentPassword}
+                onChangeText={(text: string) => setPasswordData(prev => ({ ...prev, currentPassword: text }))}
               />
               <InputField
                 label="New Password"
                 labelIcon="lock-closed"
                 inputIcon="lock-closed"
                 placeholder="Create a strong new password"
-                rightIcon="eye"
                 secureTextEntry={true}
+                value={passwordData.newPassword}
+                onChangeText={(text: string) => setPasswordData(prev => ({ ...prev, newPassword: text }))}
               />
               <InputField
                 label="Confirm New Password"
                 labelIcon="lock-closed"
                 inputIcon="lock-closed"
-                placeholder="Re - enter your new password"
-                rightIcon="eye"
+                placeholder="Re-enter your new password"
                 secureTextEntry={true}
+                value={passwordData.confirmPassword}
+                onChangeText={(text: string) => setPasswordData(prev => ({ ...prev, confirmPassword: text }))}
               />
 
               <View style={styles.divider} />
@@ -946,6 +1478,7 @@ const saveParentInfo = async () => {
                   activeOpacity={0.9}
                   scaleTo={0.96}
                   style={styles.saveBtn}
+                  onPress={changePassword}
                 >
                   <Ionicons
                     name="save"
@@ -1014,6 +1547,11 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  headerAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 17,
+  },
 
   pageTitleWrapper: { marginBottom: 16, paddingHorizontal: 20, marginTop: 10 },
   pageTitle: {
@@ -1057,6 +1595,11 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 20,
     fontWeight: '700',
+  },
+  heroAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 28,
   },
   cameraIconBadge: {
     position: 'absolute',

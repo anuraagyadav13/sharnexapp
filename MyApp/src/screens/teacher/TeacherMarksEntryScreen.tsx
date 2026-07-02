@@ -36,7 +36,7 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchText, setSearchText] = useState('');
-  const [marks, setMarks] = useState<Record<string, { score: string, isAbsent: boolean }>>({});
+  const [marks, setMarks] = useState<Record<string, { score: string, isAbsent: boolean, remark?: string }>>({});
   const [maxMarks, setMaxMarks] = useState(100);
 
   useEffect(() => {
@@ -53,11 +53,12 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
       setMaxMarks(data.maxMarks || 100);
       
       // Initialize marks state
-      const initialMarks: Record<string, { score: string, isAbsent: boolean }> = {};
+      const initialMarks: Record<string, { score: string, isAbsent: boolean, remark: string }> = {};
       (data.students || []).forEach((student: any) => {
         initialMarks[student.id] = {
-          score: student.marks !== null ? String(student.marks) : '',
+          score: student.marks !== null && student.marks !== undefined ? String(student.marks) : '',
           isAbsent: student.isAbsent || false,
+          remark: student.remark || student.remarks || '',
         };
       });
       setMarks(initialMarks);
@@ -93,6 +94,13 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
     }));
   };
 
+  const handleRemarkChange = (studentId: string, remark: string) => {
+    setMarks(prev => ({
+      ...prev,
+      [studentId]: { ...prev[studentId], remark }
+    }));
+  };
+
   const handleSave = async (isFinal: boolean = false) => {
     try {
       setIsSubmitting(true);
@@ -102,8 +110,9 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
         subjectId,
         marks: Object.entries(marks).map(([studentId, data]) => ({
           studentId,
-          marks: data.isAbsent ? null : parseFloat(data.score) || 0,
-          isAbsent: data.isAbsent
+          marks: data.isAbsent ? null : (parseFloat(data.score) || 0),
+          isAbsent: data.isAbsent,
+          remark: data.remark || ''
         })),
         isFinal
       };
@@ -121,13 +130,57 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   };
 
+  const [filterType, setFilterType] = useState<'ALL' | 'ENTERED' | 'ABSENT' | 'PENDING'>('ALL');
+
+  const calculatePercentage = (scoreStr: string, isAbsent: boolean) => {
+    if (isAbsent || !scoreStr || isNaN(parseFloat(scoreStr))) return null;
+    const score = parseFloat(scoreStr);
+    return maxMarks > 0 ? ((score / maxMarks) * 100) : 0;
+  };
+
+  const calculateGrade = (pct: number | null) => {
+    if (pct === null) return '-';
+    if (pct >= 90) return 'A+';
+    if (pct >= 80) return 'A';
+    if (pct >= 70) return 'B';
+    if (pct >= 60) return 'C';
+    if (pct >= 50) return 'D';
+    if (pct >= 40) return 'E';
+    return 'F';
+  };
+
+  const studentRanks = useMemo(() => {
+    const validScores = students
+      .map(s => ({
+        id: s.id,
+        score: marks[s.id] && !marks[s.id].isAbsent && marks[s.id].score ? parseFloat(marks[s.id].score) : null
+      }))
+      .filter(item => item.score !== null && !isNaN(item.score))
+      .sort((a, b) => (b.score as number) - (a.score as number));
+
+    const ranks: Record<string, number> = {};
+    validScores.forEach((item, idx) => {
+      ranks[item.id] = idx + 1;
+    });
+    return ranks;
+  }, [students, marks]);
+
   const filteredStudents = useMemo(() => {
-    if (!searchText) return students;
-    return students.filter(s => 
-      s.name.toLowerCase().includes(searchText.toLowerCase()) || 
-      (s.roll_no && String(s.roll_no).includes(searchText))
-    );
-  }, [searchText, students]);
+    return students.filter(s => {
+      const matchesSearch = !searchText || 
+        s.name.toLowerCase().includes(searchText.toLowerCase()) || 
+        (s.roll_no && String(s.roll_no).includes(searchText));
+      
+      const markData = marks[s.id] || { score: '', isAbsent: false };
+      const isEntered = !markData.isAbsent && markData.score !== '';
+      const isPending = !markData.isAbsent && markData.score === '';
+
+      if (filterType === 'ENTERED') return matchesSearch && isEntered;
+      if (filterType === 'ABSENT') return matchesSearch && markData.isAbsent;
+      if (filterType === 'PENDING') return matchesSearch && isPending;
+      return matchesSearch;
+    });
+  }, [searchText, students, marks, filterType]);
 
   const stats = useMemo(() => {
     const scores = Object.values(marks)
@@ -255,12 +308,34 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
                 </View>
               </View>
 
+              {/* Filter Tabs */}
+              <View style={styles.filterBarRow}>
+                {[
+                  { key: 'ALL', label: 'All Students' },
+                  { key: 'ENTERED', label: 'Entered' },
+                  { key: 'ABSENT', label: 'Absent' },
+                  { key: 'PENDING', label: 'Pending' },
+                ].map((item) => (
+                  <TouchableOpacity
+                    key={item.key}
+                    style={[styles.filterChip, filterType === item.key && styles.filterChipActive]}
+                    // @ts-ignore
+                    onPress={() => setFilterType(item.key)}
+                  >
+                    <Text style={[styles.filterChipText, filterType === item.key && styles.filterChipTextActive]}>
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
               {/* Table Header */}
               <View style={styles.tableHeader}>
-                <Text style={[styles.thText, { flex: 1 }]}>ROLL NO.</Text>
-                <Text style={[styles.thText, { flex: 2.5 }]}>STUDENT INFORMATION</Text>
-                <Text style={[styles.thText, { flex: 1.5, textAlign: 'center' }]}>SCORE ENTRY</Text>
-                <Text style={[styles.thText, { flex: 1, textAlign: 'right' }]}>STATUS</Text>
+                <Text style={[styles.thText, { flex: 0.8 }]}>ROLL</Text>
+                <Text style={[styles.thText, { flex: 2 }]}>STUDENT INFO</Text>
+                <Text style={[styles.thText, { flex: 1.8, textAlign: 'center' }]}>SCORE & GRADE</Text>
+                <Text style={[styles.thText, { flex: 1.8 }]}>REMARK</Text>
+                <Text style={[styles.thText, { flex: 1, textAlign: 'right' }]}>RANK</Text>
               </View>
 
               {/* Rows */}
@@ -270,20 +345,34 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
                 <Text style={styles.emptyText}>No students matching criteria.</Text>
               ) : (
                 filteredStudents.map((student, index) => {
-                  const markData = marks[student.id] || { score: '', isAbsent: false };
+                  const markData = marks[student.id] || { score: '', isAbsent: false, remark: '' };
+                  const pct = calculatePercentage(markData.score, markData.isAbsent);
+                  const grade = calculateGrade(pct);
+                  const rank = studentRanks[student.id];
+
                   return (
                     <View key={student.id} style={[styles.tableRow, index === filteredStudents.length - 1 && { borderBottomWidth: 0 }]}>
-                      <Text style={[styles.tdRoll, { flex: 1 }]}>{student.roll_no || 'N/A'}</Text>
-                      <Text style={[styles.tdName, { flex: 2.5 }]}>{student.name}</Text>
-                      <View style={[styles.scoreCell, { flex: 1.5 }]}>
-                        <TextInput 
-                          style={[styles.scoreInput, markData.isAbsent && styles.disabledInput]}
-                          keyboardType="numeric"
-                          value={markData.score}
-                          onChangeText={(val) => handleScoreChange(student.id, val)}
-                          editable={!markData.isAbsent}
-                          placeholder="0.00"
-                        />
+                      <Text style={[styles.tdRoll, { flex: 0.8 }]}>{student.roll_no || 'N/A'}</Text>
+                      <View style={{ flex: 2 }}>
+                        <Text style={styles.tdName} numberOfLines={1}>{student.name}</Text>
+                        <Text style={{ fontSize: 10, color: '#9CA3AF' }}>ID: {student.id?.slice(0, 6)}</Text>
+                      </View>
+                      <View style={[styles.scoreCell, { flex: 1.8 }]}>
+                        <View style={{ alignItems: 'center' }}>
+                          <TextInput 
+                            style={[styles.scoreInput, markData.isAbsent && styles.disabledInput]}
+                            keyboardType="numeric"
+                            value={markData.score}
+                            onChangeText={(val) => handleScoreChange(student.id, val)}
+                            editable={!markData.isAbsent}
+                            placeholder="0.00"
+                          />
+                          {pct !== null && (
+                            <Text style={{ fontSize: 9, color: '#6B7280', fontWeight: '700', marginTop: 2 }}>
+                              {pct.toFixed(1)}% ({grade})
+                            </Text>
+                          )}
+                        </View>
                         <TouchableOpacity 
                           style={[styles.absBtn, markData.isAbsent && styles.absBtnActive]}
                           onPress={() => toggleAbsent(student.id)}
@@ -291,11 +380,28 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
                           <Text style={[styles.absText, markData.isAbsent && styles.absTextActive]}>ABS</Text>
                         </TouchableOpacity>
                       </View>
+                      <View style={{ flex: 1.8, paddingHorizontal: 4 }}>
+                        <TextInput
+                          style={styles.remarkInput}
+                          value={markData.remark || ''}
+                          onChangeText={(val) => handleRemarkChange(student.id, val)}
+                          placeholder="Add remark..."
+                          placeholderTextColor="#9CA3AF"
+                        />
+                      </View>
                       <View style={[styles.statusCell, { flex: 1 }]}>
-                        <View style={styles.validatedBadge}>
-                          <Ionicons name="checkmark-circle" size={12} color="#10B981" />
-                          <Text style={styles.validatedText}>VALIDATED</Text>
-                        </View>
+                        {markData.isAbsent ? (
+                          <View style={[styles.rankBadge, { backgroundColor: '#FEE2E2' }]}>
+                            <Text style={[styles.rankText, { color: '#EF4444' }]}>ABS</Text>
+                          </View>
+                        ) : rank ? (
+                          <View style={styles.rankBadge}>
+                            <Ionicons name="trophy" size={10} color="#F59E0B" />
+                            <Text style={styles.rankText}>#{rank}</Text>
+                          </View>
+                        ) : (
+                          <Text style={{ fontSize: 11, color: '#9CA3AF' }}>-</Text>
+                        )}
                       </View>
                     </View>
                   );
@@ -548,6 +654,60 @@ const styles = StyleSheet.create({
   submitMarksText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
 
   emptyText: { textAlign: 'center', padding: 40, color: '#9CA3AF', fontSize: 14 },
+
+  filterBarRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+  },
+  filterChipActive: {
+    backgroundColor: '#7C3AED15',
+    borderWidth: 1,
+    borderColor: '#7C3AED',
+  },
+  filterChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  filterChipTextActive: {
+    color: '#7C3AED',
+  },
+  remarkInput: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    fontSize: 12,
+    color: '#1F2937',
+  },
+  rankBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  rankText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#D97706',
+  },
 });
 
 export default TeacherMarksEntryScreen;

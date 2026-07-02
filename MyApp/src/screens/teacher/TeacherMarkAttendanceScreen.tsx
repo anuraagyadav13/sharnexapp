@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,15 +8,16 @@ import {
   TouchableOpacity,
   Platform,
   ActivityIndicator,
-  Alert
+  Alert,
+  RefreshControl
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../App';
+import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+// Import our easy-to-use teacherService for talking to the server
+import teacherService from '../../services/teacherService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherMarkAttendance'>;
 
@@ -25,40 +26,57 @@ const TeacherMarkAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
   const { authState } = useAuth();
   const [students, setStudents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attendanceState, setAttendanceState] = useState<Record<string, 'P' | 'A' | 'L'>>({});
 
-  useEffect(() => {
-    const fetchInitialData = async () => {
+  const fetchInitialData = useCallback(async (isRefresh = false) => {
       try {
-        setIsLoading(true);
+        if (!isRefresh) setIsLoading(true);
         const dateStr = new Date().toISOString().split('T')[0];
         
+        // Ask the server for both the list of students and today's attendance records at once
         const [studentsRes, attendanceRes] = await Promise.all([
-          apiClient.get(ENDPOINTS.TEACHER.CLASS_STUDENTS(classId)),
-          apiClient.get(`${ENDPOINTS.TEACHER.ATTENDANCE(classId)}?date=${dateStr}`)
+          teacherService.getClassStudents(classId),
+          teacherService.getAttendance(classId, dateStr)
         ]);
         
-        const studentsData = studentsRes.data.data || [];
+        // Students come back as: { data: { students: [...] } } or just { data: [...] }
+        const studentsPayload = studentsRes.data?.data ?? studentsRes.data;
+        const studentsData = Array.isArray(studentsPayload)
+          ? studentsPayload
+          : (studentsPayload?.students ?? studentsPayload?.data ?? []);
         setStudents(studentsData);
 
-        // Pre-fill attendance state if records exist
-        const existingRecords = attendanceRes.data.attendance || [];
+        // Attendance records come as: { data: { attendance: [...] } }
+        const attendancePayload = attendanceRes.data?.data ?? attendanceRes.data;
+        const existingRecords = attendancePayload?.attendance ?? attendancePayload?.records ?? [];
+        // If attendance was already marked today, pre-fill the buttons so teacher can edit
         if (existingRecords.length > 0) {
           const prevState: Record<string, 'P' | 'A' | 'L'> = {};
           existingRecords.forEach((rec: any) => {
-            prevState[rec.studentId] = rec.status === 'present' ? 'P' : rec.status === 'absent' ? 'A' : 'L';
+            const sid = rec.studentId ?? rec.student_id;
+            const s = rec.status;
+            prevState[sid] = s === 'present' ? 'P' : s === 'absent' ? 'A' : 'L';
           });
           setAttendanceState(prevState);
         }
       } catch (error) {
         console.error('Failed to fetch initial marking data:', error);
       } finally {
-        setIsLoading(false);
+        if (!isRefresh) setIsLoading(false);
       }
-    };
-    fetchInitialData();
-  }, [classId]);
+    }, [classId]);
+
+  useEffect(() => {
+    fetchInitialData(false);
+  }, [fetchInitialData]);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchInitialData(true);
+    setIsRefreshing(false);
+  }, [fetchInitialData]);
 
   const markAll = (status: 'P' | 'A') => {
     const newState: Record<string, 'P' | 'A' | 'L'> = {};
@@ -85,7 +103,8 @@ const TeacherMarkAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
         return;
       }
 
-      await apiClient.post(ENDPOINTS.TEACHER.MARK_ATTENDANCE(classId), { 
+      // Send the newly marked attendance records back to the server
+      await teacherService.markAttendance(classId, { 
         date: new Date().toISOString().split('T')[0],
         attendanceRecords: data 
       });
@@ -133,7 +152,11 @@ const TeacherMarkAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
          <Text style={styles.blueSubtitle}>{students.length} Students</Text>
       </Animated.View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+      >
         
         {/* Main Content Card */}
         <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.mainCard}>

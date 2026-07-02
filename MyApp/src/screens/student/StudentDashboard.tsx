@@ -779,8 +779,6 @@ const styles = StyleSheet.create({
   liveTrackingLine: { height: '100%', backgroundColor: '#EF4444', borderRadius: 4 },
   shimmerStreak: { position: 'absolute', top: 0, bottom: 0, width: 60, backgroundColor: 'rgba(255, 255, 255, 0.6)', zIndex: 2 },
   iconBox: { borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-  iconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
-  scheduleTimeWrapper: { flex: 1, justifyContent: 'center' },
   assignmentList: { gap: 12 },
   assignmentCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   assignIconWrapper: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#EEF2FF', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
@@ -789,6 +787,26 @@ const styles = StyleSheet.create({
   assignTitle: { fontSize: 13, fontWeight: '700', color: '#1E293B', marginBottom: 4 },
   assignFooter: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   assignDueDate: { fontSize: 11, color: '#9CA3AF', fontWeight: '500' },
+  topStudentCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  rankCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  rankText: { fontSize: 12, fontWeight: '700' },
+  topStudentInfo: { flex: 1 },
+  topStudentName: { fontSize: 13, fontWeight: '700', color: '#1F2937' },
+  topStudentClass: { fontSize: 11, color: '#6B7280' },
+  topStudentPercentage: { fontSize: 13, fontWeight: '700', color: '#10B981' },
 });
 
 export default StudentDashboard;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,8 @@ import {
   Alert
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../App';
+import { RootStackParamList } from '../../types/navigation';
+import { useFocusEffect } from '@react-navigation/native';
 import Animated, { FadeInUp, FadeIn, Layout, ZoomIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -35,7 +36,7 @@ const TeacherAssignmentScreen: React.FC<Props> = ({ navigation }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const fetchAssignments = async (silent = false) => {
+  const fetchAssignments = useCallback(async (silent = false) => {
     try {
       if (!silent) setIsLoading(true);
       const teacherId = authState.user?.id;
@@ -47,14 +48,16 @@ const TeacherAssignmentScreen: React.FC<Props> = ({ navigation }) => {
       console.error('Failed to fetch teacher assignments:', error);
       Alert.alert('Error', 'Failed to synchronize assignments.');
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, [authState.user?.id]);
 
-  useEffect(() => {
-    fetchAssignments();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchAssignments(true); // silent fetch on focus to get any edits made
+    }, [fetchAssignments])
+  );
 
   const onRefresh = () => {
     setIsRefreshing(true);

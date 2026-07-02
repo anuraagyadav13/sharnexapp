@@ -12,7 +12,7 @@ import {
   Alert
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../App';
+import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
@@ -39,7 +39,8 @@ const TeacherEditAssignmentScreen: React.FC<Props> = ({ navigation, route }) => 
     const fetchDetails = async () => {
       try {
         const res = await apiClient.get(ENDPOINTS.TEACHER.ASSIGNMENT_DETAILS(assignmentId));
-        const data = res.assignment || res.data?.assignment || res.data || res;
+        const resData = res.data as any;
+        const data = resData?.assignment || resData;
         
         setTitle(data.title || '');
         setDescription(data.description || '');

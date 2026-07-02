@@ -79,7 +79,7 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
     try {
       setIsLoading(true);
       const res = await apiClient.get(
-        ENDPOINTS.TEACHER.EQUIPMENT.DETAIL(requestId),
+        ENDPOINTS.TEACHER.EQUIPMENT.DETAIL(requestId!),
       );
       const data = res.data?.data || res.data;
       if (data) {
@@ -584,7 +584,6 @@ const styles = StyleSheet.create({
   addItemText: { fontSize: 13, fontWeight: '700', color: '#4F46E5' },
 
   itemCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,

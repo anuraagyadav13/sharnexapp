@@ -34,12 +34,20 @@ export type RootStackParamList = {
   TeacherViewAttendance: { classId: string, className?: string };
   TeacherMarkAttendance: { classId: string, className?: string };
   TeacherAssignment: undefined;
-  TeacherViewSubmission: { assignmentId: string };
+  TeacherViewSubmission: { 
+    assignmentId: string;
+    classId?: string;
+    title?: string;
+    className?: string;
+    assignmentTitle?: string;
+    dueDate?: string;
+    maxMarks?: number;
+  };
   TeacherCreateAssignment: undefined;
   TeacherQuiz: undefined;
-  TeacherCreateQuiz: { initialQuiz?: any };
+  TeacherCreateQuiz: { initialQuiz?: any; quizId?: string } | undefined;
   TeacherCreateQuizStep2: { quizData: any };
-  TeacherAddQuestion: undefined;
+  TeacherAddQuestion: { editQuestion?: any; quizData?: any } | undefined;
   TeacherCreateQuizStep3: { quizData: any };
   TeacherViewQuizResult: { quizId: string };
   TeacherMonitorLive: { quizId: string };

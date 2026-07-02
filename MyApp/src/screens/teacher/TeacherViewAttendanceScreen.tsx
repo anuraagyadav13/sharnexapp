@@ -10,16 +10,19 @@ import {
   Dimensions,
   ActivityIndicator,
   Modal,
+  Alert,
+  RefreshControl
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../App';
+import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+// Import our easy-to-use teacherService for talking to the server
+import teacherService from '../../services/teacherService';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import RNFS from 'react-native-fs';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherViewAttendance'>;
 
@@ -75,30 +78,92 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
   const [selectedDate, setSelectedDate] = React.useState(new Date());
   const [isCalendarVisible, setIsCalendarVisible] = React.useState(false);
   const [attendance, setAttendance] = React.useState<any[]>([]);
+  const [students, setStudents] = React.useState<any[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [stats, setStats] = React.useState({ total: 0, present: 0, absent: 0 });
 
-  const fetchAttendance = async () => {
+  const fetchAttendance = React.useCallback(async (isRefresh = false) => {
     try {
-      setIsLoading(true);
+      if (!isRefresh) setIsLoading(true);
       const dateStr = selectedDate.toISOString().split('T')[0];
-      const res = await apiClient.get(`${ENDPOINTS.TEACHER.ATTENDANCE(classId)}?date=${dateStr}`);
-        const data = res.data.attendance || [];
-        setAttendance(data);
-        
-        setStats({
-          total: data.length,
-          present: data.filter((a: any) => a.status === 'present' || a.status === 'late').length,
-          absent: data.filter((a: any) => a.status === 'absent').length,
-        });
+      // Ask the server: "give me attendance for this class on this date", plus fetching class roster
+      const [res, rosterRes] = await Promise.all([
+        teacherService.getAttendance(classId, dateStr),
+        teacherService.getClassStudents(classId)
+      ]);
+
+      // Map Roster array to a state
+      const rosterData = rosterRes.data?.data || rosterRes.data?.students || rosterRes.data || [];
+      setStudents(rosterData);
+
+      // The server responds with: { data: { attendance: [...] } }
+      // Our API client normalizes it, so res.data.data is the real stuff
+      const payload = res.data?.data ?? res.data;
+      const data: any[] = payload?.attendance ?? payload?.records ?? [];
+
+      // Map mappedNames into attendance records directly before saving slightly easier logic in render
+      const mappedData = data.map(record => {
+        const rosterStudent = rosterData.find((s: any) => s.id === record.studentId || s.studentId === record.studentId || (s.user && s.user.id === record.studentId));
+        return {
+          ...record,
+          studentName: rosterStudent?.name || rosterStudent?.user?.name || rosterStudent?.studentName || 'Student',
+          rollNo: rosterStudent?.rollNo || rosterStudent?.rollNumber || record.studentId.slice(0, 8)
+        };
+      });
+
+      setAttendance(mappedData);
+
+      // Calculate the summary numbers from the list of students
+      setStats({
+        total: mappedData.length,
+        // Count anyone marked as 'present' or 'late' as being there
+        present: mappedData.filter((a: any) => a.status === 'present' || a.status === 'late').length,
+        absent: mappedData.filter((a: any) => a.status === 'absent').length,
+      });
+    } catch (err) {
+      console.error('Failed to fetch attendance records:', err);
     } finally {
-      setIsLoading(false);
+      if (!isRefresh) setIsLoading(false);
     }
-  };
+  }, [classId, selectedDate]);
 
   React.useEffect(() => {
-    fetchAttendance();
-  }, [classId, selectedDate]);
+    fetchAttendance(false);
+  }, [fetchAttendance]);
+
+  const onRefresh = React.useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchAttendance(true);
+    setIsRefreshing(false);
+  }, [fetchAttendance]);
+
+  const handleExport = async () => {
+    try {
+      Alert.alert('Exporting', 'Generating CSV file...');
+      
+      let csvContent = 'Name,Roll No,Status,Date,Marked At\n';
+      attendance.forEach(record => {
+        const dateStr = selectedDate.toLocaleDateString();
+        const timeStr = record.markedAt ? new Date(record.markedAt).toLocaleTimeString() : '';
+        const safeName = (record.studentName || 'Student').replace(/,/g, ''); // Escaping commas just in case
+        csvContent += `${safeName},${record.rollNo},${record.status},${dateStr},${timeStr}\n`;
+      });
+
+      const datePart = selectedDate.toISOString().split('T')[0];
+      const fileName = `Attendance_${classId.slice(0,8)}_${datePart}.csv`;
+      const path = Platform.OS === 'android' 
+        ? `${RNFS.DownloadDirectoryPath}/${fileName}` 
+        : `${RNFS.DocumentDirectoryPath}/${fileName}`;
+
+      await RNFS.writeFile(path, csvContent, 'utf8');
+      
+      Alert.alert('Success', `Attendance CSV saved locally!\n\nPath: ${path}`);
+    } catch (e: any) {
+      console.error('Attendance Export error', e);
+      Alert.alert('Error', 'Failed to export the attendance.');
+    }
+  };
 
   return (
     <View style={styles.mainContainer}>
@@ -113,103 +178,112 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
           <Ionicons name="settings-outline" size={22} color="#1F2937" />
           <Ionicons name="moon-outline" size={22} color="#1F2937" />
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
+            <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
           </View>
         </View>
       </View>
 
-       {/* Blue Header Section */}
-       <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-          <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
-             <View>
-                <Text style={styles.blueTitle}>Attendance Details</Text>
-                <Text style={styles.blueSubtitle}>{stats.total} Students Recorded • {selectedDate.toLocaleDateString()}</Text>
-             </View>
-             <TouchableOpacity style={styles.dateSelector} onPress={() => setIsCalendarVisible(true)}>
-                <Ionicons name="calendar" size={18} color="#FFF" />
-                <Text style={styles.dateSelectorText}>Select Date</Text>
-             </TouchableOpacity>
+      {/* Blue Header Section */}
+      <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+          <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View>
+            <Text style={styles.blueTitle}>Attendance Details</Text>
+            <Text style={styles.blueSubtitle}>{stats.total} Students Recorded • {selectedDate.toLocaleDateString()}</Text>
           </View>
-       </Animated.View>
+          <TouchableOpacity style={styles.dateSelector} onPress={() => setIsCalendarVisible(true)}>
+            <Ionicons name="calendar" size={18} color="#FFF" />
+            <Text style={styles.dateSelectorText}>Select Date</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+      >
+
         {/* Main Content Card */}
         <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.mainCard}>
-           
-           {/* Summary Stats Grid */}
-           <View style={styles.statsRow}>
-              <View style={[styles.statBox, { borderTopColor: '#4F46E5' }]}>
-                 <Text style={styles.statNumber}>{stats.total}</Text>
-                 <Text style={styles.statLabel}>Students</Text>
-              </View>
-              <View style={[styles.statBox, { borderTopColor: '#EF4444' }]}>
-                 <Text style={styles.statNumber}>{stats.absent}</Text>
-                 <Text style={styles.statLabel}>Absent</Text>
-              </View>
-              <View style={[styles.statBox, { borderTopColor: '#22C55E' }]}>
-                 <Text style={styles.statNumber}>{stats.present}</Text>
-                 <Text style={styles.statLabel}>Present</Text>
-              </View>
-           </View>
 
-           {/* Title */}
-           <Text style={styles.sectionTitle}>Student Attendance</Text>
+          {/* Summary Stats Grid */}
+          <View style={styles.statsRow}>
+            <View style={[styles.statBox, { borderTopColor: '#4F46E5' }]}>
+              <Text style={styles.statNumber}>{stats.total}</Text>
+              <Text style={styles.statLabel}>Students</Text>
+            </View>
+            <View style={[styles.statBox, { borderTopColor: '#EF4444' }]}>
+              <Text style={styles.statNumber}>{stats.absent}</Text>
+              <Text style={styles.statLabel}>Absent</Text>
+            </View>
+            <View style={[styles.statBox, { borderTopColor: '#22C55E' }]}>
+              <Text style={styles.statNumber}>{stats.present}</Text>
+              <Text style={styles.statLabel}>Present</Text>
+            </View>
+          </View>
 
-           {/* List */}
-           {isLoading ? (
-             <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 20 }} />
-           ) : attendance.length === 0 ? (
-             <Text style={styles.emptyText}>No attendance records found for today.</Text>
-           ) : (
-             attendance.map((student, index) => {
-               const initials = student.studentName ? student.studentName.split(' ').map((n: string) => n[0]).join('') : 'S';
-               const isPresent = student.status === 'present' || student.status === 'late';
-               
-               return (
-                 <Animated.View key={index} entering={FadeInUp.delay(150 + index * 50).springify()} style={styles.studentRow}>
-                    <View style={styles.studentInfoLeft}>
-                       <View style={styles.avatarCircle}>
-                          <Text style={styles.avatarInitials}>{initials}</Text>
-                       </View>
-                       <View>
-                          <Text style={styles.studentName}>{student.studentName}</Text>
-                          <Text style={styles.studentId}>ID: {student.rollNo || student.studentId.slice(0, 8)}</Text>
-                       </View>
+          {/* Title */}
+          <Text style={styles.sectionTitle}>Student Attendance</Text>
+
+          {/* List */}
+          {isLoading ? (
+            <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 20 }} />
+          ) : attendance.length === 0 ? (
+            <Text style={styles.emptyText}>No attendance records found for today.</Text>
+          ) : (
+            attendance.map((student, index) => {
+              // Handle both camelCase (studentName) and snake_case (student_name) — the API might use either
+              const name = student.studentName ?? student.student_name ?? student.name ?? 'Student';
+              const rollNo = student.rollNo ?? student.roll_no ?? student.roll_number;
+              const studentId = student.studentId ?? student.student_id ?? '';
+              const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
+              const isPresent = student.status === 'present' || student.status === 'late';
+
+              return (
+                <Animated.View key={studentId || index} entering={FadeInUp.delay(150 + index * 50).springify()} style={styles.studentRow}>
+                  <View style={styles.studentInfoLeft}>
+                    <View style={styles.avatarCircle}>
+                      <Text style={styles.avatarInitials}>{initials}</Text>
                     </View>
-                    <View style={[styles.statusPill, isPresent ? styles.statusPillPresent : styles.statusPillAbsent]}>
-                       <Text style={[styles.statusText, isPresent ? styles.statusTextPresent : styles.statusTextAbsent]}>
-                          {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
-                       </Text>
+                    <View>
+                      <Text style={styles.studentName}>{name}</Text>
+                      {/* Show roll number if available, otherwise show a short ID */}
+                      <Text style={styles.studentId}>ID: {rollNo ?? studentId.slice(0, 8)}</Text>
                     </View>
-                 </Animated.View>
-               );
-             })
-           )}
+                  </View>
+                  <View style={[styles.statusPill, isPresent ? styles.statusPillPresent : styles.statusPillAbsent]}>
+                    <Text style={[styles.statusText, isPresent ? styles.statusTextPresent : styles.statusTextAbsent]}>
+                      {student.status ? student.status.charAt(0).toUpperCase() + student.status.slice(1) : 'Unknown'}
+                    </Text>
+                  </View>
+                </Animated.View>
+              );
+            })
+          )}
 
         </Animated.View>
       </ScrollView>
 
       {/* Bottom Fixed Action Bar */}
       <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.bottomBar}>
-         <TouchableOpacity style={styles.exportBtn} activeOpacity={0.8}>
-            <Ionicons name="download-outline" size={16} color="#4F46E5" style={{marginRight: 6}} />
-            <Text style={styles.exportBtnText}>Export</Text>
-         </TouchableOpacity>
-         <TouchableOpacity style={styles.doneBtn} activeOpacity={0.8} onPress={() => navigation.goBack()}>
-            <Ionicons name="checkmark" size={16} color="#FFFFFF" style={{marginRight: 6}} />
-            <Text style={styles.doneBtnText}>Done</Text>
-         </TouchableOpacity>
+        <TouchableOpacity style={styles.exportBtn} activeOpacity={0.8} onPress={handleExport}>
+          <Ionicons name="download-outline" size={16} color="#4F46E5" style={{ marginRight: 6 }} />
+          <Text style={styles.exportBtnText}>Export</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.doneBtn} activeOpacity={0.8} onPress={() => navigation.goBack()}>
+          <Ionicons name="checkmark" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+          <Text style={styles.doneBtnText}>Done</Text>
+        </TouchableOpacity>
       </Animated.View>
 
-      <CustomCalendarPickerOverlay 
-         visible={isCalendarVisible} 
-         onClose={() => setIsCalendarVisible(false)} 
-         onSelect={setSelectedDate} 
-         selectedDate={selectedDate}
+      <CustomCalendarPickerOverlay
+        visible={isCalendarVisible}
+        onClose={() => setIsCalendarVisible(false)}
+        onSelect={setSelectedDate}
+        selectedDate={selectedDate}
       />
 
     </View>
@@ -236,9 +310,10 @@ const styles = StyleSheet.create({
     zIndex: 10
   },
   menuHandle: { paddingRight: 10, paddingVertical: 10 },
-  headerTitle: { fontSize: 16,
+  headerTitle: {
+    fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5', 
+    color: '#4F46E5',
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -450,16 +525,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4F46E5', 
+    backgroundColor: '#4F46E5',
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 20,
-  
+
     shadowColor: '#4F46E5',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 4,},
+    elevation: 4,
+  },
   doneBtnText: {
     fontSize: 14,
     fontWeight: '600',

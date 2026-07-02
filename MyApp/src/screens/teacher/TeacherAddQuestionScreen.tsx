@@ -24,7 +24,7 @@ const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation, route }) => {
   const editQuestion = route.params?.editQuestion;
   
   const [questionText, setQuestionText] = useState(editQuestion?.text || '');
-  const [options, setOptions] = useState(editQuestion?.options || [
+  const [options, setOptions] = useState<Array<{ letter: string; value: string }>>(editQuestion?.options || [
     { letter: 'A', value: '' },
     { letter: 'B', value: '' },
     { letter: 'C', value: '' },

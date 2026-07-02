@@ -199,7 +199,7 @@ const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation, route }) =>
       }
     } catch (err) {
       console.log('File picker error:', err);
-      const message = err?.message || 'Failed to pick file';
+      const message = (err as any)?.message || 'Failed to pick file';
       if (message.includes('native module') || message.includes('not loaded')) {
         setPickerAvailable(false);
         setPickerErrorMessage(message);
@@ -372,7 +372,7 @@ const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation, route }) =>
       }
       
       // Convert to question format
-      const questions = [];
+      const questions: any[] = [];
       for (let i = 1; i < jsonData.length; i++) {
         const row = jsonData[i] as any[];
         if (row.length < 4) continue; // Skip incomplete rows

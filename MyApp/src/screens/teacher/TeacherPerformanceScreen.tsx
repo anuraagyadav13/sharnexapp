@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,8 @@ import {
   Platform,
   StatusBar,
   ActivityIndicator,
-  Dimensions
+  Dimensions,
+  RefreshControl
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -29,11 +30,11 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
   const [performanceData, setPerformanceData] = useState<any>(null);
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [classes, setClasses] = useState<any[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = useCallback(async (isRefresh = false) => {
       try {
-        setIsLoading(true);
+        if (!isRefresh) setIsLoading(true);
         setError(null);
         const teacherId = authState.user?.id;
         if (!teacherId) throw new Error('Teacher ID not found');
@@ -58,16 +59,29 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
         // Aggregate stats
         const totalQuizzes = quizzesData.length;
         const totalAssignments = assignmentsData.length;
-        const avgQuizScore = quizzesData.length > 0 
-          ? Math.round(quizzesData.reduce((acc: number, q: any) => acc + (q.averageScore || 0), 0) / totalQuizzes) 
-          : 0;
+        
+        const avgQuizScore = totalQuizzes > 0 
+          ? Math.round(quizzesData.reduce((acc: number, q: any) => acc + (q.averageScore || q.avgScore || 0), 0) / totalQuizzes) 
+          : (summaryData.stats?.avgQuizScore || 0);
+
+        const assignmentRate = totalAssignments > 0
+          ? Math.round((assignmentsData.reduce((acc: number, a: any) => {
+              const count = a.studentsCount || a.totalStudents || 0;
+              const sub = a.submissionsCount || a.submittedCount || 0;
+              return acc + (count > 0 ? (sub / count) : 0);
+            }, 0) / totalAssignments) * 100)
+          : (summaryData.stats?.assignmentRate || 0);
+
+        const attendanceRate = summaryData.stats?.attendanceRate !== undefined 
+          ? summaryData.stats?.attendanceRate 
+          : (summaryData.attendanceRate || 0);
 
         setPerformanceData({
           overall: {
-            totalStudents: summaryData.stats?.totalStudents || 0,
-            avgQuizScore: avgQuizScore || 78, // Fallback for demo if data is missing
-            assignmentRate: 85, // Mocked as backend doesn't aggregate this yet
-            attendanceRate: 92, // Mocked
+            totalStudents: summaryData.stats?.totalStudents || summaryData.totalStudents || 0,
+            avgQuizScore,
+            assignmentRate,
+            attendanceRate,
           },
           topStudents: summaryData.topStudents || [],
           quizzes: quizzesData.slice(0, 5),
@@ -78,12 +92,19 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
         console.error('Failed to fetch performance data:', err);
         setError('Failed to load performance metrics.');
       } finally {
-        setIsLoading(false);
+        if (!isRefresh) setIsLoading(false);
       }
-    };
+    }, [authState.user?.id]);
 
-    fetchData();
-  }, [authState.user?.id]);
+  useEffect(() => {
+    fetchData(false);
+  }, [fetchData]);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchData(true);
+    setIsRefreshing(false);
+  }, [fetchData]);
 
   const handleRetry = () => {
     setIsLoading(true);
@@ -138,7 +159,12 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
       <StatusBar barStyle="dark-content" backgroundColor="#FAF9F9" />
       {renderHeader()}
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+      >
         
         {/* Page Titles */}
         <Animated.View entering={FadeInUp.duration(300)} style={styles.pageTitleContainer}>
@@ -239,21 +265,23 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
           <View style={styles.assignmentList}>
             {(performanceData?.assignments || []).length > 0 ? (
               performanceData.assignments.map((assignment: any, index: number) => {
-                const submissionRate = assignment.studentsCount > 0 
-                  ? Math.round((assignment.submissionsCount / assignment.studentsCount) * 100) 
+                const total = assignment.studentsCount || assignment.totalStudents || 0;
+                const submitted = assignment.submissionsCount || assignment.submittedCount || 0;
+                const submissionRate = total > 0 
+                  ? Math.round((submitted / total) * 100) 
                   : 0;
                 
                 return (
                   <View key={index} style={styles.assignmentPerfItem}>
                     <View style={styles.assignmentInfoRow}>
-                      <Text style={styles.assignmentTitle} numberOfLines={1}>{assignment.title}</Text>
+                      <Text style={styles.assignmentTitle} numberOfLines={1}>{assignment.title || 'Assignment'}</Text>
                       <View style={[styles.rateTag, { backgroundColor: submissionRate > 70 ? '#D1FAE5' : '#FEE2E2' }]}>
                         <Text style={[styles.rateTagText, { color: submissionRate > 70 ? '#065F46' : '#991B1B' }]}>
                           {submissionRate}% Rate
                         </Text>
                       </View>
                     </View>
-                    <Text style={styles.assignmentSub}>{assignment.class} • {assignment.subject}</Text>
+                    <Text style={styles.assignmentSub}>{assignment.class || assignment.className || 'Class'} • {assignment.subject || 'Subject'}</Text>
                   </View>
                 );
               })

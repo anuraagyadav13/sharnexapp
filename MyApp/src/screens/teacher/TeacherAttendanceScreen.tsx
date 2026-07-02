@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,17 +7,18 @@ import {
   ScrollView,
   TouchableOpacity,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  RefreshControl
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../App';
+import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+// Import our easy-to-use teacherService for talking to the server
+import teacherService from '../../services/teacherService';
 import { useTheme } from '../../store/ThemeContext';
 import Skeleton from '../../components/common/Skeleton';
 
@@ -29,20 +30,20 @@ const PageSkeleton = () => {
         <Skeleton width="40%" height={16} />
       </View>
       <View style={styles.meCard}>
-         <Skeleton width="40%" height={20} style={{marginBottom: 10}} />
-         <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
-            <Skeleton width="30%" height={30} />
-            <Skeleton width="40%" height={24} borderRadius={16} />
-         </View>
-         <Skeleton width="100%" height={6} borderRadius={3} style={{marginTop: 15}} />
+        <Skeleton width="40%" height={20} style={{ marginBottom: 10 }} />
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Skeleton width="30%" height={30} />
+          <Skeleton width="40%" height={24} borderRadius={16} />
+        </View>
+        <Skeleton width="100%" height={6} borderRadius={3} style={{ marginTop: 15 }} />
       </View>
       <View style={styles.mainCard}>
-        <Skeleton width="50%" height={20} style={{marginBottom: 20}} />
+        <Skeleton width="50%" height={20} style={{ marginBottom: 20 }} />
         {[1, 2].map(i => (
-          <View key={i} style={[styles.classCard, {padding: 15}]}>
-            <Skeleton width="60%" height={20} style={{marginBottom: 10}} />
-            <Skeleton width="40%" height={14} style={{marginBottom: 15}} />
-            <Skeleton width="100%" height={40} borderRadius={8} style={{marginBottom: 10}} />
+          <View key={i} style={[styles.classCard, { padding: 15 }]}>
+            <Skeleton width="60%" height={20} style={{ marginBottom: 10 }} />
+            <Skeleton width="40%" height={14} style={{ marginBottom: 15 }} />
+            <Skeleton width="100%" height={40} borderRadius={8} style={{ marginBottom: 10 }} />
             <Skeleton width="100%" height={40} borderRadius={8} />
           </View>
         ))}
@@ -59,28 +60,33 @@ const TeacherAttendanceScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, isDarkMode, toggleDarkMode } = useTheme();
   const [classes, setClasses] = useState<any[]>([]);
   const [myAttendance, setMyAttendance] = useState<any>(null);
-  const [summary, setSummary] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = useCallback(async (isRefresh = false) => {
       try {
+        if (!isRefresh) setIsLoading(true);
         const teacherId = authState.user?.id;
         if (!teacherId) return;
 
-        const [classesRes, meRes, summaryRes] = await Promise.all([
-          apiClient.get(ENDPOINTS.TEACHER.CLASSES(teacherId)),
-          apiClient.get(ENDPOINTS.TEACHER.MY_ATTENDANCE),
-          apiClient.get(ENDPOINTS.TEACHER.DASHBOARD(teacherId))
+        // Fetch both classes and teacher's own attendance at the same time
+        const [classesRes, meRes] = await Promise.all([
+          teacherService.getClasses(teacherId),
+          teacherService.getMyAttendance(),
         ]);
-        
-        // Handle both wrapped and unwrapped (normalized) formats for classes
-        const classData = classesRes.data || classesRes;
-        const fetchedClasses = Array.isArray(classData) ? classData : (classData.classes || []);
-        
+
+        // The API sends back: { data: { classes: [...] } }
+        const classPayload = classesRes.data?.data ?? classesRes.data ?? {};
+        const fetchedClasses = Array.isArray(classPayload)
+          ? classPayload
+          : (classPayload.classes ?? []);
+
+        // My attendance comes as: { data: { percentage: 94, records: [...] } }
+        const mePayload = meRes.data?.data ?? meRes.data ?? {};
+
         setClasses(fetchedClasses);
-        setMyAttendance(meRes.data?.data || meRes.data || null);
-        setSummary(summaryRes.data?.summary || null);
+        setMyAttendance({ percentage: mePayload.percentage ?? mePayload.attendancePercentage ?? 0 });
+
       } catch (error) {
         console.error('Failed to fetch attendance portal data:', error);
         // TEMPORARY: Mock data fallback
@@ -89,10 +95,18 @@ const TeacherAttendanceScreen: React.FC<Props> = ({ navigation }) => {
           { id: 'c2', name: 'Class 9', section: 'B', totalStudents: 38, grade: 'Secondary', todayStatus: 'pending' },
         ]);
         setMyAttendance({ percentage: 94 });
-      } finally { setIsLoading(false); }
-    };
-    fetchData();
-  }, [authState.user?.id]);
+      } finally { if (!isRefresh) setIsLoading(false); }
+    }, [authState.user?.id]);
+
+  useEffect(() => {
+    fetchData(false);
+  }, [fetchData]);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchData(true);
+    setIsRefreshing(false);
+  }, [fetchData]);
 
   return (
     <View style={[styles.mainContainer, { backgroundColor: theme.background }]}>
@@ -128,116 +142,126 @@ const TeacherAttendanceScreen: React.FC<Props> = ({ navigation }) => {
       {isLoading ? (
         <PageSkeleton />
       ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+        >
 
-        {/* Page Title Wrapper */}
-        <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
-          <Text style={styles.pageTitle}>Attendance Portal</Text>
-          <Text style={styles.pageSubtitle}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</Text>
-        </Animated.View>
-
-        {/* My Attendance Summary Card */}
-        {myAttendance && (
-          <Animated.View entering={FadeInUp.delay(50).springify()} style={styles.meCard}>
-             <View style={styles.meInfo}>
-                <View>
-                   <Text style={styles.meTitle}>My Attendance</Text>
-                   <Text style={styles.meSubtitle}>Current Month Performance</Text>
-                </View>
-                   <View style={styles.meStatRow}>
-                      <View style={styles.meStat}>
-                         <Text style={styles.meStatVal}>{myAttendance.percentage || 0}%</Text>
-                         <Text style={styles.meStatLab}>Attendance</Text>
-                      </View>
-                      <TouchableOpacity 
-                         style={styles.historyLink} 
-                         onPress={() => navigation.navigate('TeacherSelfAttendance')}
-                      >
-                         <Text style={styles.historyLinkText}>View Detailed Logs</Text>
-                         <Ionicons name="arrow-forward" size={12} color="#FFF" />
-                      </TouchableOpacity>
-                   </View>
-                   <View style={styles.meProgressBase}>
-                      <View style={[styles.meProgressFill, { width: `${myAttendance.percentage || 0}%` }]} />
-                   </View>
-             </View>
+          {/* Page Title */}
+          <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
+            <Text style={styles.pageTitle}>Attendance Portal</Text>
+            <Text style={styles.pageSubtitle}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</Text>
           </Animated.View>
-        )}
 
-        {/* Big White Main Card */}
-        <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.mainCard}>
-          <View style={styles.cardHeaderRow}>
-            <Ionicons name="checkbox" size={20} color="#111827" />
-            <Text style={styles.cardHeaderTitle}>Today's Attendance</Text>
-          </View>
-
-          {/* List of Classes */}
-          {isLoading ? (
-            <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 20 }} />
-          ) : classes.length === 0 ? (
-            <Text style={styles.emptyText}>No classes assigned to you.</Text>
-          ) : (
-            classes.map((item, index) => {
-              const isMarked = item.todayStatus === 'marked';
-              return (
-                <Animated.View key={item.id} entering={FadeInUp.delay(150 + index * 100).springify()} style={styles.classCard}>
-  
-                  {/* Class Info Top Area */}
-                  <View style={styles.classInfoContainer}>
-                    <View>
-                      <Text style={styles.classNameText}>{item.name} - {item.section}</Text>
-                      <View style={styles.classMetaRow}>
-                        <View style={styles.metaBadge}>
-                          <Ionicons name="people" size={13} color="#4F46E5" style={{ marginRight: 6 }} />
-                          <Text style={styles.metaText}>{item.totalStudents || 0} Students</Text>
-                        </View>
-                        <View style={[styles.metaBadge, { marginLeft: 20 }]}>
-                          <Ionicons name="book" size={13} color="#3B82F6" style={{ marginRight: 6 }} />
-                          <Text style={styles.metaText}>{item.grade || 'General'}</Text>
-                        </View>
-                      </View>
-                    </View>
-    
-                    {isMarked && (
-                      <View style={styles.markedPill}>
-                        <Ionicons name="checkmark-circle" size={12} color="#FFFFFF" style={{ marginRight: 4 }} />
-                        <Text style={styles.markedPillText}>Marked</Text>
-                      </View>
-                    )}
+          {/* My Attendance Summary Card */}
+          {myAttendance && (
+            <Animated.View entering={FadeInUp.delay(50).springify()} style={styles.meCard}>
+              <View style={styles.meInfo}>
+                <View>
+                  <Text style={styles.meTitle}>My Attendance</Text>
+                  <Text style={styles.meSubtitle}>Current Month Performance</Text>
+                </View>
+                <View style={styles.meStatRow}>
+                  <View style={styles.meStat}>
+                    <Text style={styles.meStatVal}>{myAttendance.percentage || 0}%</Text>
+                    <Text style={styles.meStatLab}>Attendance</Text>
                   </View>
-    
-                  {/* Action Buttons */}
-                  <View style={styles.actionsContainer}>
-                    {/* View Details Row */}
-                    <TouchableOpacity style={styles.actionBtnWhite} activeOpacity={0.7} onPress={() => navigation.navigate('TeacherViewAttendance', { classId: item.id })}>
-                      <View style={styles.actionBtnLeft}>
-                        <View style={styles.checkboxOutline}>
-                          <Ionicons name="checkmark" size={12} color="#9CA3AF" />
-                        </View>
-                        <Text style={styles.actionBtnText}>View Attendance Details</Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={16} color="#4F46E5" />
-                    </TouchableOpacity>
-    
-                    {/* Mark/Edit Row */}
-                    <TouchableOpacity style={styles.actionBtnPurple} activeOpacity={0.7} onPress={() => navigation.navigate('TeacherMarkAttendance', { classId: item.id, className: item.name })}>
-                      <View style={styles.actionBtnLeft}>
-                        <View style={styles.checkboxFilled}>
-                          <Ionicons name="checkmark" size={14} color="#FFFFFF" />
-                        </View>
-                        <Text style={styles.actionBtnText}>Mark/Edit Attendance</Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={16} color="#4F46E5" />
-                    </TouchableOpacity>
-                  </View>
-    
-                </Animated.View>
-              );
-            })
+                  <TouchableOpacity
+                    style={styles.historyLink}
+                    onPress={() => navigation.navigate('TeacherSelfAttendance')}
+                  >
+                    <Text style={styles.historyLinkText}>View Detailed Logs</Text>
+                    <Ionicons name="arrow-forward" size={12} color="#FFF" />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.meProgressBase}>
+                  <View style={[styles.meProgressFill, { width: `${myAttendance.percentage || 0}%` as any }]} />
+                </View>
+              </View>
+            </Animated.View>
           )}
-        </Animated.View>
 
-      </ScrollView>
+          {/* Big White Main Card */}
+          <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.mainCard}>
+            <View style={styles.cardHeaderRow}>
+              <Ionicons name="checkbox" size={20} color="#111827" />
+              <Text style={styles.cardHeaderTitle}>Today's Attendance</Text>
+            </View>
+
+            {/* List of Classes */}
+            {classes.length === 0 ? (
+              <Text style={styles.emptyText}>No classes assigned to you.</Text>
+            ) : (
+              classes.map((item, index) => {
+                // Handle both camelCase and snake_case field names from the API
+                const isMarked = (item.todayStatus ?? item.today_status) === 'marked';
+                const totalStudents = item.totalStudents ?? item.total_students ?? 0;
+                const className = item.name ?? item.class_name ?? `Class ${index + 1}`;
+                const section = item.section ?? '';
+                const grade = item.grade ?? item.subject ?? '';
+                return (
+                  <Animated.View key={item.id ?? index} entering={FadeInUp.delay(150 + index * 100).springify()} style={styles.classCard}>
+
+                    {/* Class Info Top Area */}
+                    <View style={styles.classInfoContainer}>
+                      <View>
+                        <Text style={styles.classNameText}>{className}{section ? ` - ${section}` : ''}</Text>
+                        <View style={styles.classMetaRow}>
+                          <View style={styles.metaBadge}>
+                            <Ionicons name="people" size={13} color="#4F46E5" style={{ marginRight: 6 }} />
+                            <Text style={styles.metaText}>{totalStudents} Students</Text>
+                          </View>
+                          {!!grade && (
+                            <View style={[styles.metaBadge, { marginLeft: 20 }]}>
+                              <Ionicons name="book" size={13} color="#3B82F6" style={{ marginRight: 6 }} />
+                              <Text style={styles.metaText}>{grade}</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+
+                      {isMarked && (
+                        <View style={styles.markedPill}>
+                          <Ionicons name="checkmark-circle" size={12} color="#FFFFFF" style={{ marginRight: 4 }} />
+                          <Text style={styles.markedPillText}>Marked</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Action Buttons */}
+                    <View style={styles.actionsContainer}>
+                      {/* View Details */}
+                      <TouchableOpacity style={styles.actionBtnWhite} activeOpacity={0.7} onPress={() => navigation.navigate('TeacherViewAttendance', { classId: item.id ?? item.class_id })}>
+                        <View style={styles.actionBtnLeft}>
+                          <View style={styles.checkboxOutline}>
+                            <Ionicons name="checkmark" size={12} color="#9CA3AF" />
+                          </View>
+                          <Text style={styles.actionBtnText}>View Attendance Details</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={16} color="#4F46E5" />
+                      </TouchableOpacity>
+
+                      {/* Mark/Edit */}
+                      <TouchableOpacity style={styles.actionBtnPurple} activeOpacity={0.7} onPress={() => navigation.navigate('TeacherMarkAttendance', { classId: item.id ?? item.class_id, className })}>
+                        <View style={styles.actionBtnLeft}>
+                          <View style={styles.checkboxFilled}>
+                            <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                          </View>
+                          <Text style={styles.actionBtnText}>Mark/Edit Attendance</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={16} color="#4F46E5" />
+                      </TouchableOpacity>
+                    </View>
+
+                  </Animated.View>
+                );
+              })
+            )}
+          </Animated.View>
+
+
+        </ScrollView>
       )}
 
       {/* Navigation Drawer */}
