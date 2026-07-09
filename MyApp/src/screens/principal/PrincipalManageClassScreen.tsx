@@ -22,20 +22,27 @@ import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import Skeleton from '../../components/common/Skeleton';
 import Toast, { ToastType } from '../../components/Toast';
+import { useTheme } from '../../store/ThemeContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const TabButton = ({ title, active, onPress }: any) => (
-  <TouchableOpacity 
-    onPress={onPress} 
-    style={[styles.tabButton, active && styles.tabButtonActive]}
-  >
-    <Text style={[styles.tabButtonText, active && styles.tabButtonTextActive]}>{title}</Text>
-    {active && <View style={styles.tabIndicator} />}
-  </TouchableOpacity>
-);
+const TabButton = ({ title, active, onPress }: any) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+  return (
+    <TouchableOpacity 
+      onPress={onPress} 
+      style={[styles.tabButton, active && styles.tabButtonActive]}
+    >
+      <Text style={[styles.tabButtonText, active && styles.tabButtonTextActive]}>{title}</Text>
+      {active && <View style={styles.tabIndicator} />}
+    </TouchableOpacity>
+  );
+};
 
 const PrincipalManageClassScreen = ({ navigation, route }: any) => {
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const { classId, className } = route.params;
   const [activeTab, setActiveTab] = useState('Overview');
   const [isLoading, setIsLoading] = useState(true);
@@ -166,7 +173,7 @@ const PrincipalManageClassScreen = ({ navigation, route }: any) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFF" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
       
       {toast.visible && (
         <Toast 
@@ -179,11 +186,11 @@ const PrincipalManageClassScreen = ({ navigation, route }: any) => {
       {/* Premium Header */}
       <View style={styles.header}>
          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={24} color="#1E293B" />
+            <Ionicons name="chevron-back" size={24} color={theme.text} />
          </TouchableOpacity>
          <Text style={styles.headerTitle} numberOfLines={1}>Manage {className}</Text>
          <TouchableOpacity style={styles.headerActionBtn}>
-            <Ionicons name="ellipsis-horizontal" size={22} color="#1E293B" />
+            <Ionicons name="ellipsis-horizontal" size={22} color={theme.text} />
          </TouchableOpacity>
       </View>
 
@@ -202,16 +209,16 @@ const PrincipalManageClassScreen = ({ navigation, route }: any) => {
           <>
             {/* Class Info Badges */}
             <View style={styles.badgeRow}>
-               <View style={[styles.infoBadge, { backgroundColor: '#EEF2FF' }]}>
+               <View style={[styles.infoBadge, { backgroundColor: isDarkMode ? '#6366F120' : '#EEF2FF' }]}>
                   <Text style={[styles.badgeLabel, { color: '#6366F1' }]}>Section: {classDetails?.section || '--'}</Text>
                </View>
-               <View style={[styles.infoBadge, { backgroundColor: '#F5F3FF' }]}>
+               <View style={[styles.infoBadge, { backgroundColor: isDarkMode ? '#8B5CF620' : '#F5F3FF' }]}>
                   <Text style={[styles.badgeLabel, { color: '#8B5CF6' }]}>Grade: {classDetails?.grade || '--'}</Text>
                </View>
-               <View style={[styles.infoBadge, { backgroundColor: '#ECFDF5' }]}>
+               <View style={[styles.infoBadge, { backgroundColor: isDarkMode ? '#10B98120' : '#ECFDF5' }]}>
                   <Text style={[styles.badgeLabel, { color: '#10B981' }]}>Students: {students.length}</Text>
                </View>
-               <View style={[styles.infoBadge, { backgroundColor: '#FFFBEB' }]}>
+               <View style={[styles.infoBadge, { backgroundColor: isDarkMode ? '#F59E0B20' : '#FFFBEB' }]}>
                   <Text style={[styles.badgeLabel, { color: '#F59E0B' }]}>Teacher: {classDetails?.teacher_name || '0'}</Text>
                </View>
             </View>
@@ -248,8 +255,8 @@ const PrincipalManageClassScreen = ({ navigation, route }: any) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FAFAFF' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   container: { flex: 1 },
   header: {
     flexDirection: 'row',
@@ -258,31 +265,85 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 20,
-    backgroundColor: '#FAFAFF',
+    backgroundColor: theme.background,
   },
-  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B', flex: 1, textAlign: 'center', marginHorizontal: 10 },
+  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.surface, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2, borderWidth: 1, borderColor: theme.border },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: theme.text, flex: 1, textAlign: 'center', marginHorizontal: 10 },
   headerActionBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   
   tabContainer: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 20, gap: 20 },
   tabButton: { paddingVertical: 8, alignItems: 'center' },
   tabButtonActive: {},
-  tabButtonText: { fontSize: 14, fontWeight: '600', color: '#94A3B8' },
-  tabButtonTextActive: { color: '#4F46E5', fontWeight: '800' },
-  tabIndicator: { width: '100%', height: 3, backgroundColor: '#4F46E5', borderRadius: 1.5, marginTop: 4 },
+  tabButtonText: { fontSize: 14, fontWeight: '600', color: theme.subtext },
+  tabButtonTextActive: { color: theme.primary, fontWeight: '800' },
+  tabIndicator: { width: '100%', height: 3, backgroundColor: theme.primary, borderRadius: 1.5, marginTop: 4 },
   
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 20, marginBottom: 25 },
   infoBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   badgeLabel: { fontSize: 11, fontWeight: '800' },
   tabContent: { paddingHorizontal: 20, paddingBottom: 40 },
-  mainSectionTitle: { fontSize: 20, fontWeight: '800', color: '#1E293B', marginBottom: 20 },
-  tableHeader: { flexDirection: 'row', backgroundColor: '#F8FAFC', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, marginBottom: 8 },
-  columnHeader: { fontSize: 10, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5 },
-  tableBody: { backgroundColor: '#FFF', borderRadius: 16, borderWeight: 1, borderColor: '#F1F5F9', overflow: 'hidden' },
-  tableRow: { flexDirection: 'row', paddingVertical: 16, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#F8FAFC', alignItems: 'center' },
-  rowText: { fontSize: 13, color: '#1E293B' },
+  mainSectionTitle: { fontSize: 20, fontWeight: '800', color: theme.text, marginBottom: 20 },
+  tableHeader: { flexDirection: 'row', backgroundColor: theme.surface, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: theme.border },
+  columnHeader: { fontSize: 10, fontWeight: '800', color: theme.subtext, letterSpacing: 0.5 },
+  tableBody: { backgroundColor: theme.surface, borderRadius: 16, borderWidth: 1, borderColor: theme.border, overflow: 'hidden' },
+  tableRow: { flexDirection: 'row', paddingVertical: 16, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: theme.border, alignItems: 'center' },
+  rowText: { fontSize: 13, color: theme.text },
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
-  emptyText: { color: '#94A3B8', fontSize: 14, fontWeight: '600' },
+  emptyText: { color: theme.subtext, fontSize: 14, fontWeight: '600' },
+  actionSection: {
+    paddingHorizontal: 20,
+    marginTop: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.text,
+    marginBottom: 12,
+  },
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.surface,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  actionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  actionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.text,
+  },
+  actionDesc: {
+    fontSize: 12,
+    color: theme.subtext,
+    marginTop: 2,
+  },
+  infoItem: { flex: 1 },
+  infoLabel: { fontSize: 11, fontWeight: '700', color: theme.subtext, marginBottom: 2 },
+  infoValue: { fontSize: 14, fontWeight: '600', color: theme.text },
+  statsRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginBottom: 20 },
+  miniStatCard: { flex: 1, backgroundColor: theme.surface, padding: 14, borderRadius: 16, alignItems: 'center', borderWidth: 1, borderColor: theme.border },
+  miniStatVal: { fontSize: 18, fontWeight: '800', color: theme.text, marginTop: 6 },
+  miniStatLabel: { fontSize: 11, fontWeight: '600', color: theme.subtext, marginTop: 2 },
+
+  // Missing styles
+  detailCard: { backgroundColor: theme.surface, borderRadius: 20, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: theme.border },
+  detailHeader: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  classBadge: { width: 48, height: 48, borderRadius: 14, backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center' },
+  detailTitle: { fontSize: 18, fontWeight: '800', color: theme.text },
+  detailSubtitle: { fontSize: 12, color: theme.subtext, marginTop: 2 },
+  divider: { height: 1, backgroundColor: theme.border, marginVertical: 16 },
+  infoGrid: { flexDirection: 'row', justifyContent: 'space-between' },
 });
 
 export default PrincipalManageClassScreen;

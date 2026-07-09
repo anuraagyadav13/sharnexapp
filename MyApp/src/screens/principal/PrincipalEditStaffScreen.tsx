@@ -25,9 +25,21 @@ import Animated, { FadeInUp, FadeInDown, SlideInRight } from 'react-native-reani
 import ScaleButton from '../../components/animations/ScaleButton';
 import { launchCamera, ImagePickerResponse } from 'react-native-image-picker';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
+import apiClient, { getApiErrorMessage } from '../../services/apiClient';
+import principalService from '../../services/principalService';
 import { ENDPOINTS } from '../../constants/api';
 import { COUNTRIES } from '../../constants/countries';
+
+const formatDateForApi = (dateStr: string) => {
+  if (!dateStr) return '2026-07-08';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    const [mm, dd, yyyy] = parts;
+    return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+  }
+  return dateStr;
+};
 
 import SelectionModal from '../../components/modals/SelectionModal';
 
@@ -66,9 +78,13 @@ const PrincipalEditStaffScreen: React.FC<Props> = ({ navigation, route }) => {
     bankName: initialData?.bankName || '',
     accountNumber: initialData?.accountNumber || '',
     accountHolderName: initialData?.accountHolderName || initialData?.name || '',
-    accountType: initialData?.accountType || 'Saving',
-    ifscCode: initialData?.ifscCode || '',
-    paymentMethod: initialData?.paymentMethod || 'Bank Transfer',
+    accountType: initialData?.accountType || initialData?.bankData?.accountType || 'Saving',
+    ifscCode: initialData?.ifscCode || initialData?.bankData?.ifscCode || '',
+    paymentMethod: initialData?.paymentMethod || initialData?.bankData?.salaryPaymentMethod || 'Bank Transfer',
+    department: initialData?.department || initialData?.profileData?.department || 'Mathematics',
+    qualification: initialData?.highestQualification || initialData?.profileData?.highestQualification || '',
+    experience: initialData?.yearsOfExperience || initialData?.profileData?.yearsOfExperience || '',
+    biography: initialData?.professionalBio || initialData?.profileData?.professionalBio || '',
   });
   const [photo, setPhoto] = useState<string | null>(initialData?.biometricPhoto || null);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -174,28 +190,36 @@ const PrincipalEditStaffScreen: React.FC<Props> = ({ navigation, route }) => {
   const handleUpdateStaff = async () => {
     try {
       setIsSubmitting(true);
-      const staffData = {
-        personalInfo: { 
-          firstName: formData.firstName, 
-          lastName: formData.lastName, 
-          email: formData.email, 
-          phone: `${formData.countryCode} ${formData.phone}`.trim(), 
-          dateOfBirth: formData.dob, 
-          address: formData.address 
+      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+      const dept = formData.department || 'Mathematics';
+
+      const payload = {
+        name: fullName,
+        email: formData.email,
+        phone: formData.phone ? `${formData.countryCode} ${formData.phone}`.trim() : '',
+        department: dept,
+        position: dept,
+        password: 'DefaultPassword123!',
+        role: 'TEACHER',
+        profileData: {
+          dateOfBirth: formatDateForApi(formData.dob),
+          address: formData.address || '',
+          department: dept,
+          highestQualification: formData.qualification || '',
+          yearsOfExperience: Number(formData.experience) || 0,
+          professionalBio: formData.biography || '',
         },
-        bankDetails: { 
-          bankName: formData.bankName, 
-          accountNumber: formData.accountNumber, 
-          accountHolderName: formData.accountHolderName, 
-          accountType: formData.accountType, 
-          ifscCode: formData.ifscCode, 
-          paymentMethod: formData.paymentMethod 
+        bankData: {
+          bankName: formData.bankName || '',
+          accountNumber: formData.accountNumber || '',
+          accountHolderName: formData.accountHolderName || fullName,
+          accountType: formData.accountType || 'Current',
+          ifscCode: formData.ifscCode || '',
+          salaryPaymentMethod: formData.paymentMethod || 'Check',
         },
-        biometricPhoto: photo,
-        // Professional info removed as per user request (table 'teachers' missing)
       };
 
-      await apiClient.put(`${ENDPOINTS.PRINCIPAL.STAFF}/${staffId}`, staffData);
+      await principalService.updateTeacher(staffId, payload);
       Alert.alert('Update Successful', `${formData.firstName}'s profile has been updated.`, [
         { text: 'Okay', onPress: () => navigation.goBack() }
       ]);

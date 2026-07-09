@@ -22,37 +22,48 @@ import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import Skeleton from '../../components/common/Skeleton';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
+import { useTheme } from '../../store/ThemeContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const PageSkeleton = () => (
-  <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-    <View style={styles.pageHeader}>
-      <Skeleton width="40%" height={24} style={{ marginBottom: 8 }} />
-      <Skeleton width="60%" height={16} />
-    </View>
-    <View style={{ marginTop: 20 }}>
-      <Skeleton width="100%" height={160} borderRadius={24} />
-    </View>
-    <View style={styles.statsRowSkeleton}>
-      <Skeleton width="48%" height={120} borderRadius={20} />
-      <Skeleton width="48%" height={120} borderRadius={20} />
-    </View>
-  </ScrollView>
-);
+const PageSkeleton = () => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+  return (
+    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <View style={styles.pageHeader}>
+        <Skeleton width="40%" height={24} style={{ marginBottom: 8 }} />
+        <Skeleton width="60%" height={16} />
+      </View>
+      <View style={{ marginTop: 20 }}>
+        <Skeleton width="100%" height={160} borderRadius={24} />
+      </View>
+      <View style={styles.statsRowSkeleton}>
+        <Skeleton width="48%" height={120} borderRadius={20} />
+        <Skeleton width="48%" height={120} borderRadius={20} />
+      </View>
+    </ScrollView>
+  );
+};
 
-const StatCard = ({ title, value, color, icon, subtitle }: any) => (
-  <View style={styles.statCard}>
-    <View style={[styles.statIconCircle, { backgroundColor: `${color}15` }]}>
-      <MaterialCommunityIcons name={icon} size={22} color={color} />
+const StatCard = ({ title, value, color, icon, subtitle }: any) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+  return (
+    <View style={styles.statCard}>
+      <View style={[styles.statIconCircle, { backgroundColor: `${color}15` }]}>
+        <MaterialCommunityIcons name={icon} size={22} color={color} />
+      </View>
+      <Text style={[styles.statValue, { color: color }]}>{value}</Text>
+      <Text style={styles.statTitle}>{title}</Text>
+      <Text style={styles.statSubtitle}>{subtitle}</Text>
     </View>
-    <Text style={[styles.statValue, { color: color }]}>{value}</Text>
-    <Text style={styles.statTitle}>{title}</Text>
-    <Text style={styles.statSubtitle}>{subtitle}</Text>
-  </View>
-);
+  );
+};
 
 const PrincipalPerformanceScreen = ({ navigation }: any) => {
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
@@ -85,12 +96,12 @@ const PrincipalPerformanceScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFF" translucent />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} translucent />
 
       {/* Global Header - Student Pattern */}
       <View style={styles.globalHeader}>
         <ScaleButton onPress={() => setDrawerOpen(true)}>
-          <Ionicons name="menu" size={28} color="#4F46E5" />
+          <Ionicons name="menu" size={28} color={theme.text} />
         </ScaleButton>
         <Text style={styles.headerTitle} numberOfLines={1}>Institution Insights</Text>
         <View style={styles.headerRight}>
@@ -105,9 +116,9 @@ const PrincipalPerformanceScreen = ({ navigation }: any) => {
       {isLoading && !isRefreshing ? (
         <PageSkeleton />
       ) : (
-        <ScrollView 
-          style={styles.container} 
-          contentContainerStyle={styles.scrollContent} 
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
         >
@@ -128,25 +139,25 @@ const PrincipalPerformanceScreen = ({ navigation }: any) => {
               <Rect width="100%" height="100%" fill="url(#perfGrad)" rx={32} ry={32} />
             </Svg>
             <View style={styles.heroContent}>
-               <View style={styles.heroMain}>
-                  <Text style={styles.heroLabel}>AVERAGE PERFORMANCE</Text>
-                  <Text style={styles.heroValue}>{performanceData?.averageScore || '0%'}</Text>
-                  <View style={styles.improvementBadge}>
-                     <Ionicons name="trending-up" size={14} color="#4ADE80" />
-                     <Text style={styles.improvementText}>{performanceData?.improvement || '+0%'} growth</Text>
-                  </View>
-               </View>
-               <View style={styles.heroGraphic}>
-                  <MaterialCommunityIcons name="chart-arc" size={80} color="rgba(255,255,255,0.2)" />
-               </View>
+              <View style={styles.heroMain}>
+                <Text style={styles.heroLabel}>AVERAGE PERFORMANCE</Text>
+                <Text style={styles.heroValue}>{performanceData?.averageScore || '0%'}</Text>
+                <View style={styles.improvementBadge}>
+                  <Ionicons name="trending-up" size={14} color="#4ADE80" />
+                  <Text style={styles.improvementText}>{performanceData?.improvement || '+0%'} growth</Text>
+                </View>
+              </View>
+              <View style={styles.heroGraphic}>
+                <MaterialCommunityIcons name="chart-arc" size={80} color="rgba(255,255,255,0.2)" />
+              </View>
             </View>
           </Animated.View>
 
           {/* Term Toggle */}
           <View style={styles.termToggle}>
             {['Term 1', 'Term 2', 'Final'].map(term => (
-              <TouchableOpacity 
-                key={term} 
+              <TouchableOpacity
+                key={term}
                 style={[styles.termBtn, selectedTerm === term && styles.termBtnActive]}
                 onPress={() => setSelectedTerm(term)}
               >
@@ -157,19 +168,19 @@ const PrincipalPerformanceScreen = ({ navigation }: any) => {
 
           {/* Stats Grid */}
           <View style={styles.statsGrid}>
-            <StatCard 
-              title="Pass Ratio" 
-              value={performanceData?.passPercentage || '0%'} 
-              subtitle="Current academic year" 
-              icon="shield-check-outline" 
-              color="#10B981" 
+            <StatCard
+              title="Pass Ratio"
+              value={performanceData?.passPercentage || '0%'}
+              subtitle="Current academic year"
+              icon="shield-check-outline"
+              color="#10B981"
             />
-            <StatCard 
-              title="Elite Scholars" 
-              value={performanceData?.topPerformers || '0'} 
-              subtitle="Scored above 90%" 
-              icon="crown-outline" 
-              color="#F59E0B" 
+            <StatCard
+              title="Elite Scholars"
+              value={performanceData?.topPerformers || '0'}
+              subtitle="Scored above 90%"
+              icon="crown-outline"
+              color="#F59E0B"
             />
           </View>
 
@@ -183,12 +194,12 @@ const PrincipalPerformanceScreen = ({ navigation }: any) => {
             {performanceData?.classWise?.map((item: any, index: number) => (
               <View key={index} style={[styles.leaderboardItem, index === 0 && { borderTopWidth: 0 }]}>
                 <View style={styles.leaderboardRank}>
-                   <Text style={styles.rankText}>{index + 1}</Text>
+                  <Text style={styles.rankText}>{index + 1}</Text>
                 </View>
                 <View style={styles.leaderboardMain}>
                   <Text style={styles.leaderboardClass}>{item.name}</Text>
                   <View style={styles.progressTrack}>
-                     <View style={[styles.progressFill, { width: `${item.score}%`, backgroundColor: item.score > 80 ? '#10B981' : '#6366F1' }]} />
+                    <View style={[styles.progressFill, { width: `${item.score}%`, backgroundColor: item.score > 80 ? '#10B981' : '#6366F1' }]} />
                   </View>
                 </View>
                 <Text style={styles.leaderboardScore}>{item.score}%</Text>
@@ -204,7 +215,7 @@ const PrincipalPerformanceScreen = ({ navigation }: any) => {
             {performanceData?.recentReports?.map((report: any, index: number) => (
               <TouchableOpacity key={report.id} style={styles.reportItem}>
                 <View style={styles.reportIconCircle}>
-                   <MaterialCommunityIcons name="file-chart-outline" size={24} color="#6366F1" />
+                  <MaterialCommunityIcons name="file-chart-outline" size={24} color="#6366F1" />
                 </View>
                 <View style={styles.reportInfo}>
                   <Text style={styles.reportTitle}>{report.title}</Text>
@@ -223,8 +234,8 @@ const PrincipalPerformanceScreen = ({ navigation }: any) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FAFAFF' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   container: { flex: 1 },
   scrollContent: { paddingBottom: 40 },
 
@@ -234,18 +245,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 30,
+    paddingTop:
+      Platform.OS === 'ios'
+        ? 60
+        : (StatusBar.currentHeight ?? 0),
     paddingBottom: 24,
-    backgroundColor: '#FAFAFF',
+    backgroundColor: theme.background,
   },
-  headerTitle: { fontSize: 16, fontWeight: '500', color: '#4F46E5', flex: 1, textAlign: 'center', marginHorizontal: 10 },
+  headerTitle: { fontSize: 16, fontWeight: '500', color: theme.primary, flex: 1, textAlign: 'center', marginHorizontal: 10 },
   headerRight: { flexDirection: 'row', alignItems: 'center' },
   avatarHeader: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center' },
   avatarTextHeader: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   pageHeader: { marginBottom: 20, paddingHorizontal: 20, marginTop: 10 },
-  screenTitle: { fontSize: 24, fontWeight: '800', color: '#3B82F6', marginBottom: 4 },
-  screenSubtitle: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
+  screenTitle: { fontSize: 24, fontWeight: '800', color: theme.isDarkMode ? theme.primary : '#3B82F6', marginBottom: 4 },
+  screenSubtitle: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
 
   // Hero
   heroCard: { height: 180, borderRadius: 32, marginHorizontal: 20, overflow: 'hidden', padding: 24, justifyContent: 'center' },
@@ -258,41 +272,41 @@ const styles = StyleSheet.create({
   heroGraphic: { marginLeft: 20 },
 
   // Toggle
-  termToggle: { flexDirection: 'row', backgroundColor: '#FFF', marginHorizontal: 20, padding: 6, borderRadius: 18, borderWidth: 1, borderColor: '#F1F5F9', marginTop: 25 },
+  termToggle: { flexDirection: 'row', backgroundColor: theme.surface, marginHorizontal: 20, padding: 6, borderRadius: 18, borderWidth: 1, borderColor: theme.border, marginTop: 25 },
   termBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 14 },
-  termBtnActive: { backgroundColor: '#4F46E5', shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
-  termBtnText: { fontSize: 12, fontWeight: '700', color: '#64748B' },
+  termBtnActive: { backgroundColor: theme.primary, shadowColor: theme.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
+  termBtnText: { fontSize: 12, fontWeight: '700', color: theme.subtext },
   termBtnTextActive: { color: '#FFF' },
 
   // Stats Grid
   statsGrid: { flexDirection: 'row', gap: 15, paddingHorizontal: 20, marginTop: 25 },
-  statCard: { flex: 1, backgroundColor: '#FFF', borderRadius: 24, padding: 20, borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.04, shadowRadius: 15, elevation: 3 },
+  statCard: { flex: 1, backgroundColor: theme.surface, borderRadius: 24, padding: 20, borderWidth: 1, borderColor: theme.border, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.04, shadowRadius: 15, elevation: 3 },
   statIconCircle: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
   statValue: { fontSize: 24, fontWeight: '900' },
-  statTitle: { fontSize: 13, fontWeight: '800', color: '#1E293B', marginTop: 6 },
-  statSubtitle: { fontSize: 10, color: '#94A3B8', marginTop: 2, fontWeight: '600' },
+  statTitle: { fontSize: 13, fontWeight: '800', color: theme.text, marginTop: 6 },
+  statSubtitle: { fontSize: 10, color: theme.subtext, marginTop: 2, fontWeight: '600' },
 
   // Leaderboard
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 32, marginBottom: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B' },
-  viewAllText: { fontSize: 12, color: '#4F46E5', fontWeight: '700' },
-  leaderboardCard: { backgroundColor: '#FFF', marginHorizontal: 20, borderRadius: 24, padding: 8, borderWidth: 1, borderColor: '#F1F5F9' },
-  leaderboardItem: { flexDirection: 'row', alignItems: 'center', padding: 16, borderTopWidth: 1, borderTopColor: '#F8FAFC' },
-  leaderboardRank: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginRight: 15 },
-  rankText: { fontSize: 12, fontWeight: '800', color: '#64748B' },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: theme.text },
+  viewAllText: { fontSize: 12, color: theme.isDarkMode ? '#818CF8' : '#4F46E5', fontWeight: '700' },
+  leaderboardCard: { backgroundColor: theme.surface, marginHorizontal: 20, borderRadius: 24, padding: 8, borderWidth: 1, borderColor: theme.border },
+  leaderboardItem: { flexDirection: 'row', alignItems: 'center', padding: 16, borderTopWidth: 1, borderTopColor: theme.border },
+  leaderboardRank: { width: 28, height: 28, borderRadius: 14, backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginRight: 15 },
+  rankText: { fontSize: 12, fontWeight: '800', color: theme.subtext },
   leaderboardMain: { flex: 1 },
-  leaderboardClass: { fontSize: 14, fontWeight: '700', color: '#1E293B', marginBottom: 8 },
-  progressTrack: { height: 6, backgroundColor: '#F1F5F9', borderRadius: 3, width: '90%', overflow: 'hidden' },
+  leaderboardClass: { fontSize: 14, fontWeight: '700', color: theme.text, marginBottom: 8 },
+  progressTrack: { height: 6, backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9', borderRadius: 3, width: '90%', overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 3 },
-  leaderboardScore: { fontSize: 15, fontWeight: '800', color: '#1E293B' },
+  leaderboardScore: { fontSize: 15, fontWeight: '800', color: theme.text },
 
   // Reports
   reportsWrapper: { paddingHorizontal: 20, gap: 12 },
-  reportItem: { backgroundColor: '#FFF', borderRadius: 24, padding: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#F1F5F9' },
-  reportIconCircle: { width: 48, height: 48, borderRadius: 15, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' },
+  reportItem: { backgroundColor: theme.surface, borderRadius: 24, padding: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: theme.border },
+  reportIconCircle: { width: 48, height: 48, borderRadius: 15, backgroundColor: theme.isDarkMode ? '#6366F120' : '#EEF2FF', alignItems: 'center', justifyContent: 'center' },
   reportInfo: { flex: 1, marginLeft: 15 },
-  reportTitle: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
-  reportDate: { fontSize: 11, color: '#94A3B8', marginTop: 2, fontWeight: '600' },
+  reportTitle: { fontSize: 14, fontWeight: '700', color: theme.text },
+  reportDate: { fontSize: 11, color: theme.subtext, marginTop: 2, fontWeight: '600' },
 
   statsRowSkeleton: { flexDirection: 'row', gap: 15, paddingHorizontal: 20, marginTop: 25 },
 });

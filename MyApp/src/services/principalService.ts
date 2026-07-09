@@ -1,0 +1,399 @@
+import apiClient from './apiClient';
+import { ENDPOINTS } from '../constants/api';
+
+// --- TS Interfaces for Principal API shapes ---
+
+export interface ClassItem {
+  id: string;
+  name: string;
+  section: string | null;
+  grade: string | null;
+  academicYear: string;
+  studentCount: number;
+  teacherCount: number;
+  classTeacherName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SubjectItem {
+  id: string;
+  institution_id: string;
+  name: string;
+  code: string | null;
+  normalized_name: string;
+}
+
+export interface TeacherItem {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: 'TEACHER' | 'LIBRARY_ADMIN' | string;
+  status: string;
+  isActive: boolean;
+  isVerified: boolean;
+  faceEnrolled: boolean;
+  assignedClassesCount: number;
+  createdAt: string;
+}
+
+export interface ClassAssignment {
+  classId: string;
+  className: string;
+  class: string;
+  grade: string | null;
+  teacherId: string | null;
+  teacherName: string | null;
+  role: string | null;
+  assignedAt: string;
+}
+
+export interface TimetablePeriod {
+  id: string;
+  institution_id: string;
+  period_number: number;
+  label: string;
+  start_time: string;
+  end_time: string;
+  is_break: boolean;
+}
+
+export interface ScheduleSlot {
+  time_slot_id: string;
+  period: {
+    id: string;
+    label: string;
+    start: string;
+    end: string;
+    is_break: boolean;
+  };
+  subject: string;
+  teacher: {
+    id: string;
+    name: string;
+    is_absent: boolean;
+  };
+  substitution: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+export interface ScheduleDay {
+  type: string;
+  date: string;
+  slots: ScheduleSlot[];
+}
+
+export interface ClassScheduleResponse {
+  institution: {
+    working_days: number[];
+    periods_per_day: number;
+  };
+  schedule: ScheduleDay[];
+}
+
+export interface RmsExamItem {
+  id: string;
+  name: string;
+  examType: 'MIDTERM' | 'FINAL' | 'UNIT_TEST' | 'QUARTERLY' | string;
+  academicYear: string;
+  status: 'ACTIVE' | string;
+  createdAt: string;
+  _count: {
+    classes: number;
+  };
+}
+
+export interface AnnouncementItem {
+  id: string;
+  institutionId: string;
+  classId: string | null;
+  title: string;
+  content: string;
+  creatorName: string;
+  creatorEmail: string;
+  creatorRole: string;
+  category: string | null;
+  targetAudience: string;
+  priority: 'normal' | 'high' | 'urgent' | string;
+  status: string;
+  views: number;
+  createdAt: string;
+}
+
+export interface InvoiceStats {
+  totalFees: number;
+  totalPaid: number;
+  totalOverdue: number;
+  pendingPayments: number;
+  collectionRate: number;
+  pendingCount: number;
+  paidCount: number;
+  overdueCount: number;
+  count: number;
+}
+
+export interface InvoiceItem {
+  id: string;
+  invoiceNumber: string;
+  institutionName: string;
+  studentId: string;
+  studentName: string;
+  grade: string | null;
+  baseAmount: number;
+  totalAmount: number;
+  currency: string;
+  description: string;
+  status: 'PENDING' | 'PAID' | 'OVERDUE' | string;
+  dueDate: string;
+  paidAt: string | null;
+  academicYear: string;
+  month: string;
+  createdAt: string;
+}
+
+export interface EquipmentRequestItem {
+  id: string;
+  request_number: string;
+  teacher_id: string;
+  status: 'SUBMITTED' | string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | string;
+  purpose: string;
+  needed_by_date: string;
+  teacher_note: string | null;
+  principal_remark: string | null;
+  submitted_at: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  teacher_name: string;
+  item_count: string;
+}
+
+export interface EquipmentPagination {
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface LibraryDashboardStats {
+  totalBooks: number;
+  totalCopies: number;
+  activeIssues: number;
+  overdueCount: number;
+  totalCategories: number;
+  staffCount: number;
+}
+
+export interface LibraryCategoryItem {
+  id: string;
+  name: string;
+  description: string;
+  created_at: string;
+  book_count: string;
+}
+
+export interface LibraryIssueItem {
+  id: string;
+  status: 'ISSUED' | 'RETURNED' | 'OVERDUE' | string;
+  issueDate: string;
+  dueDate: string;
+  studentId: string;
+  studentName: string;
+  bookTitle: string;
+  copyNumber: string;
+  className: string;
+}
+
+export interface PersonalProfileData {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  address: string;
+  biography: string;
+  photoUrl: string;
+}
+
+export interface InstitutionProfileData {
+  id: string;
+  name: string;
+  schoolType: string;
+  affiliation: string;
+  phone: string;
+  email: string;
+  address: string;
+  plan: string;
+  totalStudents: number;
+  totalStaff: number;
+  logoUrl: string | null;
+}
+
+export interface SessionItem {
+  id: string;
+  deviceInfo: string;
+  browser: string;
+  os: string;
+  ipAddress: string;
+  location: string | null;
+  lastActiveAt: string;
+  createdAt: string;
+  expiresAt: string;
+  isCurrent: boolean;
+}
+
+// --- Service Object ---
+
+const principalService = {
+  getClasses() {
+    return apiClient.get<{ classes: ClassItem[] }>(ENDPOINTS.PRINCIPAL.CLASSES);
+  },
+
+  getStudentsByClass(classId: string) {
+    return apiClient.get<any>(ENDPOINTS.PRINCIPAL.CLASS_STUDENTS(classId));
+  },
+
+  getStudentDetail(studentId: string) {
+    return apiClient.get<any>(`/students/${studentId}`);
+  },
+
+  deleteStudent(studentId: string) {
+    return apiClient.delete<any>(ENDPOINTS.PRINCIPAL.DELETE_STUDENT(studentId));
+  },
+
+  updateStudent(studentId: string, payload: any) {
+    return apiClient.put<any>(ENDPOINTS.PRINCIPAL.UPDATE_STUDENT(studentId), payload);
+  },
+
+  createStudent(payload: any) {
+    return apiClient.post<any>(ENDPOINTS.PRINCIPAL.CREATE_STUDENT, payload);
+  },
+
+  exportStudents(classId: string) {
+    return apiClient.get<any>(ENDPOINTS.PRINCIPAL.EXPORT_STUDENTS(classId));
+  },
+
+  getSubjects() {
+    return apiClient.get<{ subjects: SubjectItem[] }>(ENDPOINTS.PRINCIPAL.SUBJECTS);
+  },
+
+  getTeachers(institutionId: string) {
+    return apiClient.get<{ data: TeacherItem[] }>(ENDPOINTS.PRINCIPAL.TEACHERS(institutionId));
+  },
+
+  addTeacher(institutionId: string, payload: any) {
+    return apiClient.post(ENDPOINTS.PRINCIPAL.TEACHERS(institutionId), payload);
+  },
+
+  updateTeacher(teacherId: string, payload: any) {
+    return apiClient.patch(`/teachers/${teacherId}`, payload);
+  },
+
+  updateTeacherStatus(teacherId: string, isActive: boolean) {
+    return apiClient.patch(`/teachers/${teacherId}`, { isActive });
+  },
+
+  getClassAssignments(institutionId: string) {
+    return apiClient.get<{ data: ClassAssignment[] }>(ENDPOINTS.PRINCIPAL.CLASS_ASSIGNMENTS(institutionId));
+  },
+  uploadPhoto(formData: FormData) {
+    return apiClient.post('/account/institution/photo', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  deletePhoto() {
+    return apiClient.delete('/account/institution/photo');
+  },
+
+  getTimetablePeriods() {
+    return apiClient.get<{ periods: TimetablePeriod[] }>(ENDPOINTS.PRINCIPAL.TIMETABLE_PERIODS);
+  },
+
+  getClassSchedule(classId: string, week: string) {
+    return apiClient.get<ClassScheduleResponse>(`${ENDPOINTS.PRINCIPAL.CLASS_SCHEDULE(classId)}?week=${week}`);
+  },
+
+  getRmsExams() {
+    return apiClient.get<{ data: RmsExamItem[] }>(`${ENDPOINTS.PRINCIPAL.RMS_EXAMS}?limit=100`);
+  },
+
+  getAnnouncements(institutionId: string) {
+    return apiClient.get<{ announcements: AnnouncementItem[] }>(
+      `${ENDPOINTS.PRINCIPAL.ANNOUNCEMENTS}?institutionId=${institutionId}&limit=10`
+    );
+  },
+
+  createAnnouncement(payload: any) {
+    return apiClient.post<any>(ENDPOINTS.PRINCIPAL.ANNOUNCEMENTS, payload);
+  },
+
+  deleteAnnouncement(announcementId: string) {
+    return apiClient.delete<any>(`${ENDPOINTS.PRINCIPAL.ANNOUNCEMENTS}/${announcementId}`);
+  },
+
+  getInvoiceStats() {
+    return apiClient.get<{ data: InvoiceStats }>(ENDPOINTS.PRINCIPAL.INVOICE_STATS);
+  },
+
+  getInvoices(limit: number = 50) {
+    return apiClient.get<{ data: { invoices: InvoiceItem[] } }>(`${ENDPOINTS.PRINCIPAL.INVOICES}?limit=${limit}`);
+  },
+
+  getPendingEquipmentRequests(status: string = 'SUBMITTED', limit: number = 50, offset: number = 0) {
+    return apiClient.get<{ data: { items: EquipmentRequestItem[]; pagination: EquipmentPagination } }>(
+      `${ENDPOINTS.PRINCIPAL.EQUIPMENT_PENDING}?status=${status}&limit=${limit}&offset=${offset}`
+    );
+  },
+
+  approveEquipmentRequest(id: string, remark?: string) {
+    return apiClient.post(ENDPOINTS.PRINCIPAL.EQUIPMENT_APPROVE(id), { remark: remark ?? '' });
+  },
+
+  rejectEquipmentRequest(id: string, remark: string) {
+    return apiClient.post(ENDPOINTS.PRINCIPAL.EQUIPMENT_REJECT(id), { remark });
+  },
+
+  getLibraryDashboard() {
+    return apiClient.get<{ data: LibraryDashboardStats }>(ENDPOINTS.PRINCIPAL.LIBRARY_DASHBOARD);
+  },
+
+  getLibraryCategories() {
+    return apiClient.get<{ data: LibraryCategoryItem[] }>(ENDPOINTS.PRINCIPAL.LIBRARY_CATEGORIES);
+  },
+
+  getLibraryIssues(limit: number = 10, offset: number = 0) {
+    return apiClient.get<{ data: { items: LibraryIssueItem[]; pagination: EquipmentPagination } }>(
+      `${ENDPOINTS.PRINCIPAL.LIBRARY_ISSUES}?limit=${limit}&offset=${offset}`
+    );
+  },
+
+  getPersonalProfile() {
+    return apiClient.get<PersonalProfileData>(ENDPOINTS.PRINCIPAL.ACCOUNT_PROFILE);
+  },
+
+  updatePersonalProfile(data: { name: string; phone: string; address: string; biography: string }) {
+    return apiClient.patch<PersonalProfileData>(ENDPOINTS.PRINCIPAL.ACCOUNT_PROFILE, data);
+  },
+
+  getInstitutionProfile() {
+    return apiClient.get<InstitutionProfileData>(ENDPOINTS.PRINCIPAL.ACCOUNT_INSTITUTION);
+  },
+
+  updateInstitutionProfile(data: { name: string; schoolType: string; affiliation: string; phone: string; address: string }) {
+    return apiClient.patch<InstitutionProfileData>(ENDPOINTS.PRINCIPAL.ACCOUNT_INSTITUTION, data);
+  },
+  deleteClass(classId: string) {
+    return apiClient.delete(`${ENDPOINTS.PRINCIPAL.CLASSES}/${classId}`);
+  },
+
+  getSessions() {
+    return apiClient.get<{ sessions: SessionItem[] }>(ENDPOINTS.PRINCIPAL.ACCOUNT_SESSIONS);
+  },
+};
+
+export default principalService;

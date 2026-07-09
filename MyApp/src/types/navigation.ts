@@ -10,7 +10,7 @@ export type RootStackParamList = {
   Assignments: undefined;
   AssignmentDetails: { assignmentId: string };
   AssignmentSubmit: { assignmentId: string };
-  AssignmentGrade: undefined;
+  AssignmentGrade: { assignmentId: string };
   Quizzes: undefined;
   QuizDetails: { quizId: string };
   StartQuiz: { quizId: string };
@@ -23,6 +23,7 @@ export type RootStackParamList = {
   Grades: undefined;
   Fees: undefined;
   AccountSettings: { targetTab?: 'Personal Details' | 'Parent Information' | 'Preferences' } | undefined;
+  Messages: undefined;
 
   OfficialResult: { resultId: string };
   ResultManagement: undefined;
@@ -78,8 +79,10 @@ export type RootStackParamList = {
   // Principal Screens
   PrincipalDashboard: undefined;
   PrincipalClasses: undefined;
+  PrincipalClassDetail: { classId: string; classData: any };
   PrincipalSubjects: undefined;
   PrincipalStaff: undefined;
+  PrincipalTeachers: undefined;
   PrincipalMarkStaffAttendance: undefined;
   PrincipalAddStaff: undefined;
   PrincipalStaffDetails: { staffId: string };
@@ -94,10 +97,14 @@ export type RootStackParamList = {
   PrincipalAnnouncements: undefined;
   PrincipalFees: undefined;
   PrincipalRSM: undefined;
+  PrincipalRMS: undefined;
+  PrincipalReviewExam: { examId: string };
   PrincipalCreateExam: undefined;
   PrincipalAddSubject: undefined;
   PrincipalEditSubject: { subjectId: string, initialData?: any };
   PrincipalAddClass: undefined;
   PrincipalManageClass: { classId: string, className: string };
   PrincipalEditClass: { classId: string };
+  PrincipalEquipment: undefined;
+  PrincipalLibrary: undefined;
 };

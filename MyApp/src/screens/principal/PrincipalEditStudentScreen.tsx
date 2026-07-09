@@ -17,6 +17,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { useAuth } from '../../store/AuthContext';
 import apiClient, { getApiErrorMessage } from '../../services/apiClient';
+import principalService from '../../services/principalService';
 import { ENDPOINTS } from '../../constants/api';
 import { COUNTRIES } from '../../constants/countries';
 import SelectionModal from '../../components/modals/SelectionModal';
@@ -41,7 +42,7 @@ const FormField = ({ label, value, onChangeText, placeholder, keyboardType, requ
     <Text style={styles.label}>{label.toUpperCase()} {required && <Text style={{ color: '#EF4444' }}>*</Text>}</Text>
     <View style={{ flexDirection: 'row', gap: 12, opacity: editable ? 1 : 0.6 }}>
       {countryCode && (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.countryCodePicker}
           onPress={editable ? onCountryCodePress : undefined}
           disabled={!editable}
@@ -51,8 +52,8 @@ const FormField = ({ label, value, onChangeText, placeholder, keyboardType, requ
         </TouchableOpacity>
       )}
       {onPress && editable ? (
-        <TouchableOpacity 
-          style={[styles.premiumInput, { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]} 
+        <TouchableOpacity
+          style={[styles.premiumInput, { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
           onPress={onPress}
         >
           <Text style={[styles.premiumInputText, !value && { color: '#94A3B8' }]}>
@@ -118,12 +119,12 @@ const PrincipalEditStudentScreen = ({ navigation, route }: any) => {
   useEffect(() => {
     const fetchStudentData = async () => {
       try {
-        const response = await apiClient.get(ENDPOINTS.PRINCIPAL.STUDENT_DETAIL(studentId));
-        
+        const response = await principalService.getStudentDetail(studentId);
+
         // Handle various response wrappers
         const rawData = response.data?.data || response.data || {};
         const data = rawData.student || rawData;
-        
+
         setStudentEmail(data.email || '');
 
         const phoneObj = extractPhoneCode(data.phone || data.user?.phone);
@@ -173,7 +174,7 @@ const PrincipalEditStudentScreen = ({ navigation, route }: any) => {
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
     }
-    
+
     if (event.type === 'set' && selectedDate) {
       const yyyy = selectedDate.getFullYear();
       const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
@@ -183,7 +184,7 @@ const PrincipalEditStudentScreen = ({ navigation, route }: any) => {
     }
 
     if (Platform.OS === 'ios' && event.type === 'dismissed') {
-       setShowDatePicker(false);
+      setShowDatePicker(false);
     }
   };
 
@@ -229,7 +230,7 @@ const PrincipalEditStudentScreen = ({ navigation, route }: any) => {
       // Remove undefined fields
       Object.keys(payload).forEach(key => payload[key as keyof typeof payload] === undefined && delete payload[key as keyof typeof payload]);
 
-      await apiClient.put(`/students/${studentId}`, payload);
+      await principalService.updateStudent(studentId, payload);
       Alert.alert('Success', 'Student details updated successfully.', [
         { text: 'Done', onPress: () => navigation.goBack() }
       ]);
@@ -259,7 +260,7 @@ const PrincipalEditStudentScreen = ({ navigation, route }: any) => {
         </ScaleButton>
         <Text style={styles.headerTitle} numberOfLines={1}>Edit Student</Text>
         <View style={styles.headerRight}>
-           <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}>
             <View style={styles.avatarHeader}>
               <Text style={styles.avatarTextHeader}>{authState.user?.name?.charAt(0) || 'A'}</Text>
             </View>
@@ -269,7 +270,7 @@ const PrincipalEditStudentScreen = ({ navigation, route }: any) => {
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          
+
           <View style={styles.pageHeader}>
             <Text style={styles.screenTitle}>Update Student</Text>
             <Text style={styles.screenSubtitle}>Update information for {formData.name}</Text>
@@ -278,7 +279,7 @@ const PrincipalEditStudentScreen = ({ navigation, route }: any) => {
           {/* Immutable Fields */}
           <View style={styles.formSection}>
             <View style={styles.sectionHeader}>
-               <Text style={styles.sectionTitle}>Immutable Fields</Text>
+              <Text style={styles.sectionTitle}>Immutable Fields</Text>
             </View>
             <View style={styles.field}>
               <Text style={styles.label}>STUDENT ID</Text>
@@ -293,7 +294,7 @@ const PrincipalEditStudentScreen = ({ navigation, route }: any) => {
           {/* Personal Information */}
           <View style={styles.formSection}>
             <View style={styles.sectionHeader}>
-               <Text style={styles.sectionTitle}>Personal Information</Text>
+              <Text style={styles.sectionTitle}>Personal Information</Text>
             </View>
             <FormField required label="Full Name" value={formData.name} onChangeText={(v: any) => updateForm('name', v)} placeholder="Full Name" />
             <FormField label="Admission / Roll No" value={formData.rollNo} onChangeText={(v: any) => updateForm('rollNo', v)} placeholder="Admission number" />
@@ -306,16 +307,16 @@ const PrincipalEditStudentScreen = ({ navigation, route }: any) => {
           {/* Contact Information */}
           <View style={styles.formSection}>
             <View style={styles.sectionHeader}>
-               <Text style={styles.sectionTitle}>Contact Information</Text>
+              <Text style={styles.sectionTitle}>Contact Information</Text>
             </View>
-            <FormField 
-               label="Phone Number" 
-               value={formData.phone} 
-               onChangeText={(v: any) => updateForm('phone', v)} 
-               placeholder="Enter phone number" 
-               keyboardType="phone-pad"
-               countryCode={formData.countryCode}
-               onCountryCodePress={() => handleOpenSelection('Country Code', 'countryCode', COUNTRIES.map(c => `${c.name} ${c.code}`))}
+            <FormField
+              label="Phone Number"
+              value={formData.phone}
+              onChangeText={(v: any) => updateForm('phone', v)}
+              placeholder="Enter phone number"
+              keyboardType="phone-pad"
+              countryCode={formData.countryCode}
+              onCountryCodePress={() => handleOpenSelection('Country Code', 'countryCode', COUNTRIES.map(c => `${c.name} ${c.code}`))}
             />
             <FormField label="Address" value={formData.address} onChangeText={(v: any) => updateForm('address', v)} placeholder="Enter full address" />
           </View>
@@ -323,15 +324,15 @@ const PrincipalEditStudentScreen = ({ navigation, route }: any) => {
           {/* Parent/Guardian Information */}
           <View style={styles.formSection}>
             <View style={styles.sectionHeader}>
-               <Text style={styles.sectionTitle}>Parent / Guardian Information</Text>
+              <Text style={styles.sectionTitle}>Parent / Guardian Information</Text>
             </View>
             <FormField label="Parent Name" value={formData.parentName} onChangeText={(v: any) => updateForm('parentName', v)} placeholder="Enter Parent name" />
-            <FormField 
-              label="Parent Phone" 
-              value={formData.parentPhone} 
-              onChangeText={(v: any) => updateForm('parentPhone', v)} 
-              placeholder="Enter parent phone number" 
-              keyboardType="phone-pad" 
+            <FormField
+              label="Parent Phone"
+              value={formData.parentPhone}
+              onChangeText={(v: any) => updateForm('parentPhone', v)}
+              placeholder="Enter parent phone number"
+              keyboardType="phone-pad"
               countryCode={formData.parentCountryCode}
               onCountryCodePress={() => handleOpenSelection('Parent Country Code', 'parentCountryCode', COUNTRIES.map(c => `${c.name} ${c.code}`))}
             />
@@ -342,15 +343,15 @@ const PrincipalEditStudentScreen = ({ navigation, route }: any) => {
           {/* Emergency Contact */}
           <View style={styles.formSection}>
             <View style={styles.sectionHeader}>
-               <Text style={styles.sectionTitle}>Emergency Contact</Text>
+              <Text style={styles.sectionTitle}>Emergency Contact</Text>
             </View>
             <FormField label="Contact Name" value={formData.emergencyName} onChangeText={(v: any) => updateForm('emergencyName', v)} placeholder="Emergency contact name" />
-            <FormField 
-              label="Contact Phone" 
-              value={formData.emergencyPhone} 
-              onChangeText={(v: any) => updateForm('emergencyPhone', v)} 
-              placeholder="Emergency phone number" 
-              keyboardType="phone-pad" 
+            <FormField
+              label="Contact Phone"
+              value={formData.emergencyPhone}
+              onChangeText={(v: any) => updateForm('emergencyPhone', v)}
+              placeholder="Emergency phone number"
+              keyboardType="phone-pad"
               countryCode={formData.emergencyCountryCode}
               onCountryCodePress={() => handleOpenSelection('Emergency Country Code', 'emergencyCountryCode', COUNTRIES.map(c => `${c.name} ${c.code}`))}
             />
@@ -363,8 +364,8 @@ const PrincipalEditStudentScreen = ({ navigation, route }: any) => {
             <TouchableOpacity style={styles.cancelBtn} onPress={() => navigation.goBack()}>
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.primarySubmitBtn, isSubmitting && { opacity: 0.7 }]} 
+            <TouchableOpacity
+              style={[styles.primarySubmitBtn, isSubmitting && { opacity: 0.7 }]}
               onPress={handleSubmit}
               disabled={isSubmitting}
             >
@@ -390,7 +391,7 @@ const PrincipalEditStudentScreen = ({ navigation, route }: any) => {
         />
       )}
 
-      <SelectionModal 
+      <SelectionModal
         visible={selectionConfig.visible}
         title={selectionConfig.title}
         options={selectionConfig.options}
@@ -412,8 +413,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 30,
-    paddingBottom: 16,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 24,
     backgroundColor: '#FAFAFF',
   },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#1F2937', flex: 1, textAlign: 'center', marginHorizontal: 10 },
@@ -429,7 +430,7 @@ const styles = StyleSheet.create({
   formSection: { paddingHorizontal: 20, marginTop: 8, marginBottom: 20 },
   sectionHeader: { marginBottom: 16, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
   sectionTitle: { fontSize: 15, fontWeight: '800', color: '#111827', letterSpacing: -0.3 },
-  
+
   field: { flex: 1, marginBottom: 14 },
   label: { fontSize: 10, fontWeight: '800', color: '#64748B', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
   premiumInput: { backgroundColor: '#F8FAFC', borderRadius: 12, paddingHorizontal: 14, height: 46, fontSize: 14, color: '#1F2937', fontWeight: '500', borderWidth: 1, borderColor: '#E2E8F0' },

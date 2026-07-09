@@ -295,12 +295,6 @@ apiClient.interceptors.request.use(
       });
       // Continue without token rather than failing the request
     }
-    console.log(
-      '[API Request Headers]',
-      JSON.stringify(config.headers, null, 2)
-    );
-
-    console.log('[API Request URL]', config.url);
     return config;
   },
   (error) => {
@@ -351,12 +345,17 @@ apiClient.interceptors.response.use(
 
     // Log detailed error info for debugging
     if (error.response) {
+      const shortMsg =
+        error.response.normalized?.message ||
+        (typeof error.response.data === 'string'
+          ? `Raw response (${error.response.statusText || 'Error'})`
+          : error.response.data?.message) ||
+        normalizedError.message ||
+        'Unknown error';
       console.error('[apiClient] API Error Response:', {
         status: error.response.status,
-        statusText: error.response.statusText,
-        data: error.response.data,
-        normalized: error.response.normalized,
-        message: error.response.data?.message || normalizedError.message || 'Unknown error',
+        url: originalRequest?.url,
+        message: shortMsg,
       });
 
       // Handle 401 Unauthorized - Try to refresh token

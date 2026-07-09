@@ -19,10 +19,13 @@ import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import Toast, { ToastType } from '../../components/Toast';
+import { useTheme } from '../../store/ThemeContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PrincipalEditSubject'>;
 
 const PrincipalEditSubjectScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const { subjectId, initialData } = route.params;
   const { authState } = useAuth();
   const [name, setName] = useState(initialData?.name || '');
@@ -67,94 +70,94 @@ const PrincipalEditSubjectScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
 
       {toast.visible && (
-        <Toast 
-          message={toast.message} 
-          type={toast.type} 
-          onHide={() => setToast(prev => ({ ...prev, visible: false }))} 
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onHide={() => setToast(prev => ({ ...prev, visible: false }))}
         />
       )}
 
       {/* Global Header */}
       <View style={styles.globalHeader}>
         <TouchableOpacity style={styles.backBtnHeader} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#4F46E5" />
+          <Ionicons name="arrow-back" size={24} color={theme.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>Institutional Portal</Text>
         <View style={styles.headerRight}>
           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'P'}</Text>
+            <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'P'}</Text>
           </View>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
-           <View style={{flex: 1}}>
-              <Text style={styles.pageTitle}>Edit Subject</Text>
-              <Text style={styles.pageSubtitle}>Modify existing academic course specifications</Text>
-           </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.pageTitle}>Edit Subject</Text>
+            <Text style={styles.pageSubtitle}>Modify existing academic course specifications</Text>
+          </View>
         </Animated.View>
 
         <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.formCard}>
-           <View style={styles.cardHeader}>
-              <Ionicons name="book-outline" size={18} color="#5266EB" style={{marginRight: 6}} />
-              <Text style={styles.cardTitle}>Update Course Details</Text>
-           </View>
+          <View style={styles.cardHeader}>
+            <Ionicons name="book-outline" size={18} color="#5266EB" style={{ marginRight: 6 }} />
+            <Text style={styles.cardTitle}>Update Course Details</Text>
+          </View>
 
-           <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Subject Name *</Text>
-              <TextInput 
-                 style={styles.textInput}
-                 placeholder="e.g. Mathematics, Physics, English"
-                 placeholderTextColor="#9CA3AF"
-                 value={name}
-                 onChangeText={setName}
-              />
-           </View>
+          <View style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>Subject Name *</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g. Mathematics, Physics, English"
+              placeholderTextColor={theme.placeholder}
+              value={name}
+              onChangeText={setName}
+            />
+          </View>
 
-           <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Subject Code (optional)</Text>
-              <TextInput 
-                 style={styles.textInput}
-                 placeholder="e.g. MATH, PHY, ENG"
-                 placeholderTextColor="#9CA3AF"
-                 autoCapitalize="characters"
-                 value={code}
-                 onChangeText={setCode}
-              />
-           </View>
+          <View style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>Subject Code (optional)</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g. MATH, PHY, ENG"
+              placeholderTextColor={theme.placeholder}
+              autoCapitalize="characters"
+              value={code}
+              onChangeText={setCode}
+            />
+          </View>
 
 
 
-           <View style={styles.actionRow}>
-              <TouchableOpacity style={styles.actionBtnCancel} activeOpacity={0.8} onPress={() => navigation.goBack()}>
-                 <Text style={styles.actionBtnCancelText}>Cancel</Text>
-              </TouchableOpacity>
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={styles.actionBtnCancel} activeOpacity={0.8} onPress={() => navigation.goBack()}>
+              <Text style={styles.actionBtnCancelText}>Cancel</Text>
+            </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={[styles.actionBtnPublish, isUpdating && { opacity: 0.7 }]} 
-                activeOpacity={0.8}
-                onPress={handleUpdate}
-                disabled={isUpdating}
-              >
-                 {isUpdating ? (
-                   <ActivityIndicator color="#FFF" size="small" />
-                 ) : (
-                   <Text style={styles.actionBtnPublishText}>Update Subject</Text>
-                 )}
-              </TouchableOpacity>
-           </View>
+            <TouchableOpacity
+              style={[styles.actionBtnPublish, isUpdating && { opacity: 0.7 }]}
+              activeOpacity={0.8}
+              onPress={handleUpdate}
+              disabled={isUpdating}
+            >
+              {isUpdating ? (
+                <ActivityIndicator color="#FFF" size="small" />
+              ) : (
+                <Text style={styles.actionBtnPublishText}>Update Subject</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </Animated.View>
       </ScrollView>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40, paddingHorizontal: 16 },
   globalHeader: {
     flexDirection: 'row',
@@ -163,33 +166,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 8,
-    zIndex: 10
+    backgroundColor: theme.background,
   },
   backBtnHeader: { padding: 4 },
-  headerTitle: { fontSize: 16, fontWeight: '500', color: '#4F46E5', flex: 1, textAlign: 'center', marginHorizontal: 10 },
+  headerTitle: { fontSize: 16, fontWeight: '500', color: theme.primary, flex: 1, textAlign: 'center', marginHorizontal: 10 },
   headerRight: { flexDirection: 'row', alignItems: 'center' },
   avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#A855F7', justifyContent: 'center', alignItems: 'center' },
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
   pageTitleWrapper: { marginTop: 20, marginBottom: 20 },
-  pageTitle: { fontSize: 24, fontWeight: '800', color: '#5266EB', marginBottom: 4 },
-  pageSubtitle: { fontSize: 12, color: '#9CA3AF', fontWeight: '500' },
-  formCard: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 24, shadowColor: '#1E293B', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.06, shadowRadius: 20, elevation: 6, borderWidth: 1, borderColor: '#E5E7EB' },
+  pageTitle: { fontSize: 24, fontWeight: '800', color: theme.isDarkMode ? theme.primary : '#5266EB', marginBottom: 4 },
+  pageSubtitle: { fontSize: 12, color: theme.subtext, fontWeight: '500' },
+  formCard: { backgroundColor: theme.surface, borderRadius: 24, padding: 24, shadowColor: '#1E293B', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.06, shadowRadius: 20, elevation: 6, borderWidth: 1, borderColor: theme.border },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  cardTitle: { fontSize: 14, fontWeight: '800', color: '#111827' },
+  cardTitle: { fontSize: 14, fontWeight: '800', color: theme.text },
   fieldContainer: { marginBottom: 20 },
-  fieldLabel: { fontSize: 12, fontWeight: '700', color: '#111827', marginBottom: 8 },
-  textInput: { borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, fontSize: 14, color: '#1E293B', backgroundColor: '#FFF', borderWidth: 1, borderColor: '#D1D5DB' },
+  fieldLabel: { fontSize: 12, fontWeight: '700', color: theme.text, marginBottom: 8 },
+  textInput: { borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, fontSize: 14, color: theme.text, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border },
   textArea: { minHeight: 100, textAlignVertical: 'top' },
   actionRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginTop: 10 },
-  actionBtnCancel: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F4F6', borderRadius: 14, paddingVertical: 16 },
-  actionBtnCancelText: { fontSize: 14, fontWeight: '700', color: '#64748B' },
-  actionBtnPublish: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#5266EB', borderRadius: 14, paddingVertical: 16, shadowColor: '#5266EB', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
+  actionBtnCancel: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6', borderRadius: 14, paddingVertical: 16 },
+  actionBtnCancelText: { fontSize: 14, fontWeight: '700', color: theme.subtext },
+  actionBtnPublish: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.primary, borderRadius: 14, paddingVertical: 16, shadowColor: theme.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
   actionBtnPublishText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
 });
 

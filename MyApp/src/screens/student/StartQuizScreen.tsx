@@ -356,7 +356,7 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
               style={[styles.submitBtn, isSubmitting && styles.disabledBtn]}
               activeOpacity={0.8}
               scaleTo={0.95}
-              onPress={handleSubmitQuiz}
+              onPress={() => handleSubmitQuiz()}
               disabled={isSubmitting}
             >
               <Ionicons name="paper-plane" size={18} color="#FFFFFF" style={{marginRight: 8}} />

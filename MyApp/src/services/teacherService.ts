@@ -171,7 +171,7 @@ const teacherService = {
   getBankDetails() {
     return apiClient.get('/account/teacher/bank');
   },
-  
+
   updateBankDetails(data: any) {
     return apiClient.patch('/account/teacher/bank', data);
   },

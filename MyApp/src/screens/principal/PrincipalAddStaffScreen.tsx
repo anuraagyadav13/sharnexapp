@@ -32,10 +32,22 @@ try {
 
 import { useAuth } from '../../store/AuthContext';
 import apiClient, { getApiErrorMessage } from '../../services/apiClient';
+import principalService from '../../services/principalService';
 import { ENDPOINTS } from '../../constants/api';
 import Toast, { ToastType } from '../../components/Toast';
 import SelectionModal from '../../components/modals/SelectionModal';
 import { COUNTRIES } from '../../constants/countries';
+
+const formatDateForApi = (dateStr: string) => {
+  if (!dateStr) return '2026-07-08';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    const [mm, dd, yyyy] = parts;
+    return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+  }
+  return dateStr;
+};
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -207,17 +219,37 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
 
     try {
       setIsSubmitting(true);
+      const institutionId = authState.user?.institutionId || '';
+      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+      const dept = formData.department || formData.subject || 'Mathematics';
 
       const payload = {
-        name: `${formData.firstName} ${formData.lastName}`.trim(),
+        name: fullName,
         email: formData.email,
-        phone: `${formData.countryCode} ${formData.phone}`.trim(),
-        // Note: Professional details (subject, qualification, experience) are currently omitted
-        // as the backend 'teachers' table is not available in the database.
-        biometricPhoto: photo || null,
+        phone: formData.phone ? `${formData.countryCode} ${formData.phone}`.trim() : '',
+        department: dept,
+        position: dept,
+        password: 'DefaultPassword123!',
+        profileData: {
+          dateOfBirth: formatDateForApi(formData.dob),
+          address: formData.address || '',
+          department: dept,
+          highestQualification: formData.qualification || '',
+          yearsOfExperience: Number(formData.experience) || 0,
+          professionalBio: formData.biography || '',
+        },
+        role: 'TEACHER',
+        bankData: {
+          bankName: formData.bankName || '',
+          accountNumber: formData.accountNumber || '',
+          accountHolderName: formData.accountHolderName || fullName,
+          accountType: formData.accountType || 'Current',
+          ifscCode: formData.ifscCode || '',
+          salaryPaymentMethod: formData.paymentMethod || 'Check',
+        },
       };
 
-      await apiClient.post(ENDPOINTS.PRINCIPAL.ADD_STAFF, payload);
+      await principalService.addTeacher(institutionId, payload);
       showToast(`${formData.firstName} registered successfully!`, 'success');
       setTimeout(() => navigation.goBack(), 1500);
     } catch (err: any) {
@@ -671,8 +703,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 20,
+    paddingTop:
+      Platform.OS === 'ios'
+        ? 60
+        : (StatusBar.currentHeight ?? 0),
+    paddingBottom: 24,
     backgroundColor: '#FAFAFF',
   },
   backBtn: {

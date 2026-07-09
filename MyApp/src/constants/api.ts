@@ -139,6 +139,7 @@ export const ENDPOINTS = {
     TIMETABLE_PERIODS: '/timetable/periods',
   },
   PRINCIPAL: {
+    // Old endpoints to prevent compiler errors on other principal files
     DASHBOARD: '/principal/dashboard',
     STAFF: '/principal/staff',
     ADD_STAFF: '/principal/staff',
@@ -147,10 +148,7 @@ export const ENDPOINTS = {
     ADD_STUDENT: '/principal/students',
     FEES: '/principal/fees',
     CREATE_FEE: '/principal/fees',
-    ANNOUNCEMENTS: '/principal/announcements',
     CREATE_ANNOUNCEMENT: '/principal/announcements',
-    CLASSES: '/principal/classes',
-    SUBJECTS: '/subjects',
     TIMETABLE: '/principal/timetable',
     PERFORMANCE: '/principal/performance',
     CALENDAR: '/principal/calendar',
@@ -166,6 +164,32 @@ export const ENDPOINTS = {
     RMS_ADMIN: '/rms/results/admin',
     EQUIPMENT_REQUESTS: '/equipment/requests',
     ATTENDANCE: '/attendance',
+
+    // HAR capture verified endpoints
+    CLASSES:               '/classes',
+    SUBJECTS:              '/subjects',
+    TEACHERS:              (institutionId: string) => `/tenants/${institutionId}/teachers`,
+    CLASS_ASSIGNMENTS:     (institutionId: string) => `/tenants/${institutionId}/class-assignments`,
+    TIMETABLE_PERIODS:     '/timetable/periods',
+    CLASS_SCHEDULE:        (classId: string) => `/classes/${classId}/schedule`,
+    CLASS_STUDENTS:        (classId: string) => `/classes/${classId}/students`,
+    DELETE_STUDENT:        (id: string) => `/students/${id}`,
+    UPDATE_STUDENT:        (id: string) => `/students/${id}`,
+    CREATE_STUDENT:        '/students',
+    EXPORT_STUDENTS:       (classId: string) => `/classes/${classId}/students/export`,
+    RMS_EXAMS:             '/rms/exams',
+    ANNOUNCEMENTS:         '/announcements',
+    INVOICE_STATS:         '/invoices/stats',
+    INVOICES:              '/invoices',
+    EQUIPMENT_PENDING:     '/equipment/approvals/pending',
+    EQUIPMENT_APPROVE:     (id: string) => `/equipment/approvals/${id}/approve`,
+    EQUIPMENT_REJECT:      (id: string) => `/equipment/approvals/${id}/reject`,
+    LIBRARY_DASHBOARD:     '/library/dashboard',
+    LIBRARY_CATEGORIES:    '/library/categories',
+    LIBRARY_ISSUES:        '/library/issues',
+    ACCOUNT_PROFILE:       '/account/profile',
+    ACCOUNT_INSTITUTION:   '/account/institution',
+    ACCOUNT_SESSIONS:      '/account/sessions',
   }
 };
 

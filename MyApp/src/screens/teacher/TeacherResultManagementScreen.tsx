@@ -354,7 +354,7 @@ const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.errorContainer}>
             <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryBtn} onPress={fetchData}>
+            <TouchableOpacity style={styles.retryBtn} onPress={() => fetchData()}>
               <Text style={styles.retryBtnText}>Retry</Text>
             </TouchableOpacity>
           </View>

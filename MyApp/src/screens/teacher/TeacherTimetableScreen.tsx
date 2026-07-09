@@ -303,8 +303,18 @@ const TeacherTimetableScreen = () => {
         let finalSchedule: any[] = fetchedSchedule;
         if (fetchedPeriods.length > 0) {
           finalSchedule = fetchedPeriods.map((period: any) => {
-            if (period.is_break) {
-              return { ...period, type: 'BREAK' };
+            const isPeriod4 = period.label?.toLowerCase() === 'period 4';
+            if (period.is_break || isPeriod4) {
+              const start = isPeriod4 ? '11:15' : (period.start_time || period.start || '');
+              const end = isPeriod4 ? '12:00' : (period.end_time || period.end || '');
+              return { 
+                ...period, 
+                label: isPeriod4 ? 'Lunch' : (period.label || 'Break'), 
+                start_time: start, 
+                end_time: end, 
+                is_break: true, 
+                type: 'BREAK' 
+              };
             }
             const assigned = fetchedSchedule.find((s: any) => s.period_id === period.id);
             if (assigned) {

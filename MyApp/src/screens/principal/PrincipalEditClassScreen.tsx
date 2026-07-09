@@ -12,6 +12,7 @@ import {
   Modal,
   KeyboardAvoidingView,
   Dimensions,
+  Alert,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -494,7 +495,7 @@ const styles = StyleSheet.create({
   rowDeleteBtn: { height: 40, width: 30, justifyContent: 'center', alignItems: 'center' },
   
   footer: { flexDirection: 'row', gap: 12, marginTop: 10 },
-  cancelBtn: { flex: 1, height: 50, borderRadius: 12, borderWeight: 1, borderColor: '#E2E8F0', borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  cancelBtn: { flex: 1, height: 50, borderRadius: 12, borderColor: '#E2E8F0', borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   cancelBtnText: { color: '#64748B', fontSize: 14, fontWeight: '700' },
   submitBtn: { flex: 2, height: 50, borderRadius: 12, backgroundColor: '#4F46E5', alignItems: 'center', justifyContent: 'center', shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
   submitBtnDisabled: { backgroundColor: '#94A3B8', shadowOpacity: 0 },

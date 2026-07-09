@@ -51,7 +51,7 @@ const PrincipalRSMscreen = ({ navigation }: any) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [exams, setExams] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
-  
+
   const [selectedExam, setSelectedExam] = useState<any>(null);
   const [selectedClass, setSelectedClass] = useState<any>(null);
   const [isExamModalOpen, setIsExamModalOpen] = useState(false);
@@ -83,7 +83,7 @@ const PrincipalRSMscreen = ({ navigation }: any) => {
 
   const onRefresh = () => { setIsRefreshing(true); fetchData(); };
 
-  const filteredExams = exams.filter(e => 
+  const filteredExams = exams.filter(e =>
     e.name?.toLowerCase().includes(searchText.toLowerCase())
   );
 
@@ -106,9 +106,9 @@ const PrincipalRSMscreen = ({ navigation }: any) => {
         </View>
       </View>
 
-      <ScrollView 
-        style={styles.container} 
-        contentContainerStyle={styles.scrollContent} 
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
       >
@@ -119,28 +119,28 @@ const PrincipalRSMscreen = ({ navigation }: any) => {
 
         {/* Premium Tab Switcher */}
         <View style={styles.tabRow}>
-           {['Definitions', 'Analytics'].map(t => (
-             <TouchableOpacity key={t} style={[styles.tab, activeTab === t && styles.tabActive]} onPress={() => setActiveTab(t)}>
-                <Text style={[styles.tabText, activeTab === t && styles.tabTextActive]}>{t}</Text>
-             </TouchableOpacity>
-           ))}
+          {['Definitions', 'Analytics'].map(t => (
+            <TouchableOpacity key={t} style={[styles.tab, activeTab === t && styles.tabActive]} onPress={() => setActiveTab(t)}>
+              <Text style={[styles.tabText, activeTab === t && styles.tabTextActive]}>{t}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         {activeTab === 'Definitions' ? (
           <Animated.View entering={FadeInUp}>
             <View style={styles.searchRow}>
-               <View style={styles.searchBox}>
-                  <Ionicons name="search-outline" size={20} color="#94A3B8" />
-                  <TextInput 
-                    placeholder="Search examinations..." 
-                    style={styles.searchInput}
-                    value={searchText}
-                    onChangeText={setSearchText}
-                  />
-               </View>
-               <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('PrincipalCreateExam')}>
-                  <Ionicons name="add" size={24} color="#FFF" />
-               </TouchableOpacity>
+              <View style={styles.searchBox}>
+                <Ionicons name="search-outline" size={20} color="#94A3B8" />
+                <TextInput
+                  placeholder="Search examinations..."
+                  style={styles.searchInput}
+                  value={searchText}
+                  onChangeText={setSearchText}
+                />
+              </View>
+              <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('PrincipalCreateExam')}>
+                <Ionicons name="add" size={24} color="#FFF" />
+              </TouchableOpacity>
             </View>
 
             <View style={styles.list}>
@@ -148,31 +148,31 @@ const PrincipalRSMscreen = ({ navigation }: any) => {
                 [1, 2].map(i => <Skeleton key={i} width="100%" height={160} borderRadius={24} style={{ marginBottom: 16 }} />)
               ) : filteredExams.length === 0 ? (
                 <View style={styles.empty}>
-                   <MaterialCommunityIcons name="file-document-outline" size={60} color="#D1D5DB" />
-                   <Text style={styles.emptyText}>No exam definitions found.</Text>
+                  <MaterialCommunityIcons name="file-document-outline" size={60} color="#D1D5DB" />
+                  <Text style={styles.emptyText}>No exam definitions found.</Text>
                 </View>
               ) : (
                 filteredExams.map((exam, index) => (
                   <Animated.View entering={FadeInUp.delay(index * 50)} key={exam.id} style={styles.card}>
                     <View style={styles.cardHeader}>
-                       <View style={styles.iconCircle}>
-                          <MaterialCommunityIcons name="file-certificate-outline" size={24} color="#4F46E5" />
-                       </View>
-                       <View style={styles.examMain}>
-                          <Text style={styles.examName}>{exam.name}</Text>
-                          <Text style={styles.examMeta}>{exam.type} • {exam.year}</Text>
-                       </View>
-                       <StatusPill status={exam.status} />
+                      <View style={styles.iconCircle}>
+                        <MaterialCommunityIcons name="file-certificate-outline" size={24} color="#4F46E5" />
+                      </View>
+                      <View style={styles.examMain}>
+                        <Text style={styles.examName}>{exam.name}</Text>
+                        <Text style={styles.examMeta}>{exam.type} • {exam.year}</Text>
+                      </View>
+                      <StatusPill status={exam.status} />
                     </View>
                     <View style={styles.cardFooter}>
-                       <View style={styles.metaBox}>
-                          <Ionicons name="location-outline" size={14} color="#94A3B8" />
-                          <Text style={styles.metaBoxText}>{exam.scope}</Text>
-                       </View>
-                       <View style={styles.actions}>
-                          <TouchableOpacity style={styles.actionBtn}><Ionicons name="eye-outline" size={18} color="#6366F1" /></TouchableOpacity>
-                          <TouchableOpacity style={styles.actionBtn}><Ionicons name="pencil-outline" size={18} color="#6366F1" /></TouchableOpacity>
-                       </View>
+                      <View style={styles.metaBox}>
+                        <Ionicons name="location-outline" size={14} color="#94A3B8" />
+                        <Text style={styles.metaBoxText}>{exam.scope}</Text>
+                      </View>
+                      <View style={styles.actions}>
+                        <TouchableOpacity style={styles.actionBtn}><Ionicons name="eye-outline" size={18} color="#6366F1" /></TouchableOpacity>
+                        <TouchableOpacity style={styles.actionBtn}><Ionicons name="pencil-outline" size={18} color="#6366F1" /></TouchableOpacity>
+                      </View>
                     </View>
                   </Animated.View>
                 ))
@@ -182,28 +182,28 @@ const PrincipalRSMscreen = ({ navigation }: any) => {
         ) : (
           <Animated.View entering={SlideInRight} style={styles.analyticsPanel}>
             <View style={styles.selectionGrid}>
-               <Text style={styles.gridLabel}>CONFIGURE ANALYTICS VIEW</Text>
-               
-               <TouchableOpacity style={styles.picker} onPress={() => setIsExamModalOpen(true)}>
-                  <View style={styles.pickerIcon}><MaterialCommunityIcons name="file-certificate" size={20} color="#4F46E5" /></View>
-                  <Text style={styles.pickerText}>{selectedExam ? selectedExam.name : 'Select Examination Target'}</Text>
-                  <Ionicons name="chevron-down" size={20} color="#94A3B8" />
-               </TouchableOpacity>
+              <Text style={styles.gridLabel}>CONFIGURE ANALYTICS VIEW</Text>
 
-               <TouchableOpacity style={styles.picker} onPress={() => setIsClassModalOpen(true)}>
-                  <View style={styles.pickerIcon}><MaterialCommunityIcons name="google-classroom" size={20} color="#4F46E5" /></View>
-                  <Text style={styles.pickerText}>{selectedClass ? selectedClass.name : 'Select Class Unit'}</Text>
-                  <Ionicons name="chevron-down" size={20} color="#94A3B8" />
-               </TouchableOpacity>
+              <TouchableOpacity style={styles.picker} onPress={() => setIsExamModalOpen(true)}>
+                <View style={styles.pickerIcon}><MaterialCommunityIcons name="file-certificate" size={20} color="#4F46E5" /></View>
+                <Text style={styles.pickerText}>{selectedExam ? selectedExam.name : 'Select Examination Target'}</Text>
+                <Ionicons name="chevron-down" size={20} color="#94A3B8" />
+              </TouchableOpacity>
 
-               <TouchableOpacity style={styles.primaryActionBtn}>
-                  <Text style={styles.primaryActionText}>Generate Analytics Report</Text>
-               </TouchableOpacity>
+              <TouchableOpacity style={styles.picker} onPress={() => setIsClassModalOpen(true)}>
+                <View style={styles.pickerIcon}><MaterialCommunityIcons name="google-classroom" size={20} color="#4F46E5" /></View>
+                <Text style={styles.pickerText}>{selectedClass ? selectedClass.name : 'Select Class Unit'}</Text>
+                <Ionicons name="chevron-down" size={20} color="#94A3B8" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.primaryActionBtn}>
+                <Text style={styles.primaryActionText}>Generate Analytics Report</Text>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.emptyResults}>
-               <MaterialCommunityIcons name="chart-bell-curve-cumulative" size={80} color="#E2E8F0" />
-               <Text style={styles.emptyResultsText}>Select configuration above to synthesize result data.</Text>
+              <MaterialCommunityIcons name="chart-bell-curve-cumulative" size={80} color="#E2E8F0" />
+              <Text style={styles.emptyResultsText}>Select configuration above to synthesize result data.</Text>
             </View>
           </Animated.View>
         )}
@@ -221,25 +221,25 @@ const PrincipalRSMscreen = ({ navigation }: any) => {
 const SelectionModal = ({ visible, onClose, title, data, onSelect }: any) => (
   <Modal visible={visible} transparent animationType="none">
     <View style={styles.modalOverlay}>
-       <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
-       <Animated.View entering={SlideInDown} style={styles.modalSheet}>
-          <View style={styles.modalIndicator} />
-          <View style={styles.modalHeader}>
-             <Text style={styles.modalTitle}>{title}</Text>
-             <TouchableOpacity onPress={onClose} style={styles.closeBtn}><Ionicons name="close" size={24} color="#64748B" /></TouchableOpacity>
-          </View>
-          <FlatList
-            data={data}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity style={styles.modalItem} onPress={() => { onSelect(item); onClose(); }}>
-                <Text style={styles.modalItemText}>{item.name}</Text>
-                <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
-              </TouchableOpacity>
-            )}
-            contentContainerStyle={{ paddingBottom: 40 }}
-          />
-       </Animated.View>
+      <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
+      <Animated.View entering={SlideInDown} style={styles.modalSheet}>
+        <View style={styles.modalIndicator} />
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>{title}</Text>
+          <TouchableOpacity onPress={onClose} style={styles.closeBtn}><Ionicons name="close" size={24} color="#64748B" /></TouchableOpacity>
+        </View>
+        <FlatList
+          data={data}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity style={styles.modalItem} onPress={() => { onSelect(item); onClose(); }}>
+              <Text style={styles.modalItemText}>{item.name}</Text>
+              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
+            </TouchableOpacity>
+          )}
+          contentContainerStyle={{ paddingBottom: 40 }}
+        />
+      </Animated.View>
     </View>
   </Modal>
 );
@@ -255,7 +255,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 30,
+    paddingTop:
+      Platform.OS === 'ios'
+        ? 60
+        : (StatusBar.currentHeight ?? 0),
     paddingBottom: 24,
     backgroundColor: '#FAFAFF',
   },

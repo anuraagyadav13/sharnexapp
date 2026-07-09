@@ -926,6 +926,11 @@ const styles = StyleSheet.create({
   disabledBtnText: {
     color: '#9CA3AF',
   },
+  emptyText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginTop: 8,
+  },
 });
 
 export default QuizDetailsScreen;
