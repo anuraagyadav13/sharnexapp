@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -22,12 +22,20 @@ import { launchCamera, ImagePickerResponse } from 'react-native-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import Animated, { FadeInUp, SlideInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeInUp,
+  SlideInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
+import principalService from '../../services/principalService';
 import Skeleton from '../../components/common/Skeleton';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import SelectionModal from '../../components/modals/SelectionModal';
@@ -57,9 +65,10 @@ const PageSkeleton = () => {
 };
 
 const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
-  const { theme, isDarkMode } = useTheme();
+  const { theme, isDarkMode, toggleDarkMode } = useTheme();
   const styles = getStyles(theme);
   const { authState } = useAuth();
+
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [searchStaff, setSearchStaff] = useState('');
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -67,26 +76,100 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
   const [staffList, setStaffList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [stats, setStats] = useState({ total: 0, present: 0, absent: 0, late: 0 });
+  const [stats, setStats] = useState({ total: 0, present: 0, absent: 0, late: 0, checkedOut: 0 });
   const [activeFilter, setActiveFilter] = useState('All');
   const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
   const [selectedLog, setSelectedLog] = useState<any>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Date and UI selectors
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [manualDate, setManualDate] = useState<Date>(new Date());
+  const [showManualDatePicker, setShowManualDatePicker] = useState(false);
+
   const [showTimePicker, setShowTimePicker] = useState<{ visible: boolean; field: 'in' | 'out' }>({ visible: false, field: 'in' });
-  const [editForm, setEditForm] = useState({ inTime: new Date(), outTime: new Date(), notes: '' });
+  const [editForm, setEditForm] = useState<{ inTime: Date; outTime: Date | null; notes: string }>({ inTime: new Date(), outTime: null, notes: '' });
   const [isActionsVisible, setIsActionsVisible] = useState(false);
-  const [cameraAvailable, setCameraAvailable] = useState(true); // Simulated camera state
+  const [cameraAvailable, setCameraAvailable] = useState(true);
   const [searchLogsQuery, setSearchLogsQuery] = useState('');
   const [isStaffDropdownOpen, setIsStaffDropdownOpen] = useState(false);
   const [selectedDropdownStaff, setSelectedDropdownStaff] = useState<any>(null);
   const [isManualStaffDropdownOpen, setIsManualStaffDropdownOpen] = useState(false);
   const [selectedManualStaff, setSelectedManualStaff] = useState<any>(null);
   const [manualStatus, setManualStatus] = useState('PRESENT');
+  const [isUploadingFace, setIsUploadingFace] = useState(false);
+
+  // Scanner animation progress
+  const scanProgress = useSharedValue(0);
+
+  useEffect(() => {
+    scanProgress.value = withRepeat(
+      withTiming(1, { duration: 2500 }),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedScannerLineStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        {
+          translateY: scanProgress.value * 130 - 65,
+        },
+      ],
+    };
+  });
 
   const showToast = (msg: string, type: string) => {
     Alert.alert(type === 'success' ? 'Success' : 'Error', msg);
   };
+
+  const handleApiError = (error: any, fallbackMessage: string) => {
+    console.error('API Error Details:', error);
+    let errorMsg = fallbackMessage;
+    if (error.response) {
+      const status = error.response.status;
+      if (status === 401) {
+        errorMsg = 'Session expired. Please log in again.';
+      } else if (status === 403) {
+        errorMsg = 'Access denied. You do not have permission for this action.';
+      } else if (status === 404) {
+        errorMsg = 'Requested resource not found.';
+      } else if (status === 500) {
+        errorMsg = 'Internal server error. Please try again later.';
+      } else {
+        errorMsg = error.response.data?.message || error.response.normalized?.message || errorMsg;
+      }
+    } else if (error.request) {
+      errorMsg = 'Network error. Please check your internet connection and try again.';
+    } else {
+      errorMsg = error.message || errorMsg;
+    }
+    Alert.alert('Error', errorMsg);
+  };
+
+  const checkCameraAvailability = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        const hasPermission = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.CAMERA);
+        if (!hasPermission) {
+          const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA);
+          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+            setCameraAvailable(false);
+          }
+        }
+      } catch (err) {
+        console.warn('Camera permission check error:', err);
+        setCameraAvailable(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    checkCameraAvailability();
+  }, []);
 
   const handleLaunchCameraAttendance = async () => {
     if (Platform.OS === 'android') {
@@ -122,13 +205,16 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
       if (response.didCancel) {
         console.log('User cancelled camera');
       } else if (response.errorCode) {
+        if (response.errorCode === 'camera_unavailable') {
+          setCameraAvailable(false);
+        }
         Alert.alert('Camera Error', response.errorMessage || 'Failed to open camera');
       } else if (response.assets && response.assets.length > 0) {
         try {
-          setIsLoading(true);
+          setIsUploadingFace(true);
           const asset = response.assets[0];
           const formData = new FormData();
-          formData.append('photo', {
+          formData.append('file', {
             uri: asset.uri,
             type: asset.type || 'image/jpeg',
             name: asset.fileName || 'attendance.jpg',
@@ -141,14 +227,22 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
           });
 
           const responseData = res.data?.data || res.data || {};
-          const matchedName = responseData.name || responseData.teacherName || 'Staff Member';
+          const matchedName = responseData.name || responseData.teacherName || responseData.teacher?.name || 'Staff Member';
           Alert.alert('Success', `Face matched! Attendance marked for ${matchedName}.`);
           fetchData();
         } catch (error: any) {
           console.error('[MarkStaffAttendance] Face scan failed:', error);
-          Alert.alert('Scan Failed', error.response?.data?.message || 'Could not verify face.');
+          const errorMsg = error.response?.data?.message || error.message || 'Could not verify face.';
+          Alert.alert(
+            'Scan Failed',
+            errorMsg,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Retry', onPress: () => handleLaunchCameraAttendance() }
+            ]
+          );
         } finally {
-          setIsLoading(false);
+          setIsUploadingFace(false);
         }
       }
     });
@@ -156,60 +250,83 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [selectedDate]);
 
   const fetchData = async () => {
     try {
       if (!isRefreshing) setIsLoading(true);
 
-      const today = new Date().toISOString().split('T')[0];
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      const institutionId = authState.user?.institutionId || '';
       const [staffRes, logsRes] = await Promise.all([
-        apiClient.get(ENDPOINTS.PRINCIPAL.STAFF),
-        apiClient.get(`${ENDPOINTS.PRINCIPAL.ATTENDANCE}?startDate=${today}&endDate=${today}`)
+        principalService.getTeachers(institutionId),
+        apiClient.get(`${ENDPOINTS.PRINCIPAL.ATTENDANCE}?startDate=${dateStr}&endDate=${dateStr}`)
       ]);
 
-      const staffData = staffRes.data.data || staffRes.data || [];
-      const list = Array.isArray(staffData) ? staffData : staffData.staff || [];
+      const staffData = staffRes.data?.data || staffRes.data || [];
+      const list = Array.isArray(staffData) ? staffData : [];
       setStaffList(list);
 
       const logsData = logsRes.data.data || [];
-      const mappedLogs = logsData.map((l: any) => ({
-        id: l.id,
-        teacherId: l.teacherId,
-        name: l.teacherName || 'Unknown',
-        idNum: l.teacherId?.substring(0, 8) || 'N/A',
-        time: l.inTime ? new Date(l.inTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--',
-        method: l.method || 'Scan',
-        status: l.outTime ? 'Checked OUT' : 'Marked IN',
-        isLate: !!l.isLate,
-        isPresent: true,
-      }));
-      
+      const mappedLogs = logsData.map((l: any) => {
+        const staff: any = list.find((s: any) => s.id === l.teacherId);
+        return {
+          id: l.id,
+          teacherId: l.teacherId,
+          name: l.teacherName || staff?.name || 'Unknown',
+          idNum: staff?.employeeId || l.teacherId?.substring(0, 8) || 'N/A',
+          time: l.inTime ? new Date(l.inTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--',
+          inTime: l.inTime,
+          outTime: l.outTime,
+          date: l.date || dateStr,
+          method: l.method || 'Scan',
+          status: l.outTime ? 'Checked OUT' : 'Marked IN',
+          isLate: !!l.isLate,
+          isPresent: true,
+          notes: l.notes || '',
+          workingHours: l.workingHours || '--',
+          role: staff?.role || 'Staff Member',
+          department: staff?.department || 'Faculty',
+          auditLog: l.auditLog || l.notes || '',
+        };
+      });
+
       const absentLogs = list
         .filter((staff: any) => !mappedLogs.some((l: any) => l.teacherId === staff.id))
         .map((staff: any) => ({
           id: `absent-${staff.id}`,
           teacherId: staff.id,
           name: staff.name || 'Unknown',
-          idNum: staff.id?.substring(0, 8) || 'N/A',
+          idNum: staff.employeeId || staff.id?.substring(0, 8) || 'N/A',
           time: '--',
+          inTime: null,
+          outTime: null,
+          date: dateStr,
           method: '--',
           status: 'Absent',
           isLate: false,
           isPresent: false,
+          notes: '',
+          workingHours: '--',
+          role: staff.role || 'Staff Member',
+          department: staff.department || 'Faculty',
+          auditLog: '',
         }));
 
       setAttendanceLogs([...mappedLogs, ...absentLogs]);
 
       const presentCount = logsData.length;
+      const checkedOutCount = logsData.filter((l: any) => !!l.outTime).length;
       setStats({
         total: list.length,
         present: presentCount,
         absent: list.length - presentCount,
         late: logsData.filter((l: any) => l.isLate).length,
+        checkedOut: checkedOutCount,
       });
     } catch (error) {
       console.error('Fetch error:', error);
+      handleApiError(error, 'Failed to fetch staff data.');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -224,26 +341,40 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
 
     try {
       setIsLoading(true);
-      const type = (manualStatus === 'ABSENT') ? 'OUT' : 'IN';
+      const dateStr = manualDate.toISOString().split('T')[0];
+      let type = 'IN';
+      let isLate = false;
+
+      if (manualStatus === 'ABSENT') {
+        type = 'OUT';
+      } else if (manualStatus === 'LATE') {
+        type = 'IN';
+        isLate = true;
+      } else if (manualStatus === 'HALF DAY') {
+        // TODO: Verify if backend supports HALF_DAY status for manual attendance. Currently sending type: 'HALF_DAY'
+        type = 'HALF_DAY';
+      }
+
       const payload: any = {
         teacherId: selectedManualStaff.id,
         type: type,
-        notes: `Manual ${manualStatus} entry via Principal mobile app`
+        date: dateStr,
+        notes: `Manual ${manualStatus} entry via Principal mobile app on ${dateStr}`
       };
-      
-      if (manualStatus === 'LATE') {
+
+      if (isLate) {
         payload.isLate = true;
       }
-      
+
       await apiClient.post(`${ENDPOINTS.PRINCIPAL.ATTENDANCE}/manual`, payload);
-      
+
       setIsManualModalOpen(false);
       setSelectedManualStaff(null);
       setManualStatus('PRESENT');
       await fetchData();
       Alert.alert('Success', `Attendance recorded for ${selectedManualStaff.name}.`);
     } catch (error: any) {
-      Alert.alert('Action Failed', error.response?.data?.message || 'Could not record manual attendance.');
+      handleApiError(error, 'Could not record manual attendance.');
     } finally {
       setIsLoading(false);
     }
@@ -271,16 +402,19 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
   const handleMarkBulkAttendance = async (type: 'IN' | 'OUT') => {
     try {
       setIsLoading(true);
+      const dateStr = selectedDate.toISOString().split('T')[0];
       await apiClient.post(`${ENDPOINTS.PRINCIPAL.ATTENDANCE}/manual`, {
         teacherIds: selectedStaffIds,
         type: type,
-        notes: `Bulk mark ${type} via mobile app`
+        date: dateStr,
+        notes: `Bulk mark ${type} via mobile app on ${dateStr}`
       });
+      const count = selectedStaffIds.length;
       setSelectedStaffIds([]);
       await fetchData();
-      Alert.alert('Success', `Attendance ${type === 'IN' ? 'Marked' : 'Checked Out'} for ${selectedStaffIds.length} staff members.`);
+      Alert.alert('Success', `Attendance ${type === 'IN' ? 'Marked' : 'Checked Out'} for ${count} staff members on ${dateStr}.`);
     } catch (error: any) {
-      Alert.alert('Action Failed', error.response?.data?.message || 'Could not process attendance.');
+      handleApiError(error, 'Could not process attendance.');
     } finally {
       setIsLoading(false);
     }
@@ -289,16 +423,18 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
   const handleManualOut = async (logId: string, teacherId: string) => {
     try {
       setIsLoading(true);
+      const dateStr = selectedDate.toISOString().split('T')[0];
       await apiClient.post(`${ENDPOINTS.PRINCIPAL.ATTENDANCE}/manual`, {
         teacherId,
         type: 'OUT',
-        notes: 'Manual OUT via action menu'
+        date: dateStr,
+        notes: `Manual OUT via action menu on ${dateStr}`
       });
       setIsActionsVisible(false);
       await fetchData();
       Alert.alert('Success', 'Staff member marked as OUT.');
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to mark OUT.');
+      handleApiError(error, 'Failed to mark OUT.');
     } finally {
       setIsLoading(false);
     }
@@ -319,8 +455,9 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
               await apiClient.delete(`${ENDPOINTS.PRINCIPAL.ATTENDANCE}/${logId}`);
               setIsActionsVisible(false);
               await fetchData();
+              Alert.alert('Success', 'Attendance record deleted.');
             } catch (error: any) {
-              Alert.alert('Error', 'Failed to delete record.');
+              handleApiError(error, 'Failed to delete record.');
             } finally {
               setIsLoading(false);
             }
@@ -330,30 +467,103 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
     );
   };
 
-  const filteredStaff = staffList.filter(s => {
-    if (selectedDropdownStaff && s.id !== selectedDropdownStaff.id) {
-      return false;
-    }
-    return s.name?.toLowerCase().includes(searchStaff.toLowerCase());
-  });
+  const filteredStaff = useMemo(() => {
+    return staffList.filter(s => {
+      if (selectedDropdownStaff && s.id !== selectedDropdownStaff.id) {
+        return false;
+      }
+      const query = searchStaff.toLowerCase().trim();
+      if (!query) return true;
 
-  const filteredLogs = attendanceLogs.filter(log => {
-    if (selectedDropdownStaff && log.teacherId !== selectedDropdownStaff.id) {
-      return false;
-    }
-    
-    const matchesSearch = log.name.toLowerCase().includes(searchLogsQuery.toLowerCase());
-    if (!matchesSearch) return false;
+      const nameMatch = s.name?.toLowerCase().includes(query);
+      const emailMatch = s.email?.toLowerCase().includes(query);
+      const roleMatch = s.role?.toLowerCase().includes(query) || s.position?.toLowerCase().includes(query);
+      const deptMatch = s.department?.toLowerCase().includes(query);
+      const idMatch = s.id?.toLowerCase().includes(query) || s.employeeId?.toLowerCase().includes(query);
 
-    if (activeFilter === 'Present') return log.isPresent;
-    if (activeFilter === 'Absent') return !log.isPresent;
-    if (activeFilter === 'Late') return log.isLate;
-    return true;
-  });
+      return nameMatch || emailMatch || roleMatch || deptMatch || idMatch;
+    });
+  }, [staffList, selectedDropdownStaff, searchStaff]);
+
+  const filteredLogs = useMemo(() => {
+    return attendanceLogs.filter(log => {
+      if (selectedDropdownStaff && log.teacherId !== selectedDropdownStaff.id) {
+        return false;
+      }
+
+      const query = searchLogsQuery.toLowerCase().trim();
+      let matchesSearch = true;
+      if (query) {
+        const nameMatch = log.name?.toLowerCase().includes(query);
+        const idMatch = log.idNum?.toLowerCase().includes(query) || log.teacherId?.toLowerCase().includes(query);
+        const roleMatch = log.role?.toLowerCase().includes(query);
+        const deptMatch = log.department?.toLowerCase().includes(query);
+        matchesSearch = nameMatch || idMatch || roleMatch || deptMatch;
+      }
+
+      if (!matchesSearch) return false;
+
+      if (activeFilter === 'Present') return log.isPresent;
+      if (activeFilter === 'Absent') return !log.isPresent;
+      if (activeFilter === 'Late') return log.isLate;
+      if (activeFilter === 'Checked Out') return log.status?.includes('OUT');
+      if (activeFilter === 'Half Day') return log.status === 'HALF_DAY' || log.status?.includes('Half');
+      return true;
+    });
+  }, [attendanceLogs, selectedDropdownStaff, searchLogsQuery, activeFilter]);
+
+  const handleSaveEditAttendance = async () => {
+    if (!selectedLog) return;
+    try {
+      setIsLoading(true);
+      const payload = {
+        inTime: editForm.inTime.toISOString(),
+        outTime: editForm.outTime ? editForm.outTime.toISOString() : null,
+        notes: editForm.notes,
+      };
+      await apiClient.patch(`${ENDPOINTS.PRINCIPAL.ATTENDANCE}/${selectedLog.id}`, payload);
+      setIsEditModalOpen(false);
+      await fetchData();
+      Alert.alert('Success', 'Attendance updated successfully.');
+    } catch (error: any) {
+      console.error('[EditAttendance] Failed to update:', error);
+      handleApiError(error, 'Failed to update attendance record.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} translucent />
+
+      {showDatePicker && (
+        <DateTimePicker
+          value={selectedDate}
+          mode="date"
+          display="default"
+          onChange={(event, date) => {
+            setShowDatePicker(false);
+            if (date) {
+              setSelectedDate(date);
+            }
+          }}
+        />
+      )}
+
+      {showManualDatePicker && (
+        <DateTimePicker
+          value={manualDate}
+          mode="date"
+          display="default"
+          onChange={(event, date) => {
+            setShowManualDatePicker(false);
+            if (date) {
+              setManualDate(date);
+            }
+          }}
+        />
+      )}
 
       {/* Attendance Detail View Modal */}
       <Modal visible={isViewModalOpen} transparent animationType="slide">
@@ -368,7 +578,13 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                   <Text style={styles.detailName}>{selectedLog?.name}</Text>
                   <Text style={styles.detailId}>Teacher ID: {selectedLog?.idNum}</Text>
                 </View>
-                <TouchableOpacity onPress={() => setIsViewModalOpen(false)} style={styles.detailCloseIcon}>
+                <TouchableOpacity
+                  onPress={() => setIsViewModalOpen(false)}
+                  style={styles.detailCloseIcon}
+                  accessibilityLabel="Close Details"
+                  accessibilityRole="button"
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
                   <Ionicons name="close" size={20} color="#FFF" />
                 </TouchableOpacity>
               </View>
@@ -380,13 +596,15 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                   <Text style={styles.detailLabel}>DATE</Text>
                   <View style={styles.detailValRow}>
                     <Ionicons name="calendar-outline" size={16} color="#8B5CF6" />
-                    <Text style={styles.detailValText}>{new Date().toDateString()}</Text>
+                    <Text style={styles.detailValText}>
+                      {selectedLog?.date ? new Date(selectedLog.date).toDateString() : selectedDate.toDateString()}
+                    </Text>
                   </View>
                 </View>
                 <View style={styles.detailCol}>
                   <Text style={styles.detailLabel}>STATUS</Text>
                   <View style={styles.detailValRow}>
-                    <View style={[styles.statusDot, { backgroundColor: '#10B981' }]} />
+                    <View style={[styles.statusDot, { backgroundColor: selectedLog?.status === 'Absent' ? '#EF4444' : (selectedLog?.status.includes('OUT') ? '#F59E0B' : '#10B981') }]} />
                     <Text style={styles.detailValText}>{selectedLog?.status}</Text>
                   </View>
                 </View>
@@ -395,12 +613,27 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
               <View style={styles.timeCard}>
                 <View style={styles.timeSection}>
                   <Text style={styles.timeLabel}>CHECK IN</Text>
-                  <Text style={styles.timeValue}>{selectedLog?.time}</Text>
+                  <Text style={styles.timeValue}>
+                    {selectedLog?.inTime ? new Date(selectedLog.inTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}
+                  </Text>
                 </View>
                 <View style={styles.timeDivider} />
                 <View style={styles.timeSection}>
                   <Text style={styles.timeLabel}>CHECK OUT</Text>
-                  <Text style={styles.timeValue}>—</Text>
+                  <Text style={styles.timeValue}>
+                    {selectedLog?.outTime ? new Date(selectedLog.outTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.detailRow}>
+                <View style={styles.detailCol}>
+                  <Text style={styles.detailLabel}>LATE</Text>
+                  <Text style={styles.detailValText}>{selectedLog?.isLate ? 'Yes' : 'No'}</Text>
+                </View>
+                <View style={styles.detailCol}>
+                  <Text style={styles.detailLabel}>WORKING HOURS</Text>
+                  <Text style={styles.detailValText}>{selectedLog?.workingHours || '--'}</Text>
                 </View>
               </View>
 
@@ -415,7 +648,9 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
               <View style={styles.detailSection}>
                 <Text style={styles.detailLabel}>NOTES / AUDIT LOG</Text>
                 <View style={styles.auditLogBox}>
-                  <Text style={styles.auditLogText}>Bulk manual IN</Text>
+                  <Text style={styles.auditLogText}>
+                    {selectedLog?.auditLog || selectedLog?.notes || 'No audit information available'}
+                  </Text>
                 </View>
               </View>
             </ScrollView>
@@ -424,6 +659,8 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
               <TouchableOpacity
                 style={styles.closeDetailBtn}
                 onPress={() => setIsViewModalOpen(false)}
+                accessibilityLabel="Close details modal"
+                accessibilityRole="button"
               >
                 <Text style={styles.closeDetailBtnText}>Close Detail</Text>
               </TouchableOpacity>
@@ -435,7 +672,12 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
       {/* Premium Dashboard Header */}
       <View style={styles.dashboardHeader}>
         <View style={styles.headerLeft}>
-          <TouchableOpacity onPress={() => setDrawerOpen(true)}>
+          <TouchableOpacity
+            onPress={() => setDrawerOpen(true)}
+            accessibilityLabel="Open Navigation Menu"
+            accessibilityRole="button"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <Ionicons name="menu-outline" size={28} color={theme.text} />
           </TouchableOpacity>
           <Text style={styles.welcomeText}>
@@ -444,19 +686,41 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
         </View>
 
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.headerIcon}>
+          <TouchableOpacity
+            style={styles.headerIcon}
+            accessibilityLabel="Notifications"
+            accessibilityRole="button"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            onPress={() => {
+              // TODO: Navigate to Notifications screen once added to stack
+              Alert.alert('Notifications', 'Notification center is currently under development.');
+            }}
+          >
             <Ionicons name="notifications-outline" size={24} color={theme.text} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerIcon}>
+          <TouchableOpacity
+            style={styles.headerIcon}
+            accessibilityLabel="Settings"
+            accessibilityRole="button"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            onPress={() => navigation.navigate('AccountSettings')}
+          >
             <Ionicons name="settings-outline" size={24} color={theme.text} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerIcon}>
-            <Ionicons name="moon-outline" size={24} color={theme.text} />
+          <TouchableOpacity
+            style={styles.headerIcon}
+            accessibilityLabel="Toggle Dark Mode"
+            accessibilityRole="button"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            onPress={toggleDarkMode}
+          >
+            <Ionicons name={isDarkMode ? "sunny-outline" : "moon-outline"} size={24} color={theme.text} />
           </TouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => navigation.navigate('AccountSettings')}
-
+            accessibilityLabel="Profile Settings"
+            accessibilityRole="button"
           >
             {authState.user?.photoUrl ? (
               <Image source={{ uri: authState.user.photoUrl }} style={styles.avatarCircle} />
@@ -479,8 +743,63 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
         >
           <View style={styles.pageHeader}>
-            <Text style={styles.screenTitle}>Staff Monitoring</Text>
-            <Text style={styles.screenSubtitle}>Track faculty presence and daily attendance metrics across all departments.</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.screenTitle}>Staff Monitoring</Text>
+                <Text style={styles.screenSubtitle}>Track faculty presence and daily attendance metrics across all departments.</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.dateSelectorBtn}
+                onPress={() => setShowDatePicker(true)}
+                accessibilityLabel="Select Date"
+                accessibilityRole="button"
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="calendar" size={16} color="#FFF" />
+                <Text style={styles.dateSelectorBtnText}>
+                  {selectedDate.toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Premium Statistics Dashboard */}
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <View style={[styles.statIconBox, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
+                <Ionicons name="people" size={16} color="#6366F1" />
+              </View>
+              <Text style={styles.statValue}>{stats.total}</Text>
+              <Text style={styles.statLabel}>Total Staff</Text>
+            </View>
+            <View style={styles.statCard}>
+              <View style={[styles.statIconBox, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+              </View>
+              <Text style={styles.statValue}>{stats.present}</Text>
+              <Text style={styles.statLabel}>Present</Text>
+            </View>
+            <View style={styles.statCard}>
+              <View style={[styles.statIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+                <Ionicons name="close-circle" size={16} color="#EF4444" />
+              </View>
+              <Text style={styles.statValue}>{stats.absent}</Text>
+              <Text style={styles.statLabel}>Absent</Text>
+            </View>
+            <View style={styles.statCard}>
+              <View style={[styles.statIconBox, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
+                <Ionicons name="time" size={16} color="#F59E0B" />
+              </View>
+              <Text style={styles.statValue}>{stats.late}</Text>
+              <Text style={styles.statLabel}>Late</Text>
+            </View>
+            <View style={styles.statCard}>
+              <View style={[styles.statIconBox, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
+                <Ionicons name="log-out" size={16} color="#8B5CF6" />
+              </View>
+              <Text style={styles.statValue}>{stats.checkedOut}</Text>
+              <Text style={styles.statLabel}>Checked Out</Text>
+            </View>
           </View>
 
           {/* Dynamic Face Recognition Scanner */}
@@ -492,27 +811,44 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                 </View>
                 <Text style={styles.scannerTitleText}>Face Recognition</Text>
               </View>
-              <TouchableOpacity onPress={() => setIsViewModalOpen(false)}>
-                <Ionicons name="close" size={20} color="#CBD5E1" />
-              </TouchableOpacity>
             </View>
 
             <View style={styles.scannerDisplayArea}>
-              {!cameraAvailable ? (
+              {isUploadingFace ? (
+                <View style={styles.uploadingContainer}>
+                  <ActivityIndicator size="large" color="#6366F1" />
+                  <Text style={styles.uploadingText}>Verifying Face Scan...</Text>
+                  <Text style={styles.uploadingSub}>Please wait while we match the biometric data.</Text>
+                </View>
+              ) : !cameraAvailable ? (
                 <View style={styles.errorState}>
                   <View style={styles.errorIconBox}>
                     <MaterialCommunityIcons name="alert" size={24} color="#EF4444" />
                   </View>
                   <Text style={styles.errorTitle}>Camera Error</Text>
-                  <Text style={styles.errorSub}>No camera found on this device.</Text>
+                  <Text style={styles.errorSub}>No camera found or permissions denied.</Text>
                   <TouchableOpacity
                     style={styles.retryBtn}
-                    onPress={() => {
+                    accessibilityLabel="Retry camera access"
+                    accessibilityRole="button"
+                    onPress={async () => {
                       setIsLoading(true);
-                      setTimeout(() => {
-                        setIsLoading(false);
+                      let hasPerm = true;
+                      if (Platform.OS === 'android') {
+                        try {
+                          const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA);
+                          hasPerm = granted === PermissionsAndroid.RESULTS.GRANTED;
+                        } catch (err) {
+                          hasPerm = false;
+                        }
+                      }
+                      setIsLoading(false);
+                      if (hasPerm) {
                         setCameraAvailable(true);
-                      }, 1500);
+                        handleLaunchCameraAttendance();
+                      } else {
+                        Alert.alert('Permission Denied', 'Camera permission is required.');
+                      }
                     }}
                   >
                     <Ionicons name="refresh" size={16} color="#FFF" />
@@ -524,14 +860,17 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                   <TouchableOpacity
                     activeOpacity={0.8}
                     style={styles.scannerFrame}
+                    disabled={isUploadingFace}
                     onPress={handleLaunchCameraAttendance}
+                    accessibilityLabel="Tap to scan face"
+                    accessibilityRole="button"
                   >
                     <View style={styles.scannerCornerTL} />
                     <View style={styles.scannerCornerTR} />
                     <View style={styles.scannerCornerBL} />
                     <View style={styles.scannerCornerBR} />
                     <Animated.View
-                      style={[styles.scannerLine]}
+                      style={[styles.scannerLine, animatedScannerLineStyle]}
                     />
                     <View style={styles.scannerCenterIcon}>
                       <MaterialCommunityIcons name="face-recognition" size={40} color="rgba(99, 102, 241, 0.2)" />
@@ -541,6 +880,8 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                   <TouchableOpacity
                     style={styles.stopScannerBtn}
                     onPress={() => setCameraAvailable(false)}
+                    accessibilityLabel="Deactivate scanner"
+                    accessibilityRole="button"
                   >
                     <Text style={styles.stopScannerText}>Deactivate Scanner</Text>
                   </TouchableOpacity>
@@ -549,24 +890,30 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
             </View>
           </View>
 
-          {/* Today's Attendance Log Section */}
+          {/* Attendance Log Section */}
           <View style={[styles.scannerSection, { marginTop: 25 }]}>
             <View style={styles.sectionHeaderInner}>
               <View style={styles.sectionTitleRowInner}>
                 <Ionicons name="checkmark-circle-outline" size={20} color="#4F46E5" />
-                <Text style={styles.innerSectionTitle}>Today's Attendance</Text>
+                <Text style={styles.innerSectionTitle}>Logs List</Text>
               </View>
-              <View style={styles.filterPills}>
-                {['All', 'Present', 'Absent', 'Late'].map(f => (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ flexDirection: 'row', gap: 6 }}
+              >
+                {['All', 'Present', 'Absent', 'Late', 'Checked Out', 'Half Day'].map(f => (
                   <TouchableOpacity
                     key={f}
                     style={[styles.filterPill, activeFilter === f && styles.filterPillActive]}
                     onPress={() => setActiveFilter(f)}
+                    accessibilityLabel={`Filter logs by ${f}`}
+                    accessibilityRole="button"
                   >
                     <Text style={[styles.filterPillText, activeFilter === f && styles.filterPillTextActive]}>{f}</Text>
                   </TouchableOpacity>
                 ))}
-              </View>
+              </ScrollView>
             </View>
 
             {/* Staff Dropdown Selector */}
@@ -574,6 +921,8 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
               <TouchableOpacity
                 style={styles.dropdownSelector}
                 onPress={() => setIsStaffDropdownOpen(true)}
+                accessibilityLabel="Choose staff dropdown filter"
+                accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                   <Ionicons name="person-outline" size={18} color="#6366F1" />
@@ -582,7 +931,12 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                   </Text>
                 </View>
                 {selectedDropdownStaff ? (
-                  <TouchableOpacity onPress={() => setSelectedDropdownStaff(null)} style={{ padding: 4 }}>
+                  <TouchableOpacity
+                    onPress={() => setSelectedDropdownStaff(null)}
+                    style={{ padding: 4 }}
+                    accessibilityLabel="Clear staff filter"
+                    accessibilityRole="button"
+                  >
                     <Ionicons name="close-circle" size={18} color={theme.subtext} />
                   </TouchableOpacity>
                 ) : (
@@ -593,94 +947,137 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
 
             <View style={styles.searchBarInner}>
               <Ionicons name="search-outline" size={16} color={theme.subtext} />
-              <TextInput 
-                placeholder="Search in logs..." 
+              <TextInput
+                placeholder="Search in logs..."
                 style={styles.innerSearchInput}
                 value={searchLogsQuery}
                 onChangeText={setSearchLogsQuery}
                 placeholderTextColor={theme.subtext}
+                accessibilityLabel="Search log input"
               />
             </View>
 
             <View style={styles.logsTable}>
               {/* Attendance Cards */}
               <View style={styles.logList}>
-                {filteredLogs.map((log, index) => (
-                  <View
-                    key={log.id}
-                    style={styles.logCard}
-                  >
-                    <View style={styles.logCardMain}>
-                      <View style={styles.miniAvatar}>
-                        <Text style={styles.miniAvatarText}>{log.name.charAt(0)}</Text>
-                      </View>
-                      <View style={styles.logInfo}>
-                        <Text style={styles.logName}>{log.name}</Text>
-                        <Text style={styles.logSub}>{log.idNum} • {log.time}</Text>
-                      </View>
-                      {log.isPresent ? (
-                        <View style={styles.logActions}>
-                          <TouchableOpacity
-                            style={styles.miniActionBtn}
-                            onPress={() => {
-                              setSelectedLog(log);
-                              setIsViewModalOpen(true);
-                            }}
-                          >
-                            <Ionicons name="eye-outline" size={16} color="#6366F1" />
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={styles.miniActionBtn}
-                            onPress={() => {
-                              setSelectedLog(log);
-                              setEditForm({
-                                inTime: new Date(),
-                                outTime: new Date(),
-                                notes: 'Manual OUT via action menu'
-                              });
-                              setIsEditModalOpen(true);
-                            }}
-                          >
-                            <Ionicons name="pencil-outline" size={16} color="#6366F1" />
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={styles.miniActionBtn}
-                            onPress={() => handleManualOut(log.id, log.teacherId)}
-                          >
-                            <Ionicons name="log-out-outline" size={16} color="#F59E0B" />
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[styles.miniActionBtn, { borderColor: '#FEE2E2' }]}
-                            onPress={() => handleDeleteAttendance(log.id)}
-                          >
-                            <Ionicons name="trash-outline" size={16} color="#EF4444" />
-                          </TouchableOpacity>
-                        </View>
-                      ) : (
-                        <View style={styles.logActions}>
-                          <TouchableOpacity
-                            style={[styles.miniActionBtn, { borderColor: '#E2E8F0', paddingHorizontal: 8 }]}
-                            onPress={() => toggleStaffSelection(log.teacherId)}
-                          >
-                            <Text style={{ fontSize: 10, color: '#6366F1', fontWeight: 'bold' }}>Select to Mark</Text>
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                    </View>
-                    <View style={styles.logBadgeRow}>
-                      <View style={[styles.logStatusPill, { backgroundColor: log.status === 'Absent' ? '#FEE2E2' : (log.status.includes('OUT') ? '#FEF3C7' : '#D1FAE5') }]}>
-                        <View style={[styles.statusDot, { backgroundColor: log.status === 'Absent' ? '#EF4444' : (log.status.includes('OUT') ? '#F59E0B' : '#10B981') }]} />
-                        <Text style={[styles.logStatusText, { color: log.status === 'Absent' ? '#991B1B' : (log.status.includes('OUT') ? '#92400E' : '#065F46') }]}>{log.status}</Text>
-                      </View>
-                      {log.isPresent && (
-                        <View style={styles.methodBadge}>
-                          <Ionicons name="scan-outline" size={10} color="#64748B" />
-                          <Text style={styles.methodText}>{log.method}</Text>
-                        </View>
-                      )}
-                    </View>
+                {filteredLogs.length === 0 ? (
+                  <View style={styles.emptyStateContainer}>
+                    <Ionicons name="clipboard-outline" size={40} color={theme.subtext} />
+                    <Text style={styles.emptyStateTitle}>No Attendance Records</Text>
+                    <Text style={styles.emptyStateSub}>No attendance logs found matching the current filters or search query.</Text>
                   </View>
-                ))}
+                ) : (
+                  filteredLogs.map((log) => (
+                    <View
+                      key={log.id}
+                      style={styles.logCard}
+                    >
+                      <View style={styles.logCardMain}>
+                        <View style={styles.miniAvatar}>
+                          <Text style={styles.miniAvatarText}>{log.name.charAt(0)}</Text>
+                        </View>
+                        <View style={styles.logInfo}>
+                          <Text style={styles.logName}>{log.name}</Text>
+                          <Text style={styles.logSub}>{log.idNum} • {log.time}</Text>
+                        </View>
+                        {log.isPresent ? (
+                          <View style={styles.logActions}>
+                            <TouchableOpacity
+                              style={styles.miniActionBtn}
+                              accessibilityLabel="View details"
+                              accessibilityRole="button"
+                              onPress={() => {
+                                setSelectedLog(log);
+                                setIsViewModalOpen(true);
+                              }}
+                            >
+                              <Ionicons name="eye-outline" size={16} color="#6366F1" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.miniActionBtn}
+                              accessibilityLabel="Edit record"
+                              accessibilityRole="button"
+                              onPress={() => {
+                                const defaultIn = new Date(log.date || selectedDate);
+                                defaultIn.setHours(9, 0, 0, 0);
+                                const defaultOut = new Date(log.date || selectedDate);
+                                defaultOut.setHours(17, 0, 0, 0);
+
+                                setSelectedLog(log);
+                                setEditForm({
+                                  inTime: log.inTime ? new Date(log.inTime) : defaultIn,
+                                  outTime: log.outTime ? new Date(log.outTime) : null,
+                                  notes: log.notes || ''
+                                });
+                                setIsEditModalOpen(true);
+                              }}
+                            >
+                              <Ionicons name="pencil-outline" size={16} color="#6366F1" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.miniActionBtn}
+                              accessibilityLabel="Check out manually"
+                              accessibilityRole="button"
+                              onPress={() => handleManualOut(log.id, log.teacherId)}
+                            >
+                              <Ionicons name="log-out-outline" size={16} color="#F59E0B" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[styles.miniActionBtn, { borderColor: '#FEE2E2' }]}
+                              accessibilityLabel="Delete record"
+                              accessibilityRole="button"
+                              onPress={() => handleDeleteAttendance(log.id)}
+                            >
+                              <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <View style={styles.logActions}>
+                            <TouchableOpacity
+                              style={[
+                                styles.miniActionBtn,
+                                styles.selectStaffBtn,
+                                selectedStaffIds.includes(log.teacherId) && {
+                                  borderColor: '#10B981',
+                                  backgroundColor: isDarkMode ? '#064E3B' : '#D1FAE5',
+                                }
+                              ]}
+                              onPress={() => toggleStaffSelection(log.teacherId)}
+                              accessibilityLabel="Select to mark"
+                              accessibilityRole="button"
+                            >
+                              <Text style={[
+                                styles.selectStaffText,
+                                selectedStaffIds.includes(log.teacherId) && {
+                                  color: '#10B981',
+                                  fontWeight: 'bold',
+                                }
+                              ]}>
+                                {selectedStaffIds.includes(log.teacherId) ? (
+                                  <Ionicons name="checkmark" size={14} color="#10B981" />
+                                ) : (
+                                  'S'
+                                )}
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.logBadgeRow}>
+                        <View style={[styles.logStatusPill, { backgroundColor: log.status === 'Absent' ? '#FEE2E2' : (log.status.includes('OUT') ? '#FEF3C7' : '#D1FAE5') }]}>
+                          <View style={[styles.statusDot, { backgroundColor: log.status === 'Absent' ? '#EF4444' : (log.status.includes('OUT') ? '#F59E0B' : '#10B981') }]} />
+                          <Text style={[styles.logStatusText, { color: log.status === 'Absent' ? '#991B1B' : (log.status.includes('OUT') ? '#92400E' : '#065F46') }]}>{log.status}</Text>
+                        </View>
+                        {log.isPresent && (
+                          <View style={styles.methodBadge}>
+                            <Ionicons name="scan-outline" size={10} color="#64748B" />
+                            <Text style={styles.methodText}>{log.method}</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  ))
+                )}
               </View>
             </View>
           </View>
@@ -689,7 +1086,11 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
           <View style={[styles.scannerSection, { marginTop: 25 }]}>
             <View style={styles.sectionHeaderInner}>
               <Text style={styles.innerSectionTitle}>Quick Mark</Text>
-              <TouchableOpacity onPress={toggleSelectAll}>
+              <TouchableOpacity
+                onPress={toggleSelectAll}
+                accessibilityLabel="Select all staff"
+                accessibilityRole="button"
+              >
                 <Text style={styles.selectAllBtnText}>SELECT ALL</Text>
               </TouchableOpacity>
             </View>
@@ -700,6 +1101,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                 style={styles.innerSearchInput}
                 value={searchStaff}
                 onChangeText={setSearchStaff}
+                accessibilityLabel="Search staff input"
               />
             </View>
             <View style={styles.quickMarkList}>
@@ -708,6 +1110,8 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                   key={staff.id}
                   style={styles.quickMarkRow}
                   onPress={() => toggleStaffSelection(staff.id)}
+                  accessibilityLabel={`Select ${staff.name}`}
+                  accessibilityRole="button"
                 >
                   <View style={styles.miniAvatar}><Text style={styles.miniAvatarText}>{staff.name.charAt(0)}</Text></View>
                   <Text style={styles.quickMarkName}>{staff.name}</Text>
@@ -725,7 +1129,12 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                 <Text style={styles.innerSectionTitle}>Manual Entry Form</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.manualActionBtn} onPress={() => setIsManualModalOpen(true)}>
+            <TouchableOpacity
+              style={styles.manualActionBtn}
+              onPress={() => setIsManualModalOpen(true)}
+              accessibilityLabel="Mark attendance manually"
+              accessibilityRole="button"
+            >
               <Ionicons name="person-add-outline" size={18} color="#FFF" />
               <Text style={styles.manualActionText}>Mark Attendance Manually</Text>
             </TouchableOpacity>
@@ -736,32 +1145,43 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
             <Text style={styles.listTitle}>Full Directory</Text>
           </View>
           <View style={styles.staffList}>
-            {filteredStaff.map((staff, index) => {
-              const isSelected = selectedStaffIds.includes(staff.id);
-              return (
-                <TouchableOpacity
-                  key={staff.id}
-                  activeOpacity={0.8}
-                  onPress={() => toggleStaffSelection(staff.id)}
-                  style={[styles.staffCard, isSelected && styles.staffCardActive]}
-                >
-                  <View style={[styles.staffAvatar, isSelected && styles.avatarActive]}>
-                    <Text style={[styles.staffInitial, isSelected && styles.initialActive]}>
-                      {staff.name?.charAt(0)}
-                    </Text>
-                  </View>
-                  <View style={styles.staffMain}>
-                    <Text style={styles.staffName}>{staff.name}</Text>
-                    <Text style={styles.staffRole}>{staff.role || 'Staff Member'}</Text>
-                  </View>
-                  {isSelected ? (
-                    <Ionicons name="checkmark-circle" size={24} color="#4F46E5" />
-                  ) : (
-                    <View style={styles.checkPlaceholder} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
+            {filteredStaff.length === 0 ? (
+              <View style={styles.emptyStateContainer}>
+                <Ionicons name="people-outline" size={40} color={theme.subtext} />
+                <Text style={styles.emptyStateTitle}>No Staff Found</Text>
+                <Text style={styles.emptyStateSub}>No faculty or staff members match the selected options or search query.</Text>
+              </View>
+            ) : (
+              filteredStaff.map((staff, index) => {
+                const isSelected = selectedStaffIds.includes(staff.id);
+                return (
+                  <TouchableOpacity
+                    key={staff.id}
+                    activeOpacity={0.8}
+                    onPress={() => toggleStaffSelection(staff.id)}
+                    style={[styles.staffCard, isSelected && styles.staffCardActive]}
+                    accessibilityLabel={`Select ${staff.name}`}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: isSelected }}
+                  >
+                    <View style={[styles.staffAvatar, isSelected && styles.avatarActive]}>
+                      <Text style={[styles.staffInitial, isSelected && styles.initialActive]}>
+                        {staff.name?.charAt(0)}
+                      </Text>
+                    </View>
+                    <View style={styles.staffMain}>
+                      <Text style={styles.staffName}>{staff.name}</Text>
+                      <Text style={styles.staffRole}>{staff.role || 'Staff Member'}</Text>
+                    </View>
+                    {isSelected ? (
+                      <Ionicons name="checkmark-circle" size={24} color="#4F46E5" />
+                    ) : (
+                      <View style={styles.checkPlaceholder} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })
+            )}
           </View>
         </ScrollView>
       )}
@@ -772,13 +1192,19 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
           <View style={styles.selectionActions}>
             <TouchableOpacity
               onPress={() => handleMarkBulkAttendance('IN')}
-              style={[styles.actionBtn, { backgroundColor: '#10B981' }]}
+              style={[styles.actionBtn, { backgroundColor: '#10B981' }, isLoading && { opacity: 0.6 }]}
+              disabled={isLoading}
+              accessibilityLabel="Bulk mark present"
+              accessibilityRole="button"
             >
               <Text style={styles.actionBtnText}>PRESENT</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => handleMarkBulkAttendance('OUT')}
-              style={[styles.actionBtn, { backgroundColor: '#EF4444' }]}
+              style={[styles.actionBtn, { backgroundColor: '#EF4444' }, isLoading && { opacity: 0.6 }]}
+              disabled={isLoading}
+              accessibilityLabel="Bulk mark absent"
+              accessibilityRole="button"
             >
               <Text style={styles.actionBtnText}>ABSENT</Text>
             </TouchableOpacity>
@@ -798,7 +1224,11 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                 </View>
                 <Text style={styles.editModalTitle}>Edit Attendance</Text>
               </View>
-              <TouchableOpacity onPress={() => setIsEditModalOpen(false)}>
+              <TouchableOpacity
+                onPress={() => setIsEditModalOpen(false)}
+                accessibilityLabel="Close Edit Modal"
+                accessibilityRole="button"
+              >
                 <Ionicons name="close-outline" size={24} color="#94A3B8" />
               </TouchableOpacity>
             </View>
@@ -809,7 +1239,9 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
               </View>
               <View>
                 <Text style={styles.editStaffName}>{selectedLog?.name}</Text>
-                <Text style={styles.editRecordLabel}>Record for {new Date().toLocaleDateString()}</Text>
+                <Text style={styles.editRecordLabel}>
+                  Record for {selectedLog?.date ? new Date(selectedLog.date).toLocaleDateString() : selectedDate.toLocaleDateString()}
+                </Text>
               </View>
             </View>
 
@@ -819,6 +1251,8 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                 <TouchableOpacity
                   style={styles.timeInputBox}
                   onPress={() => setShowTimePicker({ visible: true, field: 'in' })}
+                  accessibilityLabel="Edit in time"
+                  accessibilityRole="button"
                 >
                   <Text style={styles.timeInputText}>
                     {editForm.inTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -831,9 +1265,11 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                 <TouchableOpacity
                   style={styles.timeInputBox}
                   onPress={() => setShowTimePicker({ visible: true, field: 'out' })}
+                  accessibilityLabel="Edit out time"
+                  accessibilityRole="button"
                 >
                   <Text style={styles.timeInputText}>
-                    {editForm.outTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {editForm.outTime ? editForm.outTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}
                   </Text>
                   <Ionicons name="time-outline" size={18} color="#4F46E5" />
                 </TouchableOpacity>
@@ -842,16 +1278,22 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
 
             {showTimePicker.visible && (
               <DateTimePicker
-                value={showTimePicker.field === 'in' ? editForm.inTime : editForm.outTime}
+                value={showTimePicker.field === 'in' ? editForm.inTime : (editForm.outTime || editForm.inTime)}
                 mode="time"
                 is24Hour={false}
                 display="default"
-                onChange={(event, selectedDate) => {
-                  setShowTimePicker({ visible: false, field: 'in' });
-                  if (selectedDate) {
+                onChange={(event, dateValue) => {
+                  setShowTimePicker(prev => ({ ...prev, visible: false }));
+                  if (dateValue) {
+                    const baseDate = new Date(selectedLog?.date || selectedDate);
+                    baseDate.setHours(dateValue.getHours());
+                    baseDate.setMinutes(dateValue.getMinutes());
+                    baseDate.setSeconds(0);
+                    baseDate.setMilliseconds(0);
+
                     setEditForm(prev => ({
                       ...prev,
-                      [showTimePicker.field === 'in' ? 'inTime' : 'outTime']: selectedDate
+                      [showTimePicker.field === 'in' ? 'inTime' : 'outTime']: baseDate
                     }));
                   }
                 }}
@@ -866,6 +1308,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                   multiline
                   value={editForm.notes}
                   onChangeText={(t) => setEditForm(prev => ({ ...prev, notes: t }))}
+                  accessibilityLabel="Admin notes input"
                 />
               </View>
             </View>
@@ -874,16 +1317,17 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
               <TouchableOpacity
                 style={styles.editCancelBtn}
                 onPress={() => setIsEditModalOpen(false)}
+                accessibilityLabel="Cancel edit"
+                accessibilityRole="button"
               >
                 <Text style={styles.editCancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.editSaveBtn}
-                onPress={() => {
-                  // Logic to save changes
-                  setIsEditModalOpen(false);
-                  showToast('Attendance updated successfully', 'success');
-                }}
+                style={[styles.editSaveBtn, isLoading && { opacity: 0.6 }]}
+                disabled={isLoading}
+                onPress={handleSaveEditAttendance}
+                accessibilityLabel="Save changes"
+                accessibilityRole="button"
               >
                 <Text style={styles.editSaveBtnText}>Save Changes</Text>
               </TouchableOpacity>
@@ -899,16 +1343,23 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
             <View style={styles.modalIndicator} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Manual Entry</Text>
-              <TouchableOpacity onPress={() => setIsManualModalOpen(false)} style={styles.closeBtn}>
+              <TouchableOpacity
+                onPress={() => setIsManualModalOpen(false)}
+                style={styles.closeBtn}
+                accessibilityLabel="Close Manual Entry Modal"
+                accessibilityRole="button"
+              >
                 <Ionicons name="close" size={24} color="#64748B" />
               </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
               <View style={styles.modalField}>
                 <Text style={styles.fieldLabel}>SELECT STAFF / TEACHER</Text>
-                <TouchableOpacity 
-                  style={styles.fieldInput} 
+                <TouchableOpacity
+                  style={styles.fieldInput}
                   onPress={() => setIsManualStaffDropdownOpen(true)}
+                  accessibilityLabel="Choose staff dropdown selector"
+                  accessibilityRole="button"
                 >
                   <Text style={[styles.fieldText, !selectedManualStaff && { color: '#94A3B8' }]}>
                     {selectedManualStaff ? selectedManualStaff.name : 'Choose a staff member...'}
@@ -918,8 +1369,13 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
               </View>
               <View style={styles.modalField}>
                 <Text style={styles.fieldLabel}>DATE</Text>
-                <TouchableOpacity style={styles.fieldInput}>
-                  <Text style={styles.fieldText}>{new Date().toDateString()}</Text>
+                <TouchableOpacity
+                  style={styles.fieldInput}
+                  onPress={() => setShowManualDatePicker(true)}
+                  accessibilityLabel="Choose manual date"
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.fieldText}>{manualDate.toDateString()}</Text>
                   <Ionicons name="calendar-outline" size={18} color="#94A3B8" />
                 </TouchableOpacity>
               </View>
@@ -929,10 +1385,13 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                   {['PRESENT', 'ABSENT', 'LATE', 'HALF DAY'].map(s => {
                     const isSelected = manualStatus === s;
                     return (
-                      <TouchableOpacity 
-                        key={s} 
+                      <TouchableOpacity
+                        key={s}
                         style={[styles.statusBox, isSelected && { borderColor: '#4F46E5', backgroundColor: '#EEF2FF' }]}
                         onPress={() => setManualStatus(s)}
+                        accessibilityLabel={`Status ${s}`}
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: isSelected }}
                       >
                         <View style={[styles.statusCircle, { backgroundColor: isSelected ? '#4F46E5' : '#CBD5E1' }]} />
                         <Text style={[styles.statusBoxText, isSelected && { color: '#4F46E5' }]}>{s}</Text>
@@ -941,9 +1400,12 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                   })}
                 </View>
               </View>
-              <TouchableOpacity 
-                style={styles.primaryActionBtn}
+              <TouchableOpacity
+                style={[styles.primaryActionBtn, isLoading && { opacity: 0.6 }]}
+                disabled={isLoading}
                 onPress={handleConfirmManualAttendance}
+                accessibilityLabel="Confirm manual attendance entry"
+                accessibilityRole="button"
               >
                 <Text style={styles.primaryActionText}>Confirm Attendance</Text>
               </TouchableOpacity>
@@ -1140,6 +1602,118 @@ const getStyles = (theme: any) => StyleSheet.create({
   primaryActionText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
 
   statsRowSkeleton: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginTop: 25 },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 20,
+    gap: 8,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: theme.surface,
+    borderRadius: 16,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.01,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: theme.text,
+    marginTop: 4,
+  },
+  statLabel: {
+    fontSize: 8,
+    color: theme.subtext,
+    fontWeight: '700',
+    marginTop: 2,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  statIconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  uploadingText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: theme.text,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  uploadingSub: {
+    fontSize: 12,
+    color: theme.subtext,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  emptyStateContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 30,
+    paddingHorizontal: 20,
+    backgroundColor: theme.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.border,
+    width: '100%',
+  },
+  emptyStateTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: theme.text,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  emptyStateSub: {
+    fontSize: 11,
+    color: theme.subtext,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  dateSelectorBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.primary,
+    paddingHorizontal: 12,
+    height: 38,
+    borderRadius: 10,
+    gap: 6,
+    marginLeft: 10,
+  },
+  dateSelectorBtnText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  selectStaffBtn: {
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 8,
+    backgroundColor: 'transparent',
+  },
+  selectStaffText: {
+    fontSize: 10,
+    color: '#6366F1',
+    fontWeight: 'bold',
+  },
 
   // Face Scanner Refined
   scannerContainer: { backgroundColor: theme.surface, marginHorizontal: 20, marginTop: 10, borderRadius: 24, padding: 15, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.05, shadowRadius: 20, elevation: 5, borderWidth: 1, borderColor: theme.border },

@@ -93,7 +93,6 @@ export type RootStackParamList = {
   PrincipalViewStudent: { studentId: string };
   PrincipalCalendar: undefined;
   PrincipalTimetable: undefined;
-  PrincipalPerformance: undefined;
   PrincipalAnnouncements: undefined;
   PrincipalFees: undefined;
   PrincipalRSM: undefined;

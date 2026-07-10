@@ -70,7 +70,6 @@ const PRINCIPAL_MENU: MenuItem[] = [
   { id: '5', label: 'Students details', icon: 'person-outline' },
   { id: '6', label: 'Academic Calendar', icon: 'calendar-outline' },
   { id: '7', label: 'Timetable', icon: 'time-outline' },
-  { id: '8', label: 'Performance', icon: 'trending-up-outline' },
   { id: '11', label: 'Result Management', icon: 'reader-outline' },
   { id: '9', label: 'Announcements', icon: 'megaphone-outline' },
   { id: '10', label: 'Fees & Payments', icon: 'card-outline' },
@@ -195,7 +194,6 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
         case 'Class Attendance': return currentRouteName === 'TeacherAttendance' || currentRouteName === 'TeacherViewAttendance' || currentRouteName === 'TeacherMarkAttendance';
         case 'Exams': return currentRouteName === 'TeacherQuiz' || currentRouteName === 'TeacherCreateQuiz' || currentRouteName === 'TeacherCreateQuizStep2' || currentRouteName === 'TeacherCreateQuizStep3' || currentRouteName === 'TeacherAddQuestion' || currentRouteName === 'TeacherViewQuizResult' || currentRouteName === 'TeacherMonitorLive';
         case 'Study Material': return currentRouteName === 'StudyMaterial' || currentRouteName === 'TeacherStudyMaterial';
-        case 'Performance': return currentRouteName === 'PrincipalPerformance' || currentRouteName === 'Performance' || currentRouteName === 'TeacherPerformance';
         case 'Performance Report': return currentRouteName === 'TeacherPerformance';
         case 'My Attendance': return currentRouteName === 'TeacherSelfAttendance';
         case 'Announcements': return currentRouteName === 'PrincipalAnnouncements' || currentRouteName === 'Announcements';
@@ -257,8 +255,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
           if (role === 'principal') navigation.navigate('PrincipalTimetable');
           else if (role === 'teacher') navigation.navigate('TeacherTimetable');
           else navigation.navigate('Timetable');
-        } else if (label === 'Performance') navigation.navigate('PrincipalPerformance');
-        else if (label === 'Announcements') {
+        } else if (label === 'Announcements') {
           if (role === 'principal') navigation.navigate('PrincipalAnnouncements');
           else navigation.navigate('Announcements');
         } else if (label === 'Fees & Payments') navigation.navigate('PrincipalFees');

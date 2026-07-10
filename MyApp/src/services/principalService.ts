@@ -372,6 +372,17 @@ const principalService = {
     );
   },
 
+  getLibraryBooks(limit: number = 10, offset: number = 0, query: string = '', categoryId: string = '') {
+    let url = `/library/books?limit=${limit}&offset=${offset}`;
+    if (query) url += `&search=${encodeURIComponent(query)}`;
+    if (categoryId && categoryId !== 'all') url += `&categoryId=${categoryId}`;
+    return apiClient.get<{ data: { items: any[]; pagination: { total: number; limit: number; offset: number } } }>(url);
+  },
+
+  issueBook(payload: { classId: string; studentId: string; bookId: string; dueDate: string }) {
+    return apiClient.post<{ data: any }>(ENDPOINTS.PRINCIPAL.LIBRARY_ISSUES, payload);
+  },
+
   getPersonalProfile() {
     return apiClient.get<PersonalProfileData>(ENDPOINTS.PRINCIPAL.ACCOUNT_PROFILE);
   },

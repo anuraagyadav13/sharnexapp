@@ -84,7 +84,6 @@ import PrincipalEditStudentScreen from './src/screens/principal/PrincipalEditStu
 import PrincipalViewStudentScreen from './src/screens/principal/PrincipalViewStudentScreen';
 import PrincipalCalendarScreen from './src/screens/principal/PrincipalCalendarScreen';
 import PrincipalTimetable from './src/screens/principal/PrincipalTimetableScreen';
-import PrincipalPerformance from './src/screens/principal/PrincipalPerformanceScreen';
 import PrincipalAnnouncements from './src/screens/principal/PrincipalAnnouncementsScreen';
 import PrincipalFees from './src/screens/principal/PrincipalFeesScreen';
 import PrincipalRMS from './src/screens/principal/PrincipalRMSScreen';
@@ -359,10 +358,6 @@ function RootNavigator() {
               <Stack.Screen
                 name="PrincipalTimetable"
                 component={PrincipalTimetable}
-              />
-              <Stack.Screen
-                name="PrincipalPerformance"
-                component={PrincipalPerformance}
               />
               <Stack.Screen
                 name="PrincipalAnnouncements"

@@ -18,6 +18,7 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import principalService, { InvoiceStats, InvoiceItem } from '../../services/principalService';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
+import { useTheme } from '../../store/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -38,6 +39,8 @@ const formatRupee = (amount: number) => {
 };
 
 const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -96,17 +99,30 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
 
   const getStatusStyles = useCallback((status: string) => {
     const s = status?.toUpperCase();
-    switch (s) {
-      case 'PAID':
-        return { bg: '#ECFDF5', text: '#059669' };
-      case 'PENDING':
-        return { bg: '#FFF7ED', text: '#EA580C' };
-      case 'OVERDUE':
-        return { bg: '#FEF2F2', text: '#EF4444' };
-      default:
-        return { bg: '#F3F4F6', text: '#6B7280' };
+    if (isDarkMode) {
+      switch (s) {
+        case 'PAID':
+          return { bg: 'rgba(16, 185, 129, 0.15)', text: '#34D399' };
+        case 'PENDING':
+          return { bg: 'rgba(245, 158, 11, 0.15)', text: '#FBBF24' };
+        case 'OVERDUE':
+          return { bg: 'rgba(239, 68, 68, 0.15)', text: '#F87171' };
+        default:
+          return { bg: 'rgba(148, 163, 184, 0.15)', text: '#94A3B8' };
+      }
+    } else {
+      switch (s) {
+        case 'PAID':
+          return { bg: '#ECFDF5', text: '#059669' };
+        case 'PENDING':
+          return { bg: '#FFF7ED', text: '#EA580C' };
+        case 'OVERDUE':
+          return { bg: '#FEF2F2', text: '#EF4444' };
+        default:
+          return { bg: '#F3F4F6', text: '#6B7280' };
+      }
     }
-  }, []);
+  }, [isDarkMode]);
 
   const renderInvoiceCard = useCallback(
     ({ item }: { item: InvoiceItem }) => {
@@ -116,7 +132,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
         <View style={styles.invoiceCard}>
           <View style={styles.cardHeader}>
             <View style={styles.invoiceNumberBox}>
-              <Ionicons name="receipt-outline" size={16} color="#4F46E5" style={{ marginRight: 6 }} />
+              <Ionicons name="receipt-outline" size={16} color={theme.primary} style={{ marginRight: 6 }} />
               <Text style={styles.invoiceNumberText}>{item.invoiceNumber}</Text>
             </View>
             <View style={[styles.statusBadge, { backgroundColor: statusStyles.bg }]}>
@@ -220,8 +236,8 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
   if (isLoading) {
     return (
       <View style={styles.loaderContainer}>
-        <StatusBar barStyle="dark-content" />
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.background} />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -229,8 +245,8 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
   if (isError) {
     return (
       <View style={styles.errorContainer}>
-        <StatusBar barStyle="dark-content" />
-        <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.background} />
+        <Ionicons name="alert-circle-outline" size={64} color={theme.danger} />
         <Text style={styles.errorTitle}>Failed to load fees stats</Text>
         <Text style={styles.errorSubtitle}>
           An error occurred while fetching fee statistics and invoices. Please try again.
@@ -244,12 +260,12 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.safeContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F6" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.background} />
 
       {/* Header */}
       <View style={styles.appHeader}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => setDrawerOpen(true)}>
-          <Ionicons name="menu" size={28} color="#1F2937" />
+          <Ionicons name="menu" size={28} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.appHeaderTitle}>Fees Portal</Text>
         <TouchableOpacity
@@ -282,7 +298,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="receipt-outline" size={64} color="#9CA3AF" />
+            <Ionicons name="receipt-outline" size={64} color={theme.subtext} />
             <Text style={styles.emptyTitle}>No {selectedTab.toLowerCase()} invoices</Text>
             <Text style={styles.emptySubtitle}>
               There are no invoices found for the selected filter.
@@ -296,40 +312,40 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   safeContainer: {
     flex: 1,
-    backgroundColor: '#FAF9F6',
+    backgroundColor: theme.background,
     paddingTop: Platform.OS === 'ios' ? 50 : 30,
   },
   loaderContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FAF9F6',
+    backgroundColor: theme.background,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
-    backgroundColor: '#FAF9F6',
+    backgroundColor: theme.background,
   },
   errorTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: theme.text,
     marginTop: 16,
     marginBottom: 8,
   },
   errorSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.subtext,
     textAlign: 'center',
     marginBottom: 24,
   },
   retryBtn: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -345,9 +361,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FAF9F6',
+    backgroundColor: theme.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.border,
   },
   headerBtn: {
     padding: 4,
@@ -355,7 +371,7 @@ const styles = StyleSheet.create({
   appHeaderTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1F2937',
+    color: theme.text,
   },
   listContent: {
     paddingBottom: 24,
@@ -370,11 +386,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   statCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: theme.surface,
     width: (width - 44) / 2,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: theme.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -383,20 +401,22 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.subtext,
     marginBottom: 6,
     fontWeight: '500',
   },
   statValueText: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#1F2937',
+    color: theme.text,
   },
   progressSection: {
-    backgroundColor: '#FFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 16,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: theme.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -412,30 +432,32 @@ const styles = StyleSheet.create({
   progressTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#374151',
+    color: theme.text,
   },
   progressPercentage: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#4F46E5',
+    color: theme.primary,
   },
   progressBarBg: {
     height: 8,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: isDarkMode ? '#334155' : '#E5E7EB',
     borderRadius: 4,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     borderRadius: 4,
   },
   tabsRow: {
     flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDarkMode ? '#1E293B' : '#F3F4F6',
     borderRadius: 12,
     padding: 4,
     marginBottom: 4,
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   tabBtn: {
     flex: 1,
@@ -444,7 +466,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   tabActive: {
-    backgroundColor: '#FFF',
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -454,17 +476,19 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6B7280',
+    color: theme.subtext,
   },
   tabTextActive: {
-    color: '#4F46E5',
+    color: theme.primary,
   },
   invoiceCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: theme.surface,
     marginHorizontal: 16,
     marginBottom: 16,
     borderRadius: 16,
     padding: 16,
+    borderWidth: 1,
+    borderColor: theme.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -484,7 +508,7 @@ const styles = StyleSheet.create({
   invoiceNumberText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#374151',
+    color: theme.text,
   },
   statusBadge: {
     paddingVertical: 2,
@@ -501,28 +525,28 @@ const styles = StyleSheet.create({
   studentNameText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1F2937',
+    color: theme.text,
     marginBottom: 4,
   },
   amountText: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 6,
   },
   descriptionText: {
     fontSize: 13,
-    color: '#4B5563',
+    color: theme.subtext,
     marginBottom: 4,
   },
   monthText: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: theme.subtext,
     fontWeight: '500',
   },
   cardDivider: {
     height: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.border,
     marginBottom: 12,
   },
   cardFooter: {
@@ -536,13 +560,13 @@ const styles = StyleSheet.create({
   },
   dateLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.subtext,
     marginRight: 4,
   },
   dateValue: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#374151',
+    color: theme.text,
   },
   paidInfo: {
     flexDirection: 'row',
@@ -562,20 +586,20 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#374151',
+    color: theme.text,
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.subtext,
     textAlign: 'center',
   },
   avatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#9F7AEA', // Soft purple
+    backgroundColor: '#9F7AEA',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 4,
@@ -592,7 +616,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginLeft: 4,
   },
-
 });
 
 export default PrincipalFeesScreen;
