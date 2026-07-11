@@ -12,6 +12,7 @@ import {
   Switch,
   Image,
   RefreshControl,
+  Keyboard,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -20,6 +21,7 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { StudentHeader } from '../../components/StudentHeader';
 import { useAuth } from '../../store/AuthContext';
 import accountService from '../../services/accountService';
 import teacherService from '../../services/teacherService';
@@ -405,6 +407,7 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
   };
 
   const saveProfile = async () => {
+    Keyboard.dismiss();
     try {
       setIsLoading(true);
 
@@ -429,17 +432,21 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
         }
       }
 
-      Alert.alert('Success', 'Profile updated successfully.');
-      fetchProfile();
+      setTimeout(() => {
+        Alert.alert('Success', 'Profile updated successfully.', [
+          { text: 'OK', onPress: () => fetchProfile() }
+        ]);
+      }, 100);
     } catch (error) {
       console.error('[AccountSettings] Profile update error:', error);
-      Alert.alert('Error', 'Failed to update profile.');
+      setTimeout(() => Alert.alert('Error', 'Failed to update profile.'), 100);
     } finally {
       setIsLoading(false);
     }
   };
 
   const saveInstitutionInfo = async () => {
+    Keyboard.dismiss();
     try {
       setIsLoading(true);
       await principalService.updateInstitutionProfile({
@@ -449,17 +456,21 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
         phone: institutionData.phone,
         address: institutionData.address,
       });
-      Alert.alert('Success', 'Institution details updated successfully.');
-      fetchProfile();
+      setTimeout(() => {
+        Alert.alert('Success', 'Institution details updated successfully.', [
+          { text: 'OK', onPress: () => fetchProfile() }
+        ]);
+      }, 100);
     } catch (error) {
       console.error('[AccountSettings] Institution update error:', error);
-      Alert.alert('Error', 'Failed to update institution profile.');
+      setTimeout(() => Alert.alert('Error', 'Failed to update institution profile.'), 100);
     } finally {
       setIsLoading(false);
     }
   };
 
   const saveProfDetails = async () => {
+    Keyboard.dismiss();
     try {
       setIsLoading(true);
 
@@ -474,33 +485,41 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
 
       await apiClient.patch(ENDPOINTS.TEACHER.PROFILE, payload);
 
-      Alert.alert('Success', 'Professional Information updated successfully!');
-      fetchProfile();
+      setTimeout(() => {
+        Alert.alert('Success', 'Professional Information updated successfully!', [
+          { text: 'OK', onPress: () => fetchProfile() }
+        ]);
+      }, 100);
     } catch (e: any) {
       console.error('[AccountSettings] Professional info update error:', e.response?.data || e.message || e);
       const errData = e.response?.data?.message || e.response?.data || e.message;
       const errMsg = Array.isArray(errData) ? errData.join(', ') : String(errData);
-      Alert.alert('Error', `Failed: ${errMsg}`);
+      setTimeout(() => Alert.alert('Error', `Failed: ${errMsg}`), 100);
     } finally {
       setIsLoading(false);
     }
   };
 
   const saveBankDetails = async () => {
+    Keyboard.dismiss();
     try {
       setIsLoading(true);
       await teacherService.updateBankDetails(bankData);
-      Alert.alert('Success', 'Bank details updated successfully.');
-      fetchProfile();
+      setTimeout(() => {
+        Alert.alert('Success', 'Bank details updated successfully.', [
+          { text: 'OK', onPress: () => fetchProfile() }
+        ]);
+      }, 100);
     } catch (error) {
       console.error('[AccountSettings] Bank details update error:', error);
-      Alert.alert('Error', 'Failed to update bank details.');
+      setTimeout(() => Alert.alert('Error', 'Failed to update bank details.'), 100);
     } finally {
       setIsLoading(false);
     }
   };
 
   const updatePreferences = async () => {
+    Keyboard.dismiss();
     try {
       setIsLoading(true);
       await accountService.updatePreferences({
@@ -508,16 +527,17 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
         assignNotif,
         classNotif
       });
-      Alert.alert('Success', 'Preferences updated successfully.');
+      setTimeout(() => Alert.alert('Success', 'Preferences updated successfully.'), 100);
     } catch (error) {
       console.error('[AccountSettings] Preferences update error:', error);
-      Alert.alert('Error', 'Failed to update preferences.');
+      setTimeout(() => Alert.alert('Error', 'Failed to update preferences.'), 100);
     } finally {
       setIsLoading(false);
     }
   };
 
   const changePassword = async () => {
+    Keyboard.dismiss();
     if (!passwordData.currentPassword || !passwordData.newPassword) {
       Alert.alert('Error', 'Please enter your current and new password.');
       return;
@@ -532,17 +552,18 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword,
       });
-      Alert.alert('Success', 'Password changed successfully.');
+      setTimeout(() => Alert.alert('Success', 'Password changed successfully.'), 100);
       setShowPasswordModal(false);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error: any) {
       console.error('[AccountSettings] Password change error:', error?.response?.data || error);
-      Alert.alert('Error', error?.response?.data?.message || 'Failed to change password.');
+      setTimeout(() => Alert.alert('Error', error?.response?.data?.message || 'Failed to change password.'), 100);
     } finally {
       setIsLoading(false);
     }
   };
   const saveParentInfo = async () => {
+    Keyboard.dismiss();
     try {
       setIsLoading(true);
 
@@ -554,7 +575,9 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
       };
 
       const response = await accountService.updateParentInfo(payload);
-      Alert.alert('Success', 'Parent information updated successfully.');
+      setTimeout(() => {
+        Alert.alert('Success', 'Parent information updated successfully.');
+      }, 100);
 
       // Refresh the latest data from the backend
       fetchProfile();
@@ -564,7 +587,7 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
       } else {
         console.error('[AccountSettings] Parent Update Error:', error);
       }
-      Alert.alert('Error', 'Failed to update parent information.');
+      setTimeout(() => Alert.alert('Error', 'Failed to update parent information.'), 100);
     } finally {
       setIsLoading(false);
     }
@@ -577,11 +600,14 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const showPhotoOptions = () => {
-    Alert.alert('Profile Photo', 'Choose an action', [
-      { text: 'Upload Photo', onPress: handlePhotoUpload },
-      { text: 'Remove Photo', onPress: handlePhotoDelete, style: 'destructive' },
-      { text: 'Cancel', style: 'cancel' }
-    ]);
+    Keyboard.dismiss();
+    setTimeout(() => {
+      Alert.alert('Profile Photo', 'Choose an action', [
+        { text: 'Upload Photo', onPress: handlePhotoUpload },
+        { text: 'Remove Photo', onPress: handlePhotoDelete, style: 'destructive' },
+        { text: 'Cancel', style: 'cancel' }
+      ]);
+    }, 100);
   };
 
   const handlePhotoUpload = async () => {
@@ -612,11 +638,14 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
       } else {
         await accountService.uploadPhoto(formData);
       }
-      fetchProfile();
-      Alert.alert('Success', 'Profile photo updated successfully.');
+      setTimeout(() => {
+        Alert.alert('Success', 'Profile photo updated successfully.', [
+          { text: 'OK', onPress: () => fetchProfile() }
+        ]);
+      }, 100);
     } catch (error) {
       console.error('[AccountSettings] Error uploading photo:', error);
-      Alert.alert('Error', 'Failed to upload photo.');
+      setTimeout(() => Alert.alert('Error', 'Failed to upload photo.'), 100);
     } finally {
       setIsLoading(false);
     }
@@ -632,11 +661,14 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
       } else {
         await accountService.deletePhoto();
       }
-      fetchProfile();
-      Alert.alert('Success', 'Profile photo removed.');
+      setTimeout(() => {
+        Alert.alert('Success', 'Profile photo removed.', [
+          { text: 'OK', onPress: () => fetchProfile() }
+        ]);
+      }, 100);
     } catch (error) {
       console.error('[AccountSettings] Error deleting photo:', error);
-      Alert.alert('Error', 'Failed to remove photo.');
+      setTimeout(() => Alert.alert('Error', 'Failed to remove photo.'), 100);
     } finally {
       setIsLoading(false);
     }
@@ -646,35 +678,47 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
     <View style={styles.mainContainer}>
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
 
-      {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <ScaleButton
-          style={styles.menuHandle}
-          onPress={() => setDrawerOpen(true)}
-          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-          activeOpacity={0.7}
-          scaleTo={0.85}
-        >
-          <Ionicons name="menu" size={28} color={theme.text} />
-        </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>
-          Welcome back, {authState.user?.name?.split(' ')[0] || 'User'}
-        </Text>
-        <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color={theme.text} />
-          <Ionicons name="settings-outline" size={22} color={theme.text} />
-          <Ionicons name="moon-outline" size={22} color={theme.text} />
-          <View style={styles.avatar}>
-            {authState.user?.photoUrl ? (
-              <Image source={{ uri: authState.user.photoUrl }} style={styles.headerAvatarImage} />
-            ) : (
-              <Text style={styles.avatarText}>
-                {authState.user?.name?.charAt(0) || 'U'}
-              </Text>
-            )}
+      {/* Header — role-conditional */}
+      {role === 'student' ? (
+        <StudentHeader
+          title="Account Settings"
+          navigation={navigation}
+          onMenuPress={() => setDrawerOpen(true)}
+        />
+      ) : (
+        <View style={styles.globalHeader}>
+          <ScaleButton
+            style={styles.menuHandle}
+            onPress={() => setDrawerOpen(true)}
+            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+            activeOpacity={0.7}
+            scaleTo={0.85}
+          >
+            <Ionicons name="menu" size={28} color={theme.text} />
+          </ScaleButton>
+          <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>
+            Account Settings
+          </Text>
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => navigation.goBack()}
+              style={styles.avatar}
+            >
+              {authState.user?.photoUrl ? (
+                <Image
+                  source={{ uri: authState.user.photoUrl }}
+                  style={{ width: 34, height: 34, borderRadius: 17 }}
+                />
+              ) : (
+                <Text style={styles.avatarText}>
+                  {authState.user?.name?.charAt(0) || 'U'}
+                </Text>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
-      </View>
+      )}
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}

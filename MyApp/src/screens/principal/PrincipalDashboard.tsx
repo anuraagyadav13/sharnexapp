@@ -10,7 +10,6 @@ import {
   Dimensions,
   ActivityIndicator,
   LayoutAnimation,
-  UIManager,
   Image,
   Modal,
 } from 'react-native';
@@ -36,10 +35,7 @@ interface Props {
   navigation: DashboardNavigationProp;
 }
 
-// Enable LayoutAnimation for Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+
 
 const { width } = Dimensions.get('window');
 

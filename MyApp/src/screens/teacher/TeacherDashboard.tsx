@@ -571,9 +571,9 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
       {isLoading ? (
         <DashboardSkeleton />
       ) : (
-        <ScrollView 
-          style={styles.container} 
-          contentContainerStyle={styles.scrollContent} 
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#6366F1']} />}
         >
@@ -1126,6 +1126,7 @@ const styles = StyleSheet.create({
     color: '#4F46E5',
     flex: 1,
     textAlign: 'center',
+    paddingTop: 12,
     marginHorizontal: 10,
   },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
