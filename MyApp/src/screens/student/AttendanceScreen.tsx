@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Linking,
   Alert,
+  Image,
 } from 'react-native';
 
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -20,6 +21,8 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
+import { StudentHeader } from '../../components/StudentHeader';
+import { useTheme } from '../../store/ThemeContext';
 import studentService from '../../services/studentService';
 import Skeleton from '../../components/common/Skeleton';
 
@@ -92,17 +95,6 @@ const getDayName = (dateStr: string | undefined | null): string => {
   }
 };
 
-const getStatusStyle = (status: string) => {
-  const s = status?.toLowerCase();
-  switch (s) {
-    case 'present': return { pill: styles.statusPresent, text: styles.statusTextPresent };
-    case 'absent': return { pill: styles.statusAbsent, text: styles.statusTextAbsent };
-    case 'late': return { pill: styles.statusLate, text: styles.statusTextLate };
-    case 'excused': return { pill: styles.statusExcused, text: styles.statusTextExcused };
-    default: return { pill: styles.statusExcused, text: styles.statusTextExcused };
-  }
-};
-
 const getCalendarStatus = (status: string): 'present' | 'absent' | 'late' | 'excused' | 'none' => {
   switch (status?.toLowerCase()) {
     case 'present': return 'present';
@@ -115,7 +107,7 @@ const getCalendarStatus = (status: string): 'present' | 'absent' | 'late' | 'exc
 
 // ─── Loading Skeleton ─────────────────────────────────────────────────────────
 
-const PageSkeleton: React.FC = () => (
+const PageSkeleton: React.FC<{ styles: any }> = ({ styles }) => (
   <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
     <View style={styles.pageTitleWrapper}>
       <Skeleton width="40%" height={24} style={{ marginBottom: 8 }} />
@@ -142,7 +134,24 @@ const PageSkeleton: React.FC = () => (
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const { authState } = useAuth();
+
+  const getStatusStyle = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'present':
+        return { pill: styles.statusPresent, text: styles.statusTextPresent };
+      case 'absent':
+        return { pill: styles.statusAbsent, text: styles.statusTextAbsent };
+      case 'late':
+        return { pill: styles.statusLate, text: styles.statusTextLate };
+      case 'excused':
+        return { pill: styles.statusExcused, text: styles.statusTextExcused };
+      default:
+        return { pill: {}, text: {} };
+    }
+  };
 
   // UI state
   const [isDrawerOpen, setDrawerOpen] = useState(false);
@@ -266,14 +275,14 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
   if (!isLoading && error) {
     return (
       <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center', gap: 16, padding: 32 }]}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FAF9F9" />
+        <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
         <Ionicons name="cloud-offline-outline" size={52} color="#EF4444" />
-        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', textAlign: 'center' }}>
+        <Text style={{ fontSize: 16, fontWeight: '700', color: theme.text, textAlign: 'center' }}>
           Failed to Load Attendance
         </Text>
-        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center' }}>{error}</Text>
+        <Text style={{ fontSize: 13, color: theme.subtext, textAlign: 'center' }}>{error}</Text>
         <TouchableOpacity
-          style={{ backgroundColor: '#4F46E5', paddingHorizontal: 28, paddingVertical: 12, borderRadius: 10 }}
+          style={{ backgroundColor: theme.primary, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 10 }}
           onPress={() => fetchAttendance()}
         >
           <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 14 }}>Retry</Text>
@@ -286,37 +295,17 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F9" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
 
       {/* ── Global Header ── */}
-      <View style={styles.globalHeader}>
-        <ScaleButton
-          style={styles.menuHandle}
-          onPress={() => setDrawerOpen(true)}
-          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-          activeOpacity={0.7}
-          scaleTo={0.85}
-        >
-          <Ionicons name="menu" size={28} color="#1F2937" />
-        </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>
-          Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}
-        </Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity onPress={() => { }}>
-            <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Preferences' })}>
-            <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          </TouchableOpacity>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
-          </View>
-        </View>
-      </View>
+      <StudentHeader 
+        title="Attendance"
+        navigation={navigation}
+        onMenuPress={() => setDrawerOpen(true)}
+      />
 
       {isLoading ? (
-        <PageSkeleton />
+        <PageSkeleton styles={styles} />
       ) : (
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -514,7 +503,7 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
           {stats?.academicYear && (
             <Animated.View entering={FadeInUp.delay(220).springify()} style={styles.card}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
-                <Ionicons name="school-outline" size={18} color="#111827" style={{ marginRight: 6 }} />
+                <Ionicons name="school-outline" size={18} color={theme.text} style={{ marginRight: 6 }} />
                 <Text style={styles.cardHeader}>Academic Year</Text>
                 <View style={styles.yearBadge}>
                   <Text style={styles.yearBadgeText}>{stats.academicYear.year}</Text>
@@ -543,7 +532,7 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
           {/* ── Card 5: Attendance Comparison ── */}
           <Animated.View entering={FadeInUp.delay(260).springify()} style={styles.card}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-              <Ionicons name="people-outline" size={18} color="#111827" style={{ marginRight: 6 }} />
+              <Ionicons name="people-outline" size={18} color={theme.text} style={{ marginRight: 6 }} />
               <Text style={styles.cardHeader}>Attendance Comparison</Text>
             </View>
 
@@ -712,8 +701,8 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FAF9F9' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 20 },
 
   globalHeader: {
@@ -723,7 +712,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -735,7 +724,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5',
+    color: theme.primary,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -743,80 +732,80 @@ const styles = StyleSheet.create({
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   avatar: {
     width: 34, height: 34, borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#A855F7', shadowOffset: { width: 0, height: 4 },
+    shadowColor: theme.primary, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5, shadowRadius: 6, elevation: 8,
   },
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   pageTitleWrapper: { marginBottom: 16, paddingHorizontal: 20, marginTop: 16 },
-  pageTitle: { fontSize: 24, fontWeight: '800', color: '#3B82F6', marginBottom: 4 },
-  pageSubtitle: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
+  pageTitle: { fontSize: 24, fontWeight: '800', color: theme.primary, marginBottom: 4 },
+  pageSubtitle: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
 
   card: {
-    backgroundColor: '#FFFFFF', borderRadius: 14, padding: 16,
+    backgroundColor: theme.surface, borderRadius: 14, padding: 16,
     marginHorizontal: 20, marginBottom: 16,
     shadowColor: '#1E293B', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08, shadowRadius: 10, elevation: 4,
-    borderWidth: 1, borderColor: '#F1F5F9',
+    borderWidth: 1, borderColor: theme.border,
   },
-  cardHeader: { fontSize: 15, fontWeight: '700', color: '#111827' },
+  cardHeader: { fontSize: 15, fontWeight: '700', color: theme.text },
   cardRowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
 
   // ── Stat Boxes ──
   statsRow: { flexDirection: 'row', justifyContent: 'space-between' },
   statBox: {
-    flex: 1, backgroundColor: '#FAFAFA',
-    borderWidth: 1, borderColor: '#E5E7EB',
+    flex: 1, backgroundColor: theme.isDarkMode ? '#1E293B' : '#FAFAFA',
+    borderWidth: 1, borderColor: theme.border,
     borderLeftWidth: 4, borderRadius: 8,
     paddingVertical: 10, paddingHorizontal: 8,
   },
   statBoxMid: { marginHorizontal: 8 },
-  statBoxTitle: { fontSize: 10, fontWeight: '700', color: '#374151', marginBottom: 2 },
-  statBoxVal: { fontSize: 18, fontWeight: '800', color: '#111827', marginTop: 2 },
+  statBoxTitle: { fontSize: 10, fontWeight: '700', color: theme.text, marginBottom: 2 },
+  statBoxVal: { fontSize: 18, fontWeight: '800', color: theme.text, marginTop: 2 },
 
   // ── Monthly boxes ──
   monthBox: {
     flex: 1, borderRadius: 10, borderWidth: 1,
     paddingVertical: 12, paddingHorizontal: 10,
   },
-  monthBoxLabel: { fontSize: 10, fontWeight: '600', color: '#6B7280', marginBottom: 4 },
+  monthBoxLabel: { fontSize: 10, fontWeight: '600', color: theme.subtext, marginBottom: 4 },
   monthBoxVal: { fontSize: 18, fontWeight: '800' },
 
   // ── Calendar ──
   calArrows: { flexDirection: 'row', gap: 6 },
-  calBtn: { padding: 5, borderRadius: 6, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#FFF' },
+  calBtn: { padding: 5, borderRadius: 6, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface },
   calDaysHeader: { flexDirection: 'row', marginBottom: 10, paddingHorizontal: 2 },
-  calDayText: { width: '14.28%', textAlign: 'center', fontSize: 9, fontWeight: '600', color: '#6B7280' },
+  calDayText: { width: '14.28%', textAlign: 'center', fontSize: 9, fontWeight: '600', color: theme.subtext },
   calGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   calCell: {
     width: '14.28%', aspectRatio: 1,
     justifyContent: 'center', alignItems: 'center',
     marginBottom: 4, borderRadius: 6,
   },
-  calCellPresent: { backgroundColor: '#D1FAE5' },
-  calCellAbsent: { backgroundColor: '#FEE2E2', borderWidth: 1, borderColor: '#FCA5A5' },
-  calCellLate: { backgroundColor: '#FEF3C7', borderWidth: 1, borderColor: '#FDE68A' },
-  calCellExcused: { backgroundColor: '#DBEAFE', borderWidth: 1, borderColor: '#BFDBFE' },
-  calCellToday: { borderWidth: 2, borderColor: '#4F46E5' },
-  calCellText: { fontSize: 11, fontWeight: '600', color: '#111827' },
-  calCellTextPresent: { color: '#059669' },
-  calCellTextAbsent: { color: '#DC2626' },
-  calCellTextLate: { color: '#D97706' },
-  calCellTextExcused: { color: '#2563EB' },
-  calDivider: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 10 },
+  calCellPresent: { backgroundColor: theme.isDarkMode ? '#064E3B' : '#D1FAE5' },
+  calCellAbsent: { backgroundColor: theme.isDarkMode ? '#7F1D1D30' : '#FEE2E2', borderWidth: 1, borderColor: '#FCA5A5' },
+  calCellLate: { backgroundColor: theme.isDarkMode ? '#78350F30' : '#FEF3C7', borderWidth: 1, borderColor: '#D97706' },
+  calCellExcused: { backgroundColor: theme.isDarkMode ? '#1E3A8A30' : '#DBEAFE', borderWidth: 1, borderColor: '#3B82F6' },
+  calCellToday: { borderWidth: 2, borderColor: theme.primary },
+  calCellText: { fontSize: 11, fontWeight: '600', color: theme.text },
+  calCellTextPresent: { color: theme.isDarkMode ? '#34D399' : '#059669' },
+  calCellTextAbsent: { color: theme.isDarkMode ? '#FCA5A5' : '#DC2626' },
+  calCellTextLate: { color: theme.isDarkMode ? '#F59E0B' : '#D97706' },
+  calCellTextExcused: { color: theme.isDarkMode ? '#93C5FD' : '#2563EB' },
+  calDivider: { height: 1, backgroundColor: theme.border, marginVertical: 10 },
   calLegend: { flexDirection: 'row', justifyContent: 'space-around' },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendBox: { width: 10, height: 10, borderRadius: 3 },
-  legendText: { fontSize: 10, fontWeight: '600', color: '#374151' },
+  legendText: { fontSize: 10, fontWeight: '600', color: theme.text },
 
   // ── Academic Year badge ──
   yearBadge: {
-    marginLeft: 10, backgroundColor: '#EEF2FF',
+    marginLeft: 10, backgroundColor: theme.isDarkMode ? '#1E3A8A30' : '#EEF2FF',
     paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20,
   },
-  yearBadgeText: { fontSize: 11, fontWeight: '700', color: '#4F46E5' },
+  yearBadgeText: { fontSize: 11, fontWeight: '700', color: theme.primary },
 
   // ── Comparison boxes ──
   compBox: {
@@ -824,71 +813,71 @@ const styles = StyleSheet.create({
     paddingVertical: 12, paddingHorizontal: 10,
     alignItems: 'center',
   },
-  compLabel: { fontSize: 11, fontWeight: '600', color: '#6B7280', marginBottom: 4 },
+  compLabel: { fontSize: 11, fontWeight: '600', color: theme.subtext, marginBottom: 4 },
   compVal: { fontSize: 20, fontWeight: '800' },
 
   // ── Warning banner ──
   warningBanner: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#FFFBEB', borderRadius: 8,
+    backgroundColor: theme.isDarkMode ? '#78350F30' : '#FFFBEB', borderRadius: 8,
     paddingHorizontal: 12, paddingVertical: 8, marginTop: 12,
-    borderWidth: 1, borderColor: '#FDE68A',
+    borderWidth: 1, borderColor: theme.isDarkMode ? '#D97706' : '#FDE68A',
   },
-  warningText: { fontSize: 11, color: '#92400E', fontWeight: '500', flex: 1 },
+  warningText: { fontSize: 11, color: theme.isDarkMode ? '#F59E0B' : '#92400E', fontWeight: '500', flex: 1 },
 
   // ── Progress bar ──
-  targetTitle: { fontSize: 12, fontWeight: '700', color: '#111827' },
-  targetPercent: { fontSize: 14, fontWeight: '800', color: '#4F46E5' },
+  targetTitle: { fontSize: 12, fontWeight: '700', color: theme.text },
+  targetPercent: { fontSize: 14, fontWeight: '800', color: theme.primary },
   progressBarBg: {
-    height: 8, backgroundColor: '#E2E8F0', borderRadius: 4,
+    height: 8, backgroundColor: theme.isDarkMode ? '#334155' : '#E2E8F0', borderRadius: 4,
     width: '100%', overflow: 'hidden', marginBottom: 10,
     position: 'relative',
   },
-  progressBarFill: { height: '100%', borderRadius: 4, backgroundColor: '#4F46E5' },
+  progressBarFill: { height: '100%', borderRadius: 4, backgroundColor: theme.primary },
   progressMarker: {
     position: 'absolute', top: 0, bottom: 0, width: 2,
     backgroundColor: '#10B981',
   },
   progressMetrics: { flexDirection: 'row', justifyContent: 'space-between' },
-  metricText: { fontSize: 10, color: '#6B7280', fontWeight: '500' },
+  metricText: { fontSize: 10, color: theme.subtext, fontWeight: '500' },
 
   // ── Table ──
-  viewAllBtn: { backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 4 },
-  viewAllText: { fontSize: 10, fontWeight: '600', color: '#374151' },
+  viewAllBtn: { backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 4 },
+  viewAllText: { fontSize: 10, fontWeight: '600', color: theme.text },
   table: { marginTop: 4 },
   tableHeaderRow: {
-    flexDirection: 'row', backgroundColor: '#F3F4F6',
+    flexDirection: 'row', backgroundColor: theme.isDarkMode ? '#1E293B' : '#F3F4F6',
     paddingVertical: 9, paddingHorizontal: 8, borderRadius: 6, marginBottom: 4,
   },
-  thText: { fontSize: 9, fontWeight: '700', color: '#374151' },
+  thText: { fontSize: 9, fontWeight: '700', color: theme.text },
   tableRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: 10, paddingHorizontal: 8,
-    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+    borderBottomWidth: 1, borderBottomColor: theme.border,
   },
-  tdText: { fontSize: 10, color: '#4B5563', fontWeight: '500' },
-  tdTextBold: { fontSize: 10, color: '#111827', fontWeight: '700' },
+  tdText: { fontSize: 10, color: theme.subtext, fontWeight: '500' },
+  tdTextBold: { fontSize: 10, color: theme.text, fontWeight: '700' },
   tdPillWrap: { alignItems: 'flex-start' },
 
   // Status pills
-  statusPresent: { backgroundColor: '#D1FAE5', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 12 },
-  statusAbsent: { backgroundColor: '#FEE2E2', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 12 },
-  statusLate: { backgroundColor: '#FEF3C7', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 12 },
-  statusExcused: { backgroundColor: '#DBEAFE', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 12 },
-  statusTextPresent: { fontSize: 9, color: '#059669', fontWeight: '700' },
-  statusTextAbsent: { fontSize: 9, color: '#DC2626', fontWeight: '700' },
-  statusTextLate: { fontSize: 9, color: '#D97706', fontWeight: '700' },
-  statusTextExcused: { fontSize: 9, color: '#2563EB', fontWeight: '700' },
+  statusPresent: { backgroundColor: theme.isDarkMode ? '#064E3B' : '#D1FAE5', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 12 },
+  statusAbsent: { backgroundColor: theme.isDarkMode ? '#7F1D1D30' : '#FEE2E2', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 12 },
+  statusLate: { backgroundColor: theme.isDarkMode ? '#78350F30' : '#FEF3C7', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 12 },
+  statusExcused: { backgroundColor: theme.isDarkMode ? '#1E3A8A30' : '#DBEAFE', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 12 },
+  statusTextPresent: { fontSize: 9, color: theme.isDarkMode ? '#34D399' : '#059669', fontWeight: '700' },
+  statusTextAbsent: { fontSize: 9, color: theme.isDarkMode ? '#FCA5A5' : '#DC2626', fontWeight: '700' },
+  statusTextLate: { fontSize: 9, color: theme.isDarkMode ? '#F59E0B' : '#D97706', fontWeight: '700' },
+  statusTextExcused: { fontSize: 9, color: theme.isDarkMode ? '#93C5FD' : '#2563EB', fontWeight: '700' },
 
   // ── PDF button ──
   pdfButton: {
-    backgroundColor: '#4F46E5', borderRadius: 10,
+    backgroundColor: theme.primary, borderRadius: 10,
     paddingVertical: 13, flexDirection: 'row',
     justifyContent: 'center', alignItems: 'center',
   },
   pdfButtonText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
 
-  emptyText: { textAlign: 'center', color: '#9CA3AF', marginTop: 20, fontSize: 13 },
+  emptyText: { textAlign: 'center', color: theme.subtext, marginTop: 20, fontSize: 13 },
 });
 
 export default AttendanceScreen;

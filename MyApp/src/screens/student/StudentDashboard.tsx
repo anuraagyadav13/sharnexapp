@@ -32,6 +32,7 @@ import Animated, {
   useSharedValue
 } from 'react-native-reanimated';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { StudentHeader } from '../../components/StudentHeader';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -41,8 +42,687 @@ import { useTheme } from '../../store/ThemeContext';
 import studentService from '../../services/studentService';
 import Skeleton from '../../components/common/Skeleton';
 
+const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
+  // ===== CONTAINERS =====
+  mainContainer: { 
+    flex: 1, 
+    backgroundColor: theme.background 
+  },
+  container: { 
+    flex: 1,
+    backgroundColor: theme.background 
+  },
+  scrollContent: { paddingBottom: 40 },
+
+  // ===== HEADER =====
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    paddingHorizontal: 20, 
+    paddingTop: Platform.OS === 'ios' ? 60 : 30, 
+    paddingBottom: 24, 
+    backgroundColor: theme.background 
+  },
+  menuHandle: { paddingRight: 10, paddingVertical: 10 },
+  headerTitle: { 
+    fontSize: 16, 
+    fontWeight: '500', 
+    color: theme.primary, 
+    flex: 1, 
+    textAlign: 'center', 
+    marginHorizontal: 10 
+  },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  iconBtn: { 
+    width: 36, 
+    height: 36, 
+    borderRadius: 18, 
+    backgroundColor: theme.iconBackground || theme.surface, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  avatar: { 
+    width: 34, 
+    height: 34, 
+    borderRadius: 17, 
+    backgroundColor: theme.primary, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    shadowColor: theme.primary, 
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.5, 
+    shadowRadius: 6, 
+    elevation: 8 
+  },
+  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+
+  // ===== HERO BANNER =====
+  heroBannerRow: { 
+    backgroundColor: isDarkMode ? '#312E81' : '#D9DAF9', 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingVertical: 24, 
+    paddingLeft: 16, 
+    paddingRight: 0, 
+    overflow: 'hidden', 
+    minHeight: 180 
+  },
+  heroTextSide: { width: '58%', paddingRight: 8, alignItems: 'center' },
+  heroRowTitle1: { 
+    fontSize: 20, 
+    fontWeight: '800', 
+    color: isDarkMode ? '#F8FAFC' : '#2563EB', 
+    textAlign: 'center' 
+  },
+  heroRowTitle2: { 
+    fontSize: 20, 
+    fontWeight: '800', 
+    color: isDarkMode ? '#818CF8' : '#D946EF', 
+    textAlign: 'center' 
+  },
+  heroRowTitle3: { 
+    fontSize: 20, 
+    fontWeight: '800', 
+    color: isDarkMode ? '#F8FAFC' : '#7C3AED', 
+    textAlign: 'center', 
+    marginBottom: 8 
+  },
+  heroRowSubtitle: { 
+    fontSize: 10, 
+    color: isDarkMode ? '#CBD5E1' : '#4B5563', 
+    lineHeight: 15, 
+    textAlign: 'center', 
+    fontWeight: '500' 
+  },
+  heroImageSide: { width: '42%', justifyContent: 'center', alignItems: 'flex-start' },
+  heroRowImage: { width: '100%', height: 140 },
+
+  // ===== SECTIONS =====
+  section: { paddingHorizontal: 20, marginTop: 32 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  sectionHeaderSpaceBetween: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    marginBottom: 20 
+  },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center' },
+  sectionIconMargin: { marginRight: 8 },
+  sectionTitle: { 
+    fontSize: 20, 
+    fontWeight: '800', 
+    color: theme.primary, 
+    letterSpacing: -0.5 
+  },
+  sectionTitleNoMargin: { 
+    fontSize: 20, 
+    fontWeight: '800', 
+    color: theme.primary, 
+    letterSpacing: -0.5, 
+    marginLeft: 0, 
+    marginBottom: 16 
+  },
+
+  // ===== STATS ROW =====
+  statsRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    paddingHorizontal: 20, 
+    marginTop: 24 
+  },
+
+  // ===== STAT CARDS =====
+  statCard: { 
+    alignItems: 'center', 
+    backgroundColor: theme.surface, 
+    borderRadius: 16, 
+    paddingVertical: 12, 
+    paddingHorizontal: 8, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.03, 
+    shadowRadius: 8, 
+    elevation: 2, 
+    borderWidth: 1, 
+    borderColor: theme.border, 
+    width: '31%', 
+    minHeight: 110 
+  },
+  statIconCircle: { 
+    width: 32, 
+    height: 32, 
+    borderRadius: 16, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginBottom: 4 
+  },
+  statValue: { 
+    fontSize: 16, 
+    fontWeight: '800', 
+    color: theme.text, 
+    marginTop: 2 
+  },
+  statTitle: { 
+    fontSize: 10, 
+    fontWeight: '700', 
+    color: theme.subtext, 
+    marginTop: 6, 
+    textAlign: 'center', 
+    width: '100%' 
+  },
+
+  // ===== QUICK ACTIONS =====
+  quickActionsGrid: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    justifyContent: 'space-between', 
+    gap: 12 
+  },
+  quickActionCard: { 
+    width: '31%', 
+    backgroundColor: theme.surface, 
+    borderRadius: 16, 
+    paddingVertical: 16, 
+    paddingHorizontal: 4, 
+    borderWidth: 1, 
+    borderColor: theme.border, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 6 }, 
+    shadowOpacity: 0.06, 
+    shadowRadius: 16, 
+    elevation: 4 
+  },
+  quickActionTouchable: { alignItems: 'center' },
+  quickActionTitle: { 
+    fontSize: 11, 
+    fontWeight: '600', 
+    color: theme.text, 
+    marginTop: 10, 
+    textAlign: 'center' 
+  },
+
+  // ===== ICON BOX =====
+  iconBox: { 
+    borderRadius: 16, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+
+  // ===== SCHEDULE =====
+  scheduleList: { gap: 12 },
+  scheduleCard: { 
+    backgroundColor: theme.surface, 
+    borderRadius: 12, 
+    flexDirection: 'row', 
+    borderWidth: 1, 
+    borderColor: theme.border, 
+    paddingRight: 10, 
+    height: 80, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 6 }, 
+    shadowOpacity: 0.06, 
+    shadowRadius: 16, 
+    elevation: 4 
+  },
+  scheduleLeftCol: { flexDirection: 'row', alignItems: 'stretch', width: 145 },
+  scheduleCardIndicator: { 
+    width: 4, 
+    borderRadius: 2, 
+    marginVertical: 4, 
+    marginLeft: 16, 
+    marginRight: 16 
+  },
+  scheduleTimeWrapper: { flex: 1, justifyContent: 'center' },
+  scheduleTime: { 
+    fontSize: 11, 
+    fontWeight: '500', 
+    color: theme.subtext 
+  },
+  scheduleRightCol: { flex: 1, justifyContent: 'center' },
+  schedulePillRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
+  schedulePill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+  schedulePillText: { fontSize: 10, fontWeight: '700', color: '#FFFFFF' },
+  statusContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  scheduleStatus: { 
+    fontSize: 11, 
+    color: theme.subtext, 
+    fontWeight: '500' 
+  },
+  scheduleUpNext: { 
+    fontSize: 11, 
+    color: theme.primary, 
+    fontWeight: '500' 
+  },
+  ongoingContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  ongoingDot: { width: 6, height: 6, borderRadius: 3 },
+  ongoingText: { fontSize: 11, fontWeight: '700' },
+  scheduleTeacher: { 
+    fontSize: 13, 
+    fontWeight: '400', 
+    color: theme.text, 
+    marginBottom: 4 
+  },
+  scheduleBottomRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between' 
+  },
+  scheduleRoom: { 
+    fontSize: 10, 
+    color: theme.subtext 
+  },
+  joinClassBtn: { 
+    paddingHorizontal: 10, 
+    paddingVertical: 2, 
+    borderRadius: 4, 
+    borderWidth: 1 
+  },
+  joinClassBtnText: { fontSize: 10, fontWeight: '600' },
+
+  // ===== EVENTS =====
+  eventList: { gap: 12 },
+  eventCard: { 
+    backgroundColor: theme.surface, 
+    borderRadius: 14, 
+    flexDirection: 'row', 
+    borderWidth: 1, 
+    borderColor: theme.border, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 6 }, 
+    shadowOpacity: 0.06, 
+    shadowRadius: 16, 
+    elevation: 4 
+  },
+  eventCardContent: { flex: 1, paddingVertical: 16, paddingHorizontal: 16 },
+  eventTitle: { 
+    fontSize: 14, 
+    fontWeight: '700', 
+    color: theme.text, 
+    marginBottom: 6 
+  },
+  eventDateContainer: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  eventDateText: { 
+    fontSize: 13, 
+    color: theme.subtext 
+  },
+  awardBadge: { 
+    backgroundColor: '#F97316', 
+    paddingVertical: 6, 
+    borderRadius: 16, 
+    width: 96, 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+  awardBadgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
+
+  // ===== TOP STUDENTS =====
+  topRankingContainer: { 
+    backgroundColor: isDarkMode ? '#1E1B4B' : '#2DD4BF', 
+    borderRadius: 24, 
+    paddingVertical: 20, 
+    paddingHorizontal: 16, 
+    borderWidth: 1, 
+    borderColor: isDarkMode ? '#4F46E5' : '#14B8A6' 
+  },
+  topRankingHeader: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    marginBottom: 20 
+  },
+  topRankingHeaderEmoji: { fontSize: 18, marginRight: 8 },
+  topRankingHeaderText: { 
+    fontSize: 16, 
+    fontWeight: '800', 
+    color: '#FFFFFF' 
+  },
+  topRankingGrid: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    justifyContent: 'space-between' 
+  },
+  topRankCardWrapper: { width: '48%', marginBottom: 12 },
+  lastTopRankCard: { width: '48%', alignSelf: 'center' },
+  topRankCard: { 
+    backgroundColor: theme.surface, 
+    borderRadius: 18, 
+    padding: 16, 
+    alignItems: 'center', 
+    elevation: 2, 
+    shadowColor: '#000', 
+    shadowOpacity: 0.05, 
+    shadowRadius: 8 
+  },
+  topRankCircle: { 
+    width: 44, 
+    height: 44, 
+    borderRadius: 22, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginBottom: 10 
+  },
+  topRankCircleText: { color: '#FFFFFF', fontSize: 18, fontWeight: '900' },
+  topRankName: { 
+    fontSize: 13, 
+    fontWeight: '700', 
+    color: theme.text, 
+    marginBottom: 2 
+  },
+  topRankPercent: { 
+    fontSize: 14, 
+    fontWeight: '800', 
+    color: theme.primary, 
+    marginBottom: 6 
+  },
+  topRankBadge: { 
+    backgroundColor: isDarkMode ? theme.primary : '#FACC15', 
+    paddingHorizontal: 8, 
+    paddingVertical: 2, 
+    borderRadius: 10 
+  },
+  topRankBadgeText: { fontSize: 9, fontWeight: '900', color: '#FFFFFF' },
+
+  // ===== TOP STUDENT CARD (List) =====
+  topStudentCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+  },
+  rankCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  rankText: { fontSize: 12, fontWeight: '700' },
+  topStudentInfo: { flex: 1 },
+  topStudentName: { 
+    fontSize: 13, 
+    fontWeight: '700', 
+    color: theme.text 
+  },
+  topStudentClass: { 
+    fontSize: 11, 
+    color: theme.subtext 
+  },
+  topStudentPercentage: { 
+    fontSize: 13, 
+    fontWeight: '700', 
+    color: theme.primary 
+  },
+
+  // ===== HELP CENTER =====
+  helpCenterGrid: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    justifyContent: 'space-between', 
+    gap: 12 
+  },
+  helpCenterCard: { 
+    width: '48%', 
+    height: 204, 
+    backgroundColor: theme.surface, 
+    borderRadius: 12, 
+    paddingVertical: 16, 
+    paddingHorizontal: 16, 
+    borderWidth: 1, 
+    borderColor: theme.border, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 6 }, 
+    shadowOpacity: 0.06, 
+    shadowRadius: 16, 
+    elevation: 4 
+  },
+  helpIconContainer: { 
+    width: 36, 
+    height: 36, 
+    borderRadius: 8, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginBottom: 12 
+  },
+  helpCardTitle: { 
+    fontSize: 13, 
+    fontWeight: '700', 
+    color: theme.text, 
+    marginBottom: 6, 
+    lineHeight: 18 
+  },
+  helpCardDesc: { 
+    fontSize: 10, 
+    color: theme.subtext, 
+    lineHeight: 14 
+  },
+  viewGuidesRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    width: '100%', 
+    marginTop: 'auto', 
+    borderTopWidth: 1, 
+    borderTopColor: theme.border, 
+    paddingTop: 12 
+  },
+  helpCardLink: { 
+    fontSize: 11, 
+    fontWeight: '700', 
+    color: theme.primary 
+  },
+
+  // ===== FAQ =====
+  faqListContainer: { 
+    backgroundColor: theme.surface, 
+    borderRadius: 16, 
+    padding: 8, 
+    elevation: 1, 
+    shadowColor: '#000', 
+    shadowOpacity: 0.05, 
+    shadowRadius: 10,
+    borderWidth: isDarkMode ? 1 : 0,
+    borderColor: theme.border
+  },
+  faqItemContainer: { 
+    borderBottomWidth: 1, 
+    borderBottomColor: theme.border 
+  },
+  faqHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingVertical: 16, 
+    paddingHorizontal: 12 
+  },
+  faqQuestion: { 
+    fontSize: 13, 
+    fontWeight: '600', 
+    color: theme.text, 
+    flex: 1 
+  },
+  faqAnswerContainer: { 
+    backgroundColor: isDarkMode ? '#1E293B' : '#F0FDF4', 
+    borderRadius: 12, 
+    padding: 12, 
+    marginHorizontal: 10, 
+    marginBottom: 16 
+  },
+  faqAnswerText: { 
+    fontSize: 13, 
+    color: theme.text, 
+    lineHeight: 20 
+  },
+
+  // ===== ASSIGNMENTS =====
+  assignmentList: { gap: 12 },
+  assignmentCard: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: theme.surface, 
+    borderRadius: 16, 
+    padding: 12, 
+    borderWidth: 1, 
+    borderColor: theme.border, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowOpacity: 0.05, 
+    shadowRadius: 4, 
+    elevation: 2 
+  },
+  assignIconWrapper: { 
+    width: 44, 
+    height: 44, 
+    borderRadius: 12, 
+    backgroundColor: isDarkMode ? '#312E81' : '#EEF2FF', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginRight: 12 
+  },
+  assignContent: { flex: 1 },
+  assignSubject: { 
+    fontSize: 10, 
+    fontWeight: '700', 
+    color: theme.primary, 
+    textTransform: 'uppercase', 
+    marginBottom: 2 
+  },
+  assignTitle: { 
+    fontSize: 13, 
+    fontWeight: '700', 
+    color: theme.text, 
+    marginBottom: 4 
+  },
+  assignFooter: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  assignDueDate: { 
+    fontSize: 11, 
+    color: theme.subtext, 
+    fontWeight: '500' 
+  },
+
+  // ===== LIVE BANNER =====
+  liveBanner: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF', 
+    borderRadius: 16, 
+    padding: 16, 
+    marginBottom: 20, 
+    borderLeftWidth: 4, 
+    shadowColor: '#EF4444', 
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.1, 
+    shadowRadius: 12, 
+    elevation: 5, 
+    borderWidth: 1, 
+    borderColor: isDarkMode ? '#334155' : '#FEE2E2' 
+  },
+  liveBannerContent: { flex: 1 },
+  liveIndicatorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  liveDot: { width: 8, height: 8, borderRadius: 4 },
+  liveText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
+  liveSubject: { 
+    fontSize: 16, 
+    fontWeight: '700', 
+    color: theme.text 
+  },
+  liveTeacher: { 
+    fontSize: 13, 
+    color: theme.subtext, 
+    marginTop: 2 
+  },
+  liveJoinBtn: { 
+    paddingHorizontal: 20, 
+    paddingVertical: 10, 
+    borderRadius: 12, 
+    marginLeft: 12 
+  },
+  liveJoinBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
+  liveTrackingContainer: { 
+    height: 8, 
+    width: '100%', 
+    backgroundColor: isDarkMode ? '#334155' : '#FEE2E2', 
+    borderRadius: 4, 
+    overflow: 'hidden', 
+    marginTop: 10, 
+    marginBottom: 8, 
+    borderWidth: 1, 
+    borderColor: isDarkMode ? '#475569' : '#FECACA' 
+  },
+  liveTrackingLine: { height: '100%', backgroundColor: '#EF4444', borderRadius: 4 },
+  shimmerStreak: { 
+    position: 'absolute', 
+    top: 0, 
+    bottom: 0, 
+    width: 60, 
+    backgroundColor: 'rgba(255, 255, 255, 0.6)', 
+    zIndex: 2 
+  },
+
+  // ===== NEED HELP BANNER =====
+  needHelpBanner: { 
+    paddingVertical: 24, 
+    paddingHorizontal: 20, 
+    marginHorizontal: 20, 
+    marginTop: 32, 
+    marginBottom: 40, 
+    alignItems: 'center', 
+    shadowColor: '#5A67D8', 
+    shadowOffset: { width: 0, height: 10 }, 
+    shadowOpacity: 0.3, 
+    shadowRadius: 20, 
+    elevation: 8, 
+    overflow: 'hidden', 
+    borderRadius: 20 
+  },
+  needHelpTitle: { 
+    fontSize: 18, 
+    fontWeight: '700', 
+    color: '#FFFFFF', 
+    marginBottom: 8, 
+    zIndex: 2 
+  },
+  needHelpDesc: { 
+    fontSize: 12, 
+    color: '#E0E7FF', 
+    textAlign: 'center', 
+    lineHeight: 18, 
+    marginBottom: 20, 
+    paddingHorizontal: 10, 
+    zIndex: 2 
+  },
+  needHelpButtonsRow: { 
+    flexDirection: 'row', 
+    gap: 12, 
+    width: '100%', 
+    zIndex: 2 
+  },
+  helpButtonOutlined: { 
+    flex: 1, 
+    paddingVertical: 10, 
+    borderRadius: 24, 
+    borderWidth: 1, 
+    borderColor: '#FFFFFF', 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+  helpButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
+
+  // ===== EMPTY STATE =====
+  emptyText: { 
+    fontSize: 14, 
+    color: theme.subtext, 
+    textAlign: 'center', 
+    marginTop: 20, 
+    fontWeight: '500' 
+  },
+});
+
 const DashboardSkeleton = () => {
-  const { theme } = useTheme();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.header}>
@@ -87,6 +767,8 @@ interface Props {
 // --- Icons & Badges Helpers ---
 const IconBox = ({ name, color = '#fff', bgColor, size = 50, iconSize = 24, iconLibrary = 'Ionicons' }: { name: string, color?: string, bgColor: string, size?: number, iconSize?: number, iconLibrary?: string }) => {
   const IconComponent = iconLibrary === 'MaterialCommunityIcons' ? MaterialCommunityIcons : Ionicons;
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   return (
     <View style={[styles.iconBox, { width: size, height: size, backgroundColor: bgColor }]}>
       <IconComponent name={name} size={iconSize} color={color} />
@@ -97,7 +779,8 @@ const IconBox = ({ name, color = '#fff', bgColor, size = 50, iconSize = 24, icon
 // --- Subcomponents ---
 
 const QuickActionCard = React.memo(({ title, iconName, bgColor, delay, iconLibrary = 'Ionicons', onPress }: { title: string, iconName: string, bgColor: string, delay: number, iconLibrary?: string, onPress?: () => void }) => {
-  const { theme } = useTheme();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   return (
     <Animated.View entering={FadeInUp.delay(delay).springify()} style={[styles.quickActionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <TouchableOpacity style={styles.quickActionTouchable} activeOpacity={0.7} onPress={onPress}>
@@ -110,6 +793,7 @@ const QuickActionCard = React.memo(({ title, iconName, bgColor, delay, iconLibra
 
 const ScheduleCard = React.memo(({ time, title, teacher, room, color, status, isOngoing, bgStyleColor, borderStyleColor }: any) => {
   const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   const isSpecialBg = !!bgStyleColor;
   return (
     <View style={[
@@ -167,7 +851,8 @@ const ScheduleCard = React.memo(({ time, title, teacher, room, color, status, is
 });
 
 const EventCard = React.memo(({ title, date, color }: any) => {
-  const { theme } = useTheme();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   return (
     <View style={[styles.eventCard, { backgroundColor: theme.surface, borderLeftColor: color, borderLeftWidth: 4, borderColor: theme.border }]}>
       <View style={styles.eventCardContent}>
@@ -182,7 +867,8 @@ const EventCard = React.memo(({ title, date, color }: any) => {
 });
 
 const TopStudentCard = React.memo(({ rank, name, className, percentage }: any) => {
-  const { theme } = useTheme();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   return (
     <View style={[styles.topStudentCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <View style={styles.rankCircle}>
@@ -199,6 +885,7 @@ const TopStudentCard = React.memo(({ rank, name, className, percentage }: any) =
 
 const LiveClassBanner = ({ subject, teacher, time, startTime, endTime, color }: { subject: string, teacher: string, time: string, startTime: string, endTime: string, color: string }) => {
   const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   const [progress, setProgress] = useState(0);
   const shimmerValue = useSharedValue(0);
 
@@ -258,7 +945,8 @@ const LiveClassBanner = ({ subject, teacher, time, startTime, endTime, color }: 
 };
 
 const HelpCenterCard = ({ bgColor, iconName, title, desc }: { bgColor: string, iconName: string, title: string, desc: string }) => {
-  const { theme } = useTheme();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   return (
     <View style={[styles.helpCenterCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <View style={[styles.helpIconContainer, { backgroundColor: bgColor }]}>
@@ -275,7 +963,8 @@ const HelpCenterCard = ({ bgColor, iconName, title, desc }: { bgColor: string, i
 };
 
 const FAQItem = React.memo(({ question, answer, isOpen, onToggle }: { question: string, answer: string, isOpen: boolean, onToggle: () => void }) => {
-  const { theme } = useTheme();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   return (
     <View style={[styles.faqItemContainer, { borderBottomColor: theme.border }]}>
       <TouchableOpacity 
@@ -291,7 +980,7 @@ const FAQItem = React.memo(({ question, answer, isOpen, onToggle }: { question: 
         />
       </TouchableOpacity>
       {isOpen && (
-        <Animated.View entering={FadeInUp.duration(300)} style={[styles.faqAnswerContainer, { backgroundColor: theme.faqAnswer }]}>
+        <Animated.View entering={FadeInUp.duration(300)} style={[styles.faqAnswerContainer, { backgroundColor: isDarkMode ? '#1E293B' : '#F0FDF4' }]}>
           <Text style={[styles.faqAnswerText, { color: theme.text }]}>{answer}</Text>
         </Animated.View>
       )}
@@ -300,7 +989,8 @@ const FAQItem = React.memo(({ question, answer, isOpen, onToggle }: { question: 
 });
 
 const StatCard = ({ title, value, color, icon }: { title: string, value: string | number, color: string, icon: string }) => {
-  const { theme } = useTheme();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   return (
     <View style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <View style={[styles.statIconCircle, { backgroundColor: `${color}15` }]}>
@@ -324,6 +1014,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [expandedFaqId, setExpandedFaqId] = useState<number | null>(null);
   const { theme, isDarkMode, toggleDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -428,40 +1119,12 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
       ) : (
         <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Header */}
-          <View style={styles.header}>
-            <ScaleButton 
-              style={styles.menuHandle} 
-              onPress={() => setDrawerOpen(true)}
-              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-            >
-              <Ionicons name="menu" size={28} color={theme.text} />
-            </ScaleButton>
-            <Text style={[styles.headerTitle, { color: theme.primary }]} numberOfLines={1}>
-              Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}
-            </Text>
-            <View style={styles.headerRight}>
-              <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.iconBackground }]}>
-                <Ionicons name="notifications-outline" size={22} color={theme.text} />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.iconBtn, { backgroundColor: theme.iconBackground }]} 
-                onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Preferences' })}
-              >
-                <Ionicons name="settings-outline" size={22} color={theme.text} />
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.iconBackground }]} onPress={toggleDarkMode}>
-                <Ionicons name={isDarkMode ? "sunny-outline" : "moon-outline"} size={22} color={theme.text} />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                activeOpacity={0.8}
-                onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
-              >
-                <View style={[styles.avatar, {marginLeft: 10}]}>
-                  <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
+          <StudentHeader 
+            title={`Welcome back, ${authState.user?.name?.split(' ')[0] || 'Student'}`}
+            navigation={navigation}
+            onMenuPress={() => setDrawerOpen(true)}
+            isDashboard={true}
+          />
 
         {/* Hero Banner */}
         <Animated.View 
@@ -668,145 +1331,6 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FAFAFF' },
-  container: { flex: 1 },
-  scrollContent: { paddingBottom: 40 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 60 : 30, paddingBottom: 24, backgroundColor: '#FAFAFF' },
-  menuHandle: { paddingRight: 10, paddingVertical: 10 },
-  headerTitle: { fontSize: 16, fontWeight: '500', color: '#4F46E5', flex: 1, textAlign: 'center', marginHorizontal: 10 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  iconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
-  avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#A855F7', justifyContent: 'center', alignItems: 'center', shadowColor: '#A855F7', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 6, elevation: 8 },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
-  heroBannerRow: { backgroundColor: '#D9DAF9', flexDirection: 'row', alignItems: 'center', paddingVertical: 24, paddingLeft: 16, paddingRight: 0, overflow: 'hidden', minHeight: 180 },
-  heroTextSide: { width: '58%', paddingRight: 8, alignItems: 'center' },
-  heroRowTitle1: { fontSize: 20, fontWeight: '800', color: '#2563EB', textAlign: 'center' },
-  heroRowTitle2: { fontSize: 20, fontWeight: '800', color: '#D946EF', textAlign: 'center' },
-  heroRowTitle3: { fontSize: 20, fontWeight: '800', color: '#7C3AED', textAlign: 'center', marginBottom: 8 },
-  heroRowSubtitle: { fontSize: 10, color: '#4B5563', lineHeight: 15, textAlign: 'center', fontWeight: '500' },
-  heroImageSide: { width: '42%', justifyContent: 'center', alignItems: 'flex-start' },
-  heroRowImage: { width: '100%', height: 140 },
-  section: { paddingHorizontal: 20, marginTop: 32 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  sectionHeaderSpaceBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
-  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center' },
-  sectionIconMargin: { marginRight: 8 },
-  sectionTitle: { fontSize: 20, fontWeight: '800', color: '#4F46E5', letterSpacing: -0.5 },
-  sectionTitleNoMargin: { fontSize: 20, fontWeight: '800', color: '#4F46E5', letterSpacing: -0.5, marginLeft: 0, marginBottom: 16 },
-  quickActionsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 },
-  quickActionCard: { width: '31%', backgroundColor: '#FFFFFF', borderRadius: 16, paddingVertical: 16, paddingHorizontal: 4, borderWidth: 1, borderColor: '#F8FAFC', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 4 },
-  quickActionTouchable: { alignItems: 'center' },
-  quickActionTitle: { fontSize: 11, fontWeight: '600', color: '#374151', marginTop: 10, textAlign: 'center' },
-  statCard: { alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 16, paddingVertical: 12, paddingHorizontal: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0', width: '31%', minHeight: 110 },
-  statTitle: { fontSize: 10, fontWeight: '700', color: '#6B7280', marginTop: 6, textAlign: 'center', width: '100%' },
-  statValue: { fontSize: 16, fontWeight: '800', color: '#1F2937', marginTop: 2 },
-  scheduleList: { gap: 12 },
-  scheduleCard: { backgroundColor: '#FFFFFF', borderRadius: 12, flexDirection: 'row', borderWidth: 1, borderColor: '#F8FAFC', paddingRight: 10, height: 80, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 4 },
-  scheduleLeftCol: { flexDirection: 'row', alignItems: 'stretch', width: 145 },
-  scheduleCardIndicator: { width: 4, borderRadius: 2, marginVertical: 4, marginLeft: 16, marginRight: 16 },
-  scheduleTimeWrapper: { flex: 1, justifyContent: 'center' },
-  scheduleTime: { fontSize: 11, fontWeight: '500', color: '#6B7280' },
-  scheduleRightCol: { flex: 1, justifyContent: 'center' },
-  schedulePillRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
-  schedulePill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
-  schedulePillText: { fontSize: 10, fontWeight: '700', color: '#FFFFFF' },
-  statusContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  scheduleStatus: { fontSize: 11, color: '#4B5563', fontWeight: '500' },
-  scheduleUpNext: { fontSize: 11, color: '#4F46E5', fontWeight: '500' },
-  ongoingContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  ongoingDot: { width: 6, height: 6, borderRadius: 3 },
-  ongoingText: { fontSize: 11, fontWeight: '700' },
-  scheduleTeacher: { fontSize: 13, fontWeight: '400', color: '#4B5563', marginBottom: 4 },
-  scheduleBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  scheduleRoom: { fontSize: 10, color: '#9CA3AF' },
-  joinClassBtn: { paddingHorizontal: 10, paddingVertical: 2, borderRadius: 4, borderWidth: 1 },
-  joinClassBtnText: { fontSize: 10, fontWeight: '600' },
-  eventList: { gap: 12 },
-  eventCard: { backgroundColor: '#FFFFFF', borderRadius: 14, flexDirection: 'row', borderWidth: 1, borderColor: '#F8FAFC', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 4 },
-  eventCardContent: { flex: 1, paddingVertical: 16, paddingHorizontal: 16 },
-  eventTitle: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 6 },
-  eventDateContainer: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  eventDateText: { fontSize: 13, color: '#9CA3AF' },
-  awardBadge: { backgroundColor: '#F97316', paddingVertical: 6, borderRadius: 16, width: 96, alignItems: 'center', justifyContent: 'center' },
-  awardBadgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
-  topRankingContainer: { backgroundColor: '#2DD4BF', borderRadius: 24, paddingVertical: 20, paddingHorizontal: 16, borderWidth: 1, borderColor: '#14B8A6' },
-  topRankingHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  topRankingHeaderEmoji: { fontSize: 18, marginRight: 8 },
-  topRankingHeaderText: { fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
-  topRankingGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  topRankCardWrapper: { width: '48%', marginBottom: 12 },
-  lastTopRankCard: { width: '48%', alignSelf: 'center' },
-  topRankCard: { backgroundColor: '#FFFFFF', borderRadius: 18, padding: 16, alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8 },
-  topRankCircle: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  topRankCircleText: { color: '#FFFFFF', fontSize: 18, fontWeight: '900' },
-  topRankName: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 2 },
-  topRankPercent: { fontSize: 14, fontWeight: '800', color: '#4F46E5', marginBottom: 6 },
-  topRankBadge: { backgroundColor: '#FACC15', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  topRankBadgeText: { fontSize: 9, fontWeight: '900', color: '#FFFFFF' },
-  helpCenterGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 },
-  helpCenterCard: { width: '48%', height: 204, backgroundColor: '#FFFFFF', borderRadius: 12, paddingVertical: 16, paddingHorizontal: 16, borderWidth: 1, borderColor: '#F8FAFC', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 4 },
-  helpIconContainer: { width: 36, height: 36, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  helpCardTitle: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 6, lineHeight: 18 },
-  helpCardDesc: { fontSize: 10, color: '#6B7280', lineHeight: 14 },
-  viewGuidesRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 'auto', borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 12 },
-  helpCardLink: { fontSize: 11, fontWeight: '700', color: '#3B82F6' },
-  faqListContainer: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 8, elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10 },
-  faqItemContainer: { borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  faqHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 12 },
-  faqAnswerContainer: { backgroundColor: '#F0FDF4', borderRadius: 12, padding: 12, marginHorizontal: 10, marginBottom: 16 },
-  faqAnswerText: { fontSize: 13, color: '#374151', lineHeight: 20 },
-  faqQuestion: { fontSize: 13, fontWeight: '600', color: '#111827', flex: 1 },
-  needHelpBanner: { paddingVertical: 24, paddingHorizontal: 20, marginHorizontal: 20, marginTop: 32, marginBottom: 40, alignItems: 'center', shadowColor: '#5A67D8', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 8, overflow: 'hidden', borderRadius: 20 },
-  needHelpTitle: { fontSize: 18, fontWeight: '700', color: '#FFFFFF', marginBottom: 8, zIndex: 2 },
-  needHelpDesc: { fontSize: 12, color: '#E0E7FF', textAlign: 'center', lineHeight: 18, marginBottom: 20, paddingHorizontal: 10, zIndex: 2 },
-  needHelpButtonsRow: { flexDirection: 'row', gap: 12, width: '100%', zIndex: 2 },
-  helpButtonOutlined: { flex: 1, paddingVertical: 10, borderRadius: 24, borderWidth: 1, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
-  helpButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 24 },
-  statIconCircle: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
-  emptyText: { fontSize: 14, color: '#6B7280', textAlign: 'center', marginTop: 20, fontWeight: '500' },
-  liveBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 20, borderLeftWidth: 4, shadowColor: '#EF4444', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5, borderWidth: 1, borderColor: '#FEE2E2' },
-  liveBannerContent: { flex: 1 },
-  liveIndicatorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  liveDot: { width: 8, height: 8, borderRadius: 4 },
-  liveText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
-  liveSubject: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  liveTeacher: { fontSize: 13, color: '#6B7280', marginTop: 2 },
-  liveJoinBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, marginLeft: 12 },
-  liveJoinBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
-  liveTrackingContainer: { height: 8, width: '100%', backgroundColor: '#FEE2E2', borderRadius: 4, overflow: 'hidden', marginTop: 10, marginBottom: 8, borderWidth: 1, borderColor: '#FECACA' },
-  liveTrackingLine: { height: '100%', backgroundColor: '#EF4444', borderRadius: 4 },
-  shimmerStreak: { position: 'absolute', top: 0, bottom: 0, width: 60, backgroundColor: 'rgba(255, 255, 255, 0.6)', zIndex: 2 },
-  iconBox: { borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-  assignmentList: { gap: 12 },
-  assignmentCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  assignIconWrapper: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#EEF2FF', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  assignContent: { flex: 1 },
-  assignSubject: { fontSize: 10, fontWeight: '700', color: '#6366F1', textTransform: 'uppercase', marginBottom: 2 },
-  assignTitle: { fontSize: 13, fontWeight: '700', color: '#1E293B', marginBottom: 4 },
-  assignFooter: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  assignDueDate: { fontSize: 11, color: '#9CA3AF', fontWeight: '500' },
-  topStudentCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  rankCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  rankText: { fontSize: 12, fontWeight: '700' },
-  topStudentInfo: { flex: 1 },
-  topStudentName: { fontSize: 13, fontWeight: '700', color: '#1F2937' },
-  topStudentClass: { fontSize: 11, color: '#6B7280' },
-  topStudentPercentage: { fontSize: 13, fontWeight: '700', color: '#10B981' },
-});
+
 
 export default StudentDashboard;

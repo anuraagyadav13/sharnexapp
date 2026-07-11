@@ -6,7 +6,9 @@ import {
   StyleSheet,
   StatusBar,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  Image,
+  TouchableOpacity,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -16,8 +18,9 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Svg, { Circle, G } from 'react-native-svg';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import { useTheme } from '../../store/ThemeContext';
+import { StudentHeader } from '../../components/StudentHeader';
+import studentService from '../../services/studentService';
 
 type QuizDetailsNavigationProp = NativeStackNavigationProp<RootStackParamList, 'QuizDetails'>;
 
@@ -26,104 +29,106 @@ interface Props {
   route: any; // Add route for params
 }
 
-const ScoreRow = ({ label, value, hideBorder = false, valueColor = '#111827' }: any) => (
-  <View style={[styles.scoreRow, hideBorder && { borderBottomWidth: 0 }]}>
-    <Text style={styles.scoreLabel}>{label}</Text>
-    <Text style={[styles.scoreValue, { color: valueColor }]}>{value}</Text>
-  </View>
-);
+const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { theme, isDarkMode, toggleDarkMode } = useTheme();
+  const styles = getStyles(theme);
 
-const ImprovementRow = ({ label, valueText, diffSign, diffColor, hideBorder = false, iconName, labelColor = '#111827' }: any) => (
-  <View style={[styles.scoreRow, hideBorder && { borderBottomWidth: 0 }]}>
-    <Text style={[styles.scoreLabel, { color: labelColor }]}>{label}</Text>
-    {diffSign ? (
-      <View style={styles.diffWrapper}>
-        <Text style={[styles.diffText, { color: diffColor }]}>{valueText}</Text>
-        <Ionicons name={iconName} size={14} color={diffColor} />
-      </View>
-    ) : (
-      <Text style={[styles.scoreValue, { color: '#000000', fontWeight: '500' }]}>{valueText}</Text>
-    )}
-  </View>
-);
-
-const TopicRow = ({ title, percent, color }: any) => (
-  <View style={styles.topicRow}>
-    <View style={styles.topicTextRow}>
-       <Text style={styles.topicName}>{title}</Text>
-       <Text style={styles.topicPercent}>{percent}%</Text>
+  const ScoreRow = ({ label, value, hideBorder = false, valueColor = theme.text }: any) => (
+    <View style={[styles.scoreRow, hideBorder && { borderBottomWidth: 0 }]}>
+      <Text style={styles.scoreLabel}>{label}</Text>
+      <Text style={[styles.scoreValue, { color: valueColor }]}>{value}</Text>
     </View>
-    <View style={styles.topicBarTrack}>
-       <View style={[styles.topicBarFill, { width: `${percent}%`, backgroundColor: color }]} />
-    </View>
-  </View>
-);
+  );
 
-const LegendItem = ({ color, label }: any) => (
-  <View style={styles.legendItem}>
-    <View style={[styles.legendSquare, { backgroundColor: color }]} />
-    <Text style={styles.legendText}>{label}</Text>
-  </View>
-);
-
-const QuestionCard = ({ number, question, status, options }: any) => {
-  const isCorrect = status === 'correct';
-  const isSkipped = status === 'skipped';
-  const cardBorderColor = isCorrect ? '#10B981' : (isSkipped ? '#9CA3AF' : '#EF4444');
-  const pillBg = isCorrect ? '#DCFCE7' : (isSkipped ? '#F3F4F6' : '#FEE2E2'); 
-  const pillColor = isCorrect ? '#10B981' : (isSkipped ? '#6B7280' : '#EF4444');
-
-  return (
-    <View style={styles.questionCard}>
-      {/* Absolute left border to avoid React Native curved border artifacts */}
-      <View style={[styles.cardLeftBorder, { backgroundColor: cardBorderColor }]} />
-      
-      <View style={styles.questionHeader}>
-        <Text style={styles.questionText}>
-          {number}. {question}
-        </Text>
-        <View style={[styles.statusPill, { backgroundColor: pillBg }]}>
-          <Text style={[styles.statusPillText, { color: pillColor }]}>
-            {isCorrect ? 'Correct' : (isSkipped ? 'Skipped' : 'Incorrect')}
-          </Text>
+  const ImprovementRow = ({ label, valueText, diffSign, diffColor, hideBorder = false, iconName, labelColor = theme.text }: any) => (
+    <View style={[styles.scoreRow, hideBorder && { borderBottomWidth: 0 }]}>
+      <Text style={[styles.scoreLabel, { color: labelColor }]}>{label}</Text>
+      {diffSign ? (
+        <View style={styles.diffWrapper}>
+          <Text style={[styles.diffText, { color: diffColor }]}>{valueText}</Text>
+          <Ionicons name={iconName} size={14} color={diffColor} />
         </View>
+      ) : (
+        <Text style={[styles.scoreValue, { color: theme.text, fontWeight: '500' }]}>{valueText}</Text>
+      )}
+    </View>
+  );
+
+  const TopicRow = ({ title, percent, color }: any) => (
+    <View style={styles.topicRow}>
+      <View style={styles.topicTextRow}>
+         <Text style={styles.topicName}>{title}</Text>
+         <Text style={styles.topicPercent}>{percent}%</Text>
       </View>
-
-      <View style={styles.optionsBox}>
-        <Text style={styles.optionsTitle}>Options</Text>
-        {options.map((opt: any, index: number) => {
-          let bg = '#FFFFFF';
-          let border = '#E5E7EB';
-          let letterBg = '#F3F4F6';
-          let letterColor = '#111827';
-
-          if (opt.state === 'correct') {
-            bg = '#DCFCE7';
-            border = '#10B981';
-            letterBg = '#10B981';
-            letterColor = '#FFFFFF';
-          } else if (opt.state === 'incorrect') {
-            bg = '#FEE2E2';
-            border = '#EF4444';
-            letterBg = '#EF4444';
-            letterColor = '#FFFFFF';
-          }
-
-          return (
-            <View key={index} style={[styles.optionItem, { backgroundColor: bg, borderColor: border }]}>
-               <View style={[styles.optionLetterBox, { backgroundColor: letterBg }]}>
-                 <Text style={[styles.optionLetterText, { color: letterColor }]}>{opt.letter}</Text>
-               </View>
-               <Text style={styles.optionText}>{opt.text}</Text>
-            </View>
-          );
-        })}
+      <View style={styles.topicBarTrack}>
+         <View style={[styles.topicBarFill, { width: `${percent}%`, backgroundColor: color }]} />
       </View>
     </View>
   );
-};
 
-const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
+  const LegendItem = ({ color, label }: any) => (
+    <View style={styles.legendItem}>
+      <View style={[styles.legendSquare, { backgroundColor: color }]} />
+      <Text style={styles.legendText}>{label}</Text>
+    </View>
+  );
+
+  const QuestionCard = ({ number, question, status, options }: any) => {
+    const isCorrect = status === 'correct';
+    const isSkipped = status === 'skipped';
+    const cardBorderColor = isCorrect ? '#10B981' : (isSkipped ? '#9CA3AF' : '#EF4444');
+    const pillBg = isCorrect ? (isDarkMode ? '#065F4630' : '#DCFCE7') : (isSkipped ? (isDarkMode ? '#334155' : '#F3F4F6') : (isDarkMode ? '#7F1D1D30' : '#FEE2E2')); 
+    const pillColor = isCorrect ? (isDarkMode ? '#34D399' : '#10B981') : (isSkipped ? (isDarkMode ? '#94A3B8' : '#6B7280') : (isDarkMode ? '#FCA5A5' : '#EF4444'));
+
+    return (
+      <View style={styles.questionCard}>
+        {/* Absolute left border to avoid React Native curved border artifacts */}
+        <View style={[styles.cardLeftBorder, { backgroundColor: cardBorderColor }]} />
+        
+        <View style={styles.questionHeader}>
+          <Text style={styles.questionText}>
+            {number}. {question}
+          </Text>
+          <View style={[styles.statusPill, { backgroundColor: pillBg }]}>
+            <Text style={[styles.statusPillText, { color: pillColor }]}>
+              {isCorrect ? 'Correct' : (isSkipped ? 'Skipped' : 'Incorrect')}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.optionsBox}>
+          <Text style={styles.optionsTitle}>Options</Text>
+          {options.map((opt: any, index: number) => {
+            let bg = theme.surface;
+            let border = theme.border;
+            let letterBg = isDarkMode ? '#334155' : '#F3F4F6';
+            let letterColor = theme.text;
+
+            if (opt.state === 'correct') {
+              bg = isDarkMode ? '#065F4630' : '#DCFCE7';
+              border = '#10B981';
+              letterBg = '#10B981';
+              letterColor = '#FFFFFF';
+            } else if (opt.state === 'incorrect') {
+              bg = isDarkMode ? '#7F1D1D30' : '#FEE2E2';
+              border = '#EF4444';
+              letterBg = '#EF4444';
+              letterColor = '#FFFFFF';
+            }
+
+            return (
+              <View key={index} style={[styles.optionItem, { backgroundColor: bg, borderColor: border }]}>
+                 <View style={[styles.optionLetterBox, { backgroundColor: letterBg }]}>
+                   <Text style={[styles.optionLetterText, { color: letterColor }]}>{opt.letter}</Text>
+                 </View>
+                 <Text style={styles.optionText}>{opt.text}</Text>
+              </View>
+            );
+          })}
+        </View>
+      </View>
+    );
+  };
   const { authState } = useAuth();
   const [activeTab, setActiveTab] = useState('topic');
   const [quizData, setQuizData] = useState<any>(null);
@@ -145,25 +150,25 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           return;
         }
 
-        const res = await apiClient.get(ENDPOINTS.STUDENT.QUIZ_DETAILS(quizId));
+        const res = await studentService.getQuizDetails(quizId);
         const responseData = res.normalized?.data ?? res.data?.data ?? null;
         
         // If the student has already attempted, get the result as well
         if (responseData?.hasAttempt || responseData?.derivedStatus === 'completed') {
            try {
-             const resultRes = await apiClient.get(ENDPOINTS.STUDENT.QUIZ_RESULT(quizId));
-             const resultData = resultRes.normalized?.data;
-             if (resultData) {
-               // Merge result statistics into quiz data for rendering
-               setQuizData({
-                 ...responseData,
-                 ...resultData.statistics,
-                 attempt: resultData.attempt
-               });
-               return;
-             }
+              const resultRes = await studentService.getQuizResult(quizId);
+              const resultData = resultRes.normalized?.data;
+              if (resultData) {
+                // Merge result statistics into quiz data for rendering
+                setQuizData({
+                  ...responseData,
+                  ...resultData.statistics,
+                  attempt: resultData.attempt
+                });
+                return;
+              }
            } catch (resErr) {
-             console.error('Could not fetch quiz result for details:', resErr);
+              console.error('Could not fetch quiz result for details:', resErr);
            }
         }
         
@@ -188,7 +193,7 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
         const quizId = route?.params?.quizId;
         if (!quizId) return;
 
-        const res = await apiClient.get(ENDPOINTS.STUDENT.QUIZ_ANALYSIS(quizId));
+        const res = await studentService.getQuizAnalysis(quizId);
         const data = res.normalized?.data;
         if (data) {
           setAnalysisData(data);
@@ -487,12 +492,22 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
 
   if (error && !quizData) {
     return (
-      <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }]}>
-        <Ionicons name="alert-circle" size={64} color="#EF4444" style={{ marginBottom: 16 }} />
-        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', textAlign: 'center' }}>Unable to Load Quiz Details</Text>
-        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>{error}</Text>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={styles.loadingText}>Loading quiz analysis...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+        <Text style={styles.errorText}>{error}</Text>
         <ScaleButton
-          style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
+          style={styles.retryButton}
+          activeOpacity={0.8}
+          scaleTo={0.95}
           onPress={() => {
             setError(null);
             setIsLoading(true);
@@ -503,7 +518,7 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
                   setError('Quiz ID not found');
                   return;
                 }
-                const res = await apiClient.get(ENDPOINTS.STUDENT.QUIZ_DETAILS(quizId));
+                const res = await studentService.getQuizDetails(quizId);
                 const responseData = res.normalized?.data ?? null;
                 setQuizData(responseData);
               } catch (err: any) {
@@ -514,7 +529,6 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
             };
             fetchQuizDetails();
           }}
-          scaleTo={0.95}
         >
           <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
         </ScaleButton>
@@ -524,23 +538,14 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFF" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
-         <ScaleButton style={styles.menuHandle} onPress={() => navigation.goBack()}>
-           <Ionicons name="arrow-back" size={22} color="#1F2937" />
-         </ScaleButton>
-         <Text style={styles.headerTitle} numberOfLines={1}>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
-         <View style={styles.headerRight}>
-           <Ionicons name="notifications-outline" size={20} color="#1F2937" />
-           <Ionicons name="settings-outline" size={20} color="#1F2937" />
-           <Ionicons name="moon-outline" size={20} color="#1F2937" />
-           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
-           </View>
-         </View>
-      </View>
+      <StudentHeader 
+        title="Quiz Details"
+        navigation={navigation}
+        isStackScreen={true}
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
         
@@ -620,8 +625,8 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FAFAFF' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 
   globalHeader: {
@@ -631,16 +636,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40, 
     paddingBottom: 12,
-    backgroundColor: '#FAFAFF',
+    backgroundColor: theme.surface,
   },
   menuHandle: { paddingRight: 10, paddingVertical: 10 },
-  headerTitle: { fontSize: 14, fontWeight: '500', color: '#4F46E5', flex: 1, textAlign: 'center' },
+  headerTitle: { fontSize: 14, fontWeight: '500', color: theme.primary, flex: 1, textAlign: 'center' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#A855F7', justifyContent: 'center', alignItems: 'center', marginLeft: 4 },
+  avatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center', marginLeft: 4 },
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
 
   heroContainer: {
-    backgroundColor: '#4F46E5', 
+    backgroundColor: theme.primary, 
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 36, 
@@ -654,11 +659,11 @@ const styles = StyleSheet.create({
   contentWrapper: { paddingHorizontal: 16, marginTop: 16 },
 
   infoCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     borderTopWidth: 4,
-    borderTopColor: '#3B82F6', 
-    borderLeftWidth: 1, borderRightWidth: 1, borderBottomWidth: 1, borderColor: '#E5E7EB',
+    borderTopColor: theme.primary, 
+    borderLeftWidth: 1, borderRightWidth: 1, borderBottomWidth: 1, borderColor: theme.border,
     paddingHorizontal: 16,
     paddingVertical: 14,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 4,
@@ -666,9 +671,9 @@ const styles = StyleSheet.create({
   },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   infoLeft: { flex: 1, marginRight: 10 },
-  infoTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 8 },
+  infoTitle: { fontSize: 16, fontWeight: '700', color: theme.text, marginBottom: 8 },
   infoMetaRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  infoMetaText: { fontSize: 11, color: '#6B7280', fontWeight: '400' },
+  infoMetaText: { fontSize: 11, color: theme.subtext, fontWeight: '400' },
 
   infoRight: { alignItems: 'center', width: 80 },
   scoreRing: {
@@ -676,15 +681,15 @@ const styles = StyleSheet.create({
     borderWidth: 4, borderColor: '#818CF8', 
     justifyContent: 'center', alignItems: 'center', marginBottom: 8,
   },
-  ringValue: { fontSize: 14, fontWeight: '800', color: '#111827' },
-  ringLabel: { fontSize: 10, fontWeight: '600', color: '#111827' },
-  correctAnswersText: { fontSize: 9, fontWeight: '700', color: '#111827', textAlign: 'center' },
+  ringValue: { fontSize: 14, fontWeight: '800', color: theme.text },
+  ringLabel: { fontSize: 10, fontWeight: '600', color: theme.text },
+  correctAnswersText: { fontSize: 9, fontWeight: '700', color: theme.text, textAlign: 'center' },
 
   detailsGlobalCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     borderWidth: 1, 
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -697,30 +702,30 @@ const styles = StyleSheet.create({
   tabsContainer: { 
     flexDirection: 'row', 
     borderBottomWidth: 1, 
-    borderBottomColor: '#E5E7EB', 
-    backgroundColor: '#FFFFFF' 
+    borderBottomColor: theme.border, 
+    backgroundColor: theme.surface 
   },
   tabItem: { 
     flex: 1, 
     justifyContent: 'center',
     alignItems: 'center', 
     paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
     paddingHorizontal: 4,
   },
   tabActiveBg: { 
-    backgroundColor: '#F8FAFC', 
-    borderBottomColor: '#3B82F6' 
+    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F8FAFC', 
+    borderBottomColor: theme.primary 
   },
-  tabText: { fontSize: 10, fontWeight: '600', color: '#6B7280', textAlign: 'center' },
-  tabTextActive: { color: '#3B82F6' },
+  tabText: { fontSize: 10, fontWeight: '600', color: theme.subtext, textAlign: 'center' },
+  tabTextActive: { color: theme.primary },
 
-  detailsGlobalBody: { padding: 16, gap: 16, backgroundColor: '#FFFFFF' },
+  detailsGlobalBody: { padding: 16, gap: 16, backgroundColor: theme.surface },
 
   sectionCard: {
-    backgroundColor: '#FFFFFF', 
+    backgroundColor: theme.surface, 
     borderRadius: 8,
     padding: 16, 
     shadowColor: '#1E293B',
@@ -729,45 +734,45 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 4,
     borderWidth: 1,
-    borderColor: '#F1F5F9', // crisp boundary
+    borderColor: theme.border, 
   },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#4F46E5', marginBottom: 12 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: theme.primary, marginBottom: 12 },
   
   // Custom Topic Tab Styles
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  sectionTitleNoMargin: { fontSize: 16, fontWeight: '700', color: '#4F46E5' },
+  sectionTitleNoMargin: { fontSize: 16, fontWeight: '700', color: theme.primary },
   
   topicList: {},
   topicRow: { marginBottom: 12 },
   topicTextRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  topicName: { fontSize: 11, color: '#111827', fontWeight: '600' },
-  topicPercent: { fontSize: 11, color: '#4F46E5', fontWeight: '700' },
-  topicBarTrack: { height: 6, backgroundColor: '#E5E7EB', borderRadius: 3, overflow: 'hidden' },
+  topicName: { fontSize: 11, color: theme.text, fontWeight: '600' },
+  topicPercent: { fontSize: 11, color: theme.primary, fontWeight: '700' },
+  topicBarTrack: { height: 6, backgroundColor: theme.isDarkMode ? '#334155' : '#E5E7EB', borderRadius: 3, overflow: 'hidden' },
   topicBarFill: { height: '100%', borderRadius: 3 },
 
   strengthsWrapper: { flexDirection: 'row', gap: 12 },
   strengthBox: { flex: 1, borderRadius: 8, padding: 12 },
   strengthBoxHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 4 },
   strengthBoxTitle: { fontSize: 11, fontWeight: '700' },
-  strengthBullet: { fontSize: 9, color: '#6B7280', marginBottom: 4, lineHeight: 12 },
+  strengthBullet: { fontSize: 9, color: theme.subtext, marginBottom: 4, lineHeight: 12 },
 
   recommendationsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  recoCardWide: { width: '31%', backgroundColor: '#EFF6FF', borderRadius: 6, padding: 10 },
+  recoCardWide: { width: '31%', backgroundColor: theme.isDarkMode ? '#1E3A8A30' : '#EFF6FF', borderRadius: 6, padding: 10 },
   recoPriority: { fontSize: 9, fontWeight: '700', marginBottom: 4 },
-  recoText: { fontSize: 10, color: '#4B5563', lineHeight: 14 },
+  recoText: { fontSize: 10, color: theme.subtext, lineHeight: 14 },
 
   distributionWrapper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 32, paddingVertical: 10 },
   chartContainer: { width: 120, height: 120 },
   chartLegend: { justifyContent: 'center' },
   legendItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   legendSquare: { width: 8, height: 8, borderRadius: 2, marginRight: 8 },
-  legendText: { fontSize: 10, color: '#4B5563', fontWeight: '500' },
+  legendText: { fontSize: 10, color: theme.subtext, fontWeight: '500' },
 
   // Shared Styles
   tableWrapper: { width: '100%' },
-  scoreRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
-  scoreLabel: { fontSize: 12, color: '#111827', fontWeight: '500' },
-  scoreValue: { fontSize: 12, fontWeight: '500', color: '#111827' },
+  scoreRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: theme.border },
+  scoreLabel: { fontSize: 12, color: theme.text, fontWeight: '500' },
+  scoreValue: { fontSize: 12, fontWeight: '500', color: theme.text },
   diffWrapper: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   diffText: { fontSize: 12, fontWeight: '500' },
 
@@ -780,7 +785,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   activeFilterPill: {
-    backgroundColor: '#4F46E5', // Distinct blue-purple theme color matching SS2 exactly
+    backgroundColor: theme.primary, 
     borderRadius: 20,
     paddingHorizontal: 10, 
     paddingVertical: 6,   
@@ -791,19 +796,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   inactiveFilterPill: {
-    backgroundColor: '#F1F5F9', // softer grey background matching SS2 exactly
+    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F1F5F9', 
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   inactiveFilterPillText: {
-    color: '#6B7280',
+    color: theme.subtext,
     fontSize: 9,
     fontWeight: '600',
   },
 
   questionCard: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F8FAFC',
     borderRadius: 12,
     marginBottom: 16,
     padding: 16,
@@ -826,7 +831,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
     lineHeight: 18,
     marginRight: 10,
   },
@@ -841,14 +846,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   optionsBox: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 8,
     padding: 12,
   },
   optionsTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#3B82F6',
+    color: theme.primary,
     marginBottom: 12,
   },
   optionItem: {
@@ -874,7 +879,7 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 12,
-    color: '#111827',
+    color: theme.text,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -894,9 +899,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderRadius: 8,
     paddingVertical: 10,
     shadowColor: '#000',
@@ -908,7 +913,7 @@ const styles = StyleSheet.create({
   analysisNavBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#4F46E5',
+    color: theme.primary,
   },
   analysisPageIndicator: {
     paddingHorizontal: 12,
@@ -916,7 +921,7 @@ const styles = StyleSheet.create({
   analysisPageText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#6B7280',
+    color: theme.subtext,
   },
 
   // Disabled States
@@ -924,12 +929,46 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   disabledBtnText: {
-    color: '#9CA3AF',
+    color: theme.subtext,
   },
   emptyText: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: theme.subtext,
     marginTop: 8,
+  },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.background,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: theme.subtext,
+    fontWeight: '500',
+  },
+
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.background,
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#EF4444',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: theme.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
   },
 });
 

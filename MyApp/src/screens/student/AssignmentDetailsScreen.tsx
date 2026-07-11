@@ -7,6 +7,8 @@ import {
   StatusBar,
   Dimensions,
   ActivityIndicator,
+  Image,
+  TouchableOpacity,
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -15,8 +17,9 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import { useTheme } from '../../store/ThemeContext';
+import { StudentHeader } from '../../components/StudentHeader';
+import studentService from '../../services/studentService';
 
 type AssignmentDetailsNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AssignmentDetails'>;
 
@@ -25,41 +28,40 @@ interface Props {
   route?: any;
 }
 
-const BulletPoint = ({ text }: { text: string }) => (
-  <View style={styles.bulletRow}>
-    <Text style={styles.bulletDot}>•</Text>
-    <Text style={styles.bulletText}>{text}</Text>
-  </View>
-);
-
-const AttachmentItem = ({ title, meta }: { title: string, meta: string }) => (
-  <ScaleButton style={styles.attachmentItem} activeOpacity={0.8} scaleTo={0.98}>
-    <View style={styles.pdfIconContainer}>
-      <MaterialCommunityIcons name="file-pdf-box" size={28} color="#FFFFFF" />
-      {/* The reference shows a blue icon with 'PDF' inside. 
-          We use file-pdf-box from MaterialCommunityIcons as a close match, 
-          placed inside a rounded-rect blue box. */}
-    </View>
-    <View style={styles.attachmentTextCol}>
-      <Text style={styles.attachmentTitle}>{title}</Text>
-      <Text style={styles.attachmentMeta}>{meta}</Text>
-    </View>
-  </ScaleButton>
-);
-
 const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { theme, isDarkMode, toggleDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const { authState } = useAuth();
   const assignmentId = route?.params?.assignmentId;
   const [assignmentData, setAssignmentData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const BulletPoint = ({ text }: { text: string }) => (
+    <View style={styles.bulletRow}>
+      <Text style={styles.bulletDot}>•</Text>
+      <Text style={styles.bulletText}>{text}</Text>
+    </View>
+  );
+
+  const AttachmentItem = ({ title, meta }: { title: string, meta: string }) => (
+    <ScaleButton style={styles.attachmentItem} activeOpacity={0.8} scaleTo={0.98}>
+      <View style={styles.pdfIconContainer}>
+        <MaterialCommunityIcons name="file-pdf-box" size={28} color="#FFFFFF" />
+      </View>
+      <View style={styles.attachmentTextCol}>
+        <Text style={styles.attachmentTitle}>{title}</Text>
+        <Text style={styles.attachmentMeta}>{meta}</Text>
+      </View>
+    </ScaleButton>
+  );
+
   useEffect(() => {
     const fetchAssignmentDetails = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const res = await apiClient.get(ENDPOINTS.STUDENT.ASSIGNMENT_DETAIL(assignmentId));
+        const res = await studentService.getAssignmentDetails(assignmentId);
         const data = res.data.assignment || res.data.data || res.data;
         setAssignmentData(data);
       } catch (error: any) {
@@ -76,20 +78,14 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   }, [assignmentId]);
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <Text style={styles.globalHeaderTitle} numberOfLines={1}>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
-        <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
-          </View>
-        </View>
-      </View>
+      <StudentHeader 
+        title="Assignment Details"
+        navigation={navigation}
+        isStackScreen={true}
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
@@ -186,7 +182,7 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
                 <>
                   <View style={{ height: 16 }} />
                   <Text style={styles.sectionSubtitle}>Description</Text>
-                  <Text style={{ fontSize: 11, color: '#6B7280', lineHeight: 16 }}>
+                  <Text style={{ fontSize: 11, color: theme.subtext, lineHeight: 16 }}>
                     {assignmentData.description}
                   </Text>
                 </>
@@ -256,8 +252,8 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
 
   globalHeader: {
     flexDirection: 'row',
@@ -266,12 +262,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 60, // Adjust for iOS statusbar
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
   },
   globalHeaderTitle: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#4F46E5',
+    color: theme.primary,
     marginRight: 'auto', // Pushes icons to the right
     marginLeft: 32, // To balance and match the screenshot
   },
@@ -280,7 +276,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -291,7 +287,7 @@ const styles = StyleSheet.create({
   },
 
   heroSection: {
-    backgroundColor: '#4F46E5', // Distinct blue from screenshot
+    backgroundColor: theme.primary, // Distinct blue from screenshot
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 32,
@@ -326,7 +322,7 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 20, // richer, modern curve
     paddingVertical: 22,
     paddingHorizontal: 20,
@@ -336,7 +332,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 4,
     borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.6)', // very subtle, rich translucent border
+    borderColor: theme.border, // very subtle, rich translucent border
   },
   cardHeader: {
     flexDirection: 'row',
@@ -347,7 +343,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: theme.isDarkMode ? '#1E3A8A' : '#EFF6FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
@@ -355,11 +351,11 @@ const styles = StyleSheet.create({
   cardHeaderTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
   separator: {
     height: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: theme.border,
     marginBottom: 16,
     marginHorizontal: -20, // stretch to edges
   },
@@ -368,12 +364,12 @@ const styles = StyleSheet.create({
   assignmentTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 4,
   },
   assignmentMeta: {
     fontSize: 11,
-    color: '#6B7280',
+    color: theme.subtext,
     marginBottom: 20,
   },
   infoGrid: {
@@ -386,20 +382,20 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 10,
-    color: '#9CA3AF',
+    color: theme.subtext,
     marginBottom: 4,
     fontWeight: '500',
   },
   infoValue: {
     fontSize: 13,
-    color: '#111827',
+    color: theme.text,
     fontWeight: '600',
   },
 
   sectionSubtitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 10,
   },
   bulletRow: {
@@ -409,13 +405,13 @@ const styles = StyleSheet.create({
   },
   bulletDot: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.subtext,
     marginRight: 6,
     lineHeight: 18,
   },
   bulletText: {
     fontSize: 11,
-    color: '#6B7280',
+    color: theme.subtext,
     flex: 1,
     lineHeight: 16,
   },
@@ -427,16 +423,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#F8FAFC', // exact subtle blueish-grey fill
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F8FAFC', // exact subtle blueish-grey fill
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#EFF6FF',
+    borderColor: theme.border,
   },
   pdfIconContainer: {
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: '#4F46E5', // blue icon background
+    backgroundColor: theme.primary, // blue icon background
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -447,12 +443,12 @@ const styles = StyleSheet.create({
   attachmentTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 2,
   },
   attachmentMeta: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.subtext,
   },
   viewGradeBtn: {
     backgroundColor: '#00C48C',

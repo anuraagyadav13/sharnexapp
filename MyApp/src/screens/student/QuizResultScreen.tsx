@@ -6,7 +6,9 @@ import {
   StyleSheet,
   StatusBar,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  Image,
+  TouchableOpacity,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -14,8 +16,9 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import { useTheme } from '../../store/ThemeContext';
+import { StudentHeader } from '../../components/StudentHeader';
+import studentService from '../../services/studentService';
 
 type QuizResultNavigationProp = NativeStackNavigationProp<RootStackParamList, 'QuizResult'>;
 
@@ -25,6 +28,8 @@ interface Props {
 }
 
 const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { theme, isDarkMode, toggleDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const { authState } = useAuth();
   const [quizResult, setQuizResult] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,7 +46,7 @@ const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
           return;
         }
 
-        const res = await apiClient.get(ENDPOINTS.STUDENT.QUIZ_RESULT(quizId));
+        const res = await studentService.getQuizResult(quizId);
         const responseData = res.normalized?.data ?? null;
         setQuizResult(responseData);
       } catch (err: any) {
@@ -62,17 +67,17 @@ const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
     let mainTextStyle: any = styles.optionTextMain;
 
     if (state === 'correct-selected') {
-      boxStyle = [styles.optionItem, { borderColor: '#4F46E5', backgroundColor: '#EEF2FF' }];
-      circleStyle = [styles.optionLetterBox, { backgroundColor: '#4F46E5' }];
+      boxStyle = [styles.optionItem, { borderColor: isDarkMode ? '#312E81' : theme.primary, backgroundColor: isDarkMode ? '#1E1B4B' : '#EEF2FF' }];
+      circleStyle = [styles.optionLetterBox, { backgroundColor: theme.primary }];
       circleTextStyle = [styles.optionLetterText, { color: '#FFFFFF' }];
-      mainTextStyle = [styles.optionTextMain, { color: '#4F46E5', fontWeight: '700' }];
+      mainTextStyle = [styles.optionTextMain, { color: theme.primary, fontWeight: '700' }];
     } else if (state === 'right-answer') {
-      boxStyle = [styles.optionItem, { borderColor: '#10B981', backgroundColor: '#ECFDF5' }];
+      boxStyle = [styles.optionItem, { borderColor: '#10B981', backgroundColor: isDarkMode ? '#065F4630' : '#ECFDF5' }];
       circleStyle = [styles.optionLetterBox, { backgroundColor: '#10B981' }];
       circleTextStyle = [styles.optionLetterText, { color: '#FFFFFF' }];
       mainTextStyle = [styles.optionTextMain, { color: '#10B981', fontWeight: '700' }];
     } else if (state === 'wrong-selected') {
-      boxStyle = [styles.optionItem, { borderColor: '#F43F5E', backgroundColor: '#FFF1F2' }];
+      boxStyle = [styles.optionItem, { borderColor: '#F43F5E', backgroundColor: isDarkMode ? '#7F1D1D30' : '#FFF1F2' }];
       circleStyle = [styles.optionLetterBox, { backgroundColor: '#F43F5E' }];
       circleTextStyle = [styles.optionLetterText, { color: '#FFFFFF' }];
       mainTextStyle = [styles.optionTextMain, { color: '#F43F5E', fontWeight: '700' }];
@@ -91,7 +96,7 @@ const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
   if (isLoading && !quizResult) {
     return (
       <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -100,23 +105,19 @@ const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
     return (
       <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }]}>
         <Ionicons name="alert-circle" size={64} color="#EF4444" style={{ marginBottom: 16 }} />
-        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', textAlign: 'center' }}>Unable to Load Quiz Results</Text>
-        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>{error}</Text>
+        <Text style={{ fontSize: 16, fontWeight: '700', color: theme.text, textAlign: 'center' }}>Unable to Load Results</Text>
+        <Text style={{ fontSize: 13, color: theme.subtext, textAlign: 'center', marginTop: 8 }}>{error}</Text>
         <ScaleButton
-          style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
+          style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: theme.primary, borderRadius: 8 }}
           onPress={() => {
             setError(null);
             setIsLoading(true);
             const fetchQuizResult = async () => {
               try {
                 const quizId = route?.params?.quizId;
-                if (!quizId) {
-                  setError('Quiz ID not found');
-                  return;
-                }
-                const res = await apiClient.get(ENDPOINTS.STUDENT.QUIZ_RESULT(quizId));
-                const responseData = res.normalized?.data ?? null;
-                setQuizResult(responseData);
+                if (!quizId) throw new Error('Quiz ID not found');
+                 const res = await studentService.getQuizResult(quizId);
+                setQuizResult(res.data?.data || res.data);
               } catch (err: any) {
                 setError('Failed to load quiz results. Please try again.');
               } finally {
@@ -135,23 +136,14 @@ const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFF" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
-         <ScaleButton style={styles.menuHandle} onPress={() => navigation.goBack()}>
-           <Ionicons name="arrow-back" size={22} color="#1F2937" />
-         </ScaleButton>
-         <Text style={styles.headerTitle} numberOfLines={1}>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
-         <View style={styles.headerRight}>
-           <Ionicons name="notifications-outline" size={20} color="#1F2937" />
-           <Ionicons name="settings-outline" size={20} color="#1F2937" />
-           <Ionicons name="moon-outline" size={20} color="#1F2937" />
-           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
-           </View>
-         </View>
-      </View>
+      <StudentHeader 
+        title="Quiz Result"
+        navigation={navigation}
+        isStackScreen={true}
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
         
@@ -265,10 +257,10 @@ const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
               </View>
 
               {/* Result Tag */}
-              <View style={[styles.resultFeedbackPill, {backgroundColor: question.isCorrect ? '#D1FAE5' : '#FFE4E6'}]}>
+              <View style={[styles.resultFeedbackPill, {backgroundColor: question.isCorrect ? (isDarkMode ? '#065F4630' : '#D1FAE5') : (isDarkMode ? '#7F1D1D30' : '#FFE4E6')}]}>
                  <Ionicons name={question.isCorrect ? "checkmark-circle" : "close-circle"} size={14} color={question.isCorrect ? "#10B981" : "#F43F5E"} style={{marginRight: 4}} />
                  <Text style={[styles.resultFeedbackText, {color: question.isCorrect ? '#10B981' : '#F43F5E'}]}>
-                   Your Answer: {question.submittedAnswer || 'Skipped'} - {question.isCorrect ? 'Correct!' : 'Incorrect!'}
+                    Your Answer: {question.submittedAnswer || 'Skipped'} - {question.isCorrect ? 'Correct!' : 'Incorrect!'}
                  </Text>
               </View>
             </Animated.View>
@@ -285,7 +277,7 @@ const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
           <Animated.View entering={FadeInUp.delay(350).springify()} style={styles.actionFooter}>
              
              <View style={styles.splitButtonsRow}>
-                <ScaleButton style={[styles.footerBtnHalf, {backgroundColor: '#4F46E5'}]} activeOpacity={0.8} scaleTo={0.95} onPress={() => navigation.navigate('QuizDetails', { quizId: route?.params?.quizId })}>
+                <ScaleButton style={[styles.footerBtnHalf, {backgroundColor: theme.primary}]} activeOpacity={0.8} scaleTo={0.95} onPress={() => navigation.navigate('QuizDetails', { quizId: route?.params?.quizId })}>
                    <Ionicons name="bar-chart-outline" size={16} color="#FFFFFF" style={{marginRight: 6}} />
                    <Text style={styles.footerBtnHalfText}>View Analytics</Text>
                 </ScaleButton>
@@ -297,7 +289,7 @@ const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
              </View>
 
              <ScaleButton style={styles.backBtnFull} activeOpacity={0.8} scaleTo={0.96} onPress={() => navigation.goBack()}>
-                <Ionicons name="arrow-back" size={18} color="#4F46E5" style={{marginRight: 8}} />
+                <Ionicons name="arrow-back" size={18} color={theme.primary} style={{marginRight: 8}} />
                 <Text style={styles.backBtnFullText}>Back To Quiz</Text>
              </ScaleButton>
              
@@ -309,8 +301,8 @@ const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FAF9F9' }, 
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background }, 
   scrollContent: { paddingBottom: 40 },
 
   globalHeader: {
@@ -320,16 +312,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40, 
     paddingBottom: 12,
-    backgroundColor: '#FAFAFF', 
+    backgroundColor: theme.surface, 
   },
   menuHandle: { paddingRight: 10, paddingVertical: 10 },
-  headerTitle: { fontSize: 14, fontWeight: '500', color: '#4F46E5', flex: 1, textAlign: 'center' },
+  headerTitle: { fontSize: 14, fontWeight: '500', color: theme.primary, flex: 1, textAlign: 'center' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#A855F7', justifyContent: 'center', alignItems: 'center', marginLeft: 4 },
+  avatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center', marginLeft: 4 },
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
 
   heroContainer: {
-    backgroundColor: '#4E5EEE', 
+    backgroundColor: theme.primary, 
     paddingHorizontal: 20,
     paddingTop: 24, 
     paddingBottom: 36, 
@@ -341,23 +333,23 @@ const styles = StyleSheet.create({
   heroRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   heroSubtitle: { fontSize: 11, color: '#E0E7FF', fontWeight: '500' },
   completedBadge: { backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  completedBadgeText: { color: '#4E5EEE', fontSize: 10, fontWeight: '700' },
+  completedBadgeText: { color: theme.primary, fontSize: 10, fontWeight: '700' },
 
   contentWrapper: { paddingHorizontal: 16, marginTop: 16 }, 
 
   summaryCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, paddingBottom: 24,
+    backgroundColor: theme.surface, borderRadius: 16, padding: 20, paddingBottom: 24,
     shadowColor: '#1E293B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3,
-    marginBottom: 24, borderWidth: 1, borderColor: '#F1F5F9',
+    marginBottom: 24, borderWidth: 1, borderColor: theme.border,
     alignItems: 'center',
   },
   ringWrapper: { marginBottom: 12 },
   scoreRing: { 
     width: 86, height: 86, borderRadius: 43, borderWidth: 6, borderColor: '#05D59A',
-    justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' 
+    justifyContent: 'center', alignItems: 'center', backgroundColor: theme.surface 
   },
-  scoreNumberMain: { fontSize: 18, fontWeight: '800', color: '#111827' },
-  scoreNumberSub: { fontSize: 10, fontWeight: '500', color: '#6B7280' },
+  scoreNumberMain: { fontSize: 18, fontWeight: '800', color: theme.text },
+  scoreNumberSub: { fontSize: 10, fontWeight: '500', color: theme.subtext },
   
   performancePill: { backgroundColor: '#05D59A', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 16, marginBottom: 24 },
   performancePillText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
@@ -365,19 +357,19 @@ const styles = StyleSheet.create({
   statsGridRow: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 10, gap: 10 },
   statsGridCol: { 
     flex: 1, alignItems: 'center', justifyContent: 'center', 
-    backgroundColor: '#FAF9F9', borderWidth: 1, borderColor: '#F3F4F6',
+    backgroundColor: theme.isDarkMode ? '#1E293B' : '#FAF9F9', borderWidth: 1, borderColor: theme.border,
     borderRadius: 8, paddingVertical: 14 
   },
-  statsGridVal: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
-  statsGridLbl: { fontSize: 9, color: '#6B7280', fontWeight: '500' },
+  statsGridVal: { fontSize: 15, fontWeight: '700', color: theme.text, marginBottom: 2 },
+  statsGridLbl: { fontSize: 9, color: theme.subtext, fontWeight: '500' },
 
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, paddingHorizontal: 4 },
-  sectionTitleText: { fontSize: 16, fontWeight: '700', color: '#4F46E5', marginLeft: 8 },
+  sectionTitleText: { fontSize: 16, fontWeight: '700', color: theme.primary, marginLeft: 8 },
 
   questionCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16,
+    backgroundColor: theme.surface, borderRadius: 12, padding: 16,
     shadowColor: '#1E293B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4,
-    marginBottom: 20, borderWidth: 1, borderColor: '#F1F5F9',
+    marginBottom: 20, borderWidth: 1, borderColor: theme.border,
     borderLeftWidth: 4, 
   },
   cardBorderCorrect: { borderLeftColor: '#05D59A' },
@@ -385,26 +377,26 @@ const styles = StyleSheet.create({
 
   questionHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 20 },
   questionNumberCircle: {
-    width: 24, height: 24, borderRadius: 12, backgroundColor: '#4F46E5',
+    width: 24, height: 24, borderRadius: 12, backgroundColor: theme.primary,
     justifyContent: 'center', alignItems: 'center', marginRight: 12, marginTop: 2,
   },
   questionNumberText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
-  questionMainText: { flex: 1, fontSize: 12, fontWeight: '700', color: '#111827', lineHeight: 18, marginRight: 8 },
-  pointsBadge: { backgroundColor: '#ECFDF5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' },
+  questionMainText: { flex: 1, fontSize: 12, fontWeight: '700', color: theme.text, lineHeight: 18, marginRight: 8 },
+  pointsBadge: { backgroundColor: theme.isDarkMode ? '#065F4630' : '#ECFDF5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' },
   pointsBadgeText: { color: '#10B981', fontSize: 8, fontWeight: '800' },
 
   optionsList: { gap: 8, marginBottom: 16 },
   optionItem: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: 6, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#FFFFFF'
+    borderRadius: 6, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface
   },
   
   optionLetterBox: {
-    width: 22, height: 22, borderRadius: 11, backgroundColor: '#F3F4F6',
+    width: 22, height: 22, borderRadius: 11, backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
     justifyContent: 'center', alignItems: 'center', marginRight: 12,
   },
-  optionLetterText: { fontSize: 10, fontWeight: '700', color: '#4B5563' },
-  optionTextMain: { fontSize: 12, color: '#4B5563', fontWeight: '500' },
+  optionLetterText: { fontSize: 10, fontWeight: '700', color: theme.text },
+  optionTextMain: { fontSize: 12, color: theme.text, fontWeight: '500' },
 
   resultFeedbackPill: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
   resultFeedbackText: { fontSize: 10, fontWeight: '700' },
@@ -420,9 +412,9 @@ const styles = StyleSheet.create({
 
   backBtnFull: {
      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-     borderWidth: 1, borderColor: '#4F46E5', borderRadius: 6, paddingVertical: 12, backgroundColor: '#FFFFFF'
+     borderWidth: 1, borderColor: theme.primary, borderRadius: 6, paddingVertical: 12, backgroundColor: theme.surface
   },
-  backBtnFullText: { color: '#4F46E5', fontSize: 14, fontWeight: '700' },
+  backBtnFullText: { color: theme.primary, fontSize: 14, fontWeight: '700' },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -430,9 +422,8 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: '#999',
+    color: theme.subtext,
   },
-
 });
 
 export default QuizResultScreen;

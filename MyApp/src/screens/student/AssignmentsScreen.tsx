@@ -8,7 +8,9 @@ import {
   Dimensions,
   ActivityIndicator,
   Linking,
-  Alert
+  Alert,
+  Image,
+  TouchableOpacity,
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -18,6 +20,8 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../../store/AuthContext';
+import { useTheme } from '../../store/ThemeContext';
+import { StudentHeader } from '../../components/StudentHeader';
 import studentService from '../../services/studentService';
 
 type AssignmentsNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Assignments'>;
@@ -26,78 +30,81 @@ interface Props {
   navigation: AssignmentsNavigationProp;
 }
 
-const SummaryCard = ({ number, label, bgColor, iconName, lineColor, delay, library = 'MaterialCommunityIcons' }: any) => {
-  const IconComponent = library === 'Ionicons' ? Ionicons : MaterialCommunityIcons;
-  return (
-    <Animated.View 
-      entering={FadeInUp.delay(delay).springify()} 
-      style={[styles.summaryCard, { borderTopColor: lineColor || bgColor }]}
-    >
-      <View style={[styles.summaryIconBox, { backgroundColor: bgColor }]}>
-        <IconComponent name={iconName} size={24} color="#FFFFFF" />
-      </View>
-      <View style={styles.summaryTextCol}>
-        <Text style={styles.summaryNumber}>{number}</Text>
-        <Text style={styles.summaryLabel}>{label}</Text>
-      </View>
-    </Animated.View>
-  );
-};
-
-const AssignmentCard = ({ category, status, title, subtitle, dueDate, deadlineRelative, isDelayed, delay, onPressView, onPressSubmit, onPressDownload }: any) => {
-  const isPending = status === 'Pending';
-  return (
-    <Animated.View entering={FadeInUp.delay(delay).springify()} style={styles.assignmentCard}>
-      <View style={styles.cardHeaderRow}>
-        <View style={styles.categoryBadge}>
-          <Text style={styles.categoryBadgeText}>{category}</Text>
-        </View>
-        <View style={[styles.statusBadge, !isPending && styles.statusBadgeSubmitted]}>
-          <Text style={[styles.statusBadgeText, !isPending && styles.statusBadgeTextSubmitted]}>{status}</Text>
-        </View>
-      </View>
-
-      <Text style={styles.cardTitle}>{title}</Text>
-      <Text style={styles.cardSubtitle}>{subtitle}</Text>
-      
-      <View style={styles.cardBottomRow}>
-        <View style={styles.cardDateCol}>
-          <Text style={styles.cardDueDate}>Due Date : {dueDate}</Text>
-          <Text style={[styles.cardRelativeDate, isDelayed && { color: '#EF4444' }]}>
-            {deadlineRelative}
-          </Text>
-        </View>
-
-        <View style={styles.cardActionCol}>
-           <ScaleButton style={styles.btnView} activeOpacity={0.7} scaleTo={0.95} onPress={onPressView}>
-             <Ionicons name="eye" size={14} color="#3B82F6" style={styles.btnIconLayout} />
-             <Text style={styles.btnViewText}>View</Text>
-           </ScaleButton>
-           
-           {isPending ? (
-             <ScaleButton style={[styles.btnSubmit, {backgroundColor: '#4F46E5'}]} activeOpacity={0.8} scaleTo={0.95} onPress={onPressSubmit}>
-               <Ionicons name="send" size={13} color="#FFFFFF" style={styles.btnIconLayout} />
-               <Text style={styles.btnSubmitText}>Submit</Text>
-             </ScaleButton>
-           ) : (
-             <ScaleButton style={[styles.btnSubmit, {backgroundColor: '#10B981'}]} activeOpacity={0.8} scaleTo={0.95} onPress={onPressDownload}>
-               <Ionicons name="download-outline" size={14} color="#FFFFFF" style={styles.btnIconLayout} />
-               <Text style={styles.btnSubmitText}>Download</Text>
-             </ScaleButton>
-           )}
-        </View>
-      </View>
-    </Animated.View>
-  );
-};
-
 const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
     console.log('[Assignments] screen mounted');
+  const { theme, isDarkMode, toggleDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [assignments, setAssignments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const SummaryCard = ({ number, label, bgColor, iconName, lineColor, delay, library = 'MaterialCommunityIcons' }: any) => {
+    const IconComponent = library === 'Ionicons' ? Ionicons : MaterialCommunityIcons;
+    return (
+      <Animated.View 
+        entering={FadeInUp.delay(delay).springify()} 
+        style={[styles.summaryCard, { borderTopColor: lineColor || bgColor }]}
+      >
+        <View style={[styles.summaryIconBox, { backgroundColor: bgColor }]}>
+          <IconComponent name={iconName} size={24} color="#FFFFFF" />
+        </View>
+        <View style={styles.summaryTextCol}>
+          <Text style={styles.summaryNumber}>{number}</Text>
+          <Text style={styles.summaryLabel}>{label}</Text>
+        </View>
+      </Animated.View>
+    );
+  };
+
+  const AssignmentCard = ({ category, status, title, subtitle, dueDate, deadlineRelative, isDelayed, delay, onPressView, onPressSubmit, onPressDownload }: any) => {
+    const isPending = status === 'Pending';
+    return (
+      <Animated.View entering={FadeInUp.delay(delay).springify()} style={styles.assignmentCard}>
+        <View style={styles.cardHeaderRow}>
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryBadgeText}>{category}</Text>
+          </View>
+          <View style={[styles.statusBadge, !isPending && styles.statusBadgeSubmitted]}>
+            <Text style={[styles.statusBadgeText, !isPending && styles.statusBadgeTextSubmitted]}>{status}</Text>
+          </View>
+        </View>
+
+        <Text style={styles.cardTitle}>{title}</Text>
+        <Text style={styles.cardSubtitle}>{subtitle}</Text>
+        
+        <View style={styles.cardBottomRow}>
+          <View style={styles.cardDateCol}>
+            <Text style={styles.cardDueDate}>Due Date : {dueDate}</Text>
+            <Text style={[styles.cardRelativeDate, isDelayed && { color: '#EF4444' }]}>
+              {deadlineRelative}
+            </Text>
+          </View>
+
+          <View style={styles.cardActionCol}>
+             <ScaleButton style={styles.btnView} activeOpacity={0.7} scaleTo={0.95} onPress={onPressView}>
+               <Ionicons name="eye" size={14} color={theme.primary} style={styles.btnIconLayout} />
+               <Text style={styles.btnViewText}>View</Text>
+             </ScaleButton>
+             
+             {isPending ? (
+               <ScaleButton style={[styles.btnSubmit, {backgroundColor: theme.primary}]} activeOpacity={0.8} scaleTo={0.95} onPress={onPressSubmit}>
+                 <Ionicons name="send" size={13} color="#FFFFFF" style={styles.btnIconLayout} />
+                 <Text style={styles.btnSubmitText}>Submit</Text>
+               </ScaleButton>
+             ) : (
+               <ScaleButton style={[styles.btnSubmit, {backgroundColor: '#10B981'}]} activeOpacity={0.8} scaleTo={0.95} onPress={onPressDownload}>
+                 <Ionicons name="download-outline" size={14} color="#FFFFFF" style={styles.btnIconLayout} />
+                 <Text style={styles.btnSubmitText}>Download</Text>
+               </ScaleButton>
+             )}
+          </View>
+        </View>
+      </Animated.View>
+    );
+  };
+
   const [summary, setSummary] = useState({
     pending: 0,
     submitted: 0,
@@ -105,132 +112,81 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
     upcoming: 0
   });
 
-  useEffect(() => {
-    // const fetchAssignments = async () => {
-    //   try {
-    //     setIsLoading(true);
-    //     setError(null);
-    //     // 1. Get student profile to find database ID
-    //     const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
-    //     const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
 
-    //     if (!studentId) {
-    //       throw new Error('Student ID not found in profile');
-    //     }
+  const fetchAssignments = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      console.log('[Assignments] starting fetch');
+      const meRes = await studentService.getMe();
+      const meData = meRes.normalized?.data;
 
-    //     // 2. Fetch assignments
-    //     const res = await apiClient.get(ENDPOINTS.STUDENT.ASSIGNMENTS(studentId));
-    //     const data = res.data?.assignments || res.data?.data || res.data || [];
-        
-    //     // Ensure data is an array
-    //     const assignmentsArray = Array.isArray(data) ? data : [];
-    //     setAssignments(assignmentsArray);
+      console.log('[Assignments] /auth/me data:', JSON.stringify(meData));
 
-    //     // 3. Compute summary
-    //     const stats = {
-    //       pending: assignmentsArray.filter((a: any) => a.status?.toLowerCase() === 'pending' || a.status?.toLowerCase() === 'overdue').length,
-    //       submitted: assignmentsArray.filter((a: any) => a.submission_id || a.is_submitted).length,
-    //       graded: assignmentsArray.filter((a: any) => a.graded_at || a.grade).length,
-    //       upcoming: assignmentsArray.filter((a: any) => a.status?.toLowerCase() === 'upcoming').length,
-    //     };
-    //     setSummary(stats);
-    //   } catch (err: any) {
-    //     console.error('Failed to fetch assignments:', err);
-    //     setError('Failed to load assignments. Please try again.');
-    //     setAssignments([]);
-    //   } finally {
-    //     setIsLoading(false);
-    //   }
-    // };
+      const studentId = meData?.id || '';
 
-    // fetchAssignments();
-        console.log('[Assignments] useEffect running');//debug
-        const fetchAssignments = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-                console.log('[Assignments] starting fetch');//debug
-        const meRes = await studentService.getMe();
-        const meData = meRes.normalized?.data;
-
-        console.log('[Assignments] /auth/me data:', JSON.stringify(meData));
-
-         const studentId = meData?.id || '';
-
-        if (!studentId) {
-          throw new Error('Student account ID not found in /auth/me');
-        }
-
-        const res = await studentService.getAssignments(studentId);
-
-        console.log('[Assignments] raw data:', JSON.stringify(res.normalized?.data));
-
-        const rawData = res.normalized?.data;
-        const data =
-          rawData?.assignments ||
-          rawData?.data ||
-          rawData ||
-          [];
-
-        const assignmentsArray = Array.isArray(data) ? data : [];
-        setAssignments(assignmentsArray);
-
-        const stats = {
-          pending: assignmentsArray.filter((a: any) => {
-            const status = String(a.status || '').toLowerCase();
-            return status === 'pending' || status === 'overdue';
-          }).length,
-          submitted: assignmentsArray.filter((a: any) => {
-            const status = String(a.status || '').toLowerCase();
-            return Boolean(a.submission_id || a.submissionId || a.is_submitted || a.isSubmitted || status === 'submitted');
-          }).length,
-          graded: assignmentsArray.filter((a: any) => {
-            const status = String(a.status || '').toLowerCase();
-            return Boolean(a.graded_at || a.gradedAt || a.grade || status === 'graded');
-          }).length,
-          upcoming: assignmentsArray.filter((a: any) => {
-            const status = String(a.status || '').toLowerCase();
-            return status === 'upcoming';
-          }).length,
-        };
-
-        setSummary(stats);
-      } catch (err: any) {
-        console.error('[Assignments] failed:', err?.response || err?.message || err);
-        setError(err.message || 'Failed to load assignments. Please try again.');
-        setAssignments([]);
-      } finally {
-        setIsLoading(false);
+      if (!studentId) {
+        throw new Error('Student account ID not found in /auth/me');
       }
-    };
+
+      const res = await studentService.getAssignments(studentId);
+
+      console.log('[Assignments] raw data:', JSON.stringify(res.normalized?.data));
+
+      const rawData = res.normalized?.data;
+      const data =
+        rawData?.assignments ||
+        rawData?.data ||
+        rawData ||
+        [];
+
+      const assignmentsArray = Array.isArray(data) ? data : [];
+      setAssignments(assignmentsArray);
+
+      const stats = {
+        pending: assignmentsArray.filter((a: any) => {
+          const status = String(a.status || '').toLowerCase();
+          return status === 'pending' || status === 'overdue';
+        }).length,
+        submitted: assignmentsArray.filter((a: any) => {
+          const status = String(a.status || '').toLowerCase();
+          return Boolean(a.submission_id || a.submissionId || a.is_submitted || a.isSubmitted || status === 'submitted');
+        }).length,
+        graded: assignmentsArray.filter((a: any) => {
+          const status = String(a.status || '').toLowerCase();
+          return Boolean(a.graded_at || a.gradedAt || a.grade || status === 'graded');
+        }).length,
+        upcoming: assignmentsArray.filter((a: any) => {
+          const status = String(a.status || '').toLowerCase();
+          return status === 'upcoming';
+        }).length,
+      };
+
+      setSummary(stats);
+    } catch (err: any) {
+      console.error('[Assignments] failed:', err?.response || err?.message || err);
+      setError(err.message || 'Failed to load assignments. Please try again.');
+      setAssignments([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    console.log('[Assignments] useEffect running');
     fetchAssignments();
-  }, []);
+  }, [authState.user?.id]);
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFF" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
 
-      {/* Top Header matched directly with dashboard */}
-      <View style={styles.header}>
-        <ScaleButton 
-          style={styles.menuHandle} 
-          onPress={() => setDrawerOpen(true)}
-          hitSlop={{top: 20, bottom: 20, left: 20, right: 20}}
-          activeOpacity={0.7}
-          scaleTo={0.85}
-        >
-          <Ionicons name="menu" size={28} color="#1F2937" />
-        </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
-        <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
-          </View>
-        </View>
-      </View>
+      {/* Global Header */}
+      <StudentHeader 
+        title="Assignments"
+        navigation={navigation}
+        onMenuPress={() => setDrawerOpen(true)}
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
@@ -293,15 +249,12 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
                 <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
               </ScaleButton> */}
               <ScaleButton
-  style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
-  onPress={() => {
-    setError(null);
-    setIsLoading(false);
-  }}
-  scaleTo={0.95}
->
-  <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
-</ScaleButton>
+                style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
+                onPress={() => fetchAssignments()}
+                scaleTo={0.95}
+              >
+                <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
+              </ScaleButton>
             </View>
           ) : assignments.length === 0 ? (
             <View style={styles.emptyContainer}>
@@ -349,8 +302,8 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FAFAFF' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
   
   header: {
@@ -360,7 +313,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 60, // Adjust for iOS statusbar
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF', // Using pure white for better contrast with shadow
+    backgroundColor: theme.surface, // Using pure white for better contrast with shadow
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -372,7 +325,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5',
+    color: theme.primary,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -382,10 +335,10 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#A855F7',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
@@ -400,13 +353,13 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#3B82F6',
+    color: theme.primary,
     letterSpacing: -0.5,
     marginBottom: 4,
   },
   pageSubtitle: {
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.subtext,
     fontWeight: '500',
   },
 
@@ -420,7 +373,7 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     width: '48%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 16,
@@ -431,10 +384,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 10,
     elevation: 4,
-    // Exact border edges from screenshot:
     borderWidth: 1.5,
-    borderColor: '#F3F4F6', // Subtle light gray for sides and bottom
-    // borderTopColor dynamically bound
+    borderColor: theme.border, 
   },
   summaryIconBox: {
     width: 44,
@@ -450,11 +401,11 @@ const styles = StyleSheet.create({
   summaryNumber: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
   },
   summaryLabel: {
     fontSize: 12,
-    color: '#4B5563',
+    color: theme.subtext,
     fontWeight: '500',
   },
 
@@ -465,7 +416,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
 
   listContainer: {
@@ -473,11 +424,11 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   assignmentCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 18,
     borderLeftWidth: 4,
-    borderLeftColor: '#4F46E5', // Stronger blue from the reference image
+    borderLeftColor: theme.primary, 
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
@@ -486,7 +437,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderRightWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#E5E7EB', // lighter border around the rest
+    borderColor: theme.border, 
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -497,23 +448,23 @@ const styles = StyleSheet.create({
   categoryBadge: {
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 20, // Fully pill-shaped as per reference
-    backgroundColor: '#EFF6FF',
+    borderRadius: 20, 
+    backgroundColor: theme.isDarkMode ? '#1E3A8A' : '#EFF6FF',
     borderWidth: 1,
-    borderColor: '#93C5FD',
+    borderColor: theme.isDarkMode ? '#3B82F6' : '#93C5FD',
   },
   categoryBadgeText: {
     fontSize: 11,
-    fontWeight: '500', // softer font weight
-    color: '#3B82F6',
+    fontWeight: '500', 
+    color: theme.primary,
   },
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 20, // Fully pill-shaped
-    backgroundColor: '#FFFBEB',
+    borderRadius: 20, 
+    backgroundColor: theme.isDarkMode ? '#78350F30' : '#FFFBEB',
     borderWidth: 1,
-    borderColor: '#FCD34D',
+    borderColor: theme.isDarkMode ? '#D97706' : '#FCD34D',
   },
   statusBadgeText: {
     fontSize: 11,
@@ -521,23 +472,23 @@ const styles = StyleSheet.create({
     color: '#F59E0B',
   },
   statusBadgeSubmitted: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#6EE7B7',
+    backgroundColor: theme.isDarkMode ? '#065F4630' : '#ECFDF5',
+    borderColor: theme.isDarkMode ? '#34D399' : '#6EE7B7',
   },
   statusBadgeTextSubmitted: {
-    color: '#10B981',
+    color: theme.isDarkMode ? '#34D399' : '#10B981',
   },
   
   cardTitle: {
-    fontSize: 17, // slightly smaller, not super bold
+    fontSize: 17, 
     fontWeight: '600',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 4,
   },
   cardSubtitle: {
-    fontSize: 13, // slightly smaller matching reference
-    color: '#6B7280',
-    marginBottom: 20, // Space before the bottom row
+    fontSize: 13, 
+    color: theme.subtext,
+    marginBottom: 20, 
     fontWeight: '400',
   },
   
@@ -556,9 +507,9 @@ const styles = StyleSheet.create({
   
   cardDueDate: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.subtext,
     marginBottom: 4,
-    fontWeight: '400', // lighter font
+    fontWeight: '400', 
   },
   cardRelativeDate: {
     fontSize: 12,
@@ -569,17 +520,17 @@ const styles = StyleSheet.create({
   btnView: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12, // Compact padding
+    paddingHorizontal: 12, 
     paddingVertical: 6,
-    borderRadius: 6, // Slightly softer radius
+    borderRadius: 6, 
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
   },
   btnViewText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#3B82F6',
+    color: theme.primary,
   },
   btnIconLayout: {
     marginRight: 4,
@@ -606,7 +557,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     fontWeight: '600',
-    color: '#6B7280',
+    color: theme.subtext,
   },
 });
 

@@ -152,6 +152,12 @@ const studentService = {
     );
   },
 
+  getStartQuiz(id: string) {
+    return apiClient.get(
+      ENDPOINTS.STUDENT.START_QUIZ(id),
+    );
+  },
+
   submitQuiz(id: string, data: any) {
     return apiClient.post(
       ENDPOINTS.STUDENT.SUBMIT_QUIZ(id),

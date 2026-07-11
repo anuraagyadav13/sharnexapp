@@ -7,6 +7,8 @@ import {
   StatusBar,
   Platform,
   ActivityIndicator,
+  Image,
+  TouchableOpacity,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -16,6 +18,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useState } from 'react';
 import { useAuth } from '../../store/AuthContext';
+import { useTheme } from '../../store/ThemeContext';
+import { StudentHeader } from '../../components/StudentHeader';
 import studentService from '../../services/studentService';
 
 type PerformanceScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Performance'>;
@@ -25,6 +29,8 @@ interface Props {
 }
 
 const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
+  const { theme, isDarkMode, toggleDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [performance, setPerformance] = useState<any>(null);
@@ -72,7 +78,7 @@ setPerformance({
   if (isLoading && !performance) {
     return (
       <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -81,10 +87,10 @@ setPerformance({
     return (
       <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }]}>
         <Ionicons name="alert-circle" size={64} color="#EF4444" style={{ marginBottom: 16 }} />
-        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', textAlign: 'center' }}>Unable to Load Performance</Text>
-        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>{error}</Text>
+        <Text style={{ fontSize: 16, fontWeight: '700', color: theme.text, textAlign: 'center' }}>Unable to Load Performance</Text>
+        <Text style={{ fontSize: 13, color: theme.subtext, textAlign: 'center', marginTop: 8 }}>{error}</Text>
         <ScaleButton
-          style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
+          style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: theme.primary, borderRadius: 8 }}
           onPress={() => {
             setError(null);
             setIsLoading(true);
@@ -138,29 +144,14 @@ const quizRate =
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F9" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <ScaleButton 
-          style={styles.menuHandle} 
-          onPress={() => setDrawerOpen(true)}
-          hitSlop={{top: 20, bottom: 20, left: 20, right: 20}}
-          activeOpacity={0.7}
-          scaleTo={0.85}
-        >
-          <Ionicons name="menu" size={28} color="#1F2937" />
-        </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
-        <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
-          </View>
-        </View>
-      </View>
+      <StudentHeader 
+        title="Performance"
+        navigation={navigation}
+        onMenuPress={() => setDrawerOpen(true)}
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
         
@@ -323,10 +314,10 @@ const quizRate =
                 {(perfMetrics.monthlyScores || []).map((item: any, idx: number) => (
                   <View key={idx} style={styles.chartCol}>
                     <Text style={styles.chartTopLabel}>{item.score}%</Text>
-                    <View style={styles.chartBarWrapper}>
-                       <View style={{height: `${100 - item.score}%`, backgroundColor: '#F3F4F6'}} />
-                       <View style={{height: `${item.score}%`, backgroundColor: '#4F46E5'}} />
-                    </View>
+                     <View style={styles.chartBarWrapper}>
+                        <View style={{height: `${100 - item.score}%`, backgroundColor: isDarkMode ? '#334155' : '#F3F4F6'}} />
+                        <View style={{height: `${item.score}%`, backgroundColor: theme.primary}} />
+                     </View>
                     <Text style={styles.chartBotLabel}>{item.month}</Text>
                   </View>
                 ))}
@@ -351,8 +342,8 @@ const quizRate =
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FAF9F9' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 
   globalHeader: {
@@ -360,9 +351,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 60, 
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF', 
+    backgroundColor: theme.surface, 
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -374,7 +365,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5',
+    color: theme.primary,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -384,10 +375,10 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#A855F7',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
@@ -396,57 +387,57 @@ const styles = StyleSheet.create({
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   pageTitleWrapper: { marginBottom: 16, paddingHorizontal: 20, marginTop: 10 },
-  pageTitle: { fontSize: 22, fontWeight: '800', color: '#3B82F6', marginBottom: 4 },
-  pageSubtitle: { fontSize: 12, color: '#6B7280', fontWeight: '500' },
+  pageTitle: { fontSize: 22, fontWeight: '800', color: theme.primary, marginBottom: 4 },
+  pageSubtitle: { fontSize: 12, color: theme.subtext, fontWeight: '500' },
 
   card: {
-    backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, marginHorizontal: 20,
+    backgroundColor: theme.surface, borderRadius: 12, padding: 16, marginHorizontal: 20,
     shadowColor: '#1E293B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 4,
-    marginBottom: 16, borderWidth: 1, borderColor: '#F1F5F9'
+    marginBottom: 16, borderWidth: 1, borderColor: theme.border
   },
   cardRowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  cardHeader: { fontSize: 14, fontWeight: '800', color: '#111827', marginBottom: 12 },
-  cardDivider: { height: 1, backgroundColor: '#F3F4F6', width: '100%', marginBottom: 16 },
+  cardHeader: { fontSize: 14, fontWeight: '800', color: theme.text, marginBottom: 12 },
+  cardDivider: { height: 1, backgroundColor: theme.border, width: '100%', marginBottom: 16 },
 
   improvingPill: { flexDirection: 'row', alignItems: 'center' },
   improvingText: { fontSize: 11, fontWeight: '700', color: '#10B981', marginLeft: 2 },
 
   gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 },
-  gridBox: { width: '48%', backgroundColor: '#F8FAFC', borderRadius: 8, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
-  gridVal: { fontSize: 15, fontWeight: '700', marginBottom: 6 },
-  gridLbl: { fontSize: 10, color: '#6B7280', fontWeight: '500' },
+  gridBox: { width: '48%', backgroundColor: theme.isDarkMode ? '#1E293B' : '#F8FAFC', borderRadius: 8, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
+  gridVal: { fontSize: 15, fontWeight: '700', color: theme.text, marginBottom: 6 },
+  gridLbl: { fontSize: 10, color: theme.subtext, fontWeight: '500' },
 
   centerBlock: { alignItems: 'center', marginBottom: 16, marginTop: 4 },
   hugePercent: { 
-    fontSize: 34, fontWeight: '900', color: '#3B82F6', marginBottom: 4,
-    textShadowColor: 'rgba(59, 130, 246, 0.3)', textShadowOffset: { width: 0, height: 4 }, textShadowRadius: 8
+    fontSize: 34, fontWeight: '900', color: theme.primary, marginBottom: 4,
+    textShadowColor: theme.isDarkMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.3)', textShadowOffset: { width: 0, height: 4 }, textShadowRadius: 8
   },
-  hugeSubtitle: { fontSize: 11, color: '#6B7280', fontWeight: '600' },
+  hugeSubtitle: { fontSize: 11, color: theme.subtext, fontWeight: '600' },
 
   progressSection: { marginTop: 16 },
   progressRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  progressLbl: { fontSize: 10, fontWeight: '600', color: '#111827' },
-  progressVal: { fontSize: 10, fontWeight: '700', color: '#111827' },
-  progressBarBg: { height: 6, backgroundColor: '#E2E8F0', borderRadius: 3, width: '100%', overflow: 'hidden' },
+  progressLbl: { fontSize: 10, fontWeight: '600', color: theme.text },
+  progressVal: { fontSize: 10, fontWeight: '700', color: theme.text },
+  progressBarBg: { height: 6, backgroundColor: theme.isDarkMode ? '#334155' : '#E2E8F0', borderRadius: 3, width: '100%', overflow: 'hidden' },
   progressBarFill: { height: '100%', borderRadius: 3 },
 
   subjectBox: {
-    backgroundColor: '#F8FAFC', borderRadius: 12, padding: 16,
+    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F8FAFC', borderRadius: 12, padding: 16,
     borderLeftWidth: 4, borderLeftColor: '#F97316'
   },
   subjectRowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  subjectName: { fontSize: 14, fontWeight: '800', color: '#111827' },
+  subjectName: { fontSize: 14, fontWeight: '800', color: theme.text },
   subjectGrade: { fontSize: 18, fontWeight: '800', color: '#10B981' },
   subjectRowBetween2: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  subjectSubText: { fontSize: 11, color: '#6B7280', fontWeight: '500' },
+  subjectSubText: { fontSize: 11, color: theme.subtext, fontWeight: '500' },
 
   scrollMoreRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 16, gap: 4 },
-  scrollMoreText: { fontSize: 10, color: '#6B7280', fontWeight: '500' },
+  scrollMoreText: { fontSize: 10, color: theme.subtext, fontWeight: '500' },
 
   chartContainer: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4 },
   chartCol: { alignItems: 'center' },
-  chartTopLabel: { fontSize: 13, fontWeight: '800', color: '#111827', marginBottom: 12 },
-  chartBotLabel: { fontSize: 11, fontWeight: '600', color: '#111827', marginTop: 12 },
+  chartTopLabel: { fontSize: 13, fontWeight: '800', color: theme.text, marginBottom: 12 },
+  chartBotLabel: { fontSize: 11, fontWeight: '600', color: theme.text, marginTop: 12 },
   chartBarWrapper: { width: 42, height: 110, borderRadius: 6, overflow: 'hidden' },
   subjectsContainer: { height: 280, marginTop: 10 },
   subjectsScroll: { flex: 1 },

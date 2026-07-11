@@ -11,11 +11,16 @@ import {
   StatusBar,
   SafeAreaView,
   Dimensions,
+  Image,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Animated, { FadeInUp, FadeInDown, SlideInRight } from 'react-native-reanimated';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { useTheme } from '../../store/ThemeContext';
+import { useAuth } from '../../store/AuthContext';
+import { useNavigation } from '@react-navigation/native';
+import { StudentHeader } from '../../components/StudentHeader';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -84,7 +89,12 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
   },
 ];
 
+// TODO: Messages API does not exist. Skipping integration per instructions.
 const Messages = () => {
+  const { authState } = useAuth();
+  const navigation = useNavigation<any>();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const [conversations, setConversations] = useState<Conversation[]>(INITIAL_CONVERSATIONS);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -136,7 +146,7 @@ const Messages = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFF" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
 
       {activeChat ? (
         // Thread View Screen
@@ -148,7 +158,7 @@ const Messages = () => {
           {/* Thread Header */}
           <View style={styles.header}>
             <TouchableOpacity onPress={() => setSelectedChatId(null)} style={styles.backBtn}>
-              <Ionicons name="arrow-back" size={24} color="#6366F1" />
+              <Ionicons name="arrow-back" size={24} color={theme.primary} />
             </TouchableOpacity>
             <View style={[styles.avatarCircle, { backgroundColor: activeChat.avatarColor }]}>
               <Text style={styles.avatarInitial}>{activeChat.initials}</Text>
@@ -194,7 +204,7 @@ const Messages = () => {
                       </View>
                       <View style={[styles.metaContainer, isMe ? styles.metaRight : styles.metaLeft]}>
                         <Text style={styles.timestampText}>{msg.timestamp}</Text>
-                        {isMe && <Ionicons name="checkmark-done" size={14} color="#6366F1" style={{ marginLeft: 4 }} />}
+                        {isMe && <Ionicons name="checkmark-done" size={14} color={theme.primary} style={{ marginLeft: 4 }} />}
                       </View>
                     </View>
                   </View>
@@ -209,7 +219,7 @@ const Messages = () => {
               <TextInput
                 style={styles.textInput}
                 placeholder={`Type a message to ${activeChat.name.split(' ')[0]}...`}
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={theme.placeholder}
                 value={inputText}
                 onChangeText={setInputText}
                 onSubmitEditing={handleSendMessage}
@@ -223,24 +233,18 @@ const Messages = () => {
       ) : (
         // Conversation List Screen
         <View style={styles.container}>
-          {/* List Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => setDrawerOpen(true)} style={styles.menuBtn}>
-              <Ionicons name="menu" size={28} color="#6366F1" />
-            </TouchableOpacity>
-            <View style={styles.centerHeaderTitle}>
-              <Text style={styles.headerMainTitle}>Messages</Text>
-              <Text style={styles.portalLabel}>STUDENT PORTAL</Text>
-            </View>
-            <View style={{ width: 40 }} />
-          </View>
+          <StudentHeader 
+            title="Messages"
+            navigation={navigation}
+            onMenuPress={() => setDrawerOpen(true)}
+          />
 
           {/* Search Bar */}
           <View style={styles.searchWrapper}>
-            <Ionicons name="search-outline" size={20} color="#94A3B8" style={styles.searchIcon} />
+            <Ionicons name="search-outline" size={20} color={theme.subtext} style={styles.searchIcon} />
             <TextInput
               placeholder="Search teacher or subject..."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={theme.placeholder}
               style={styles.searchInput}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -301,14 +305,14 @@ const Messages = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FAFAFF',
+    backgroundColor: theme.background,
   },
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFF',
+    backgroundColor: theme.background,
   },
   header: {
     flexDirection: 'row',
@@ -317,8 +321,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 56,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    backgroundColor: '#FFF',
+    borderBottomColor: theme.border,
+    backgroundColor: theme.surface,
   },
   backBtn: {
     padding: 4,
@@ -332,12 +336,12 @@ const styles = StyleSheet.create({
   headerMainTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#1E293B',
+    color: theme.text,
   },
   portalLabel: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: theme.subtext,
     letterSpacing: 0.5,
     marginTop: 1,
   },
@@ -348,11 +352,11 @@ const styles = StyleSheet.create({
   headerTitleText: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#1E293B',
+    color: theme.text,
   },
   headerSubText: {
     fontSize: 11,
-    color: '#64748B',
+    color: theme.subtext,
     fontWeight: '600',
     marginTop: 1,
   },
@@ -376,9 +380,9 @@ const styles = StyleSheet.create({
   searchWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
     borderRadius: 16,
     marginHorizontal: 16,
     marginVertical: 12,
@@ -396,7 +400,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 13,
-    color: '#1E293B',
+    color: theme.text,
     fontWeight: '500',
   },
   sectionHeader: {
@@ -409,7 +413,7 @@ const styles = StyleSheet.create({
   sectionHeaderText: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#1E293B',
+    color: theme.text,
   },
   listScrollContent: {
     paddingHorizontal: 16,
@@ -418,12 +422,12 @@ const styles = StyleSheet.create({
   chatRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: theme.surface,
     borderRadius: 20,
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: theme.border,
     shadowColor: '#1E293B',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.02,
@@ -431,10 +435,10 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   chatRowSelected: {
-    borderColor: '#C7D2FE',
+    borderColor: theme.isDarkMode ? '#312E81' : '#C7D2FE',
     borderLeftWidth: 4,
-    borderLeftColor: '#6366F1',
-    backgroundColor: '#F5F7FF',
+    borderLeftColor: theme.primary,
+    backgroundColor: theme.isDarkMode ? '#1E1B4B' : '#F5F7FF',
   },
   chatInfo: {
     flex: 1,
@@ -448,23 +452,23 @@ const styles = StyleSheet.create({
   chatName: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#1E293B',
+    color: theme.text,
     flex: 1,
   },
   lastTimeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: theme.subtext,
   },
   roleSubtext: {
     fontSize: 11,
-    color: '#64748B',
+    color: theme.subtext,
     fontWeight: '600',
     marginTop: 2,
   },
   previewText: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: theme.subtext,
     fontWeight: '500',
     marginTop: 4,
   },
@@ -475,7 +479,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 13,
-    color: '#94A3B8',
+    color: theme.subtext,
     fontWeight: '500',
   },
   messageScrollContent: {
@@ -492,12 +496,12 @@ const styles = StyleSheet.create({
   emptyThreadText: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#64748B',
+    color: theme.text,
     marginTop: 12,
   },
   emptyThreadSubText: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: theme.subtext,
     fontWeight: '500',
     marginTop: 4,
   },
@@ -541,13 +545,13 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   bubbleMe: {
-    backgroundColor: '#6366F1', // Purple accent
+    backgroundColor: theme.primary, 
     borderBottomRightRadius: 4,
   },
   bubbleThem: {
-    backgroundColor: '#FFF',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: theme.border,
     borderBottomLeftRadius: 4,
   },
   bubbleText: {
@@ -559,7 +563,7 @@ const styles = StyleSheet.create({
     color: '#FFF',
   },
   bubbleTextThem: {
-    color: '#1E293B',
+    color: theme.text,
   },
   metaContainer: {
     flexDirection: 'row',
@@ -575,28 +579,28 @@ const styles = StyleSheet.create({
   timestampText: {
     fontSize: 9,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: theme.subtext,
   },
   inputContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFF',
+    backgroundColor: theme.surface,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: theme.border,
   },
   inputPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F8FAFC',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
     paddingHorizontal: 14,
     height: 48,
   },
   textInput: {
     flex: 1,
-    color: '#1E293B',
+    color: theme.text,
     fontSize: 13,
     fontWeight: '500',
     paddingVertical: 4,
@@ -605,16 +609,25 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#6366F1',
+    backgroundColor: theme.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
-    shadowColor: '#6366F1',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 4,
   },
+  avatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: theme.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 });
 
 export default Messages;

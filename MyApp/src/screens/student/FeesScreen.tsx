@@ -10,7 +10,8 @@ import {
   Modal,
   TouchableWithoutFeedback,
   ActivityIndicator,
-  Alert
+  Alert,
+  Image,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -19,8 +20,9 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import { useTheme } from '../../store/ThemeContext';
+import { StudentHeader } from '../../components/StudentHeader';
+import studentService from '../../services/studentService';
 
 type FeesScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Fees'>;
 
@@ -42,6 +44,8 @@ const HISTORY = [
 ];
 
 const FeesScreen: React.FC<Props> = ({ navigation }) => {
+  const { theme, isDarkMode, toggleDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'Invoices' | 'History'>('Invoices');
@@ -57,7 +61,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
   const handleReceiptPress = async (paymentId: string) => {
     try {
       setActiveReceiptId(paymentId);
-      const res = await apiClient.get(ENDPOINTS.STUDENT.PAYMENT_RECEIPT(paymentId));
+      const res = await studentService.getReceipt(paymentId);
       // Target the 'data' field inside the response
       const receiptData = res.normalized?.data?.data || res.data?.data || res.data;
       setSelectedReceipt(receiptData);
@@ -75,14 +79,14 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
         setIsLoading(true);
         setError(null);
         if (activeTab === 'Invoices') {
-          const res = await apiClient.get(ENDPOINTS.STUDENT.INVOICES);
+          const res = await studentService.getInvoices();
           // Handle multiple response formats
           const responseData = res.data?.data || res.data || {};
           const invoicesArray = responseData.invoices || res.data?.invoices || [];
           setInvoices(Array.isArray(invoicesArray) ? invoicesArray : []);
           setSummary(responseData.summary || { totalPending: 0, pendingCount: 0, overdueCount: 0, collectionRate: 0 });
         } else {
-          const res = await apiClient.get(ENDPOINTS.STUDENT.PAYMENT_HISTORY);
+          const res = await studentService.getPaymentHistory();
           // Handle multiple response formats
           const responseData = res.data?.data || res.data || {};
           const paymentsArray = responseData.payments || res.data?.payments || [];
@@ -127,29 +131,14 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle={selectedInvoice ? "light-content" : "dark-content"} backgroundColor={selectedInvoice ? 'rgba(0,0,0,0.5)' : '#FAF9F9'} />
+      <StatusBar barStyle={isDarkMode ? "light-content" : (selectedInvoice || selectedReceipt ? "light-content" : "dark-content")} backgroundColor={isDarkMode ? theme.background : (selectedInvoice || selectedReceipt ? 'rgba(0,0,0,0.5)' : theme.background)} />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <ScaleButton 
-          style={styles.menuHandle} 
-           onPress={() => setDrawerOpen(true)}
-          hitSlop={{top: 20, bottom: 20, left: 20, right: 20}}
-          activeOpacity={0.7}
-          scaleTo={0.85}
-        >
-          <Ionicons name="menu" size={28} color="#1F2937" />
-        </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
-        <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
-          </View>
-        </View>
-      </View>
+      <StudentHeader 
+        title="Fees"
+        navigation={navigation}
+        onMenuPress={() => setDrawerOpen(true)}
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
@@ -187,7 +176,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
               activeOpacity={0.7} 
               onPress={() => setActiveTab('Invoices')}
            >
-              <Ionicons name="receipt" size={16} color={activeTab === 'Invoices' ? '#3B82F6' : '#9CA3AF'} style={{marginRight: 6}} />
+              <Ionicons name="receipt" size={16} color={activeTab === 'Invoices' ? theme.primary : theme.subtext} style={{marginRight: 6}} />
               <Text style={[styles.tabText, activeTab === 'Invoices' && styles.tabTextActive]}>Invoices</Text>
               {activeTab === 'Invoices' && <View style={styles.tabIndicator} />}
            </TouchableOpacity>
@@ -197,18 +186,17 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
               activeOpacity={0.7} 
               onPress={() => setActiveTab('History')}
            >
-              <Ionicons name="time-outline" size={18} color={activeTab === 'History' ? '#3B82F6' : '#9CA3AF'} style={{marginRight: 6}} />
+              <Ionicons name="time-outline" size={18} color={activeTab === 'History' ? theme.primary : theme.subtext} style={{marginRight: 6}} />
               <Text style={[styles.tabText, activeTab === 'History' && styles.tabTextActive]}>History</Text>
               {activeTab === 'History' && <View style={styles.tabIndicator} />}
            </TouchableOpacity>
         </Animated.View>
 
-        {/* List Container */}
         <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.listContainer}>
            <Text style={styles.listSectionTitle}>{activeTab === 'Invoices' ? 'All Invoices' : 'Payment History'}</Text>
 
            {isLoading ? (
-             <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 40 }} />
+             <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
            ) : error ? (
              <View style={styles.emptyContainer}>
                <Ionicons name="alert-circle-outline" size={60} color="#EF4444" />
@@ -217,7 +205,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
            ) : activeTab === 'Invoices' ? (
              invoices.length === 0 ? (
                <View style={styles.emptyContainer}>
-                 <Ionicons name="receipt-outline" size={60} color="#E5E7EB" />
+                 <Ionicons name="receipt-outline" size={60} color={theme.subtext} />
                  <Text style={styles.emptyText}>No invoices found</Text>
                </View>
              ) : (
@@ -275,7 +263,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
                    <View style={[styles.invRowBeetween, {marginBottom: 16}]}>
                      <Text style={styles.historyDate}>{new Date(item.completedAt || item.createdAt).toLocaleDateString()}</Text>
                      <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                       <Ionicons name="card" size={12} color="#111827" style={{marginRight: 6}} />
+                       <Ionicons name="card" size={12} color={theme.text} style={{marginRight: 6}} />
                        <Text style={styles.historyMethod}>{item.status}</Text>
                      </View>
                    </View>
@@ -283,7 +271,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
                    <View style={styles.historyDivider} />
                    
                    <View style={styles.invRowBeetween}>
-                     <Text style={styles.historyFor}>For: <Text style={{fontWeight: '700', color: '#111827'}}>{item.invoiceNumber}</Text></Text>
+                     <Text style={styles.historyFor}>For: <Text style={{fontWeight: '700', color: theme.text}}>{item.invoiceNumber}</Text></Text>
                       <TouchableOpacity 
                         style={styles.receiptPill} 
                         activeOpacity={0.8}
@@ -308,7 +296,6 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
 
       </ScrollView>
 
-      {/* Invoice Popup Modal */}
       <Modal
         visible={!!selectedInvoice}
         transparent
@@ -321,18 +308,16 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
               <View style={styles.modalContent}>
                  {selectedInvoice && (
                    <>
-                     {/* Header */}
                      <View style={styles.modalHeaderRow}>
                        <View style={{ flex: 1 }}>
                          <Text style={styles.modalTitle}>{selectedInvoice.inv}</Text>
                          <Text style={styles.modalSubtitle}>{selectedInvoice.title}</Text>
                        </View>
-                       <TouchableOpacity hitSlop={{top:20, bottom:20, left:20, right:20}} onPress={() => setSelectedInvoice(null)} style={styles.closeBtn}>
-                         <Ionicons name="close-outline" size={24} color="#111827" />
-                       </TouchableOpacity>
+                        <TouchableOpacity hitSlop={{top:20, bottom:20, left:20, right:20}} onPress={() => setSelectedInvoice(null)} style={styles.closeBtn}>
+                          <Ionicons name="close-outline" size={24} color={theme.text} />
+                        </TouchableOpacity>
                      </View>
 
-                     {/* Details Area */}
                      <View style={styles.modalDetailContainer}>
                        <View style={styles.modalDetailRow}>
                          <Text style={styles.modalLabel}>Status</Text>
@@ -366,7 +351,6 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
                          <Text style={styles.modalAmountBigger}>₹ {selectedInvoice.totalAmount}</Text>
                        </View>
 
-                       {/* Interactive Pay Card within Modal */}
                        {selectedInvoice.status !== 'PAID' && (
                          <ScaleButton activeOpacity={0.9} scaleTo={0.96} style={styles.payCard}>
                              <View style={styles.payIconCircle}>
@@ -385,7 +369,6 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* Receipt Modal */}
       <Modal
         visible={!!selectedReceipt}
         transparent
@@ -396,8 +379,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
           <Animated.View entering={FadeIn.duration(300)} style={[styles.modalContent, { padding: 0, overflow: 'hidden' }]}>
             {selectedReceipt && (
               <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Receipt Header */}
-                <View style={[styles.receiptHeader, { backgroundColor: '#4F46E5' }]}>
+                 <View style={[styles.receiptHeader, { backgroundColor: theme.primary }]}>
                   <View style={styles.receiptHeaderTop}>
                     <Ionicons name="school" size={24} color="#FFFFFF" />
                     <TouchableOpacity onPress={() => setSelectedReceipt(null)}>
@@ -470,8 +452,8 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FAF9F9' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 
   globalHeader: {
@@ -481,7 +463,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40, 
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF', 
+    backgroundColor: theme.surface, 
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -493,7 +475,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5', 
+    color: theme.primary, 
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -503,10 +485,10 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#A855F7',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
@@ -515,17 +497,17 @@ const styles = StyleSheet.create({
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   pageTitleWrapper: { marginBottom: 16, paddingHorizontal: 20, marginTop: 10 },
-  pageTitle: { fontSize: 24, fontWeight: '800', color: '#3B82F6', marginBottom: 4 },
-  pageSubtitle: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
+  pageTitle: { fontSize: 24, fontWeight: '800', color: theme.primary, marginBottom: 4 },
+  pageSubtitle: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
 
   /* Hero Card */
   heroCard: {
-    backgroundColor: '#4F46E5', 
+    backgroundColor: theme.primary, 
     borderRadius: 14,
     padding: 20,
     marginHorizontal: 20,
     marginBottom: 20,
-    shadowColor: '#4F46E5',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -574,7 +556,7 @@ const styles = StyleSheet.create({
   /* Tab Segment */
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     marginHorizontal: 20,
     marginBottom: 20,
@@ -596,17 +578,17 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: theme.subtext,
   },
   tabTextActive: {
-    color: '#3B82F6',
+    color: theme.primary,
   },
   tabIndicator: {
     position: 'absolute',
     bottom: -6,
     width: '40%',
     height: 3,
-    backgroundColor: '#3B82F6',
+    backgroundColor: theme.primary,
     borderTopLeftRadius: 3,
     borderTopRightRadius: 3,
   },
@@ -619,23 +601,23 @@ const styles = StyleSheet.create({
   listSectionTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 16,
   },
   invoiceCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 10,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderLeftWidth: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 4,
     elevation: 2,
-    overflow: 'hidden', // Ensures the border Left cleanly curves exactly with the main radius
+    overflow: 'hidden', 
   },
   invRowBeetween: {
     flexDirection: 'row',
@@ -645,7 +627,7 @@ const styles = StyleSheet.create({
   invNumber: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
   },
   statusPill: {
     paddingHorizontal: 8,
@@ -653,13 +635,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   pillPending: {
-    backgroundColor: '#FEF3C7', 
+    backgroundColor: theme.isDarkMode ? '#78350F30' : '#FEF3C7', 
   },
   pillOverdue: {
-    backgroundColor: '#FCE7F3', 
+    backgroundColor: theme.isDarkMode ? '#9D174D30' : '#FCE7F3', 
   },
   pillPaid: {
-    backgroundColor: '#D1FAE5',
+    backgroundColor: theme.isDarkMode ? '#065F4630' : '#D1FAE5',
   },
   pillText: {
     fontSize: 9,
@@ -676,29 +658,29 @@ const styles = StyleSheet.create({
   },
   invTitle: {
     fontSize: 10,
-    color: '#6B7280',
+    color: theme.subtext,
     marginTop: 6,
     fontWeight: '500',
   },
   invAmount: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#3B82F6',
+    color: theme.primary,
   },
   invDate: {
     fontSize: 10,
-    color: '#9CA3AF',
+    color: theme.subtext,
     fontWeight: '500',
   },
   
   /* History Card Styles */
   historyCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 10,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
@@ -708,37 +690,37 @@ const styles = StyleSheet.create({
   historyPayId: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
   },
   historyAmount: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#3B82F6',
+    color: theme.primary,
   },
   historyDate: {
     fontSize: 10,
-    color: '#9CA3AF',
+    color: theme.subtext,
     fontWeight: '500',
   },
   historyMethod: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
   historyDivider: {
     height: 1,
-    backgroundColor: '#F3F4F6', 
+    backgroundColor: theme.border, 
     marginBottom: 12,
   },
   historyFor: {
     fontSize: 11,
-    color: '#4B5563',
+    color: theme.subtext,
     fontWeight: '500',
   },
   receiptPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#4E5EEE',
+    backgroundColor: theme.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -760,7 +742,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 24,
     shadowColor: '#000',
@@ -778,22 +760,21 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 4,
   },
   modalSubtitle: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.subtext,
     fontWeight: '500',
   },
   closeBtn: {
     padding: 2,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderRadius: 16,
   },
   modalDetailContainer: {
-    // any internal padding if needed
   },
   modalDetailRow: {
     flexDirection: 'row',
@@ -802,25 +783,25 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: theme.border,
   },
   modalLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.subtext,
     fontWeight: '500',
   },
   modalValueBold: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
   modalAmountBigger: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
   },
   payCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
@@ -831,13 +812,13 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
     borderWidth: 1,
-    borderColor: '#FAFAFA',
+    borderColor: theme.border,
   },
   payIconCircle: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#3B82F6',
+    backgroundColor: theme.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
@@ -845,7 +826,7 @@ const styles = StyleSheet.create({
   payBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -856,7 +837,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#374151',
+    color: theme.subtext,
     marginTop: 16,
   },
   /* Receipt Modal Specific Styles */
@@ -909,28 +890,28 @@ const styles = StyleSheet.create({
   receiptLabel: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: theme.subtext,
     textTransform: 'uppercase',
     marginBottom: 4,
   },
   receiptValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
   receiptValueBig: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
   },
   receiptSubValue: {
     fontSize: 11,
-    color: '#6B7280',
+    color: theme.subtext,
     marginTop: 2,
   },
   receiptDivider: {
     height: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.border,
     marginVertical: 16,
     borderStyle: 'dashed',
     borderRadius: 1,
@@ -943,17 +924,17 @@ const styles = StyleSheet.create({
   },
   receiptDesc: {
     fontSize: 13,
-    color: '#4B5563',
+    color: theme.subtext,
     flex: 1,
     paddingRight: 20,
   },
   receiptAmount: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
   receiptTotalBox: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F9FAFB',
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
@@ -964,12 +945,12 @@ const styles = StyleSheet.create({
   receiptTotalLabel: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#4B5563',
+    color: theme.subtext,
   },
   receiptTotalValue: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#4F46E5',
+    color: theme.primary,
   },
   receiptFooter: {
     alignItems: 'center',
@@ -978,7 +959,7 @@ const styles = StyleSheet.create({
   },
   receiptFooterText: {
     fontSize: 10,
-    color: '#9CA3AF',
+    color: theme.subtext,
     marginBottom: 4,
   },
   receiptCheckCircle: {

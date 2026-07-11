@@ -7,7 +7,8 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator
+  ActivityIndicator,
+  Image,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -16,8 +17,9 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import { useTheme } from '../../store/ThemeContext';
+import { StudentHeader } from '../../components/StudentHeader';
+import studentService from '../../services/studentService';
 
 type AnnouncementScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Announcements'>;
 
@@ -39,6 +41,8 @@ const ANNOUNCEMENTS = [
 ];
 
 const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
+  const { theme, isDarkMode, toggleDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -51,14 +55,8 @@ const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
         setIsLoading(true);
         setError(null);
         
-        // 1. Resolve ID reliably based on role
-        const isTeacher = authState.role === 'teacher';
-        const profileEndpoint = isTeacher ? ENDPOINTS.TEACHER.PROFILE : ENDPOINTS.STUDENT.PROFILE;
-        const profileRes = await apiClient.get(profileEndpoint);
-        
-        // 2. Fetch announcements using the appropriate endpoint
-        const announcementEndpoint = isTeacher ? ENDPOINTS.TEACHER.ANNOUNCEMENTS : ENDPOINTS.STUDENT.ANNOUNCEMENTS;
-        const res = await apiClient.get(announcementEndpoint);
+        // Fetch announcements using studentService
+        const res = await studentService.getAnnouncements();
         
         // Handle various response types including normalized
         const data = res.normalized?.data?.announcements || res.normalized?.data || res.data?.announcements || res.data?.data || res.data || [];
@@ -78,35 +76,14 @@ const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F9" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
 
-      {/* Global Header (Attendance Standard) */}
-      <View style={styles.globalHeader}>
-        <ScaleButton 
-          style={styles.menuHandle} 
-          onPress={() => setDrawerOpen(true)}
-          hitSlop={{top: 20, bottom: 20, left: 20, right: 20}}
-        >
-          <Ionicons name="menu" size={28} color="#111827" />
-        </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          Welcome back, {authState.user?.name?.split(' ')[0] || (authState.role === 'teacher' ? 'Teacher' : 'Student')}
-        </Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconBtn}>
-            <Ionicons name="notifications-outline" size={22} color="#111827" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('AccountSettings')} style={styles.iconBtn}>
-            <Ionicons name="settings-outline" size={22} color="#111827" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => {}} style={styles.iconBtn}>
-            <Ionicons name="moon-outline" size={22} color="#111827" />
-          </TouchableOpacity>
-          <View style={[styles.avatar, { backgroundColor: authState.role === 'teacher' ? '#4F46E5' : '#A855F7' }]}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || (authState.role === 'teacher' ? 'T' : 'S')}</Text>
-          </View>
-        </View>
-      </View>
+      {/* Global Header */}
+      <StudentHeader 
+        title="Announcements"
+        navigation={navigation}
+        onMenuPress={() => setDrawerOpen(true)}
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
@@ -138,26 +115,26 @@ const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
             >
                <View style={styles.cardHeaderRow}>
                  <Text style={styles.cardTitle}>{item.title}</Text>
-                 <View style={[styles.priorityPill, { backgroundColor: item.priority === 'URGENT' || item.priority === 'HIGH' ? '#FEE2E2' : '#DBEAFE' }]}>
-                   <Ionicons name="alert-circle" size={13} color={item.priority === 'URGENT' || item.priority === 'HIGH' ? '#EF4444' : '#3B82F6'} style={{marginRight: 4}} />
-                   <Text style={[styles.priorityText, { color: item.priority === 'URGENT' || item.priority === 'HIGH' ? '#EF4444' : '#3B82F6' }]}>
-                     {item.priority || 'Normal'} priority
-                   </Text>
-                 </View>
-               </View>
+                  <View style={[styles.priorityPill, { backgroundColor: item.priority === 'URGENT' || item.priority === 'HIGH' ? (isDarkMode ? '#7F1D1D' : '#FEE2E2') : (isDarkMode ? '#1E3A8A' : '#DBEAFE') }]}>
+                    <Ionicons name="alert-circle" size={13} color={item.priority === 'URGENT' || item.priority === 'HIGH' ? (isDarkMode ? '#FCA5A5' : '#EF4444') : (isDarkMode ? '#93C5FD' : '#3B82F6')} style={{marginRight: 4}} />
+                    <Text style={[styles.priorityText, { color: item.priority === 'URGENT' || item.priority === 'HIGH' ? (isDarkMode ? '#FCA5A5' : '#EF4444') : (isDarkMode ? '#93C5FD' : '#3B82F6') }]}>
+                      {item.priority || 'Normal'} priority
+                    </Text>
+                  </View>
+                </View>
 
-               <View style={styles.metaRow}>
-                 <View style={styles.metaItem}>
-                   <Ionicons name="calendar-outline" size={12} color="#9CA3AF" />
-                   <Text style={styles.metaText}>
-                     {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
-                   </Text>
-                 </View>
-                 <View style={styles.metaItem}>
-                   <Ionicons name="person-outline" size={12} color="#9CA3AF" />
-                   <Text style={styles.metaText}>{item.creatorName || item.sender || 'Office'}</Text>
-                 </View>
-               </View>
+                <View style={styles.metaRow}>
+                  <View style={styles.metaItem}>
+                    <Ionicons name="calendar-outline" size={12} color={theme.subtext} />
+                    <Text style={styles.metaText}>
+                      {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
+                    </Text>
+                  </View>
+                  <View style={styles.metaItem}>
+                    <Ionicons name="person-outline" size={12} color={theme.subtext} />
+                    <Text style={styles.metaText}>{item.creatorName || item.sender || 'Office'}</Text>
+                  </View>
+                </View>
 
                <Text style={styles.description}>{item.content || item.description}</Text>
 
@@ -186,8 +163,8 @@ const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FAF9F9' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 
   globalHeader: {
@@ -197,7 +174,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40, 
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF', 
+    backgroundColor: theme.surface, 
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -209,7 +186,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5', // Matches assignments screen accent
+    color: theme.primary, 
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -222,7 +199,7 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#A855F7',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
@@ -231,18 +208,17 @@ const styles = StyleSheet.create({
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   pageTitleWrapper: { marginBottom: 16, paddingHorizontal: 20, marginTop: 10 },
-  pageTitle: { fontSize: 24, fontWeight: '800', color: '#3B82F6', marginBottom: 4 },
-  pageSubtitle: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
+  pageTitle: { fontSize: 24, fontWeight: '800', color: theme.primary, marginBottom: 4 },
+  pageSubtitle: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
 
   card: {
-    backgroundColor: '#FFFFFF', 
+    backgroundColor: theme.surface, 
     borderRadius: 12, 
     padding: 16, 
     marginHorizontal: 20,
     marginBottom: 16, 
-    // Edge color effect via strict border-left
     borderWidth: 1, 
-    borderColor: '#FAFAFA',
+    borderColor: theme.border,
     borderLeftWidth: 4,
     shadowColor: '#1E293B', 
     shadowOffset: { width: 0, height: 4 }, 
@@ -261,13 +237,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
     lineHeight: 20,
   },
   priorityPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEE2E2',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -275,7 +250,6 @@ const styles = StyleSheet.create({
   priorityText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#EF4444',
   },
   metaRow: {
     flexDirection: 'row',
@@ -290,12 +264,12 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.subtext,
     fontWeight: '500',
   },
   description: {
     fontSize: 12.5,
-    color: '#111827',
+    color: theme.text,
     lineHeight: 18,
     marginBottom: 16,
   },
@@ -303,7 +277,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 12,
@@ -328,7 +302,7 @@ const styles = StyleSheet.create({
   },
   attachmentText: {
     fontSize: 12,
-    color: '#111827',
+    color: theme.text,
     fontWeight: '500',
   },
   emptyContainer: {
@@ -341,7 +315,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     fontWeight: '600',
-    color: '#6B7280',
+    color: theme.subtext,
   },
 });
 

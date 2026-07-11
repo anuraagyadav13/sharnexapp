@@ -7,7 +7,8 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator
+  ActivityIndicator,
+  Image,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -16,8 +17,9 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import { useTheme } from '../../store/ThemeContext';
+import { StudentHeader } from '../../components/StudentHeader';
+import studentService from '../../services/studentService';
 
 type GradesScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Grades'>;
 
@@ -27,6 +29,8 @@ interface Props {
 
 
 const GradesScreen: React.FC<Props> = ({ navigation }) => {
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [grades, setGrades] = useState<any[]>([]);
@@ -40,11 +44,11 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
       setError(null);
       
       // 1. Resolve student ID reliably
-      const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+      const profileRes = await studentService.getProfile();
       const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
 
       // 2. Fetch grades and reports
-      const res = await apiClient.get(ENDPOINTS.STUDENT.GRADES);
+      const res = await studentService.getGrades();
       
       // Handle various response types including normalized
       const data = res.normalized?.data || res.data?.data || res.data;
@@ -71,33 +75,21 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
   if (isLoading && grades.length === 0 && reports.length === 0) {
     return (
       <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F9" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <ScaleButton 
-          style={styles.menuHandle} 
-          onPress={() => setDrawerOpen(true)}
-          hitSlop={{top: 20, bottom: 20, left: 20, right: 20}}
-          activeOpacity={0.7}
-          scaleTo={0.85}
-        >
-          <Ionicons name="menu" size={28} color="#1F2937" />
-        </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
-        <View style={styles.headerRight}>
-             <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
-             </View>
-        </View>
-      </View>
+      <StudentHeader 
+        title="Grades"
+        navigation={navigation}
+        onMenuPress={() => setDrawerOpen(true)}
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
@@ -199,7 +191,7 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
                          <Text style={styles.reportDesc}>{report.description || 'Full term academic performance summary'}</Text>
                          <Text style={styles.reportDate}>{report.date || new Date().toLocaleDateString()}</Text>
                       </View>
-                      <Ionicons name="download-outline" size={20} color="#3B82F6" />
+                      <Ionicons name="download-outline" size={20} color={theme.primary} />
                    </TouchableOpacity>
                  ))
                )}
@@ -220,8 +212,8 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FAF9F9' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 
   globalHeader: {
@@ -231,7 +223,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40, 
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF', 
+    backgroundColor: theme.surface, 
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -243,7 +235,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5', // Maintains system parity
+    color: theme.primary, 
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -253,10 +245,10 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#A855F7',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
@@ -265,20 +257,20 @@ const styles = StyleSheet.create({
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   pageTitleWrapper: { marginBottom: 16, paddingHorizontal: 20, marginTop: 10 },
-  pageTitle: { fontSize: 24, fontWeight: '800', color: '#3B82F6', marginBottom: 4 },
-  pageSubtitle: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
+  pageTitle: { fontSize: 24, fontWeight: '800', color: theme.primary, marginBottom: 4 },
+  pageSubtitle: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
 
   /* Subject Card */
   subjectCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
     marginHorizontal: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderTopWidth: 4,
-    borderTopColor: '#3B82F6',
+    borderTopColor: theme.primary,
     shadowColor: '#1E293B',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
@@ -293,16 +285,16 @@ const styles = StyleSheet.create({
   subjectName: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 2,
   },
   teacherName: {
     fontSize: 10,
-    color: '#6B7280',
+    color: theme.subtext,
     fontWeight: '500',
   },
   statusPill: {
-    backgroundColor: '#D1FAE5',
+    backgroundColor: theme.isDarkMode ? '#065F4630' : '#D1FAE5',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 12,
@@ -310,17 +302,17 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 9,
     fontWeight: '600',
-    color: '#059669',
+    color: theme.isDarkMode ? '#34D399' : '#059669',
   },
   divider: {
     height: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.border,
     marginVertical: 12,
   },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingRight: 40, // Keeps the 3 columns compact
+    paddingRight: 40, 
   },
   statCol: {
     flexDirection: 'column',
@@ -328,18 +320,18 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 9,
-    color: '#9CA3AF',
+    color: theme.subtext,
     fontWeight: '500',
   },
   statValue: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
   gradeBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F9FAFB',
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -349,24 +341,24 @@ const styles = StyleSheet.create({
   },
   gradeLabel: {
     fontSize: 10,
-    color: '#6B7280',
+    color: theme.subtext,
     fontWeight: '500',
   },
   gradeValue: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#059669',
+    color: theme.isDarkMode ? '#34D399' : '#059669',
   },
 
   /* Recent Reports Block */
   reportsWrapper: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
     marginHorizontal: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     shadowColor: '#1E293B',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
@@ -376,22 +368,22 @@ const styles = StyleSheet.create({
   reportsHeader: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 16,
   },
   reportItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FAFAFA',
+    backgroundColor: theme.isDarkMode ? '#1E293B' : '#FAFAFA',
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#3B82F6',
+    borderLeftColor: theme.primary,
   },
   pdfIconWrap: {
     position: 'relative',
-    backgroundColor: '#3B82F6',
+    backgroundColor: theme.primary,
     width: 34,
     height: 34,
     borderRadius: 8,
@@ -404,7 +396,7 @@ const styles = StyleSheet.create({
     bottom: 5,
     fontSize: 6,
     fontWeight: '900',
-    color: '#3B82F6',
+    color: theme.primary,
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 2,
     borderRadius: 2,
@@ -416,17 +408,17 @@ const styles = StyleSheet.create({
   reportTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 2,
   },
   reportDesc: {
     fontSize: 9,
-    color: '#6B7280',
+    color: theme.subtext,
     lineHeight: 13,
   },
   reportDate: {
     fontSize: 8,
-    color: '#9CA3AF',
+    color: theme.subtext,
     marginTop: 6,
   },
   emptyContainer: {
@@ -439,7 +431,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     fontWeight: '600',
-    color: '#6B7280',
+    color: theme.subtext,
   },
 });
 
