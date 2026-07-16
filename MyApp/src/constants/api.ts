@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import Messages from '../screens/student/Messages';
 
 interface ExpoExtra {
   API_HOST?: string;
@@ -166,30 +167,43 @@ export const ENDPOINTS = {
     ATTENDANCE: '/attendance',
 
     // HAR capture verified endpoints
-    CLASSES:               '/classes',
-    SUBJECTS:              '/subjects',
-    TEACHERS:              (institutionId: string) => `/tenants/${institutionId}/teachers`,
-    CLASS_ASSIGNMENTS:     (institutionId: string) => `/tenants/${institutionId}/class-assignments`,
-    TIMETABLE_PERIODS:     '/timetable/periods',
-    CLASS_SCHEDULE:        (classId: string) => `/classes/${classId}/schedule`,
-    CLASS_STUDENTS:        (classId: string) => `/classes/${classId}/students`,
-    DELETE_STUDENT:        (id: string) => `/students/${id}`,
-    UPDATE_STUDENT:        (id: string) => `/students/${id}`,
-    CREATE_STUDENT:        '/students',
-    EXPORT_STUDENTS:       (classId: string) => `/classes/${classId}/students/export`,
-    RMS_EXAMS:             '/rms/exams',
-    ANNOUNCEMENTS:         '/announcements',
-    INVOICE_STATS:         '/invoices/stats',
-    INVOICES:              '/invoices',
-    EQUIPMENT_PENDING:     '/equipment/approvals/pending',
-    EQUIPMENT_APPROVE:     (id: string) => `/equipment/approvals/${id}/approve`,
-    EQUIPMENT_REJECT:      (id: string) => `/equipment/approvals/${id}/reject`,
-    LIBRARY_DASHBOARD:     '/library/dashboard',
-    LIBRARY_CATEGORIES:    '/library/categories',
-    LIBRARY_ISSUES:        '/library/issues',
-    ACCOUNT_PROFILE:       '/account/profile',
-    ACCOUNT_INSTITUTION:   '/account/institution',
-    ACCOUNT_SESSIONS:      '/account/sessions',
-  }
+    CLASSES: '/classes',
+    SUBJECTS: '/subjects',
+    TEACHERS: (institutionId: string) => `/tenants/${institutionId}/teachers`,
+    CLASS_ASSIGNMENTS: (institutionId: string) => `/tenants/${institutionId}/class-assignments`,
+    TIMETABLE_PERIODS: '/timetable/periods',
+    CLASS_SCHEDULE: (classId: string) => `/classes/${classId}/schedule`,
+    CLASS_STUDENTS: (classId: string) => `/classes/${classId}/students`,
+    DELETE_STUDENT: (id: string) => `/students/${id}`,
+    UPDATE_STUDENT: (id: string) => `/students/${id}`,
+    CREATE_STUDENT: '/students',
+    EXPORT_STUDENTS: (classId: string) => `/classes/${classId}/students/export`,
+    RMS_EXAMS: '/rms/exams',
+    ANNOUNCEMENTS: '/announcements',
+    INVOICE_STATS: '/invoices/stats',
+    INVOICES: '/invoices',
+    EQUIPMENT_PENDING: '/equipment/approvals/pending',
+    EQUIPMENT_APPROVE: (id: string) => `/equipment/approvals/${id}/approve`,
+    EQUIPMENT_REJECT: (id: string) => `/equipment/approvals/${id}/reject`,
+    LIBRARY_DASHBOARD: '/library/dashboard',
+    LIBRARY_CATEGORIES: '/library/categories',
+    LIBRARY_ISSUES: '/library/issues',
+    ACCOUNT_PROFILE: '/account/profile',
+    ACCOUNT_INSTITUTION: '/account/institution',
+    ACCOUNT_SESSIONS: '/account/sessions',
+  },
+  MESSAGES: {
+    CONVERSATION: '/messages',
+    CONTACTS: '/messages/contacts',
+
+    MESSAGES: (recipientId: string, limit = 50) =>
+      `/messages?recipientId=${recipientId}&limit=${limit}`,
+
+    MESSAGE: '/messages',
+
+    READ: '/messages/read',
+
+    STREAM: '/messages/stream',
+  },
 };
 

@@ -16,14 +16,17 @@ import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import { useTheme } from '../../store/ThemeContext';
+import { TeacherHeader } from '../../components/TeacherHeader';
+import teacherService from '../../services/teacherService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherEditAssignment'>;
 
 const TeacherEditAssignmentScreen: React.FC<Props> = ({ navigation, route }) => {
   const { assignmentId } = route.params;
   const { authState } = useAuth();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles({ ...theme, isDarkMode });
   
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -38,7 +41,7 @@ const TeacherEditAssignmentScreen: React.FC<Props> = ({ navigation, route }) => 
   useEffect(() => {
     const fetchDetails = async () => {
       try {
-        const res = await apiClient.get(ENDPOINTS.TEACHER.ASSIGNMENT_DETAILS(assignmentId));
+        const res = await teacherService.getAssignmentDetails(assignmentId);
         const resData = res.data as any;
         const data = resData?.assignment || resData;
         
@@ -64,18 +67,47 @@ const TeacherEditAssignmentScreen: React.FC<Props> = ({ navigation, route }) => 
   }, [assignmentId]);
 
   const handleUpdate = async () => {
-    if (!title) {
-      Alert.alert('Error', 'Please enter a title.');
+    if (!title.trim()) {
+      Alert.alert('Validation Error', 'Please enter an assignment title.');
       return;
+    }
+
+    const parsedMaxMarks = parseInt(maxMarks, 10);
+    if (isNaN(parsedMaxMarks) || parsedMaxMarks <= 0) {
+      Alert.alert('Validation Error', 'Total Points must be a positive integer greater than 0.');
+      return;
+    }
+
+    let resolvedDueDate = '';
+    if (dueDate.trim()) {
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(dueDate.trim())) {
+        Alert.alert('Validation Error', 'Due Date must be in YYYY-MM-DD format.');
+        return;
+      }
+      const parsedDate = Date.parse(dueDate.trim());
+      if (isNaN(parsedDate)) {
+        Alert.alert('Validation Error', 'Please enter a valid date.');
+        return;
+      }
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (new Date(parsedDate) < today) {
+        Alert.alert('Validation Error', 'Due Date cannot be in the past.');
+        return;
+      }
+      resolvedDueDate = new Date(parsedDate).toISOString();
+    } else {
+      resolvedDueDate = new Date(Date.now() + 86400000 * 7).toISOString(); // Default to 7 days from now
     }
 
     try {
       setIsSaving(true);
-      await apiClient.put(ENDPOINTS.TEACHER.UPDATE_ASSIGNMENT(assignmentId), {
-        title,
+      await teacherService.updateAssignment(assignmentId, {
+        title: title.trim(),
         description,
-        dueDate: dueDate || null,
-        maxMarks: parseInt(maxMarks) || 100,
+        dueDate: resolvedDueDate,
+        maxMarks: parsedMaxMarks,
       });
       
       Alert.alert('Success', 'Assignment updated successfully!');
@@ -103,15 +135,11 @@ const TeacherEditAssignmentScreen: React.FC<Props> = ({ navigation, route }) => 
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1}>Edit Assignment</Text>
-        <View style={styles.headerRight}>
-          <View style={styles.avatar}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
-          </View>
-        </View>
-      </View>
+      <TeacherHeader
+        title="Edit Assignment"
+        navigation={navigation}
+        isStackScreen={true}
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
@@ -216,11 +244,11 @@ const TeacherEditAssignmentScreen: React.FC<Props> = ({ navigation, route }) => 
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40, paddingHorizontal: 16 },
-  loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' },
-  loadingText: { marginTop: 12, color: '#6B7280', fontWeight: '500' },
+  loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background },
+  loadingText: { marginTop: 12, color: theme.subtext, fontWeight: '500' },
 
   globalHeader: {
     flexDirection: 'row',
@@ -229,12 +257,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     elevation: 8,
     zIndex: 10
   },
   menuHandle: { width: 40 },
-  headerTitle: { fontSize: 16, fontWeight: '700', color: '#1F2937', flex: 1, textAlign: 'center' },
+  headerTitle: { fontSize: 16, fontWeight: '700', color: theme.primary, flex: 1, textAlign: 'center' },
   headerRight: { flexDirection: 'row', alignItems: 'center' },
   avatar: {
     width: 34,
@@ -252,52 +280,53 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 20,
   },
-  pageTitle: { fontSize: 24, fontWeight: '800', color: '#5266EB', marginBottom: 4 },
-  pageSubtitle: { fontSize: 12, color: '#9CA3AF', fontWeight: '500' },
+  pageTitle: { fontSize: 24, fontWeight: '800', color: theme.primary, marginBottom: 4 },
+  pageSubtitle: { fontSize: 12, color: theme.subtext, fontWeight: '500' },
   backButton: {
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: '#5266EB',
+    backgroundColor: 'rgba(255,255,255,0.25)',
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   formCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 24,
     elevation: 6,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 20,
   },
-  cardTitle: { fontSize: 14, fontWeight: '800', color: '#111827' },
+  cardTitle: { fontSize: 14, fontWeight: '800', color: theme.text },
 
   fieldContainer: { marginBottom: 20 },
-  fieldLabel: { fontSize: 12, fontWeight: '700', color: '#111827', marginBottom: 8 },
+  fieldLabel: { fontSize: 12, fontWeight: '700', color: theme.text, marginBottom: 8 },
   textInput: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderRadius: 6,
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 13,
-    color: '#111827',
-    backgroundColor: '#FFFFFF',
+    color: theme.text,
+    backgroundColor: theme.surface,
   },
   textArea: { minHeight: 100, textAlignVertical: 'top' },
   inputWithIcon: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderRadius: 6,
     paddingHorizontal: 14,
+    backgroundColor: theme.surface,
   },
 
   actionRow: {
@@ -310,16 +339,16 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
     borderRadius: 8,
     paddingVertical: 14,
   },
-  actionBtnCancelText: { fontSize: 12, fontWeight: '600', color: '#5266EB' },
+  actionBtnCancelText: { fontSize: 12, fontWeight: '600', color: theme.primary },
   actionBtnPublish: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#5266EB',
+    backgroundColor: theme.primary,
     borderRadius: 8,
     paddingVertical: 14,
   },

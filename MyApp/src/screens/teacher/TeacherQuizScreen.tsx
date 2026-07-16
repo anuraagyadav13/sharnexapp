@@ -17,7 +17,9 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { TeacherHeader } from '../../components/TeacherHeader';
 import { useAuth } from '../../store/AuthContext';
+import { useTheme } from '../../store/ThemeContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import RNFS from 'react-native-fs';
@@ -27,6 +29,8 @@ type Props = NativeStackScreenProps<RootStackParamList, 'TeacherQuiz'>;
 
 const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
   const { authState } = useAuth();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles({ ...theme, isDarkMode });
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -144,26 +148,11 @@ const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <ScaleButton
-          style={styles.menuHandle}
-          onPress={() => setDrawerOpen(true)}
-          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-          activeOpacity={0.7}
-          scaleTo={0.85}
-        >
-          <Ionicons name="menu" size={28} color="#1F2937" />
-        </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
-        <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
-          </View>
-        </View>
-      </View>
+      <TeacherHeader
+        title="Quizzes"
+        navigation={navigation}
+        onMenuPress={() => setDrawerOpen(true)}
+      />
 
       <ScrollView 
         contentContainerStyle={styles.scrollContent} 
@@ -337,9 +326,7 @@ const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
             );
           })
         )}
-        </View>
-
-      </ScrollView>
+        </View>      </ScrollView>
 
       {/* Navigation Drawer */}
       <NavigationDrawer
@@ -351,8 +338,8 @@ const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 
   globalHeader: {
@@ -362,7 +349,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -374,7 +361,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5',
+    color: theme.primary,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -396,8 +383,8 @@ const styles = StyleSheet.create({
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   pageTitleWrapper: { marginBottom: 20, paddingHorizontal: 16, marginTop: 24 },
-  pageTitle: { fontSize: 24, fontWeight: '800', color: '#4F46E5', marginBottom: 6 },
-  pageSubtitle: { fontSize: 12, color: '#6B7280', fontWeight: '500' },
+  pageTitle: { fontSize: 24, fontWeight: '800', color: theme.primary, marginBottom: 6 },
+  pageSubtitle: { fontSize: 12, color: theme.subtext, fontWeight: '500' },
 
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -409,10 +396,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
   },
   newQuizBtn: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
@@ -434,7 +421,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   quizCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 8,
     padding: 12,
     marginBottom: 10,
@@ -444,7 +431,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: theme.border,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -455,7 +442,7 @@ const styles = StyleSheet.create({
   subjectText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4F46E5',
+    color: theme.primary,
   },
   statusPill: {
     paddingHorizontal: 10,
@@ -469,7 +456,7 @@ const styles = StyleSheet.create({
   quizTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 8,
     lineHeight: 24,
   },
@@ -485,13 +472,13 @@ const styles = StyleSheet.create({
   },
   metaTextCompact: {
     fontSize: 11,
-    color: '#64748B',
+    color: theme.subtext,
     fontWeight: '600',
   },
 
   statsHorizontalBox: {
     flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.isDarkMode ? '#33415530' : '#F8FAFC',
     borderRadius: 6,
     padding: 10,
     justifyContent: 'space-between',
@@ -504,10 +491,10 @@ const styles = StyleSheet.create({
   },
   statValueCell: {
     fontSize: 11,
-    color: '#1E293B',
+    color: theme.text,
     fontWeight: '700',
   },
-   actionRow: {
+  actionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
@@ -519,12 +506,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 4,
 
-    shadowColor: '#4F46E5',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -540,15 +527,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 4,
   },
   actionBtnSecondaryText: {
-    color: '#4F46E5',
+    color: theme.primary,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -560,13 +547,13 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#374151',
+    color: theme.text,
     marginTop: 16,
     marginBottom: 4,
   },
   emptySubtext: {
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.subtext,
     textAlign: 'center',
   },
   gradingSection: {
@@ -574,21 +561,21 @@ const styles = StyleSheet.create({
   },
   gradingTitle: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: theme.subtext,
     fontWeight: '700',
     marginBottom: 6,
     textTransform: 'uppercase',
   },
   gradingBarBg: {
     height: 6,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9',
     borderRadius: 3,
     overflow: 'hidden',
     marginBottom: 4,
   },
   gradingBarFill: {
     height: '100%',
-    backgroundColor: '#6366F1', // Indigo/Purple mix
+    backgroundColor: theme.primary,
     borderRadius: 3,
   },
   gradingLabels: {
@@ -597,7 +584,7 @@ const styles = StyleSheet.create({
   },
   gradingLabelText: {
     fontSize: 11,
-    color: '#64748B',
+    color: theme.subtext,
     fontWeight: '600',
   },
 
@@ -610,9 +597,10 @@ const styles = StyleSheet.create({
     flex: 4.5,
     height: 44,
     borderRadius: 6,
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#4F46E5',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
@@ -628,24 +616,24 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
   btnExportText: {
-    color: '#475569',
+    color: theme.text,
     fontSize: 13,
     fontWeight: '600',
   },
   subjectBadge: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: theme.isDarkMode ? '#312E8130' : '#EEF2FF',
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   quizMeta: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.subtext,
     marginBottom: 16,
   },
 });

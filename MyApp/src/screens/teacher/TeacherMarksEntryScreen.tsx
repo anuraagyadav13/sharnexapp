@@ -19,8 +19,7 @@ import Animated, { FadeInUp, FadeIn, Layout } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import teacherService from '../../services/teacherService';
 import { useTheme } from '../../store/ThemeContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -29,7 +28,8 @@ type Props = NativeStackScreenProps<RootStackParamList, 'TeacherMarksEntry'>;
 
 const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
   const { examId, classId, subjectId, examName, className, subjectName } = route.params;
-  const { theme } = useTheme();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles({ ...theme, isDarkMode });
   const { authState } = useAuth();
   
   const [students, setStudents] = useState<any[]>([]);
@@ -46,7 +46,7 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
   const fetchSheet = async () => {
     try {
       setIsLoading(true);
-      const res = await apiClient.get(ENDPOINTS.TEACHER.RMS_MARKS_SHEET(examId, classId, subjectId));
+      const res = await teacherService.getRmsMarksSheet(examId, classId, subjectId);
       const data = res.data.data || {};
       
       setStudents(data.students || []);
@@ -71,9 +71,10 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const handleScoreChange = (studentId: string, value: string) => {
-    // Validate max marks
+    // Validate marks limits
     const numericValue = parseFloat(value);
-    if (!isNaN(numericValue) && numericValue > maxMarks) {
+    if (!isNaN(numericValue) && (numericValue > maxMarks || numericValue < 0)) {
+      Alert.alert('Validation Error', `Marks must be between 0 and ${maxMarks}.`);
       return;
     }
     
@@ -102,6 +103,22 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const handleSave = async (isFinal: boolean = false) => {
+    if (isFinal) {
+      // Validate that all students have either been graded or marked absent
+      const missing = students.filter(student => {
+        const studentMarks = marks[student.id];
+        return !studentMarks || (!studentMarks.isAbsent && (studentMarks.score === undefined || studentMarks.score.trim() === ''));
+      });
+      
+      if (missing.length > 0) {
+        Alert.alert(
+          'Validation Error',
+          `Cannot submit sheet. Please enter marks or mark as absent for all students. (${missing.length} remaining)`
+        );
+        return;
+      }
+    }
+
     try {
       setIsSubmitting(true);
       const payload = {
@@ -117,14 +134,17 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
         isFinal
       };
 
-      const endpoint = isFinal ? ENDPOINTS.TEACHER.RMS_SUBMIT_MARKS : ENDPOINTS.TEACHER.RMS_BULK_SAVE;
-      await apiClient.post(endpoint, payload);
+      if (isFinal) {
+        await teacherService.submitRmsMarks(payload);
+      } else {
+        await teacherService.bulkSaveRmsMarks(payload);
+      }
       
       Alert.alert('Success', isFinal ? 'Marks submitted successfully' : 'Marks saved as draft');
       if (isFinal) navigation.goBack();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save marks:', error);
-      Alert.alert('Error', 'Failed to save marks');
+      Alert.alert('Error', error.response?.data?.message || 'Failed to save marks');
     } finally {
       setIsSubmitting(false);
     }
@@ -199,12 +219,12 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.surface} />
 
       {/* Header */}
       <View style={styles.globalHeader}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#1F2937" />
+          <Ionicons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={styles.portalTitle}>MARKS EXAMINATION PORTAL</Text>
@@ -225,7 +245,7 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
           {/* Left Cards (Academic Context & Stats) */}
           <View style={styles.sidebarContainer}>
             {/* Academic Context */}
-            <Animated.View entering={FadeInUp.delay(100).springify()} style={[styles.sidebarCard, { backgroundColor: '#FFFFFF' }]}>
+            <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.sidebarCard}>
               <View style={styles.cardHeaderRow}>
                 <View style={styles.dot} />
                 <Text style={styles.sidebarCardTitle}>ACADEMIC CONTEXT</Text>
@@ -437,8 +457,8 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F9FAFC' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 100 },
 
   globalHeader: {
@@ -447,24 +467,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: theme.border,
   },
   backButton: { padding: 4, marginRight: 12 },
   headerTitleContainer: { flex: 1 },
-  portalTitle: { fontSize: 10, fontWeight: '800', color: '#9CA3AF', letterSpacing: 0.5 },
-  portalSubtitle: { fontSize: 16, fontWeight: '800', color: '#111827', marginTop: 2 },
+  portalTitle: { fontSize: 10, fontWeight: '800', color: theme.subtext, letterSpacing: 0.5 },
+  portalSubtitle: { fontSize: 16, fontWeight: '800', color: theme.text, marginTop: 2 },
   lockBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: theme.isDarkMode ? '#065F4630' : '#ECFDF5',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
     gap: 6,
   },
-  lockText: { fontSize: 10, fontWeight: '900', color: '#10B981' },
+  lockText: { fontSize: 10, fontWeight: '900', color: theme.isDarkMode ? '#34D399' : '#10B981' },
 
   layoutContainer: {
     flexDirection: Platform.OS === 'web' || SCREEN_WIDTH > 768 ? 'row' : 'column',
@@ -481,7 +501,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.02,
@@ -490,11 +511,11 @@ const styles = StyleSheet.create({
   },
   cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#8B5CF6' },
-  sidebarCardTitle: { fontSize: 12, fontWeight: '800', color: '#6B7280', letterSpacing: 0.5 },
+  sidebarCardTitle: { fontSize: 12, fontWeight: '800', color: theme.subtext, letterSpacing: 0.5 },
   
   contextItem: { marginBottom: 16 },
-  contextLabel: { fontSize: 9, fontWeight: '800', color: '#9CA3AF', marginBottom: 4 },
-  contextValue: { fontSize: 14, fontWeight: '800', color: '#1F2937' },
+  contextLabel: { fontSize: 9, fontWeight: '800', color: theme.subtext, marginBottom: 4 },
+  contextValue: { fontSize: 14, fontWeight: '800', color: theme.text },
 
   performanceRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
   perfBlock: { flex: 1 },
@@ -512,10 +533,10 @@ const styles = StyleSheet.create({
   // Main Table
   mainContentContainer: { flex: 1 },
   tableCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.05,
@@ -528,7 +549,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: theme.border,
     justifyContent: 'space-between',
     flexWrap: 'wrap',
     gap: 12,
@@ -538,19 +559,19 @@ const styles = StyleSheet.create({
     minWidth: 280,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.background,
     borderRadius: 10,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
   },
-  searchInput: { flex: 1, paddingVertical: 10, paddingHorizontal: 8, fontSize: 13, color: '#1F2937' },
+  searchInput: { flex: 1, paddingVertical: 10, paddingHorizontal: 8, fontSize: 13, color: theme.text },
   controlRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   foundBadge: { 
     flexDirection: 'row', 
     alignItems: 'center', 
     gap: 6, 
-    backgroundColor: '#F5F3FF', 
+    backgroundColor: theme.isDarkMode ? '#7C3AED30' : '#F5F3FF', 
     paddingHorizontal: 10, 
     paddingVertical: 6, 
     borderRadius: 8 
@@ -564,11 +585,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F8FAFC',
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: theme.border,
   },
-  thText: { fontSize: 10, fontWeight: '800', color: '#9CA3AF', letterSpacing: 0.5 },
+  thText: { fontSize: 10, fontWeight: '800', color: theme.subtext, letterSpacing: 0.5 },
 
   tableRow: {
     flexDirection: 'row',
@@ -576,35 +597,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: theme.border,
   },
-  tdRoll: { fontSize: 12, fontWeight: '500', color: '#6B7280' },
-  tdName: { fontSize: 14, fontWeight: '800', color: '#1F2937' },
+  tdRoll: { fontSize: 12, fontWeight: '500', color: theme.subtext },
+  tdName: { fontSize: 14, fontWeight: '800', color: theme.text },
   scoreCell: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   scoreInput: {
     width: 60,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.background,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
     borderRadius: 8,
     paddingVertical: 6,
     paddingHorizontal: 8,
     fontSize: 14,
     fontWeight: '700',
-    color: '#1F2937',
+    color: theme.text,
     textAlign: 'center',
   },
-  disabledInput: { backgroundColor: '#F1F5F9', color: '#9CA3AF' },
+  disabledInput: { backgroundColor: theme.isDarkMode ? '#1E293B' : '#F1F5F9', color: theme.subtext },
   absBtn: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9',
     paddingVertical: 6,
     paddingHorizontal: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
   },
   absBtnActive: { backgroundColor: '#FEE2E2', borderColor: '#FECACA' },
-  absText: { fontSize: 10, fontWeight: '800', color: '#9CA3AF' },
+  absText: { fontSize: 10, fontWeight: '800', color: theme.subtext },
   absTextActive: { color: '#EF4444' },
   
   statusCell: { alignItems: 'flex-end' },
@@ -613,10 +634,10 @@ const styles = StyleSheet.create({
 
   tableFooter: {
     padding: 16,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F8FAFC',
     alignItems: 'center',
   },
-  footerText: { fontSize: 9, fontWeight: '700', color: '#9CA3AF', letterSpacing: 0.5 },
+  footerText: { fontSize: 9, fontWeight: '700', color: theme.subtext, letterSpacing: 0.5 },
 
   footerActions: {
     position: 'absolute',
@@ -624,21 +645,21 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     padding: 16,
     paddingBottom: Platform.OS === 'ios' ? 34 : 16,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: theme.border,
     gap: 12,
   },
   saveDraftBtn: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
   },
-  saveDraftText: { fontSize: 14, fontWeight: '700', color: '#475569' },
+  saveDraftText: { fontSize: 14, fontWeight: '700', color: theme.text },
   submitMarksBtn: {
     flex: 2,
     backgroundColor: '#7C3AED',
@@ -653,46 +674,46 @@ const styles = StyleSheet.create({
   },
   submitMarksText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
 
-  emptyText: { textAlign: 'center', padding: 40, color: '#9CA3AF', fontSize: 14 },
+  emptyText: { textAlign: 'center', padding: 40, color: theme.subtext, fontSize: 14 },
 
   filterBarRow: {
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: theme.border,
     gap: 8,
   },
   filterChip: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
   },
   filterChipActive: {
-    backgroundColor: '#7C3AED15',
+    backgroundColor: theme.isDarkMode ? '#7C3AED30' : '#7C3AED15',
     borderWidth: 1,
     borderColor: '#7C3AED',
   },
   filterChipText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#6B7280',
+    color: theme.subtext,
   },
   filterChipTextActive: {
     color: '#7C3AED',
   },
   remarkInput: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.background,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
     borderRadius: 8,
     paddingVertical: 6,
     paddingHorizontal: 8,
     fontSize: 12,
-    color: '#1F2937',
+    color: theme.text,
   },
   rankBadge: {
     flexDirection: 'row',

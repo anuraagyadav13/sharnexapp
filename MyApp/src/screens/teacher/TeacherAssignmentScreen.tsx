@@ -20,6 +20,7 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { TeacherHeader } from '../../components/TeacherHeader';
 import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
@@ -29,6 +30,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'TeacherAssignment'>;
 
 const TeacherAssignmentScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, isDarkMode, toggleDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [assignments, setAssignments] = useState<any[]>([]);
@@ -107,31 +109,11 @@ const TeacherAssignmentScreen: React.FC<Props> = ({ navigation }) => {
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
 
       {/* Global Header */}
-      <View style={[styles.globalHeader, { backgroundColor: theme.surface }]}>
-        <ScaleButton 
-          style={styles.menuHandle} 
-          onPress={() => setDrawerOpen(true)}
-        >
-          <Ionicons name="menu" size={28} color={theme.text} />
-        </ScaleButton>
-        <Text style={[styles.headerTitle, { color: theme.primary }]} numberOfLines={1}>
-          Assignments
-        </Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconBtn}>
-            <Ionicons name="notifications-outline" size={22} color={theme.text} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('AccountSettings')} style={styles.iconBtn}>
-            <Ionicons name="settings-outline" size={22} color={theme.text} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={toggleDarkMode} style={styles.iconBtn}>
-            <Ionicons name={isDarkMode ? "sunny-outline" : "moon-outline"} size={22} color={theme.text} />
-          </TouchableOpacity>
-          <View style={[styles.avatar, { backgroundColor: '#A855F7' }]}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
-          </View>
-        </View>
-      </View>
+      <TeacherHeader
+        title="Assignments"
+        navigation={navigation}
+        onMenuPress={() => setDrawerOpen(true)}
+      />
 
       <ScrollView 
         contentContainerStyle={styles.scrollContent} 
@@ -282,8 +264,8 @@ const TeacherAssignmentScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1 },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 100 },
   
   globalHeader: {
@@ -293,6 +275,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -304,6 +287,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '500',
+    color: theme.primary,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -325,10 +309,10 @@ const styles = StyleSheet.create({
   avatarText: { color: '#FFF', fontWeight: 'bold' },
 
   topSection: { padding: 16 },
-  welcomeText: { fontSize: 12, fontWeight: '600', marginBottom: 2 },
-  pageTitle: { fontSize: 22, fontWeight: '900', letterSpacing: -0.5 },
+  welcomeText: { fontSize: 12, fontWeight: '600', marginBottom: 2, color: theme.subtext },
+  pageTitle: { fontSize: 22, fontWeight: '900', letterSpacing: -0.5, color: theme.text },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 2, marginBottom: 12 },
-  addBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
+  addBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: theme.primary },
   addBtnText: { color: '#FFF', fontSize: 12, fontWeight: '800', marginLeft: 4 },
 
   searchContainer: {
@@ -338,14 +322,16 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 10,
     borderWidth: 1,
+    backgroundColor: theme.surface,
+    borderColor: theme.border
   },
-  searchInput: { flex: 1, fontSize: 13, fontWeight: '500', marginLeft: 8 },
+  searchInput: { flex: 1, fontSize: 13, fontWeight: '500', marginLeft: 8, color: theme.text },
 
   listContainer: { paddingHorizontal: 20 },
   loaderContainer: { marginTop: 60, alignItems: 'center' },
-  loadingText: { marginTop: 12, fontSize: 14, fontWeight: '500' },
+  loadingText: { marginTop: 12, fontSize: 14, fontWeight: '500', color: theme.text },
 
-  card: { borderRadius: 20, padding: 18, marginBottom: 16, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
+  card: { backgroundColor: theme.surface, borderColor: theme.border, borderRadius: 20, padding: 18, marginBottom: 16, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   subjectTag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   subjectTagText: { fontSize: 11, fontWeight: '800' },
@@ -353,29 +339,29 @@ const styles = StyleSheet.create({
   statusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 6 },
   statusText: { fontSize: 10, fontWeight: '900' },
   
-  cardTitle: { fontSize: 17, fontWeight: '800', marginBottom: 10, lineHeight: 22 },
+  cardTitle: { fontSize: 17, fontWeight: '800', marginBottom: 10, lineHeight: 22, color: theme.text },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  metaText: { fontSize: 12, fontWeight: '600' },
-  metaDivider: { width: 1, height: 12 },
+  metaText: { fontSize: 12, fontWeight: '600', color: theme.subtext },
+  metaDivider: { width: 1, height: 12, backgroundColor: theme.border },
 
   progressBox: { marginBottom: 20 },
   progressHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  progressLabel: { fontSize: 12, fontWeight: '600' },
-  progressValue: { fontSize: 12, fontWeight: '800' },
-  progressTrack: { height: 8, borderRadius: 4, width: '100%', overflow: 'hidden' },
+  progressLabel: { fontSize: 12, fontWeight: '600', color: theme.subtext },
+  progressValue: { fontSize: 12, fontWeight: '800', color: theme.text },
+  progressTrack: { height: 8, borderRadius: 4, width: '100%', overflow: 'hidden', backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9' },
   progressFill: { height: '100%', borderRadius: 4 },
 
-  cardFooter: { flexDirection: 'row', alignItems: 'center', paddingTop: 16, borderTopWidth: 1 },
+  cardFooter: { flexDirection: 'row', alignItems: 'center', paddingTop: 16, borderTopWidth: 1, borderTopColor: theme.border },
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, gap: 8 },
   actionTextMain: { color: '#FFF', fontSize: 13, fontWeight: '800' },
   footerRight: { flexDirection: 'row', alignItems: 'center', gap: 10, marginLeft: 12 },
   iconActionBtn: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
 
   emptyContainer: { marginTop: 40, alignItems: 'center', padding: 20 },
-  emptyIconCircle: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-  emptyTitle: { fontSize: 20, fontWeight: '800', marginBottom: 8 },
-  emptyDesc: { fontSize: 14, textAlign: 'center', lineHeight: 22 }
+  emptyIconCircle: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', marginBottom: 20, backgroundColor: theme.isDarkMode ? '#312E8130' : '#EEF2FF' },
+  emptyTitle: { fontSize: 20, fontWeight: '800', marginBottom: 8, color: theme.text },
+  emptyDesc: { fontSize: 14, textAlign: 'center', lineHeight: 22, color: theme.subtext }
 });
 
 export default TeacherAssignmentScreen;

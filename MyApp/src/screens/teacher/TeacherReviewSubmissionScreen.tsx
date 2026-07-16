@@ -29,7 +29,8 @@ type Props = NativeStackScreenProps<RootStackParamList, 'TeacherReviewSubmission
 
 const TeacherReviewSubmissionScreen: React.FC<Props> = ({ navigation, route }) => {
   const { examId, classId, examName, className } = route.params;
-  const { theme } = useTheme();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles({ ...theme, isDarkMode });
   const { authState } = useAuth();
   
   const [summary, setSummary] = useState<any>(null);
@@ -359,17 +360,17 @@ const TeacherReviewSubmissionScreen: React.FC<Props> = ({ navigation, route }) =
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FFFFFF' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40, paddingHorizontal: 20 },
 
   wizardHeader: {
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: theme.border,
   },
   headerTop: {
     flexDirection: 'row',
@@ -378,12 +379,12 @@ const styles = StyleSheet.create({
   },
   backButton: { marginRight: 16 },
   headerTitleContainer: { flex: 1 },
-  wizardTitle: { fontSize: 13, fontWeight: '800', color: '#1E1B4B', letterSpacing: 0.5 },
-  wizardSubtitle: { fontSize: 11, fontWeight: '700', color: '#3B82F6', marginTop: 2 },
+  wizardTitle: { fontSize: 13, fontWeight: '800', color: theme.text, letterSpacing: 0.5 },
+  wizardSubtitle: { fontSize: 11, fontWeight: '700', color: theme.primary, marginTop: 2 },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#3B82F6',
+    backgroundColor: theme.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
@@ -405,19 +406,19 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#E5E7EB',
     justifyContent: 'center',
     alignItems: 'center',
   },
   activeStepCircle: { backgroundColor: '#3B82F6' },
-  stepNumber: { fontSize: 11, fontWeight: '800', color: '#9CA3AF' },
+  stepNumber: { fontSize: 11, fontWeight: '800', color: theme.subtext },
   activeStepNumber: { color: '#FFFFFF' },
-  stepLabel: { fontSize: 10, fontWeight: '800', color: '#9CA3AF' },
-  activeStepLabel: { color: '#1E1B4B' },
+  stepLabel: { fontSize: 10, fontWeight: '800', color: theme.subtext },
+  activeStepLabel: { color: theme.text },
   stepConnector: {
     width: 30,
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#E5E7EB',
     marginHorizontal: 12,
   },
 
@@ -431,11 +432,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 6,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: theme.border,
     marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -452,16 +453,16 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   subjectStatusText: { fontSize: 9, fontWeight: '900', textTransform: 'uppercase' },
-  subjectNameText: { fontSize: 15, fontWeight: '800', color: '#1F2937', marginBottom: 4 },
+  subjectNameText: { fontSize: 15, fontWeight: '800', color: theme.text, marginBottom: 4 },
   teacherInfo: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  teacherName: { fontSize: 11, fontWeight: '600', color: '#9CA3AF' },
+  teacherName: { fontSize: 11, fontWeight: '600', color: theme.subtext },
 
   readinessColumn: { flex: 1 },
   readinessCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: theme.border,
     padding: 20,
     alignItems: 'center',
     shadowColor: '#000',
@@ -470,7 +471,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 3,
   },
-  readinessCardTitle: { fontSize: 10, fontWeight: '800', color: '#9CA3AF', alignSelf: 'flex-start', marginBottom: 20 },
+  readinessCardTitle: { fontSize: 10, fontWeight: '800', color: theme.subtext, alignSelf: 'flex-start', marginBottom: 20 },
   
   circleProgressContainer: {
     width: 140,
@@ -497,9 +498,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderTopColor: 'transparent',
     borderRightColor: 'transparent',
-    // In a real app we'd use SVG for accurate arcs
   },
-  readinessValue: { fontSize: 24, fontWeight: '900', color: '#1E1B4B' },
+  readinessValue: { fontSize: 24, fontWeight: '900', color: theme.text },
   readinessLabel: { fontSize: 9, fontWeight: '800', color: '#10B981', marginTop: 2 },
   progressArc: {
     position: 'absolute',
@@ -515,51 +515,51 @@ const styles = StyleSheet.create({
   subjectsApprovalContainer: { width: '100%' },
   approvalLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   approvalLabel: { fontSize: 9, fontWeight: '800', color: '#3B82F6' },
-  approvalCount: { fontSize: 11, fontWeight: '900', color: '#1E1B4B' },
-  progressBarBg: { height: 6, backgroundColor: '#F1F5F9', borderRadius: 3, overflow: 'hidden' },
+  approvalCount: { fontSize: 11, fontWeight: '900', color: theme.text },
+  progressBarBg: { height: 6, backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9', borderRadius: 3, overflow: 'hidden' },
   progressBarFill: { height: '100%', borderRadius: 3 },
 
   emptySubjects: { alignItems: 'center', justifyContent: 'center', marginTop: 60 },
-  emptyText: { marginTop: 16, fontSize: 14, color: '#9CA3AF' },
+  emptyText: { marginTop: 16, fontSize: 14, color: theme.subtext },
 
   stepContent: { padding: 16, maxWidth: 900, alignSelf: 'center', width: '100%' },
-  stepTitle: { fontSize: 20, fontWeight: '800', color: '#1F2937', marginBottom: 4 },
-  stepDesc: { fontSize: 13, color: '#6B7280', marginBottom: 20 },
+  stepTitle: { fontSize: 20, fontWeight: '800', color: theme.text, marginBottom: 4 },
+  stepDesc: { fontSize: 13, color: theme.subtext, marginBottom: 20 },
   statsGrid: { flexDirection: 'row', gap: 12, marginBottom: 20 },
-  statCard: { flex: 1, backgroundColor: '#FFFFFF', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', alignItems: 'center' },
+  statCard: { flex: 1, backgroundColor: theme.surface, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: theme.border, alignItems: 'center' },
   statVal: { fontSize: 22, fontWeight: '900', color: '#7C3AED' },
-  statLab: { fontSize: 10, fontWeight: '800', color: '#6B7280', marginTop: 4 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#1F2937' },
-  analysisCard: { backgroundColor: '#FFFFFF', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 12 },
+  statLab: { fontSize: 10, fontWeight: '800', color: theme.subtext, marginTop: 4 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: theme.text },
+  analysisCard: { backgroundColor: theme.surface, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: theme.border, marginBottom: 12 },
   analysisHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  analysisSubName: { fontSize: 15, fontWeight: '800', color: '#1F2937' },
+  analysisSubName: { fontSize: 15, fontWeight: '800', color: theme.text },
   analysisStatus: { fontSize: 12, fontWeight: '800' },
   analysisRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  analysisMeta: { fontSize: 12, color: '#6B7280', fontWeight: '500' },
-  primaryActionBtn: { backgroundColor: '#7C3AED', paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginTop: 20 },
+  analysisMeta: { fontSize: 12, color: theme.subtext, fontWeight: '500' },
+  primaryActionBtn: { backgroundColor: theme.primary, paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginTop: 20 },
   primaryActionText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
 
-  publishWarningCard: { backgroundColor: '#F5F3FF', padding: 24, borderRadius: 16, borderWidth: 1, borderColor: '#DDD6FE', alignItems: 'center', marginBottom: 24 },
-  publishWarningTitle: { fontSize: 18, fontWeight: '800', color: '#5B21B6', marginTop: 12, marginBottom: 8 },
-  publishWarningDesc: { fontSize: 13, color: '#6D28D9', textAlign: 'center', lineHeight: 20 },
+  publishWarningCard: { backgroundColor: theme.isDarkMode ? '#312E8140' : '#F5F3FF', padding: 24, borderRadius: 16, borderWidth: 1, borderColor: theme.isDarkMode ? '#5B21B6' : '#DDD6FE', alignItems: 'center', marginBottom: 24 },
+  publishWarningTitle: { fontSize: 18, fontWeight: '800', color: theme.isDarkMode ? '#DDD6FE' : '#5B21B6', marginTop: 12, marginBottom: 8 },
+  publishWarningDesc: { fontSize: 13, color: theme.isDarkMode ? '#C084FC' : '#6D28D9', textAlign: 'center', lineHeight: 20 },
   actionGrid: { gap: 12 },
   publishBtn: { flexDirection: 'row', backgroundColor: '#10B981', paddingVertical: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 8 },
   publishBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
-  rejectBtn: { flexDirection: 'row', backgroundColor: '#FEE2E2', paddingVertical: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#FECACA' },
+  rejectBtn: { flexDirection: 'row', backgroundColor: theme.isDarkMode ? '#7F1D1D40' : '#FEE2E2', paddingVertical: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: theme.isDarkMode ? '#991B1B' : '#FECACA' },
   rejectBtnText: { color: '#EF4444', fontWeight: '800', fontSize: 13 },
   secondaryActionsRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  recallBtn: { flex: 1, flexDirection: 'row', backgroundColor: '#FEF3C7', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  recallBtn: { flex: 1, flexDirection: 'row', backgroundColor: theme.isDarkMode ? '#78350F40' : '#FEF3C7', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 6 },
   recallBtnText: { color: '#D97706', fontWeight: '700', fontSize: 13 },
-  auditBtn: { flex: 1, flexDirection: 'row', backgroundColor: '#F3F4F6', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 6 },
-  auditBtnText: { color: '#4B5563', fontWeight: '700', fontSize: 13 },
+  auditBtn: { flex: 1, flexDirection: 'row', backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  auditBtnText: { color: theme.text, fontWeight: '700', fontSize: 13 },
 
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, width: '100%', maxWidth: 500 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#F1F5F9', paddingBottom: 12 },
-  modalTitle: { fontSize: 16, fontWeight: '800', color: '#1F2937' },
-  logItem: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  logAction: { fontSize: 13, fontWeight: '700', color: '#1F2937' },
-  logMeta: { fontSize: 11, color: '#6B7280', marginTop: 2 },
+  modalCard: { backgroundColor: theme.surface, borderRadius: 16, padding: 20, width: '100%', maxWidth: 500 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: theme.border, paddingBottom: 12 },
+  modalTitle: { fontSize: 16, fontWeight: '800', color: theme.text },
+  logItem: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: theme.border },
+  logAction: { fontSize: 13, fontWeight: '700', color: theme.text },
+  logMeta: { fontSize: 11, color: theme.subtext, marginTop: 2 },
 });
 
 export default TeacherReviewSubmissionScreen;

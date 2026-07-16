@@ -19,9 +19,9 @@ import Animated, { FadeInUp, FadeIn, Layout } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { TeacherHeader } from '../../components/TeacherHeader';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import teacherService from '../../services/teacherService';
 import { useTheme } from '../../store/ThemeContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -29,7 +29,8 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherResultManagement'>;
 
 const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
-  const { theme } = useTheme();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles({ ...theme, isDarkMode });
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [activeTab, setActiveTab] = useState<'entry' | 'review'>('entry');
@@ -46,8 +47,8 @@ const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
       if (!isRefresh) setIsLoading(true);
       setError(null);
       const [workRes, reviewRes] = await Promise.all([
-        apiClient.get(ENDPOINTS.TEACHER.RMS_WORK_ITEMS).catch(() => ({ data: { items: [] } })),
-        apiClient.get(ENDPOINTS.TEACHER.RMS_REVIEW_ITEMS).catch(() => ({ data: { items: [] } })),
+        teacherService.getRmsWorkItems().catch(() => ({ data: { items: [] } })),
+        teacherService.getRmsReviewItems().catch(() => ({ data: { items: [] } })),
       ]);
 
       const workData = workRes.data?.items || workRes.data?.data?.items || (Array.isArray(workRes.data) ? workRes.data : []);
@@ -257,32 +258,11 @@ const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* Standardized Global Header */}
-      <View style={styles.globalHeader}>
-        <ScaleButton
-          style={styles.menuHandle}
-          onPress={() => setDrawerOpen(true)}
-          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-        >
-          <Ionicons name="menu" size={28} color="#111827" />
-        </ScaleButton>
-
-        <Text style={styles.headerTitle} numberOfLines={1}>Result Management</Text>
-
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconBtn}>
-            <Ionicons name="notifications-outline" size={22} color="#111827" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('AccountSettings')} style={styles.iconBtn}>
-            <Ionicons name="settings-outline" size={22} color="#111827" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => { }} style={styles.iconBtn}>
-            <Ionicons name="moon-outline" size={22} color="#111827" />
-          </TouchableOpacity>
-          <View style={[styles.avatar, { backgroundColor: '#A855F7' }]}>
-            <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
-          </View>
-        </View>
-      </View>
+      <TeacherHeader
+        title="Result Management"
+        navigation={navigation}
+        onMenuPress={() => setDrawerOpen(true)}
+      />
 
       {/* Tabs */}
       <View style={styles.tabBar}>
@@ -375,8 +355,8 @@ const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FAFAFF' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40, paddingHorizontal: 16 },
 
   globalHeader: {
@@ -386,7 +366,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -398,7 +378,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5',
+    color: theme.primary,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -422,10 +402,10 @@ const styles = StyleSheet.create({
 
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: theme.border,
   },
   tab: {
     flexDirection: 'row',
@@ -437,21 +417,21 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   activeTab: {
-    borderBottomColor: '#7C3AED',
+    borderBottomColor: theme.primary,
   },
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: theme.subtext,
   },
   activeTabText: {
-    color: '#7C3AED',
+    color: theme.primary,
   },
 
   tabContent: { marginTop: 24 },
   sectionHeaderRow: { marginBottom: 20 },
-  sectionTitle: { fontSize: 22, fontWeight: '800', color: '#1F2937' },
-  sectionSubtitle: { fontSize: 12, color: '#6B7280', marginTop: 4, fontWeight: '500' },
+  sectionTitle: { fontSize: 22, fontWeight: '800', color: theme.text },
+  sectionSubtitle: { fontSize: 12, color: theme.subtext, marginTop: 4, fontWeight: '500' },
 
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   cardWrapper: { width: '48.5%', marginBottom: 16 },
@@ -464,6 +444,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.03,
     shadowRadius: 6,
     elevation: 2,
+    backgroundColor: theme.surface,
+    borderColor: theme.border,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -495,42 +477,42 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: theme.border,
   },
-  cardDate: { fontSize: 9, color: '#9CA3AF', fontWeight: '500' },
+  cardDate: { fontSize: 9, color: theme.subtext, fontWeight: '500' },
   enterMarksBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   enterMarksText: { fontSize: 9, fontWeight: '800' },
 
   progressContainer: { marginTop: 12 },
   progressLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  progressLabel: { fontSize: 8, fontWeight: '700', color: '#9CA3AF' },
-  progressValue: { fontSize: 9, fontWeight: '800', color: '#1F2937' },
-  progressBarBg: { height: 4, borderRadius: 2, overflow: 'hidden' },
+  progressLabel: { fontSize: 8, fontWeight: '700', color: theme.subtext },
+  progressValue: { fontSize: 9, fontWeight: '800', color: theme.text },
+  progressBarBg: { height: 4, borderRadius: 2, overflow: 'hidden', backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9' },
   progressBarFill: { height: '100%', borderRadius: 2 },
   reviewDoneText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
 
   emptyState: { alignItems: 'center', justifyContent: 'center', marginTop: 60, paddingHorizontal: 40 },
-  emptyText: { textAlign: 'center', marginTop: 16, fontSize: 14, lineHeight: 20 },
+  emptyText: { textAlign: 'center', marginTop: 16, fontSize: 14, lineHeight: 20, color: theme.subtext },
   loaderContainer: { alignItems: 'center', justifyContent: 'center', marginTop: 100 },
-  loaderText: { marginTop: 12, fontSize: 14, fontWeight: '500' },
+  loaderText: { marginTop: 12, fontSize: 14, fontWeight: '500', color: theme.subtext },
 
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     marginHorizontal: 16,
     marginTop: 12,
     paddingHorizontal: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     height: 46,
   },
   searchInput: {
     flex: 1,
     marginLeft: 10,
     fontSize: 14,
-    color: '#1F2937',
+    color: theme.text,
   },
   filterScroll: {
     paddingHorizontal: 16,
@@ -542,22 +524,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
     marginRight: 8,
     borderWidth: 1,
     borderColor: 'transparent',
   },
   filterChipActive: {
-    backgroundColor: '#7C3AED15',
-    borderColor: '#7C3AED',
+    backgroundColor: theme.isDarkMode ? '#7C3AED30' : '#7C3AED15',
+    borderColor: theme.primary,
   },
   filterChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
+    color: theme.subtext,
   },
   filterChipTextActive: {
-    color: '#7C3AED',
+    color: theme.primary,
   },
   errorContainer: {
     alignItems: 'center',
@@ -572,7 +554,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   retryBtn: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: theme.primary,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,

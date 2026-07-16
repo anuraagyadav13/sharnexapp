@@ -95,9 +95,8 @@ const teacherService = {
     return apiClient.post(ENDPOINTS.TEACHER.CREATE_QUIZ, data);
   },
 
-  // Updates an existing quiz's details or questions
   updateQuiz(id: string, data: any) {
-    return apiClient.put(ENDPOINTS.TEACHER.UPDATE_QUIZ(id), data);
+    return apiClient.patch(ENDPOINTS.TEACHER.UPDATE_QUIZ(id), data);
   },
 
   // Deletes a quiz
@@ -257,6 +256,15 @@ const teacherService = {
     return apiClient.delete(ENDPOINTS.TEACHER.DELETE_STUDY_MATERIAL(id));
   },
 
+  // Uploads study material binary with metadata using multipart/form-data
+  uploadStudyMaterial(formData: FormData) {
+    return apiClient.post(ENDPOINTS.TEACHER.STUDY_MATERIALS, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
   // ----------------------------------------------------
   // Leaves (Time Off)
   // ----------------------------------------------------
@@ -327,8 +335,8 @@ const teacherService = {
   },
 
   // Acknowledges that they received the equipment
-  acknowledgeEquipmentRequest(id: string) {
-    return apiClient.post(ENDPOINTS.TEACHER.EQUIPMENT.ACKNOWLEDGE(id));
+  acknowledgeEquipmentRequest(id: string, data?: any) {
+    return apiClient.post(ENDPOINTS.TEACHER.EQUIPMENT.ACKNOWLEDGE(id), data);
   },
 
   // ----------------------------------------------------

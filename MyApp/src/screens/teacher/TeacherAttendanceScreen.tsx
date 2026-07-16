@@ -16,6 +16,7 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { TeacherHeader } from '../../components/TeacherHeader';
 import { useAuth } from '../../store/AuthContext';
 // Import our easy-to-use teacherService for talking to the server
 import teacherService from '../../services/teacherService';
@@ -23,6 +24,8 @@ import { useTheme } from '../../store/ThemeContext';
 import Skeleton from '../../components/common/Skeleton';
 
 const PageSkeleton = () => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
   return (
     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.pageTitleWrapper}>
@@ -58,6 +61,7 @@ const TeacherAttendanceScreen: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const { theme, isDarkMode, toggleDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const [classes, setClasses] = useState<any[]>([]);
   const [myAttendance, setMyAttendance] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -113,31 +117,11 @@ const TeacherAttendanceScreen: React.FC<Props> = ({ navigation }) => {
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
 
       {/* Global Header */}
-      <View style={[styles.globalHeader, { backgroundColor: theme.surface }]}>
-        <ScaleButton
-          style={styles.menuHandle}
-          onPress={() => setDrawerOpen(true)}
-        >
-          <Ionicons name="menu" size={28} color={theme.text} />
-        </ScaleButton>
-        <Text style={[styles.headerTitle, { color: theme.primary }]} numberOfLines={1}>
-          Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}
-        </Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconBtn}>
-            <Ionicons name="notifications-outline" size={22} color={theme.text} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('AccountSettings')} style={styles.iconBtn}>
-            <Ionicons name="settings-outline" size={22} color={theme.text} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={toggleDarkMode} style={styles.iconBtn}>
-            <Ionicons name={isDarkMode ? "sunny-outline" : "moon-outline"} size={22} color={theme.text} />
-          </TouchableOpacity>
-          <View style={[styles.avatar, { backgroundColor: '#A855F7' }]}>
-            <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
-          </View>
-        </View>
-      </View>
+      <TeacherHeader
+        title="Attendance"
+        navigation={navigation}
+        onMenuPress={() => setDrawerOpen(true)}
+      />
 
       {isLoading ? (
         <PageSkeleton />
@@ -274,8 +258,8 @@ const TeacherAttendanceScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 
   globalHeader: {
@@ -285,13 +269,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
     elevation: 8,
-    zIndex: 10,
   },
   menuHandle: { paddingRight: 10, paddingVertical: 10 },
   headerTitle: {
@@ -318,11 +301,11 @@ const styles = StyleSheet.create({
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   pageTitleWrapper: { marginBottom: 16, paddingHorizontal: 16, marginTop: 20 },
-  pageTitle: { fontSize: 22, fontWeight: '800', color: '#4F46E5', marginBottom: 4 },
-  pageSubtitle: { fontSize: 11, color: '#6B7280', fontWeight: '500' },
+  pageTitle: { fontSize: 22, fontWeight: '800', color: theme.primary, marginBottom: 4 },
+  pageSubtitle: { fontSize: 11, color: theme.subtext, fontWeight: '500' },
 
   mainCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 14,
     padding: 20,
     marginHorizontal: 16,
@@ -332,7 +315,7 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 6,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -343,11 +326,11 @@ const styles = StyleSheet.create({
   cardHeaderTitle: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
   },
 
   classCard: {
-    backgroundColor: '#F7F9FC',
+    backgroundColor: theme.isDarkMode ? '#33415530' : '#F7F9FC',
     borderRadius: 8,
     padding: 10,
     marginBottom: 16,
@@ -361,7 +344,7 @@ const styles = StyleSheet.create({
   classNameText: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#1F2937',
+    color: theme.text,
     marginBottom: 6,
   },
   classMetaRow: {
@@ -374,7 +357,7 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.subtext,
     fontWeight: '500',
   },
   markedPill: {
@@ -403,7 +386,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 8,
     padding: 12,
     shadowColor: '#1E293B',
@@ -416,7 +399,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#EEF2FF',
+    backgroundColor: theme.isDarkMode ? '#312E8130' : '#EEF2FF',
     borderRadius: 8,
     padding: 12,
   },
@@ -430,8 +413,8 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -439,29 +422,29 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 4,
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   actionBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: theme.text,
   },
   emptyText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.subtext,
     textAlign: 'center',
     marginTop: 20,
     fontWeight: '500',
   },
   meCard: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     borderRadius: 14,
     padding: 16,
     marginHorizontal: 16,
     marginBottom: 16,
-    shadowColor: '#4F46E5',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
     shadowRadius: 15,

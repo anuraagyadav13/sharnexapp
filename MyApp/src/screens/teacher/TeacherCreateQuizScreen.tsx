@@ -16,8 +16,9 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import { useTheme } from '../../store/ThemeContext';
+import { TeacherHeader } from '../../components/TeacherHeader';
+import teacherService from '../../services/teacherService';
 import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -34,6 +35,8 @@ type Props = NativeStackScreenProps<RootStackParamList, 'TeacherCreateQuiz'>;
 
 const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation, route }) => {
   const { authState } = useAuth();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const [classes, setClasses] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<Array<{ id: string; name: string }>>([]);
   
@@ -44,6 +47,7 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation, route }) => {
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [dueDate, setDueDate] = useState<Date>(new Date());
   const [duration, setDuration] = useState('');
+  const [questions, setQuestions] = useState<any[]>([]);
   
   const [isLoading, setIsLoading] = useState(false);
   
@@ -65,8 +69,27 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation, route }) => {
       setStartDate(initialQuiz.startAt ? new Date(initialQuiz.startAt) : new Date());
       setDueDate(initialQuiz.dueDate ? new Date(initialQuiz.dueDate) : new Date());
       setSelectedClasses(initialQuiz.classes || (initialQuiz.classId ? [initialQuiz.classId] : []));
+      setQuestions(initialQuiz.questions || []);
     }
   }, [route.params?.initialQuiz]);
+
+  // Prevent temporary state loss when navigating back from Step 2
+  useEffect(() => {
+    const params = route.params as any;
+    if (params?.updatedQuizData) {
+      const data = params.updatedQuizData;
+      setTitle(data.title || '');
+      setDescription(data.description || '');
+      setSubject(data.subject || '');
+      setDuration(String(data.duration || ''));
+      if (data.startDate) setStartDate(new Date(data.startDate));
+      if (data.dueDate) setDueDate(new Date(data.dueDate));
+      setSelectedClasses(data.classes || []);
+      setQuestions(data.questions || []);
+      // Clear navigation params after processing to avoid reprocessing
+      navigation.setParams({ updatedQuizData: undefined } as any);
+    }
+  }, [route.params?.updatedQuizData]);
 
   useEffect(() => {
     const fetchClassesAndSubjects = async () => {
@@ -75,7 +98,7 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation, route }) => {
         if (!teacherId) return;
         
         // Fetch classes
-        const classesRes = await apiClient.get(ENDPOINTS.TEACHER.CLASSES(teacherId));
+        const classesRes = await teacherService.getClasses(teacherId);
         const classesData = classesRes.data || classesRes;
         const fetchedClasses = Array.isArray(classesData) ? classesData : (classesData.classes || []);
         setClasses(fetchedClasses);
@@ -230,7 +253,7 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation, route }) => {
         duration: durationNum,
         teacherId: authState.user?.id as string,
         institutionId: authState.user?.institutionId as string,
-        questions: route.params?.initialQuiz?.questions || []
+        questions: questions
       }
     });
   };
@@ -240,18 +263,11 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation, route }) => {
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
-        <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
-          </View>
-        </View>
-      </View>
+      <TeacherHeader
+        title="Create Quiz"
+        navigation={navigation}
+        isStackScreen={true}
+      />
 
       {/* Blue Header Section */}
       <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
@@ -513,8 +529,8 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 110 },
 
   globalHeader: {
@@ -524,7 +540,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -535,7 +551,7 @@ const styles = StyleSheet.create({
   menuHandle: { paddingRight: 10, paddingVertical: 10, width: 28 },
   headerTitle: { fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5', 
+    color: theme.primary, 
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -557,7 +573,7 @@ const styles = StyleSheet.create({
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   blueHeader: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 20,
@@ -590,7 +606,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 40,
     paddingVertical: 20,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.isDarkMode ? '#33415530' : '#F8FAFC',
   },
   stepItem: {
     alignItems: 'center',
@@ -600,19 +616,19 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFFFFF',
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 6,
   },
   stepCircleActive: {
-    backgroundColor: '#4F46E5',
-    borderColor: '#4F46E5',
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   stepNumber: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: theme.subtext,
     fontWeight: '600',
   },
   stepNumberActive: {
@@ -620,15 +636,15 @@ const styles = StyleSheet.create({
   },
   stepText: {
     fontSize: 11,
-    color: '#6B7280',
+    color: theme.subtext,
     fontWeight: '600',
   },
   stepTextActive: {
-    color: '#4F46E5',
+    color: theme.primary,
   },
 
   mainCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 6,
     padding: 20,
     marginHorizontal: 16,
@@ -638,17 +654,17 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: theme.border,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 4,
   },
   cardSubtitle: {
     fontSize: 11,
-    color: '#6B7280',
+    color: theme.subtext,
     marginBottom: 20,
   },
 
@@ -656,43 +672,58 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   inputLabel: {
-    fontSize: 13,
-    color: '#111827',
-    marginBottom: 6,
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.text,
+    marginBottom: 8,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
     borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     fontSize: 13,
-    color: '#1E293B',
-    backgroundColor: '#F8FAFC',
+    color: theme.text,
+    backgroundColor: theme.surface,
   },
   dropdownInput: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: '#F8FAFC',
   },
-  dropdownTextPlaceholder: {
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  inputWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    backgroundColor: theme.surface,
+    height: 42,
+  },
+  inputVal: {
+    flex: 1,
     fontSize: 13,
-    color: '#9CA3AF',
+    color: theme.text,
+  },
+  placeholderText: {
+    flex: 1,
+    fontSize: 13,
+    color: theme.subtext,
   },
   dropdownMenu: {
     position: 'absolute',
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
     borderRadius: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -705,11 +736,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: theme.border,
   },
   dropdownItemText: {
     fontSize: 13,
-    color: '#374151',
+    color: theme.text,
   },
   formRow: {
     flexDirection: 'row',
@@ -729,30 +760,30 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFFFFF',
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
   },
   checkboxActive: {
-    backgroundColor: '#4F46E5',
-    borderColor: '#4F46E5',
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   checkboxLabel: {
     fontSize: 13,
-    color: '#374151',
+    color: theme.text,
     fontWeight: '500',
   },
   unitLabel: {
     fontSize: 11,
-    color: '#6B7280',
+    color: theme.subtext,
     fontWeight: '600',
     marginLeft: 4,
   },
   emptySmall: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.subtext,
     fontStyle: 'italic',
   },
   rowInputs: {
@@ -762,96 +793,20 @@ const styles = StyleSheet.create({
   },
   pickerValueText: {
     fontSize: 13,
-    color: '#1E293B',
+    color: theme.text,
     fontWeight: '500',
   },
   
-  // Modal Styles
-  calendarModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  calModalContainer: {
-    width: '85%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  calHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  calMonthText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-  calNavBtn: {
-    padding: 8,
-  },
-  calWeekdaysRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 8,
-  },
-  calWeekdayText: {
-    fontSize: 11,
-    color: '#64748B',
-    fontWeight: '600',
-    width: 32,
-    textAlign: 'center',
-  },
-  calDaysGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-  },
-  calDayBtn: {
-    width: '14.28%',
-    aspectRatio: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 6,
-  },
-  calDayText: {
-    fontSize: 13,
-    color: '#1E293B',
-  },
-  calCancelBtn: {
-    marginTop: 16,
-    padding: 12,
-    alignItems: 'center',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  
   // Time Picker Styles
-  timeModalContainer: {
-    width: '80%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+  timeModalContent: {
+    backgroundColor: theme.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     padding: 20,
+    maxHeight: '60%',
   },
-  timeModalTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1E293B',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  timeSelectionRow: {
+  timePickerWrapper: {
     flexDirection: 'row',
-    height: 150,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
@@ -874,21 +829,21 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   timeItemActive: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: theme.isDarkMode ? '#312E8130' : '#EEF2FF',
   },
   timeText: {
     fontSize: 16,
-    color: '#64748B',
+    color: theme.subtext,
     fontWeight: '600',
   },
   timeTextActive: {
-    color: '#4F46E5',
+    color: theme.primary,
     fontWeight: '800',
   },
   timeDivider: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#E2E8F0',
+    color: theme.border,
     marginHorizontal: 10,
   },
   modalFooter: {
@@ -897,7 +852,7 @@ const styles = StyleSheet.create({
   },
   confirmBtn: {
     flex: 1,
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
@@ -912,10 +867,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
   },
   timeModalCancelBtnText: {
-    color: '#64748B',
+    color: theme.subtext,
     fontWeight: '600',
   },
 
@@ -928,16 +883,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.surface,
   },
   cancelBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderRadius: 6,
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -946,19 +901,19 @@ const styles = StyleSheet.create({
   cancelBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
   nextBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     borderRadius: 6,
     paddingVertical: 10,
     paddingHorizontal: 16,
   
-    shadowColor: '#4F46E5',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
@@ -974,7 +929,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '80%',
@@ -989,28 +944,28 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
   classSelectItem: {
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: theme.border,
   },
   classSelectText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 4,
   },
   classSelectSubtext: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.subtext,
   },
   emptyText: {
     textAlign: 'center',
     marginTop: 40,
     fontSize: 14,
-    color: '#9CA3AF',
+    color: theme.subtext,
   },
 });
 

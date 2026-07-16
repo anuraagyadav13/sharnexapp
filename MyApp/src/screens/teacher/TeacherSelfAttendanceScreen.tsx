@@ -21,11 +21,15 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import { useAuth } from '../../store/AuthContext';
+import { useTheme } from '../../store/ThemeContext';
+import { TeacherHeader } from '../../components/TeacherHeader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherSelfAttendance'>;
 
 const TeacherSelfAttendanceScreen: React.FC<Props> = ({ navigation }) => {
   const { authState } = useAuth();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles({ ...theme, isDarkMode });
   const [records, setRecords] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -85,32 +89,11 @@ const TeacherSelfAttendanceScreen: React.FC<Props> = ({ navigation }) => {
       <StatusBar barStyle="light-content" translucent />
       
       {/* Standardized Header Box */}
-      <View style={styles.globalHeader}>
-        <ScaleButton
-          style={styles.menuHandle}
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-        >
-          <Ionicons name="arrow-back" size={28} color="#111827" />
-        </ScaleButton>
-
-        <Text style={styles.headerTitle} numberOfLines={1}>My Attendance</Text>
-
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconBtn}>
-            <Ionicons name="notifications-outline" size={22} color="#111827" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('AccountSettings')} style={styles.iconBtn}>
-            <Ionicons name="settings-outline" size={22} color="#111827" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => {}} style={styles.iconBtn}>
-            <Ionicons name="moon-outline" size={22} color="#111827" />
-          </TouchableOpacity>
-          <View style={[styles.avatar, { backgroundColor: '#A855F7' }]}>
-            <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
-          </View>
-        </View>
-      </View>
+      <TeacherHeader
+        title="My Attendance"
+        navigation={navigation}
+        isStackScreen={true}
+      />
 
       <ScrollView 
         style={styles.content}
@@ -204,8 +187,8 @@ const TeacherSelfAttendanceScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+const getStyles = (theme: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.background },
   globalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -213,7 +196,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -225,7 +208,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5',
+    color: theme.primary,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -249,38 +232,38 @@ const styles = StyleSheet.create({
   content: { flex: 1, paddingHorizontal: 20 },
   
   statsCard: { 
-    backgroundColor: '#FFF', 
+    backgroundColor: theme.surface, 
     borderRadius: 24, 
     padding: 20, 
     marginTop: -20, 
     shadowColor: '#1E293B', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10,
-    borderWidth: 1, borderColor: '#F1F5F9'
+    borderWidth: 1, borderColor: theme.border
   },
   statsMain: { flexDirection: 'row', alignItems: 'center' },
-  progressCircle: { width: 80, height: 80, borderRadius: 40, borderWidth: 6, borderColor: '#6366F1', justifyContent: 'center', alignItems: 'center' },
-  percentText: { fontSize: 20, fontWeight: '900', color: '#1E293B' },
-  percentLab: { fontSize: 8, fontWeight: '700', color: '#94A3B8' },
+  progressCircle: { width: 80, height: 80, borderRadius: 40, borderWidth: 6, borderColor: theme.primary, justifyContent: 'center', alignItems: 'center' },
+  percentText: { fontSize: 20, fontWeight: '900', color: theme.text },
+  percentLab: { fontSize: 8, fontWeight: '700', color: theme.subtext },
   statsGrid: { flex: 1, flexDirection: 'row', marginLeft: 20 },
   statItem: { flex: 1, alignItems: 'center' },
-  statVal: { fontSize: 22, fontWeight: '900', color: '#1E293B' },
-  statLab: { fontSize: 10, fontWeight: '600', color: '#64748B', marginTop: 4 },
+  statVal: { fontSize: 22, fontWeight: '900', color: theme.text },
+  statLab: { fontSize: 10, fontWeight: '600', color: theme.subtext, marginTop: 4 },
   
-  clockActionRow: { marginTop: 20, paddingTop: 20, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
+  clockActionRow: { marginTop: 20, paddingTop: 20, borderTopWidth: 1, borderTopColor: theme.border },
   clockBtn: { height: 50, borderRadius: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', shadowColor: '#1E293B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
-  clockInBtn: { backgroundColor: '#6366F1' },
+  clockInBtn: { backgroundColor: theme.primary },
   clockOutBtn: { backgroundColor: '#F59E0B' },
   clockBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
   completedDayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 10 },
   completedText: { fontSize: 14, fontWeight: '700', color: '#10B981' },
 
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B', marginTop: 30, marginBottom: 15 },
-  logCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 15, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#F1F5F9' },
-  logDateArea: { width: 50, alignItems: 'center', borderRightWidth: 1, borderRightColor: '#F1F5F9', marginRight: 15 },
-  logDay: { fontSize: 10, fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase' },
-  logDate: { fontSize: 22, fontWeight: '900', color: '#1E293B' },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: theme.text, marginTop: 30, marginBottom: 15 },
+  logCard: { backgroundColor: theme.surface, borderRadius: 16, padding: 15, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: theme.border },
+  logDateArea: { width: 50, alignItems: 'center', borderRightWidth: 1, borderRightColor: theme.border, marginRight: 15 },
+  logDay: { fontSize: 10, fontWeight: '800', color: theme.subtext, textTransform: 'uppercase' },
+  logDate: { fontSize: 22, fontWeight: '900', color: theme.text },
   logInfoArea: { flex: 1, gap: 6 },
   logRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  logTimeText: { fontSize: 12, fontWeight: '600', color: '#475569' },
+  logTimeText: { fontSize: 12, fontWeight: '600', color: theme.text },
   
   statusTag: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
   statusPresent: { backgroundColor: '#ECFDF5' },
@@ -290,7 +273,7 @@ const styles = StyleSheet.create({
   statusTextLate: { color: '#D97706' },
 
   emptyContainer: { alignItems: 'center', marginTop: 60 },
-  emptyText: { marginTop: 15, fontSize: 14, fontWeight: '600', color: '#94A3B8' },
+  emptyText: { marginTop: 15, fontSize: 14, fontWeight: '600', color: theme.subtext },
 });
 
 export default TeacherSelfAttendanceScreen;

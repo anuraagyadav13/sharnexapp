@@ -15,13 +15,16 @@ import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import { useTheme } from '../../store/ThemeContext';
+import { TeacherHeader } from '../../components/TeacherHeader';
+import teacherService from '../../services/teacherService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherCreateQuizStep3'>;
 
 const TeacherCreateQuizStep3Screen: React.FC<Props> = ({ navigation, route }) => {
   const { authState } = useAuth();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const { quizData } = route.params;
   const [isPublishing, setIsPublishing] = useState(false);
 
@@ -76,14 +79,12 @@ const TeacherCreateQuizStep3Screen: React.FC<Props> = ({ navigation, route }) =>
       };
 
       if (quizData.id) {
-        // Update existing quiz - Backend uses PATCH for updates
-        await apiClient.patch(ENDPOINTS.TEACHER.UPDATE_QUIZ(quizData.id), payload);
+        await teacherService.updateQuiz(quizData.id, payload);
         Alert.alert('Success', 'Quiz updated successfully!', [
           { text: 'OK', onPress: () => navigation.navigate('TeacherQuiz') }
         ]);
       } else {
-        // Create new quiz
-        await apiClient.post(ENDPOINTS.TEACHER.CREATE_QUIZ, payload);
+        await teacherService.createQuiz(payload);
         Alert.alert('Success', 'Quiz published successfully!', [
           { text: 'OK', onPress: () => navigation.navigate('TeacherQuiz') }
         ]);
@@ -101,22 +102,23 @@ const TeacherCreateQuizStep3Screen: React.FC<Props> = ({ navigation, route }) =>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
-        <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
-          </View>
-        </View>
-      </View>
+      <TeacherHeader
+        title="Create Quiz"
+        navigation={navigation}
+        isStackScreen={true}
+      />
 
       {/* Blue Header Section */}
       <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
-         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+          <TouchableOpacity 
+             style={styles.backButton} 
+             onPress={() => {
+               navigation.navigate('TeacherCreateQuizStep2', {
+                 quizData
+               });
+             }} 
+             activeOpacity={0.8}
+          >
             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
          </TouchableOpacity>
          <Text style={styles.blueTitle}>{quizData?.id ? 'Edit Quiz' : 'Create New Quiz'}</Text>
@@ -219,15 +221,19 @@ const TeacherCreateQuizStep3Screen: React.FC<Props> = ({ navigation, route }) =>
 
       {/* Bottom Fixed Action Bar */}
       <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.bottomBar}>
-         <TouchableOpacity 
-           style={styles.cancelBtn} 
-           activeOpacity={0.8} 
-           onPress={() => navigation.goBack()}
-           disabled={isPublishing}
-         >
-            <Ionicons name="arrow-back" size={16} color="#111827" style={{marginRight: 6}} />
-            <Text style={styles.cancelBtnText}>Previous</Text>
-         </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.cancelBtn} 
+            activeOpacity={0.8} 
+            onPress={() => {
+              navigation.navigate('TeacherCreateQuizStep2', {
+                quizData
+              });
+            }}
+            disabled={isPublishing}
+          >
+             <Ionicons name="arrow-back" size={16} color="#111827" style={{marginRight: 6}} />
+             <Text style={styles.cancelBtnText}>Previous</Text>
+          </TouchableOpacity>
          <TouchableOpacity 
            style={styles.nextBtn} 
            activeOpacity={0.8} 
@@ -248,8 +254,8 @@ const TeacherCreateQuizStep3Screen: React.FC<Props> = ({ navigation, route }) =>
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 110 },
 
   globalHeader: {
@@ -259,7 +265,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -270,7 +276,7 @@ const styles = StyleSheet.create({
   menuHandle: { paddingRight: 10, paddingVertical: 10, width: 28 },
   headerTitle: { fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5', 
+    color: theme.primary, 
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -292,7 +298,7 @@ const styles = StyleSheet.create({
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   blueHeader: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 20,
@@ -325,7 +331,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 40,
     paddingVertical: 20,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.isDarkMode ? '#33415530' : '#F8FAFC',
   },
   stepItem: {
     alignItems: 'center',
@@ -335,15 +341,15 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFFFFF',
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 6,
   },
   stepCircleActive: {
-    backgroundColor: '#4F46E5',
-    borderColor: '#4F46E5',
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   stepCircleCompleted: {
     backgroundColor: '#22C55E',
@@ -351,7 +357,7 @@ const styles = StyleSheet.create({
   },
   stepNumber: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: theme.subtext,
     fontWeight: '600',
   },
   stepNumberActive: {
@@ -359,18 +365,18 @@ const styles = StyleSheet.create({
   },
   stepText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.subtext,
     fontWeight: '700',
   },
   stepTextActive: {
-    color: '#4F46E5',
+    color: theme.primary,
   },
   stepTextCompleted: {
     color: '#22C55E',
   },
 
   mainCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 6,
     padding: 20,
     marginHorizontal: 16,
@@ -380,23 +386,23 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: theme.border,
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 4,
   },
   cardSubtitle: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.subtext,
     marginBottom: 24,
   },
   sectionHeader: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 20,
   },
 
@@ -415,19 +421,19 @@ const styles = StyleSheet.create({
   },
   gridLabel: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.subtext,
     fontWeight: '500',
     marginBottom: 4,
   },
   gridValue: {
     fontSize: 13,
-    color: '#111827',
+    color: theme.text,
     fontWeight: '700',
   },
 
   divider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.border,
     marginBottom: 20,
   },
   descSection: {
@@ -435,15 +441,15 @@ const styles = StyleSheet.create({
   },
   descValue: {
     fontSize: 13,
-    color: '#111827',
+    color: theme.text,
     fontWeight: '600',
     lineHeight: 20,
   },
 
   infoBox: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: theme.isDarkMode ? '#78350F30' : '#FFFBEB',
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: theme.isDarkMode ? '#D97706' : '#FDE68A',
     borderRadius: 8,
     padding: 16,
     marginBottom: 10,
@@ -451,13 +457,13 @@ const styles = StyleSheet.create({
   infoBoxTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#B45309',
+    color: theme.isDarkMode ? '#F59E0B' : '#B45309',
     marginBottom: 6,
   },
   infoBoxSub: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#B45309',
+    color: theme.isDarkMode ? '#F59E0B' : '#B45309',
     lineHeight: 18,
   },
 
@@ -470,16 +476,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.surface,
   },
   cancelBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderRadius: 6,
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -488,19 +494,19 @@ const styles = StyleSheet.create({
   cancelBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
   nextBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     borderRadius: 6,
     paddingVertical: 10,
     paddingHorizontal: 16,
   
-    shadowColor: '#4F46E5',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 6,

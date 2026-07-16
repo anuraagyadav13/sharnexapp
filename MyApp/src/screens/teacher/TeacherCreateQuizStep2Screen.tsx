@@ -15,6 +15,8 @@ import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
+import { useTheme } from '../../store/ThemeContext';
+import { TeacherHeader } from '../../components/TeacherHeader';
 let DocumentPicker: any = null;
 let DocumentPickerTypes: any = null;
 let XLSX: any = null;
@@ -77,6 +79,8 @@ const readFileBase64 = async (uri: string) => {
 
 const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation, route }) => {
   const { authState } = useAuth();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const { quizData } = route.params;
   const [questions, setQuestions] = useState<any[]>(quizData?.questions || []);
   const [inputMethod, setInputMethod] = useState<'JSON' | 'Excel'>('JSON');
@@ -444,23 +448,27 @@ const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation, route }) =>
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
-      {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
-        <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
-          </View>
-        </View>
-      </View>
+      {/* Standardized Global Header */}
+      <TeacherHeader
+        title="Quiz Questions"
+        navigation={navigation}
+        isStackScreen={true}
+      />
 
       {/* Blue Header Section */}
       <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
-         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+         <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => {
+              navigation.navigate('TeacherCreateQuiz', {
+                updatedQuizData: {
+                  ...quizData,
+                  questions
+                }
+              });
+            }} 
+            activeOpacity={0.8}
+         >
             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
          </TouchableOpacity>
          <Text style={styles.blueTitle}>{quizData?.id ? 'Edit Quiz' : 'Create New Quiz'}</Text>
@@ -648,9 +656,8 @@ const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation, route }) =>
 
           </Animated.View>
 
-          {/* Existing Questions Preview Section (Moved or hidden if needed) */}
-          {questions.length > 0 && (
-            <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.previewSection}>
+          {/* Existing Questions Preview Section */}
+          <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.previewSection}>
               <View style={styles.headerRow}>
                   <View>
                     <Text style={styles.sectionTitle}>Question Preview</Text>
@@ -718,13 +725,23 @@ const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation, route }) =>
             )}
 
           </Animated.View>
-          )}
 
       </ScrollView>
 
       {/* Bottom Fixed Action Bar */}
       <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.bottomBar}>
-         <TouchableOpacity style={styles.cancelBtn} activeOpacity={0.8} onPress={() => navigation.goBack()}>
+         <TouchableOpacity 
+            style={styles.cancelBtn} 
+            activeOpacity={0.8} 
+            onPress={() => {
+              navigation.navigate('TeacherCreateQuiz', {
+                updatedQuizData: {
+                  ...quizData,
+                  questions
+                }
+              });
+            }}
+         >
             <Ionicons name="arrow-back" size={16} color="#111827" style={{marginRight: 6}} />
             <Text style={styles.cancelBtnText}>Previous</Text>
          </TouchableOpacity>
@@ -737,8 +754,8 @@ const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation, route }) =>
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 110 },
 
   globalHeader: {
@@ -748,7 +765,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -759,7 +776,7 @@ const styles = StyleSheet.create({
   menuHandle: { paddingRight: 10, paddingVertical: 10, width: 28 },
   headerTitle: { fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5', 
+    color: theme.primary, 
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -781,7 +798,7 @@ const styles = StyleSheet.create({
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   blueHeader: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 20,
@@ -814,7 +831,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 40,
     paddingVertical: 20,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.isDarkMode ? '#33415530' : '#F8FAFC',
   },
   stepItem: {
     alignItems: 'center',
@@ -824,15 +841,15 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFFFFF',
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 6,
   },
   stepCircleActive: {
-    backgroundColor: '#4F46E5',
-    borderColor: '#4F46E5',
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   stepCircleCompleted: {
     backgroundColor: '#22C55E',
@@ -840,7 +857,7 @@ const styles = StyleSheet.create({
   },
   stepNumber: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: theme.subtext,
     fontWeight: '600',
   },
   stepNumberActive: {
@@ -848,11 +865,11 @@ const styles = StyleSheet.create({
   },
   stepText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.subtext,
     fontWeight: '700',
   },
   stepTextActive: {
-    color: '#4F46E5',
+    color: theme.primary,
   },
   stepTextCompleted: {
     color: '#22C55E',
@@ -862,12 +879,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   contentCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
     padding: 20,
-    marginHorizontal: 16,
     marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -884,23 +900,23 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#000',
+    color: theme.text,
     marginBottom: 4,
   },
   cardSubtitle: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.subtext,
     fontWeight: '500',
   },
   questionCountBox: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9',
     borderRadius: 6,
   },
   questionCountText: {
     fontSize: 11,
-    color: '#64748B',
+    color: theme.subtext,
     fontWeight: '600',
   },
   methodToggleRow: {
@@ -910,13 +926,13 @@ const styles = StyleSheet.create({
   },
   methodLabel: {
     fontSize: 14,
-    color: '#1E293B',
+    color: theme.text,
     fontWeight: '600',
     marginRight: 12,
   },
   segmentedControl: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9',
     borderRadius: 8,
     padding: 4,
     flex: 1,
@@ -928,49 +944,49 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   segmentBtnActive: {
-    backgroundColor: '#8B5CF6',
+    backgroundColor: theme.primary,
   },
   segmentBtnText: {
     fontSize: 13,
-    color: '#64748B',
+    color: theme.subtext,
     fontWeight: '600',
   },
   segmentBtnTextActive: {
     color: '#FFFFFF',
   },
   uploadBox: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.isDarkMode ? '#33415530' : '#F8FAFC',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
     padding: 16,
   },
   uploadBoxTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1E293B',
+    color: theme.text,
     marginBottom: 8,
   },
   formatText: {
     fontSize: 11,
-    color: '#64748B',
+    color: theme.subtext,
     marginBottom: 12,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   jsonInputLarge: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 12,
-    color: '#1E293B',
+    color: theme.text,
     height: 180,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   uploadSubText: {
     fontSize: 11,
-    color: '#64748B',
+    color: theme.subtext,
     marginBottom: 12,
   },
   filePickerRow: {
@@ -980,14 +996,14 @@ const styles = StyleSheet.create({
   fileBtn: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#FDF4FF',
+    backgroundColor: theme.isDarkMode ? '#4A044E30' : '#FDF4FF',
     borderWidth: 1,
-    borderColor: '#F0ABFC',
+    borderColor: theme.isDarkMode ? '#C026D3' : '#F0ABFC',
     borderRadius: 8,
   },
   fileBtnDisabled: {
-    backgroundColor: '#F3F4F6',
-    borderColor: '#D1D5DB',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
+    borderColor: theme.border,
   },
   fileBtnText: {
     fontSize: 12,
@@ -996,7 +1012,7 @@ const styles = StyleSheet.create({
   },
   fileName: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: theme.subtext,
     marginLeft: 12,
   },
   pickerWarningText: {
@@ -1004,6 +1020,24 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     marginTop: 8,
     marginLeft: 6,
+  },
+  btnRow: {
+    flexDirection: 'row',
+    marginTop: 20,
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  importBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    backgroundColor: theme.primary,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  importBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
   },
   importInfoBar: {
     flexDirection: 'row',
@@ -1014,52 +1048,41 @@ const styles = StyleSheet.create({
   },
   importLimitText: {
     fontSize: 12,
-    color: '#64748B',
+    color: theme.subtext,
     fontWeight: '500',
   },
-  importBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    shadowColor: '#A855F7',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  importBtnText: {
-    fontSize: 13,
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
   tipBox: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: theme.isDarkMode ? '#78350F30' : '#FFFBEB',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FEF3C7',
+    borderColor: theme.isDarkMode ? '#D97706' : '#FEF3C7',
     padding: 12,
     flexDirection: 'row',
   },
-  tipText: { fontSize: 11, color: '#B45309', lineHeight: 16 },
+  tipText: {
+    fontSize: 11,
+    color: theme.isDarkMode ? '#F59E0B' : '#B45309',
+    lineHeight: 16,
+  },
   codeBlock: {
     marginTop: 8,
-    backgroundColor: '#FDF2F2',
+    backgroundColor: theme.isDarkMode ? '#991B1B30' : '#FDF2F2',
     padding: 8,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#FEE2E2',
+    borderColor: theme.isDarkMode ? '#EF4444' : '#FEE2E2',
   },
   codeText: {
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontSize: 10,
-    color: '#991B1B',
+    color: theme.isDarkMode ? '#EF4444' : '#991B1B',
   },
   requiredRow: {
     marginBottom: 16,
   },
   requiredLabel: {
     fontSize: 11,
-    color: '#64748B',
+    color: theme.subtext,
     marginBottom: 8,
   },
   badgeRow: {
@@ -1068,26 +1091,26 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   badge: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
   badgeText: {
     fontSize: 10,
-    color: '#475569',
+    color: theme.text,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   warningBox: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: theme.isDarkMode ? '#78350F30' : '#FFFBEB',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FEF3C7',
+    borderColor: theme.isDarkMode ? '#D97706' : '#FEF3C7',
     padding: 12,
   },
   warningText: {
     fontSize: 12,
-    color: '#92400E',
+    color: theme.isDarkMode ? '#F59E0B' : '#92400E',
     lineHeight: 18,
   },
   warningHighlight: {
@@ -1107,16 +1130,16 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#000',
+    color: theme.text,
     marginBottom: 4,
   },
   sectionSubtitle: {
     fontSize: 11,
-    color: '#6B7280',
+    color: theme.subtext,
     fontWeight: '500',
   },
   addBtn: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     paddingVertical: 14,
     paddingHorizontal: 12,
     borderRadius: 8,
@@ -1146,18 +1169,18 @@ const styles = StyleSheet.create({
   },
   qActionBtn: {
     padding: 4,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
     borderRadius: 6,
   },
   questionNumLabel: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 4,
   },
   questionText: {
     fontSize: 12,
-    color: '#111827',
+    color: theme.text,
     marginBottom: 20,
     fontWeight: '500',
   },
@@ -1169,21 +1192,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
   },
   optionRowCorrect: {
-    backgroundColor: '#D1FAE5',
-    borderColor: '#A7F3D0',
+    backgroundColor: theme.isDarkMode ? '#065F4630' : '#D1FAE5',
+    borderColor: theme.isDarkMode ? '#059669' : '#A7F3D0',
   },
   optionLetterCircle: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -1194,14 +1217,14 @@ const styles = StyleSheet.create({
   optionLetter: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
   },
   optionLetterCorrect: {
     color: '#FFFFFF',
   },
   optionValue: {
     fontSize: 13,
-    color: '#111827',
+    color: theme.text,
     fontWeight: '500',
   },
   correctNote: {
@@ -1219,16 +1242,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.surface,
   },
   cancelBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 20,
@@ -1237,23 +1260,24 @@ const styles = StyleSheet.create({
   cancelBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
   nextBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 20,
-  
-    shadowColor: '#4F46E5',
+
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 4,},
+    elevation: 4,
+  },
   nextBtnText: {
     fontSize: 13,
     fontWeight: '600',
@@ -1263,22 +1287,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderStyle: 'dashed',
   },
   emptyText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#374151',
+    color: theme.text,
     marginTop: 16,
     marginBottom: 4,
   },
   emptySubtext: {
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.subtext,
     textAlign: 'center',
     paddingHorizontal: 40,
   },

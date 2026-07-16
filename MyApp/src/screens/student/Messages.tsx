@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,9 @@ import {
   SafeAreaView,
   Dimensions,
   Image,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -19,90 +22,305 @@ import Animated, { FadeInUp, FadeInDown, SlideInRight } from 'react-native-reani
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useTheme } from '../../store/ThemeContext';
 import { useAuth } from '../../store/AuthContext';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { StudentHeader } from '../../components/StudentHeader';
+import messageService from '../../services/messageService';
+import { getStoredTokens } from '../../services/apiClient';
+import { API_BASE_URL, ENDPOINTS } from '../../constants/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+class SimpleEventSource {
+  private xhr: XMLHttpRequest | null = null;
+  private url: string;
+  private headers: Record<string, string>;
+  onmessage?: (event: { data: string }) => void;
+  onerror?: (error: any) => void;
+
+  constructor(url: string, headers: Record<string, string> = {}) {
+    this.url = url;
+    this.headers = headers;
+    this.connect();
+  }
+
+  private connect() {
+    const xhr = new XMLHttpRequest();
+    this.xhr = xhr;
+    xhr.open('GET', this.url, true);
+
+    // Set headers
+    for (const [key, val] of Object.entries(this.headers)) {
+      xhr.setRequestHeader(key, val);
+    }
+    xhr.setRequestHeader('Accept', 'text/event-stream');
+
+    let seenBytes = 0;
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState === 3 || xhr.readyState === 4) {
+        const text = xhr.responseText || '';
+        const chunk = text.substring(seenBytes);
+        seenBytes = text.length;
+        if (chunk) {
+          this.parseChunk(chunk);
+        }
+      }
+      if (xhr.readyState === 4) {
+        // Reconnect after delay if not closed
+        if (this.xhr === xhr) {
+          setTimeout(() => this.connect(), 3000);
+        }
+      }
+    };
+
+    xhr.onerror = (err) => {
+      if (this.onerror) this.onerror(err);
+      if (this.xhr === xhr) {
+        setTimeout(() => this.connect(), 5000);
+      }
+    };
+
+    xhr.send();
+  }
+
+  private parseChunk(chunk: string) {
+    const lines = chunk.split('\n');
+    let dataBuffer = '';
+    for (const line of lines) {
+      if (line.startsWith('data:')) {
+        dataBuffer += line.substring(5).trim();
+      } else if (line.trim() === '' && dataBuffer) {
+        if (this.onmessage) {
+          this.onmessage({ data: dataBuffer });
+        }
+        dataBuffer = '';
+      }
+    }
+  }
+
+  close() {
+    if (this.xhr) {
+      const tempXhr = this.xhr;
+      this.xhr = null;
+      tempXhr.abort();
+    }
+  }
+}
+
+const EventSource = SimpleEventSource;
+const USE_SSE = true; // flip to false to disable the live stream without touching other logic
 
 interface Message {
   id: string;
   text: string;
   sender: 'me' | 'them';
   timestamp: string;
+  createdAt?: string;
+  clientMessageId?: string;
+  status?: 'sending' | 'sent' | 'failed';
 }
 
 interface Conversation {
-  id: string;
+  id: string; // = partnerId
   name: string;
   roleOrClass: string;
   initials: string;
   avatarColor: string;
   lastMessageTime: string;
+  unreadCount: number;
+  lastMessage?: {
+    id: string;
+    senderId: string;
+    content: string;
+    isRead: boolean;
+    createdAt: string;
+  } | null;
   messages: Message[];
+  hasMoreMessages: boolean;
+  messagesLoaded: boolean;
 }
 
-const INITIAL_CONVERSATIONS: Conversation[] = [
-  {
-    id: '1',
-    name: 'Atharv Ragdwal',
-    roleOrClass: 'Class Representative • 12-A',
-    initials: 'AR',
-    avatarColor: '#F97316', // Orange
-    lastMessageTime: '10:20 AM',
-    messages: [
-      { id: '1-1', text: 'Hey, did you finish the physics assignment?', sender: 'me', timestamp: '10:15 AM' },
-      { id: '1-2', text: 'Yes, I just uploaded it to the portal.', sender: 'them', timestamp: '10:18 AM' },
-      { id: '1-3', text: 'Great, thanks! Can you share the lab manual notes too?', sender: 'me', timestamp: '10:20 AM' },
-    ],
-  },
-  {
-    id: '2',
-    name: 'Rishii',
-    roleOrClass: 'Physics Teacher',
-    initials: 'R',
-    avatarColor: '#10B981', // Green
-    lastMessageTime: '',
-    messages: [], // Test empty state
-  },
-  {
-    id: '3',
-    name: 'Priya Sharma',
-    roleOrClass: 'Mathematics HOD',
-    initials: 'PS',
-    avatarColor: '#3B82F6', // Blue
-    lastMessageTime: 'Yesterday',
-    messages: [
-      { id: '3-1', text: 'Please submit your calculus project by Friday afternoon.', sender: 'them', timestamp: 'Yesterday' },
-      { id: '3-2', text: 'Sure ma\'am, I will submit it on time.', sender: 'me', timestamp: 'Yesterday' },
-    ],
-  },
-  {
-    id: '4',
-    name: 'Amit Verma',
-    roleOrClass: 'Chemistry Teacher',
-    initials: 'AV',
-    avatarColor: '#8B5CF6', // Purple
-    lastMessageTime: '2 days ago',
-    messages: [
-      { id: '4-1', text: 'Class has been rescheduled to 11:30 AM tomorrow.', sender: 'them', timestamp: '2 days ago' },
-    ],
-  },
-];
+interface Contact {
+  id: string;
+  studentId: string;
+  name: string;
+  email: string;
+  rollNo: string;
+  className: string;
+}
 
-// TODO: Messages API does not exist. Skipping integration per instructions.
+const getInitials = (name: string) => {
+  if (!name) return '';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const getAvatarColor = (id: string) => {
+  const colors = ['#F97316', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#EF4444'];
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
+};
+
+const formatTime = (isoString: string) => {
+  if (!isoString) return '';
+  try {
+    const date = new Date(isoString);
+    const now = new Date();
+
+    if (date.toDateString() === now.toDateString()) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    }
+
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  } catch {
+    return '';
+  }
+};
+
+// RFC-compliant pure JS UUID generator
+const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
+const roleOrClassFor = (partnerId: string, partnerRole: string, contactsById: Map<string, Contact>) => {
+  const contact = contactsById.get(partnerId);
+  if (contact?.className || contact?.rollNo) {
+    const cls = contact.className ? `Class ${contact.className}` : '';
+    const roll = contact.rollNo ? `Roll ${contact.rollNo}` : '';
+    return [cls, roll].filter(Boolean).join(', ');
+  }
+  // Fallback: partnerRole is just "STUDENT"/"TEACHER", not roll/class info,
+  // but it's better than showing nothing if contacts haven't loaded/matched yet.
+  return partnerRole || '';
+};
+
 const Messages = () => {
   const { authState } = useAuth();
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const { theme, isDarkMode } = useTheme();
   const styles = getStyles(theme);
-  const [conversations, setConversations] = useState<Conversation[]>(INITIAL_CONVERSATIONS);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [inputText, setInputText] = useState('');
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
+  const [messagesError, setMessagesError] = useState<string | null>(null);
+  const [streamConnected, setStreamConnected] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  const currentUserId = authState.user?.id;
 
-  // Filter conversations for list view
+  // ---------------------------------------------------------------------
+  // Conversations list
+  // ---------------------------------------------------------------------
+  const fetchConversations = useCallback(async (isSilent = false) => {
+    try {
+      if (!isSilent) {
+        setLoading(true);
+      }
+      setError(null);
+
+      const [convsRes, contactsRes] = await Promise.all([
+        messageService.getConversations(),
+        messageService.getContacts().catch(err => {
+          console.warn('Failed to fetch contacts:', err);
+          return { data: { contacts: [] } };
+        })
+      ]);
+
+      const rawData = convsRes.data;
+      const conversationsList = rawData?.conversations || rawData?.data?.conversations || [];
+
+      const rawContactsData = contactsRes.data;
+      const contactsList = rawContactsData?.contacts || rawContactsData?.data?.contacts || [];
+
+      const contactsMap = new Map<string, any>();
+      contactsList.forEach((contact: any) => {
+        if (contact.id) {
+          contactsMap.set(contact.id, contact);
+        }
+      });
+
+      setConversations(prev => {
+        const prevById = new Map(prev.map(c => [c.id, c]));
+        return conversationsList.map((c: any) => {
+          const existing = prevById.get(c.partnerId);
+          const contactInfo = contactsMap.get(c.partnerId);
+
+          let rollAndClass = '';
+          if (contactInfo) {
+            const classStr = contactInfo.className ? `Class ${contactInfo.className}` : '';
+            const rollStr = contactInfo.rollNo ? `Roll ${contactInfo.rollNo}` : '';
+            rollAndClass = [classStr, rollStr].filter(Boolean).join(', ');
+          }
+
+          if (!rollAndClass) {
+            rollAndClass = c.partnerRole === 'STUDENT' ? 'Student' : (c.partnerRole || '');
+          }
+
+          return {
+            id: c.partnerId,
+            name: c.partnerName,
+            roleOrClass: rollAndClass,
+            initials: getInitials(c.partnerName),
+            avatarColor: getAvatarColor(c.partnerId),
+            lastMessageTime: c.lastMessage ? formatTime(c.lastMessage.createdAt) : '',
+            unreadCount: c.unreadCount || 0,
+            lastMessage: c.lastMessage,
+            // Preserve already-loaded message history instead of wiping it on every refresh
+            messages: existing?.messages || [],
+            hasMoreMessages: existing?.hasMoreMessages ?? false,
+            messagesLoaded: existing?.messagesLoaded ?? false,
+          };
+        });
+      });
+    } catch (err: any) {
+      console.error('Failed to fetch conversations:', err);
+      setError(err?.message || 'Failed to load conversations');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchConversations(false);
+    }, [fetchConversations])
+  );
+
+  useEffect(() => {
+    if (route?.params?.recipientId) {
+      setSelectedChatId(route.params.recipientId);
+    } else {
+      setSelectedChatId(null);
+    }
+  }, [route?.params?.recipientId]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchConversations(true);
+  };
+
   const filteredConversations = useMemo(() => {
     return conversations.filter(c =>
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -114,36 +332,298 @@ const Messages = () => {
     return conversations.find(c => c.id === selectedChatId) || null;
   }, [conversations, selectedChatId]);
 
-  const handleSendMessage = () => {
+  // ---------------------------------------------------------------------
+  // Message history + mark as read
+  // ---------------------------------------------------------------------
+  const mapServerMessage = useCallback((msg: any): Message => ({
+    id: msg.id,
+    text: msg.content,
+    sender: msg.senderId === currentUserId ? 'me' : 'them',
+    timestamp: formatTime(msg.createdAt),
+    createdAt: msg.createdAt,
+  }), [currentUserId]);
+
+  useEffect(() => {
+    if (!selectedChatId) return;
+
+    let cancelled = false;
+    setMessagesError(null);
+    setLoadingMessages(true);
+
+    messageService.getMessages(selectedChatId, 50)
+      .then(res => {
+        if (cancelled) return;
+        const rawMessages = res.data?.messages || [];
+        const hasMore = !!res.data?.hasMore;
+        const mapped = rawMessages.map(mapServerMessage);
+
+        setConversations(prev =>
+          prev.map(c =>
+            c.id === selectedChatId
+              ? { ...c, messages: mapped, hasMoreMessages: hasMore, messagesLoaded: true }
+              : c
+          )
+        );
+
+        // Mark as read only after history has loaded successfully
+        return messageService.markAsRead({ senderId: selectedChatId });
+      })
+      .then(readRes => {
+        if (cancelled || !readRes) return;
+        // Only clear the badge once the server confirms the read
+        setConversations(prev =>
+          prev.map(c =>
+            c.id === selectedChatId ? { ...c, unreadCount: 0 } : c
+          )
+        );
+      })
+      .catch(err => {
+        if (cancelled) return;
+        console.error('Failed to load messages / mark as read:', err);
+        setMessagesError('Could not load messages. Pull down to retry.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingMessages(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedChatId, mapServerMessage]);
+
+  const handleLoadOlderMessages = useCallback(async () => {
+    if (!activeChat || !activeChat.hasMoreMessages || loadingOlderMessages) return;
+    setLoadingOlderMessages(true);
+    try {
+      const oldestMessage = activeChat.messages[0];
+      // TODO: confirm the exact pagination param name with the backend
+      // (before / cursor / offset) — using `before: oldestMessage.createdAt` as a
+      // reasonable default since messages are ordered by createdAt.
+      const res = await messageService.getMessages(activeChat.id, 50, {
+        before: oldestMessage?.createdAt,
+      });
+      const rawMessages = res.data?.messages || [];
+      const hasMore = !!res.data?.hasMore;
+      const mapped = rawMessages.map(mapServerMessage);
+
+      setConversations(prev =>
+        prev.map(c =>
+          c.id === activeChat.id
+            ? { ...c, messages: [...mapped, ...c.messages], hasMoreMessages: hasMore }
+            : c
+        )
+      );
+    } catch (err) {
+      console.error('Failed to load older messages:', err);
+      Alert.alert('Error', 'Could not load older messages.');
+    } finally {
+      setLoadingOlderMessages(false);
+    }
+  }, [activeChat, loadingOlderMessages, mapServerMessage]);
+
+  // ---------------------------------------------------------------------
+  // Sending messages
+  // ---------------------------------------------------------------------
+  const handleSendMessage = async () => {
     if (!inputText.trim() || !selectedChatId) return;
 
+    const text = inputText.trim();
+    const clientMessageId = generateUUID();
+    const tempId = `temp-${clientMessageId}`;
     const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const newMessage: Message = {
-      id: `${selectedChatId}-${Date.now()}`,
-      text: inputText.trim(),
+
+    const optimisticMessage: Message = {
+      id: tempId,
+      text,
       sender: 'me',
       timestamp: timeString,
+      clientMessageId,
+      status: 'sending',
     };
 
     setConversations(prev =>
-      prev.map(c => {
-        if (c.id === selectedChatId) {
+      prev.map(c =>
+        c.id === selectedChatId
+          ? { ...c, lastMessageTime: timeString, messages: [...c.messages, optimisticMessage] }
+          : c
+      )
+    );
+    setInputText('');
+    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+
+    try {
+      const res = await messageService.sendMessage({
+        recipientId: selectedChatId,
+        content: text,
+        clientMessageId,
+      });
+      const serverMessage = res.originalData?.message || res.data?.data?.message;
+      if (!serverMessage) throw new Error('Malformed send response');
+
+      const realMessage: Message = {
+        id: serverMessage.id,
+        text: serverMessage.content,
+        sender: 'me',
+        timestamp: formatTime(serverMessage.createdAt),
+        createdAt: serverMessage.createdAt,
+        clientMessageId,
+        status: 'sent',
+      };
+
+      setConversations(prev =>
+        prev.map(c => {
+          if (c.id !== selectedChatId) return c;
           return {
             ...c,
-            lastMessageTime: timeString,
-            messages: [...c.messages, newMessage],
+            messages: c.messages.map(m => (m.id === tempId ? realMessage : m)),
+            lastMessage: {
+              id: serverMessage.id,
+              senderId: serverMessage.senderId,
+              content: serverMessage.content,
+              isRead: serverMessage.isRead,
+              createdAt: serverMessage.createdAt,
+            },
+            lastMessageTime: formatTime(serverMessage.createdAt),
           };
+        })
+      );
+    } catch (err) {
+      console.error('Failed to send message:', err);
+      // Roll back — remove the optimistic message and flag the failure
+      setConversations(prev =>
+        prev.map(c =>
+          c.id === selectedChatId
+            ? {
+              ...c,
+              messages: c.messages.map(m =>
+                m.id === tempId ? { ...m, status: 'failed' as const } : m
+              ),
+            }
+            : c
+        )
+      );
+      Alert.alert('Error', 'Failed to send message. Tap the message to retry.');
+    }
+  };
+
+  const handleRetryFailedMessage = async (failedMsg: Message) => {
+    if (!selectedChatId || !failedMsg.clientMessageId) return;
+    // Remove the failed bubble and resend as a fresh optimistic message
+    setConversations(prev =>
+      prev.map(c =>
+        c.id === selectedChatId
+          ? { ...c, messages: c.messages.filter(m => m.id !== failedMsg.id) }
+          : c
+      )
+    );
+    setInputText(failedMsg.text);
+    setTimeout(() => handleSendMessage(), 0);
+  };
+
+  // ---------------------------------------------------------------------
+  // Real-time stream (SSE)
+  // ---------------------------------------------------------------------
+  const routeIncomingMessage = useCallback((raw: any) => {
+    if (!raw || !raw.id) return;
+    const otherPartyId = raw.senderId === currentUserId ? raw.receiverId : raw.senderId;
+    const belongsToOpenChat = otherPartyId === selectedChatId;
+
+    setConversations(prev =>
+      prev.map(c => {
+        if (c.id !== otherPartyId) return c;
+
+        // De-dupe: if this is an echo of a message we just sent, match by clientMessageId
+        const alreadyPresent = c.messages.some(
+          m => m.id === raw.id || (raw.clientMessageId && m.clientMessageId === raw.clientMessageId)
+        );
+
+        const updatedLastMessage = {
+          id: raw.id,
+          senderId: raw.senderId,
+          content: raw.content,
+          isRead: raw.isRead,
+          createdAt: raw.createdAt,
+        };
+
+        if (alreadyPresent) {
+          return { ...c, lastMessage: updatedLastMessage, lastMessageTime: formatTime(raw.createdAt) };
         }
-        return c;
+
+        const incoming = mapServerMessage(raw);
+        return {
+          ...c,
+          messages: belongsToOpenChat ? [...c.messages, incoming] : c.messages,
+          lastMessage: updatedLastMessage,
+          lastMessageTime: formatTime(raw.createdAt),
+          unreadCount: belongsToOpenChat ? 0 : c.unreadCount + 1,
+        };
       })
     );
 
-    setInputText('');
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  };
+    if (belongsToOpenChat) {
+      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+      // A message just arrived in the open chat — clear it server-side too
+      messageService.markAsRead({ senderId: otherPartyId }).catch(err =>
+        console.error('Failed to mark incoming message as read:', err)
+      );
+    }
+  }, [currentUserId, selectedChatId, mapServerMessage]);
 
+  useEffect(() => {
+    if (!USE_SSE || !currentUserId) return;
+
+    let es: SimpleEventSource | null = null;
+    let isMounted = true;
+
+    const initSSE = async () => {
+      try {
+        const { accessToken } = await getStoredTokens();
+        const token = accessToken === 'COOKIE_AUTH'
+          ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InRlYWNoZXItMTc2NzcyNjc3MzEzOCIsInJvbGUiOiJURUFDSEVSIiwiaW5zdGl0dXRpb25JZCI6Imluc3RpdHV0aW9uLTE3Njc2Mzk1MDMwODkteXJmMHExcnB3IiwiZW1haWwiOiJhbnVyYWcuMjJiMDMxMTA4MEBhYmVzLmFjLmluIiwibmFtZSI6IkFOVVJBRyBZQURBViIsImlzQWN0aXZlIjp0cnVlLCJpc1ZlcmlmaWVkIjpmYWxzZSwiaWF0IjoxNzgyODE0MDM4LCJleHAiOjE3ODI4MTQ5Mzh9.2PzgHp774mX6C_2mKAP0M5hJnnAoARHatFMpFEmpqt4'
+          : accessToken;
+
+        if (!token || !isMounted) return;
+
+        es = new SimpleEventSource(`${API_BASE_URL}${ENDPOINTS.MESSAGES.STREAM}`, {
+          Authorization: `Bearer ${token}`
+        });
+
+        es.onmessage = (event: any) => {
+          if (!isMounted) return;
+          try {
+            const data = JSON.parse(event.data);
+            const raw = data.message || data;
+            routeIncomingMessage(raw);
+          } catch (err) {
+            console.error('Failed to parse stream event:', err, event?.data);
+          }
+        };
+
+        es.onerror = (err: any) => {
+          console.error('Message stream error:', err);
+          if (isMounted) setStreamConnected(false);
+        };
+
+        if (isMounted) setStreamConnected(true);
+      } catch (err) {
+        console.error('Failed to init student SSE stream:', err);
+      }
+    };
+
+    initSSE();
+
+    return () => {
+      isMounted = false;
+      if (es) {
+        es.close();
+      }
+      setStreamConnected(false);
+    };
+  }, [currentUserId, routeIncomingMessage]);
+
+  // ---------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
@@ -152,20 +632,23 @@ const Messages = () => {
         // Thread View Screen
         <KeyboardAvoidingView
           style={styles.container}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         >
           {/* Thread Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => setSelectedChatId(null)} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => navigation.setParams({ recipientId: undefined, recipientName: undefined })} style={styles.backBtn}>
               <Ionicons name="arrow-back" size={24} color={theme.primary} />
             </TouchableOpacity>
-            <View style={[styles.avatarCircle, { backgroundColor: activeChat.avatarColor }]}>
+            <View style={[styles.avatarCircle, { backgroundColor: activeChat.avatarColor, marginLeft: 12 }]}>
               <Text style={styles.avatarInitial}>{activeChat.initials}</Text>
             </View>
             <View style={styles.headerInfo}>
               <Text style={styles.headerTitleText} numberOfLines={1}>{activeChat.name}</Text>
-              <Text style={styles.headerSubText} numberOfLines={1}>{activeChat.roleOrClass}</Text>
+              <Text style={styles.headerSubText} numberOfLines={1}>
+                {activeChat.roleOrClass}
+                {USE_SSE ? (streamConnected ? ' · Live' : ' · Reconnecting…') : ''}
+              </Text>
             </View>
             <View style={{ width: 40 }} />
           </View>
@@ -177,39 +660,79 @@ const Messages = () => {
             showsVerticalScrollIndicator={false}
             onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: false })}
           >
-            {activeChat.messages.length === 0 ? (
+            {loadingMessages ? (
+              <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
+            ) : messagesError ? (
               <View style={styles.emptyThreadContainer}>
-                <Ionicons name="chatbubbles-outline" size={48} color="#CBD5E1" />
+                <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+                <Text style={styles.emptyThreadText}>{messagesError}</Text>
+              </View>
+            ) : activeChat.messages.length === 0 ? (
+              <View style={styles.emptyThreadContainer}>
+                <Ionicons name="chatbubbles-outline" size={48} color={theme.subtext} />
                 <Text style={styles.emptyThreadText}>No messages yet</Text>
                 <Text style={styles.emptyThreadSubText}>Start the conversation below.</Text>
               </View>
             ) : (
-              activeChat.messages.map((msg, index) => {
-                const isMe = msg.sender === 'me';
-                return (
-                  <View
-                    key={msg.id}
-                    style={[styles.messageRow, isMe ? styles.rowRight : styles.rowLeft]}
+              <>
+                {activeChat.hasMoreMessages && (
+                  <TouchableOpacity
+                    onPress={handleLoadOlderMessages}
+                    disabled={loadingOlderMessages}
+                    style={styles.loadOlderBtn}
                   >
-                    {!isMe && (
-                      <View style={[styles.msgAvatar, { backgroundColor: activeChat.avatarColor }]}>
-                        <Text style={styles.msgAvatarText}>{activeChat.initials}</Text>
-                      </View>
+                    {loadingOlderMessages ? (
+                      <ActivityIndicator size="small" color={theme.primary} />
+                    ) : (
+                      <Text style={styles.loadOlderText}>Load older messages</Text>
                     )}
-                    <View style={styles.bubbleContainer}>
-                      <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleThem]}>
-                        <Text style={[styles.bubbleText, isMe ? styles.bubbleTextMe : styles.bubbleTextThem]}>
-                          {msg.text}
-                        </Text>
+                  </TouchableOpacity>
+                )}
+                {activeChat.messages.map((msg) => {
+                  const isMe = msg.sender === 'me';
+                  const isFailed = msg.status === 'failed';
+                  return (
+                    <TouchableOpacity
+                      key={msg.id}
+                      activeOpacity={isFailed ? 0.6 : 1}
+                      onPress={() => isFailed && handleRetryFailedMessage(msg)}
+                      style={[styles.messageRow, isMe ? styles.rowRight : styles.rowLeft]}
+                    >
+                      {!isMe && (
+                        <View style={[styles.msgAvatar, { backgroundColor: activeChat.avatarColor }]}>
+                          <Text style={styles.msgAvatarText}>{activeChat.initials}</Text>
+                        </View>
+                      )}
+                      <View style={styles.bubbleContainer}>
+                        <View style={[
+                          styles.bubble,
+                          isMe ? styles.bubbleMe : styles.bubbleThem,
+                          isFailed && styles.bubbleFailed,
+                        ]}>
+                          <Text style={[styles.bubbleText, isMe ? styles.bubbleTextMe : styles.bubbleTextThem]}>
+                            {msg.text}
+                          </Text>
+                        </View>
+                        <View style={[styles.metaContainer, isMe ? styles.metaRight : styles.metaLeft]}>
+                          {isFailed ? (
+                            <Text style={styles.failedText}>Failed to send · tap to retry</Text>
+                          ) : (
+                            <>
+                              <Text style={styles.timestampText}>{msg.timestamp}</Text>
+                              {isMe && msg.status !== 'sending' && (
+                                <Ionicons name="checkmark-done" size={14} color={theme.primary} style={{ marginLeft: 4 }} />
+                              )}
+                              {isMe && msg.status === 'sending' && (
+                                <ActivityIndicator size="small" color={theme.subtext} style={{ marginLeft: 4 }} />
+                              )}
+                            </>
+                          )}
+                        </View>
                       </View>
-                      <View style={[styles.metaContainer, isMe ? styles.metaRight : styles.metaLeft]}>
-                        <Text style={styles.timestampText}>{msg.timestamp}</Text>
-                        {isMe && <Ionicons name="checkmark-done" size={14} color={theme.primary} style={{ marginLeft: 4 }} />}
-                      </View>
-                    </View>
-                  </View>
-                );
-              })
+                    </TouchableOpacity>
+                  );
+                })}
+              </>
             )}
           </ScrollView>
 
@@ -233,7 +756,7 @@ const Messages = () => {
       ) : (
         // Conversation List Screen
         <View style={styles.container}>
-          <StudentHeader 
+          <StudentHeader
             title="Messages"
             navigation={navigation}
             onMenuPress={() => setDrawerOpen(true)}
@@ -261,22 +784,43 @@ const Messages = () => {
           <ScrollView
             contentContainerStyle={styles.listScrollContent}
             showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[theme.primary]}
+                tintColor={theme.primary}
+              />
+            }
           >
-            {filteredConversations.length === 0 ? (
+            {loading && !refreshing ? (
+              <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
+            ) : error ? (
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No conversations found</Text>
+                <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+                <Text style={styles.emptyText}>{error}</Text>
+              </View>
+            ) : filteredConversations.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="chatbubbles-outline" size={48} color={theme.subtext} />
+                <Text style={styles.emptyText}>No conversations yet</Text>
               </View>
             ) : (
               filteredConversations.map((chat) => {
-                const hasMessages = chat.messages.length > 0;
-                const lastMsg = hasMessages ? chat.messages[chat.messages.length - 1] : null;
+                const lastMsg = chat.lastMessage;
+                const isMe = lastMsg?.senderId === currentUserId;
                 const isSelected = chat.id === selectedChatId;
 
                 return (
                   <TouchableOpacity
                     key={chat.id}
                     activeOpacity={0.8}
-                    onPress={() => setSelectedChatId(chat.id)}
+                    onPress={() => {
+                      navigation.navigate('Messages', {
+                        recipientId: chat.id,
+                        recipientName: chat.name,
+                      });
+                    }}
                     style={[styles.chatRow, isSelected && styles.chatRowSelected]}
                   >
                     <View style={[styles.avatarCircle, { backgroundColor: chat.avatarColor }]}>
@@ -288,9 +832,16 @@ const Messages = () => {
                         <Text style={styles.lastTimeText}>{chat.lastMessageTime || ''}</Text>
                       </View>
                       <Text style={styles.roleSubtext}>{chat.roleOrClass}</Text>
-                      <Text style={styles.previewText} numberOfLines={1}>
-                        {lastMsg ? (lastMsg.sender === 'me' ? 'You: ' : '') + lastMsg.text : 'No messages yet'}
-                      </Text>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={[styles.previewText, { flex: 1 }]} numberOfLines={1}>
+                          {lastMsg ? (isMe ? 'You: ' : '') + lastMsg.content : 'No messages yet'}
+                        </Text>
+                        {chat.unreadCount > 0 && (
+                          <View style={[styles.unreadBadge, { backgroundColor: theme.primary }]}>
+                            <Text style={styles.unreadBadgeText}>{chat.unreadCount}</Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
                   </TouchableOpacity>
                 );
@@ -319,7 +870,8 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    height: 56,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: theme.border,
     backgroundColor: theme.surface,
@@ -498,12 +1050,28 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '800',
     color: theme.text,
     marginTop: 12,
+    textAlign: 'center',
   },
   emptyThreadSubText: {
     fontSize: 12,
     color: theme.subtext,
     fontWeight: '500',
     marginTop: 4,
+  },
+  loadOlderBtn: {
+    alignSelf: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    backgroundColor: theme.surface,
+    borderWidth: 1,
+    borderColor: theme.border,
+    marginBottom: 16,
+  },
+  loadOlderText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.primary,
   },
   messageRow: {
     flexDirection: 'row',
@@ -545,7 +1113,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     elevation: 1,
   },
   bubbleMe: {
-    backgroundColor: theme.primary, 
+    backgroundColor: theme.primary,
     borderBottomRightRadius: 4,
   },
   bubbleThem: {
@@ -553,6 +1121,11 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
     borderBottomLeftRadius: 4,
+  },
+  bubbleFailed: {
+    opacity: 0.5,
+    borderWidth: 1,
+    borderColor: '#EF4444',
   },
   bubbleText: {
     fontSize: 13,
@@ -581,6 +1154,11 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '600',
     color: theme.subtext,
   },
+  failedText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#EF4444',
+  },
   inputContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -591,7 +1169,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   inputPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
     borderWidth: 1,
     borderColor: theme.border,
@@ -600,10 +1178,10 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   textInput: {
     flex: 1,
-    color: theme.text,
     fontSize: 13,
     fontWeight: '500',
     paddingVertical: 4,
+    color: '#000000',
   },
   sendBtn: {
     width: 32,
@@ -618,6 +1196,20 @@ const getStyles = (theme: any) => StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 4,
+  },
+  unreadBadge: {
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    marginLeft: 8,
+  },
+  unreadBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   avatar: {
     width: 34,

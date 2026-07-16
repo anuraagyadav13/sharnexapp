@@ -27,6 +27,7 @@ import Animated, {
   useSharedValue
 } from 'react-native-reanimated';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { TeacherHeader } from '../../components/TeacherHeader';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -40,6 +41,7 @@ import { fetchWithCache, CACHE_KEYS, TTL } from '../../utils/cache';
 
 const DashboardSkeleton = () => {
   const { theme } = useTheme();
+  const styles = getStyles(theme);
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.header}>
@@ -82,6 +84,8 @@ interface Props {
 }
 
 const IconBox = ({ name, color = '#fff', bgColor, size = 50, iconSize = 24, iconLibrary = 'Ionicons' }: any) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
   const IconComponent = iconLibrary === 'MaterialCommunityIcons' ? MaterialCommunityIcons : Ionicons;
   return (
     <View style={[styles.iconBox, { width: size, height: size, backgroundColor: bgColor }]}>
@@ -91,6 +95,8 @@ const IconBox = ({ name, color = '#fff', bgColor, size = 50, iconSize = 24, icon
 };
 
 const ActivityItem = ({ iconName, iconBgColor, name, action, time, isLast, iconLibrary = 'Ionicons' }: any) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
   const IconComponent = iconLibrary === 'MaterialCommunityIcons' ? MaterialCommunityIcons : Ionicons;
   return (
     <View style={[styles.activityItem, !isLast && styles.activityItemBorder]}>
@@ -98,9 +104,9 @@ const ActivityItem = ({ iconName, iconBgColor, name, action, time, isLast, iconL
         <IconComponent name={iconName} size={14} color="#FFF" />
       </View>
       <View style={styles.activityContent}>
-        <Text style={styles.activityName}>{name}</Text>
-        <Text style={styles.activityAction} numberOfLines={2}>{action}</Text>
-        <Text style={styles.activityDateText}>{time}</Text>
+        <Text style={[styles.activityName, { color: theme.text }]}>{name}</Text>
+        <Text style={[styles.activityAction, { color: theme.subtext }]} numberOfLines={2}>{action}</Text>
+        <Text style={[styles.activityDateText, { color: theme.placeholder }]}>{time}</Text>
       </View>
     </View>
   );
@@ -108,6 +114,7 @@ const ActivityItem = ({ iconName, iconBgColor, name, action, time, isLast, iconL
 
 const StatCard = ({ title, value, color, icon }: { title: string, value: string | number, color: string, icon: string }) => {
   const { theme } = useTheme();
+  const styles = getStyles(theme);
   return (
     <View style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <View style={[styles.statIconCircle, { backgroundColor: `${color}15` }]}>
@@ -121,6 +128,7 @@ const StatCard = ({ title, value, color, icon }: { title: string, value: string 
 
 const QuickActionCard = React.memo(({ title, iconName, bgColor, delay, onPress, iconLibrary = 'Ionicons', badge }: any) => {
   const { theme } = useTheme();
+  const styles = getStyles(theme);
   return (
     <Animated.View entering={FadeInUp.delay(delay).springify()} style={[styles.quickActionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <TouchableOpacity onPress={onPress} activeOpacity={onPress ? 0.7 : 1} disabled={!onPress} style={styles.quickActionTouchable}>
@@ -140,6 +148,7 @@ const QuickActionCard = React.memo(({ title, iconName, bgColor, delay, onPress, 
 
 const ScheduleCard = React.memo(({ time, title, classSection, room, color, status, isOngoing, bgStyleColor, borderStyleColor }: any) => {
   const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const isSpecialBg = !!bgStyleColor;
   return (
     <View style={[
@@ -198,13 +207,14 @@ const ScheduleCard = React.memo(({ time, title, classSection, room, color, statu
 
 const EventCard = React.memo(({ title, date, color }: any) => {
   const { theme } = useTheme();
+  const styles = getStyles(theme);
   return (
-    <View style={[styles.eventCard, { borderLeftColor: color }]}>
+    <View style={[styles.eventCard, { backgroundColor: theme.surface, borderColor: theme.border, borderLeftColor: color }]}>
       <View style={styles.eventCardContent}>
-        <Text style={styles.eventTitle} numberOfLines={1}>{title}</Text>
+        <Text style={[styles.eventTitle, { color: theme.text }]} numberOfLines={1}>{title}</Text>
         <View style={styles.eventDateContainer}>
-          <Ionicons name="calendar-outline" size={12} color="#9CA3AF" />
-          <Text style={styles.eventDateText}>{date}</Text>
+          <Ionicons name="calendar-outline" size={12} color={theme.subtext} />
+          <Text style={[styles.eventDateText, { color: theme.subtext }]}>{date}</Text>
         </View>
       </View>
     </View>
@@ -212,14 +222,16 @@ const EventCard = React.memo(({ title, date, color }: any) => {
 });
 
 const TopStudentCard = React.memo(({ rank, name, className, percentage }: any) => {
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
   return (
-    <View style={styles.topStudentCard}>
-      <View style={[styles.rankCircle, { backgroundColor: rank === 1 ? '#FEF3C7' : '#F3F4F6' }]}>
-        <Text style={[styles.rankText, { color: rank === 1 ? '#D97706' : '#6B7280' }]}>{rank}</Text>
+    <View style={[styles.topStudentCard, { borderBottomColor: theme.border }]}>
+      <View style={[styles.rankCircle, { backgroundColor: rank === 1 ? '#FEF3C7' : isDarkMode ? '#334155' : '#F3F4F6' }]}>
+        <Text style={[styles.rankText, { color: rank === 1 ? '#D97706' : theme.text }]}>{rank}</Text>
       </View>
       <View style={styles.topStudentInfo}>
-        <Text style={styles.topStudentName} numberOfLines={1}>{name}</Text>
-        <Text style={styles.topStudentClass}>{className}</Text>
+        <Text style={[styles.topStudentName, { color: theme.text }]} numberOfLines={1}>{name}</Text>
+        <Text style={[styles.topStudentClass, { color: theme.subtext }]}>{className}</Text>
       </View>
       <Text style={styles.topStudentPercentage}>{percentage}</Text>
     </View>
@@ -228,6 +240,7 @@ const TopStudentCard = React.memo(({ rank, name, className, percentage }: any) =
 
 const LiveSessionBanner = ({ subject, classSection, time, color }: any) => {
   const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const shimmerValue = useSharedValue(0);
 
   useEffect(() => {
@@ -319,6 +332,7 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const { theme, isDarkMode, toggleDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [pendingTasks, setPendingTasks] = useState<any[]>([]);
   const [profileData, setProfileData] = useState<any>(null);
@@ -561,8 +575,7 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
   const handleCloseDrawer = useCallback(() => setDrawerOpen(false), []);
   const handleToggleFaq = useCallback((idx: number) =>
     setExpandedFaq(prev => prev === idx ? null : idx), []);
-
-
+  const teacherFirstName = authState.user?.name?.split(' ')[0] || '';
 
   return (
     <View style={styles.mainContainer}>
@@ -578,53 +591,12 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#6366F1']} />}
         >
           {/* Global Header */}
-          <View style={styles.header}>
-            <ScaleButton
-              style={styles.menuHandle}
-              onPress={handleOpenDrawer}
-              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-            >
-              <Ionicons name="menu" size={28} color="#1F2937" />
-            </ScaleButton>
-            <View style={{ flex: 1, alignItems: 'center', marginHorizontal: 10 }}>
-              <Text style={[styles.headerTitle, { marginHorizontal: 0, color: theme.text }]} numberOfLines={1}>
-                Welcome, {authState.user?.name?.split(' ')[0] || 'Teacher'}
-              </Text>
-              {(profileData?.designation || profileData?.role) && (
-                <Text style={{ fontSize: 11, color: isDarkMode ? '#94A3B8' : '#6B7280', marginTop: 2, fontWeight: '500' }}>
-                  {profileData?.designation || (profileData?.role === 'TEACHER' ? 'Teacher' : profileData?.role) || 'Teacher'}
-                </Text>
-              )}
-            </View>
-            <View style={styles.headerRight}>
-              <TouchableOpacity style={styles.iconBtn}>
-                <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleGoToAccountSettings} style={styles.iconBtn}>
-                <Ionicons name="settings-outline" size={22} color="#1F2937" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={toggleDarkMode} style={styles.iconBtn}>
-                <Ionicons name={isDarkMode ? "sunny-outline" : "moon-outline"} size={22} color="#1F2937" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={handleGoToAccountSettings}
-              >
-                {authState.user?.photoUrl ? (
-                  <Image
-                    source={{ uri: authState.user.photoUrl }}
-                    style={[styles.avatar, { shadowOpacity: 0 }]}
-                  />
-                ) : (
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>
-                      {(authState.user?.name || 'T').charAt(0).toUpperCase()}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
+          <TeacherHeader
+            title={teacherFirstName ? `Welcome back, ${teacherFirstName}` : 'Welcome back'}
+            navigation={navigation}
+            onMenuPress={handleOpenDrawer}
+            isDashboard={true}
+          />
 
           {/* Hero Banner */}
           <Animated.View
@@ -1106,8 +1078,8 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FAFAFF' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   container: { flex: 1 },
   scrollContent: { paddingBottom: 40 },
   header: {
@@ -1117,20 +1089,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 30,
     paddingBottom: 24,
-    backgroundColor: '#FAFAFF',
+    backgroundColor: theme.background,
   },
   menuHandle: { paddingRight: 10, paddingVertical: 10 },
   headerTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5',
+    color: theme.primary,
     flex: 1,
     textAlign: 'center',
     paddingTop: 12,
     marginHorizontal: 10,
   },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  iconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
+  iconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.iconBackground, justifyContent: 'center', alignItems: 'center' },
   avatar: {
     width: 34,
     height: 34,
@@ -1158,13 +1130,13 @@ const styles = StyleSheet.create({
   section: { paddingHorizontal: 20, marginTop: 32 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   sectionIconMargin: { marginRight: 8 },
-  sectionTitle: { fontSize: 20, fontWeight: '800', color: '#4F46E5', letterSpacing: -0.5 },
+  sectionTitle: { fontSize: 20, fontWeight: '800', color: theme.primary, letterSpacing: -0.5 },
 
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 0, gap: 12 },
-  statCard: { alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 16, paddingVertical: 12, paddingHorizontal: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0', width: '31%', minHeight: 110 },
+  statCard: { alignItems: 'center', backgroundColor: theme.surface, borderColor: theme.border, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 2, borderWidth: 1, width: '31%', minHeight: 110 },
   statIconCircle: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
-  statTitle: { fontSize: 10, fontWeight: '700', color: '#6B7280', marginTop: 6, textAlign: 'center', width: '100%' },
-  statValue: { fontSize: 16, fontWeight: '800', color: '#1F2937', marginTop: 2 },
+  statTitle: { fontSize: 10, fontWeight: '700', color: theme.subtext, marginTop: 6, textAlign: 'center', width: '100%' },
+  statValue: { fontSize: 16, fontWeight: '800', color: theme.text, marginTop: 2 },
 
   quickActionsGrid: {
     flexDirection: 'row',
@@ -1174,12 +1146,12 @@ const styles = StyleSheet.create({
   },
   quickActionCard: {
     width: '31%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
+    borderColor: theme.border,
     borderRadius: 16,
     paddingVertical: 16,
     paddingHorizontal: 4,
     borderWidth: 1,
-    borderColor: '#F8FAFC',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.06,
@@ -1187,7 +1159,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   quickActionTouchable: { alignItems: 'center' },
-  quickActionTitle: { fontSize: 11, fontWeight: '600', color: '#374151', marginTop: 10, textAlign: 'center' },
+  quickActionTitle: { fontSize: 11, fontWeight: '600', color: theme.text, marginTop: 10, textAlign: 'center' },
   badgeContainer: {
     position: 'absolute',
     top: -4,
@@ -1210,50 +1182,50 @@ const styles = StyleSheet.create({
   },
 
   scheduleList: { gap: 12 },
-  scheduleCard: { backgroundColor: '#FFFFFF', borderRadius: 12, flexDirection: 'row', borderWidth: 1, borderColor: '#F8FAFC', paddingRight: 10, height: 80, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 4 },
+  scheduleCard: { backgroundColor: theme.surface, borderColor: theme.border, borderRadius: 12, flexDirection: 'row', borderWidth: 1, paddingRight: 10, height: 80, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 4 },
   scheduleLeftCol: { flexDirection: 'row', alignItems: 'stretch', width: 145 },
   scheduleCardIndicator: { width: 4, borderRadius: 2, marginVertical: 4, marginLeft: 16, marginRight: 16 },
   scheduleTimeWrapper: { flex: 1, justifyContent: 'center' },
-  scheduleTime: { fontSize: 11, fontWeight: '500', color: '#6B7280' },
+  scheduleTime: { fontSize: 11, fontWeight: '500', color: theme.subtext },
   scheduleRightCol: { flex: 1, justifyContent: 'center' },
   schedulePillRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
   schedulePill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
   schedulePillText: { fontSize: 10, fontWeight: '700', color: '#FFFFFF' },
   statusContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  scheduleStatus: { fontSize: 11, color: '#4B5563', fontWeight: '500' },
-  scheduleUpNext: { fontSize: 11, color: '#4F46E5', fontWeight: '500' },
+  scheduleStatus: { fontSize: 11, color: theme.subtext, fontWeight: '500' },
+  scheduleUpNext: { fontSize: 11, color: theme.primary, fontWeight: '500' },
   ongoingContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   ongoingDot: { width: 6, height: 6, borderRadius: 3 },
   ongoingText: { fontSize: 11, fontWeight: '700' },
-  scheduleTeacher: { fontSize: 13, fontWeight: '400', color: '#4B5563', marginBottom: 4 },
+  scheduleTeacher: { fontSize: 13, fontWeight: '400', color: theme.text, marginBottom: 4 },
   scheduleBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  scheduleRoom: { fontSize: 10, color: '#9CA3AF' },
+  scheduleRoom: { fontSize: 10, color: theme.subtext },
   joinClassBtn: { paddingHorizontal: 10, paddingVertical: 2, borderRadius: 4, borderWidth: 1 },
   joinClassBtnText: { fontSize: 10, fontWeight: '600' },
 
-  emptyText: { fontSize: 14, color: '#6B7280', textAlign: 'center', marginTop: 20, fontWeight: '500' },
+  emptyText: { fontSize: 14, color: theme.subtext, textAlign: 'center', marginTop: 20, fontWeight: '500' },
 
-  liveBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 20, borderLeftWidth: 4, shadowColor: '#EF4444', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5, borderWidth: 1, borderColor: '#FEE2E2' },
+  liveBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surface, borderColor: theme.border, borderRadius: 16, padding: 16, marginBottom: 20, borderLeftWidth: 4, shadowColor: '#EF4444', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5, borderWidth: 1 },
   liveBannerContent: { flex: 1 },
   liveIndicatorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   liveDot: { width: 8, height: 8, borderRadius: 4 },
   liveText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
-  liveSubject: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  liveClassName: { fontSize: 13, color: '#6B7280', marginTop: 2 },
+  liveSubject: { fontSize: 16, fontWeight: '700', color: theme.text },
+  liveClassName: { fontSize: 13, color: theme.subtext, marginTop: 2 },
   liveJoinBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, marginLeft: 12 },
   liveJoinBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
   liveProgressContainer: { height: 8, width: '100%', backgroundColor: '#FEE2E2', borderRadius: 4, overflow: 'hidden', marginTop: 10, marginBottom: 8, borderWidth: 1, borderColor: '#FECACA' },
   liveProgressFill: { height: '100%', borderRadius: 4 },
   shimmerStreak: { position: 'absolute', top: 0, bottom: 0, width: 60, backgroundColor: 'rgba(255, 255, 255, 0.6)', zIndex: 2 },
 
-  pendingTasksCard: { backgroundColor: '#FFFFFF', borderRadius: 12, paddingVertical: 24, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2, marginBottom: 6 },
-  pendingTasksText: { fontSize: 11, color: '#9CA3AF', fontWeight: '500', letterSpacing: 0.2 },
+  pendingTasksCard: { backgroundColor: theme.surface, borderColor: theme.border, borderRadius: 12, paddingVertical: 24, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2, marginBottom: 6 },
+  pendingTasksText: { fontSize: 11, color: theme.subtext, fontWeight: '500', letterSpacing: 0.2 },
   pendingTasksList: { gap: 12 },
-  taskCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
+  taskCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surface, borderColor: theme.border, borderRadius: 16, padding: 12, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   taskIconBg: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   taskInfo: { flex: 1 },
-  taskTitle: { fontSize: 13, fontWeight: '700', color: '#1F2937', marginBottom: 1 },
-  taskSubtitle: { fontSize: 10, color: '#6B7280', fontWeight: '500' },
+  taskTitle: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 1 },
+  taskSubtitle: { fontSize: 10, color: theme.subtext, fontWeight: '500' },
 
   announcementCard: { backgroundColor: '#EA580C', borderRadius: 20, overflow: 'hidden', padding: 24, paddingBottom: 30, marginTop: 0, shadowColor: '#EA580C', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 },
   announcementContent: { zIndex: 1 },
@@ -1265,19 +1237,19 @@ const styles = StyleSheet.create({
   boldText: { fontWeight: '800', color: '#FFFFFF' },
 
   helpGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 },
-  helpCard: { width: '48%', height: 204, backgroundColor: '#FFFFFF', borderRadius: 12, paddingVertical: 16, paddingHorizontal: 16, borderWidth: 1, borderColor: '#F8FAFC', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 4 },
+  helpCard: { width: '48%', height: 204, backgroundColor: theme.surface, borderColor: theme.border, borderRadius: 12, paddingVertical: 16, paddingHorizontal: 16, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 4 },
   helpIconBg: { width: 36, height: 36, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  helpCardTitle: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 6, lineHeight: 18 },
-  helpCardDesc: { fontSize: 10, color: '#6B7280', lineHeight: 14 },
-  viewGuidesRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 'auto', borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 12 },
+  helpCardTitle: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 6, lineHeight: 18 },
+  helpCardDesc: { fontSize: 10, color: theme.subtext, lineHeight: 14 },
+  viewGuidesRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 'auto', borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 12 },
   viewGuidesText: { fontSize: 11, fontWeight: '700', color: '#3B82F6' },
 
-  faqList: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 8, elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10 },
-  faqItem: { borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  faqList: { backgroundColor: theme.surface, borderRadius: 16, padding: 8, elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10 },
+  faqItem: { borderBottomWidth: 1, borderBottomColor: theme.border },
   faqHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 18 },
-  faqQuestion: { fontSize: 13, fontWeight: '600', color: '#111827', flex: 1 },
-  faqAnswerContainer: { backgroundColor: '#F0FDF4', borderRadius: 12, padding: 12, marginHorizontal: 10, marginBottom: 16 },
-  faqAnswer: { fontSize: 13, color: '#374151', lineHeight: 20 },
+  faqQuestion: { fontSize: 13, fontWeight: '600', color: theme.text, flex: 1 },
+  faqAnswerContainer: { backgroundColor: theme.faqAnswer, borderRadius: 12, padding: 12, marginHorizontal: 10, marginBottom: 16 },
+  faqAnswer: { fontSize: 13, color: theme.text, lineHeight: 20 },
 
   helpBannerCard: { paddingVertical: 24, paddingHorizontal: 20, marginHorizontal: 0, marginTop: 32, marginBottom: 40, alignItems: 'center', shadowColor: '#5A67D8', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 8, overflow: 'hidden', borderRadius: 20 },
   helpBannerContent: { zIndex: 1, alignItems: 'center' },
@@ -1289,7 +1261,7 @@ const styles = StyleSheet.create({
   sectionSpacing: { height: 10 },
   iconBox: { borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
   cardContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 12,
     shadowColor: '#000',
@@ -1298,10 +1270,10 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 4,
     borderWidth: 1,
-    borderColor: '#F8FAFC'
+    borderColor: theme.border
   },
   eventCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 12,
     borderLeftWidth: 4,
@@ -1311,18 +1283,18 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#F8FAFC'
+    borderColor: theme.border
   },
   eventCardContent: { flex: 1 },
-  eventTitle: { fontSize: 13, fontWeight: '700', color: '#1F2937', marginBottom: 4 },
+  eventTitle: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 4 },
   eventDateContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  eventDateText: { fontSize: 11, color: '#9CA3AF' },
+  eventDateText: { fontSize: 11, color: theme.subtext },
   topStudentCard: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: theme.border,
   },
   rankCircle: {
     width: 28,
@@ -1334,13 +1306,13 @@ const styles = StyleSheet.create({
   },
   rankText: { fontSize: 12, fontWeight: '700' },
   topStudentInfo: { flex: 1 },
-  topStudentName: { fontSize: 13, fontWeight: '700', color: '#1F2937' },
-  topStudentClass: { fontSize: 11, color: '#6B7280' },
+  topStudentName: { fontSize: 13, fontWeight: '700', color: theme.text },
+  topStudentClass: { fontSize: 11, color: theme.subtext },
   topStudentPercentage: { fontSize: 13, fontWeight: '700', color: '#10B981' },
   sectionHeaderSpaceBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   viewAllText: { fontSize: 13, fontWeight: '600', color: '#3B82F6' },
   activityBox: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 4,
     shadowColor: '#000',
@@ -1349,7 +1321,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 4,
     borderWidth: 1,
-    borderColor: '#F8FAFC'
+    borderColor: theme.border
   },
   activityItem: {
     flexDirection: 'row',
@@ -1359,7 +1331,7 @@ const styles = StyleSheet.create({
   },
   activityItemBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: theme.border,
   },
   activityAvatarBox: {
     width: 32,
@@ -1370,9 +1342,9 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   activityContent: { flex: 1, justifyContent: 'center' },
-  activityName: { fontSize: 13, fontWeight: '700', color: '#1F2937', marginBottom: 2 },
-  activityAction: { fontSize: 11, color: '#6B7280', marginBottom: 4, lineHeight: 15 },
-  activityDateText: { fontSize: 10, color: '#9CA3AF' },
+  activityName: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 2 },
+  activityAction: { fontSize: 11, color: theme.subtext, marginBottom: 4, lineHeight: 15 },
+  activityDateText: { fontSize: 10, color: theme.placeholder },
 });
 
 export default TeacherDashboard;

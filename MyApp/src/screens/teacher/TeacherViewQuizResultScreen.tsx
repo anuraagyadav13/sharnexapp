@@ -15,6 +15,8 @@ import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
+import { useTheme } from '../../store/ThemeContext';
+import { TeacherHeader } from '../../components/TeacherHeader';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 
@@ -22,6 +24,8 @@ type Props = NativeStackScreenProps<RootStackParamList, 'TeacherViewQuizResult'>
 
 const TeacherViewQuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
   const { authState } = useAuth();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles({ ...theme, isDarkMode });
   const { quizId } = route.params;
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,18 +54,11 @@ const TeacherViewQuizResultScreen: React.FC<Props> = ({ navigation, route }) => 
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
-        <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
-          </View>
-        </View>
-      </View>
+      <TeacherHeader
+        title="Quiz Results"
+        navigation={navigation}
+        isStackScreen={true}
+      />
 
       {/* Blue Header Section */}
       <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
@@ -155,8 +152,8 @@ const TeacherViewQuizResultScreen: React.FC<Props> = ({ navigation, route }) => 
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 
   globalHeader: {
@@ -166,7 +163,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -178,7 +175,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5',
+    color: theme.primary,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -201,7 +198,7 @@ const styles = StyleSheet.create({
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   blueHeader: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 24,
@@ -239,7 +236,7 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 6,
     paddingVertical: 12,
     paddingHorizontal: 8,
@@ -250,7 +247,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: theme.border,
   },
   statIconBox: {
     width: 34,
@@ -265,13 +262,13 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 9,
-    color: '#9CA3AF',
+    color: theme.subtext,
     fontWeight: '500',
     marginBottom: 4,
   },
   statValue: {
     fontSize: 14,
-    color: '#111827',
+    color: theme.text,
     fontWeight: '800',
   },
 
@@ -282,12 +279,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#000',
+    color: theme.text,
     marginBottom: 20,
   },
 
   tableContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 6,
     shadowColor: '#1E293B',
     shadowOffset: { width: 0, height: 4 },
@@ -295,19 +292,19 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: theme.border,
     overflow: 'hidden',
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#E5E7EB',
     paddingVertical: 14,
     paddingHorizontal: 16,
   },
   thText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#6B7280',
+    color: theme.subtext,
   },
   tableRow: {
     flexDirection: 'row',
@@ -315,7 +312,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: theme.border,
   },
   lastTableRow: {
     borderBottomWidth: 0,
@@ -323,28 +320,27 @@ const styles = StyleSheet.create({
   tdTextStudent: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
   tdTextBase: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.text,
   },
   tdStatusWrapper: {
     justifyContent: 'center',
   },
   statusPill: {
-    backgroundColor: '#D1FAE5',
+    backgroundColor: theme.isDarkMode ? '#065F4630' : '#D1FAE5',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
   statusPillText: {
-    color: '#10B981',
+    color: theme.isDarkMode ? '#34D399' : '#10B981',
     fontSize: 10,
     fontWeight: '700',
   },
-
 });
 
 export default TeacherViewQuizResultScreen;

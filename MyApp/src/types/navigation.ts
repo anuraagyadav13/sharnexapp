@@ -23,7 +23,7 @@ export type RootStackParamList = {
   Grades: undefined;
   Fees: undefined;
   AccountSettings: { targetTab?: 'Personal Details' | 'Parent Information' | 'Preferences' } | undefined;
-  Messages: undefined;
+  Messages: { recipientId?: string; recipientName?: string } | undefined;
 
   OfficialResult: { resultId: string };
   ResultManagement: undefined;
@@ -46,7 +46,7 @@ export type RootStackParamList = {
   };
   TeacherCreateAssignment: undefined;
   TeacherQuiz: undefined;
-  TeacherCreateQuiz: { initialQuiz?: any; quizId?: string } | undefined;
+  TeacherCreateQuiz: { initialQuiz?: any; quizId?: string; updatedQuizData?: any } | undefined;
   TeacherCreateQuizStep2: { quizData: any };
   TeacherAddQuestion: { editQuestion?: any; quizData?: any } | undefined;
   TeacherCreateQuizStep3: { quizData: any };

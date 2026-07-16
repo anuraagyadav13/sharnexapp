@@ -14,9 +14,11 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { TeacherHeader } from '../../components/TeacherHeader';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import { useAuth } from '../../store/AuthContext';
+import { useTheme } from '../../store/ThemeContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 
@@ -25,6 +27,8 @@ const { width } = Dimensions.get('window');
 const TeacherPerformanceScreen = ({ navigation }: any) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles({ ...theme, isDarkMode });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [performanceData, setPerformanceData] = useState<any>(null);
@@ -33,68 +37,68 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchData = useCallback(async (isRefresh = false) => {
-      try {
-        if (!isRefresh) setIsLoading(true);
-        setError(null);
-        const teacherId = authState.user?.id;
-        if (!teacherId) throw new Error('Teacher ID not found');
+    try {
+      if (!isRefresh) setIsLoading(true);
+      setError(null);
+      const teacherId = authState.user?.id;
+      if (!teacherId) throw new Error('Teacher ID not found');
 
-        const [summaryRes, classesRes, quizzesRes, assignmentsRes] = await Promise.all([
-          apiClient.get(ENDPOINTS.TEACHER.DASHBOARD(teacherId)),
-          apiClient.get(ENDPOINTS.TEACHER.CLASSES(teacherId)),
-          apiClient.get(ENDPOINTS.TEACHER.TEACHER_QUIZZES(teacherId)).catch(() => ({ data: [] })),
-          apiClient.get(ENDPOINTS.TEACHER.ASSIGNMENTS(teacherId)).catch(() => ({ data: { assignments: [] } }))
-        ]);
+      const [summaryRes, classesRes, quizzesRes, assignmentsRes] = await Promise.all([
+        apiClient.get(ENDPOINTS.TEACHER.DASHBOARD(teacherId)),
+        apiClient.get(ENDPOINTS.TEACHER.CLASSES(teacherId)),
+        apiClient.get(ENDPOINTS.TEACHER.TEACHER_QUIZZES(teacherId)).catch(() => ({ data: [] })),
+        apiClient.get(ENDPOINTS.TEACHER.ASSIGNMENTS(teacherId)).catch(() => ({ data: { assignments: [] } }))
+      ]);
 
-        const summaryData = summaryRes.normalized?.data?.summary || summaryRes.data?.summary || {};
-        const classesData = Array.isArray(classesRes.data) ? classesRes.data : (classesRes.data?.classes || []);
-        const quizzesData = Array.isArray(quizzesRes.data) ? quizzesRes.data : (quizzesRes.data?.data || []);
-        const assignmentsData = Array.isArray(assignmentsRes.data) ? assignmentsRes.data : (assignmentsRes.data?.assignments || []);
+      const summaryData = summaryRes.normalized?.data?.summary || summaryRes.data?.summary || {};
+      const classesData = Array.isArray(classesRes.data) ? classesRes.data : (classesRes.data?.classes || []);
+      const quizzesData = Array.isArray(quizzesRes.data) ? quizzesRes.data : (quizzesRes.data?.data || []);
+      const assignmentsData = Array.isArray(assignmentsRes.data) ? assignmentsRes.data : (assignmentsRes.data?.assignments || []);
 
-        setClasses(classesData);
-        if (classesData.length > 0 && !selectedClass) {
-          setSelectedClass(classesData[0].id);
-        }
-
-        // Aggregate stats
-        const totalQuizzes = quizzesData.length;
-        const totalAssignments = assignmentsData.length;
-        
-        const avgQuizScore = totalQuizzes > 0 
-          ? Math.round(quizzesData.reduce((acc: number, q: any) => acc + (q.averageScore || q.avgScore || 0), 0) / totalQuizzes) 
-          : (summaryData.stats?.avgQuizScore || 0);
-
-        const assignmentRate = totalAssignments > 0
-          ? Math.round((assignmentsData.reduce((acc: number, a: any) => {
-              const count = a.studentsCount || a.totalStudents || 0;
-              const sub = a.submissionsCount || a.submittedCount || 0;
-              return acc + (count > 0 ? (sub / count) : 0);
-            }, 0) / totalAssignments) * 100)
-          : (summaryData.stats?.assignmentRate || 0);
-
-        const attendanceRate = summaryData.stats?.attendanceRate !== undefined 
-          ? summaryData.stats?.attendanceRate 
-          : (summaryData.attendanceRate || 0);
-
-        setPerformanceData({
-          overall: {
-            totalStudents: summaryData.stats?.totalStudents || summaryData.totalStudents || 0,
-            avgQuizScore,
-            assignmentRate,
-            attendanceRate,
-          },
-          topStudents: summaryData.topStudents || [],
-          quizzes: quizzesData.slice(0, 5),
-          assignments: assignmentsData.slice(0, 5)
-        });
-
-      } catch (err: any) {
-        console.error('Failed to fetch performance data:', err);
-        setError('Failed to load performance metrics.');
-      } finally {
-        if (!isRefresh) setIsLoading(false);
+      setClasses(classesData);
+      if (classesData.length > 0 && !selectedClass) {
+        setSelectedClass(classesData[0].id);
       }
-    }, [authState.user?.id]);
+
+      // Aggregate stats
+      const totalQuizzes = quizzesData.length;
+      const totalAssignments = assignmentsData.length;
+
+      const avgQuizScore = totalQuizzes > 0
+        ? Math.round(quizzesData.reduce((acc: number, q: any) => acc + (q.averageScore || q.avgScore || 0), 0) / totalQuizzes)
+        : (summaryData.stats?.avgQuizScore || 0);
+
+      const assignmentRate = totalAssignments > 0
+        ? Math.round((assignmentsData.reduce((acc: number, a: any) => {
+          const count = a.studentsCount || a.totalStudents || 0;
+          const sub = a.submissionsCount || a.submittedCount || 0;
+          return acc + (count > 0 ? (sub / count) : 0);
+        }, 0) / totalAssignments) * 100)
+        : (summaryData.stats?.assignmentRate || 0);
+
+      const attendanceRate = summaryData.stats?.attendanceRate !== undefined
+        ? summaryData.stats?.attendanceRate
+        : (summaryData.attendanceRate || 0);
+
+      setPerformanceData({
+        overall: {
+          totalStudents: summaryData.stats?.totalStudents || summaryData.totalStudents || 0,
+          avgQuizScore,
+          assignmentRate,
+          attendanceRate,
+        },
+        topStudents: summaryData.topStudents || [],
+        quizzes: quizzesData.slice(0, 5),
+        assignments: assignmentsData.slice(0, 5)
+      });
+
+    } catch (err: any) {
+      console.error('Failed to fetch performance data:', err);
+      setError('Failed to load performance metrics.');
+    } finally {
+      if (!isRefresh) setIsLoading(false);
+    }
+  }, [authState.user?.id]);
 
   useEffect(() => {
     fetchData(false);
@@ -112,34 +116,11 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
   };
 
   const renderHeader = () => (
-    <View style={styles.topHeader}>
-      <ScaleButton
-        style={styles.menuHandle}
-        onPress={() => setDrawerOpen(true)}
-        hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-      >
-        <Ionicons name="menu" size={28} color="#111827" />
-      </ScaleButton>
-
-      <Text style={styles.topHeaderTitle} numberOfLines={1}>
-        Performance Report
-      </Text>
-
-      <View style={styles.headerRight}>
-        <TouchableOpacity style={styles.iconBtn}>
-          <Ionicons name="notifications-outline" size={22} color="#111827" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('TeacherProfile')} style={styles.iconBtn}>
-          <Ionicons name="settings-outline" size={22} color="#111827" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => {}} style={styles.iconBtn}>
-          <Ionicons name="moon-outline" size={22} color="#111827" />
-        </TouchableOpacity>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
-        </View>
-      </View>
-    </View>
+    <TeacherHeader
+      title="Performance"
+      navigation={navigation}
+      onMenuPress={() => setDrawerOpen(true)}
+    />
   );
 
   if (isLoading && !performanceData) {
@@ -159,13 +140,13 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
       <StatusBar barStyle="dark-content" backgroundColor="#FAF9F9" />
       {renderHeader()}
 
-      <ScrollView 
-        style={styles.container} 
-        contentContainerStyle={styles.scrollContent} 
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
       >
-        
+
         {/* Page Titles */}
         <Animated.View entering={FadeInUp.duration(300)} style={styles.pageTitleContainer}>
           <Text style={styles.pageTitle}>Analytics Overview</Text>
@@ -195,24 +176,24 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
         {/* Top Performers Card */}
         <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.cardContainer}>
           <View style={styles.cardHeader}>
-            <MaterialCommunityIcons name="trophy" size={18} color="#F59E0B" style={{marginRight: 8}} />
+            <MaterialCommunityIcons name="trophy" size={18} color="#F59E0B" style={{ marginRight: 8 }} />
             <Text style={styles.cardTitle}>Top Performers</Text>
           </View>
-          
+
           <View style={styles.topStudentsList}>
             {(performanceData?.topStudents || []).length > 0 ? (
               performanceData.topStudents.map((student: any, index: number) => (
                 <View key={index} style={[styles.studentItem, index === performanceData.topStudents.length - 1 && { borderBottomWidth: 0 }]}>
-                   <View style={styles.studentRankContainer}>
-                      <Text style={styles.studentRank}>#{student.rank}</Text>
-                   </View>
-                   <View style={styles.studentInfo}>
-                      <Text style={styles.studentName}>{student.name}</Text>
-                      <Text style={styles.studentClass}>{student.class_name}</Text>
-                   </View>
-                   <View style={styles.studentScoreContainer}>
-                      <Text style={styles.studentScore}>{student.percentage}</Text>
-                   </View>
+                  <View style={styles.studentRankContainer}>
+                    <Text style={styles.studentRank}>#{student.rank}</Text>
+                  </View>
+                  <View style={styles.studentInfo}>
+                    <Text style={styles.studentName}>{student.name}</Text>
+                    <Text style={styles.studentClass}>{student.class_name}</Text>
+                  </View>
+                  <View style={styles.studentScoreContainer}>
+                    <Text style={styles.studentScore}>{student.percentage}</Text>
+                  </View>
                 </View>
               ))
             ) : (
@@ -226,10 +207,10 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
         {/* Quiz Performance Trends */}
         <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.cardContainer}>
           <View style={styles.cardHeader}>
-            <MaterialCommunityIcons name="chart-line" size={18} color="#3B82F6" style={{marginRight: 8}} />
+            <MaterialCommunityIcons name="chart-line" size={18} color="#3B82F6" style={{ marginRight: 8 }} />
             <Text style={styles.cardTitle}>Recent Quiz Performance</Text>
           </View>
-          
+
           <View style={styles.quizList}>
             {(performanceData?.quizzes || []).length > 0 ? (
               performanceData.quizzes.map((quiz: any, index: number) => (
@@ -258,19 +239,19 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
         {/* Assignment Insights */}
         <Animated.View entering={FadeInUp.delay(500).springify()} style={styles.cardContainer}>
           <View style={styles.cardHeader}>
-            <MaterialCommunityIcons name="clipboard-check" size={18} color="#10B981" style={{marginRight: 8}} />
+            <MaterialCommunityIcons name="clipboard-check" size={18} color="#10B981" style={{ marginRight: 8 }} />
             <Text style={styles.cardTitle}>Assignment Submission Insights</Text>
           </View>
-          
+
           <View style={styles.assignmentList}>
             {(performanceData?.assignments || []).length > 0 ? (
               performanceData.assignments.map((assignment: any, index: number) => {
                 const total = assignment.studentsCount || assignment.totalStudents || 0;
                 const submitted = assignment.submissionsCount || assignment.submittedCount || 0;
-                const submissionRate = total > 0 
-                  ? Math.round((submitted / total) * 100) 
+                const submissionRate = total > 0
+                  ? Math.round((submitted / total) * 100)
                   : 0;
-                
+
                 return (
                   <View key={index} style={styles.assignmentPerfItem}>
                     <View style={styles.assignmentInfoRow}>
@@ -301,8 +282,8 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FAF9F9' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   container: { flex: 1 },
   scrollContent: { paddingBottom: 40, paddingHorizontal: 16 },
 
@@ -313,7 +294,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -322,11 +303,11 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   menuHandle: { paddingRight: 10, paddingVertical: 10 },
-  topHeaderTitle: { 
-    fontSize: 16, 
-    fontWeight: '500', 
-    color: '#4F46E5', 
-    flex: 1, 
+  topHeaderTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: theme.primary,
+    flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
   },
@@ -347,18 +328,18 @@ const styles = StyleSheet.create({
   },
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
-  loadingContainer: { flex: 1, backgroundColor: '#FAF9F9' },
+  loadingContainer: { flex: 1, backgroundColor: theme.background },
   centerFill: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 16, fontSize: 14, color: '#6B7280', fontWeight: '500' },
+  loadingText: { marginTop: 16, fontSize: 14, color: theme.subtext, fontWeight: '500' },
 
   pageTitleContainer: { marginTop: 16, marginBottom: 20 },
-  pageTitle: { fontSize: 22, fontWeight: '800', color: '#1E293B', marginBottom: 4 },
-  pageSubtitle: { color: '#64748B', fontSize: 13, fontWeight: '500', lineHeight: 18 },
+  pageTitle: { fontSize: 22, fontWeight: '800', color: theme.text, marginBottom: 4 },
+  pageSubtitle: { color: theme.subtext, fontSize: 13, fontWeight: '500', lineHeight: 18 },
 
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 20 },
   statItem: {
     width: (width - 44) / 2,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -369,11 +350,11 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 2,
   },
-  statValue: { fontSize: 24, fontWeight: '800', marginBottom: 2 },
-  statLabel: { fontSize: 11, color: '#64748B', fontWeight: '600' },
+  statValue: { fontSize: 24, fontWeight: '800', marginBottom: 2, color: theme.text },
+  statLabel: { fontSize: 11, color: theme.subtext, fontWeight: '600' },
 
   cardContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
@@ -383,10 +364,10 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#F1F5F9'
+    borderColor: theme.border
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  cardTitle: { fontSize: 16, fontWeight: '800', color: '#1E293B' },
+  cardTitle: { fontSize: 16, fontWeight: '800', color: theme.text },
 
   topStudentsList: { marginTop: 4 },
   studentItem: {
@@ -394,48 +375,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: theme.border,
   },
   studentRankContainer: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  studentRank: { fontSize: 12, fontWeight: '700', color: '#6B7280' },
+  studentRank: { fontSize: 12, fontWeight: '700', color: theme.subtext },
   studentInfo: { flex: 1 },
-  studentName: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
-  studentClass: { fontSize: 11, color: '#6B7280', marginTop: 1 },
+  studentName: { fontSize: 14, fontWeight: '700', color: theme.text },
+  studentClass: { fontSize: 11, color: theme.subtext, marginTop: 1 },
   studentScoreContainer: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, backgroundColor: '#E0F2FE' },
   studentScore: { fontSize: 12, fontWeight: '800', color: '#0369A1' },
 
   quizList: { marginTop: 4 },
   quizPerformanceItem: { marginBottom: 16 },
   quizHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  quizName: { fontSize: 14, fontWeight: '700', color: '#1E293B', flex: 1 },
+  quizName: { fontSize: 14, fontWeight: '700', color: theme.text, flex: 1 },
   quizAvg: { fontSize: 14, fontWeight: '800', color: '#3B82F6' },
-  progressBg: { height: 6, backgroundColor: '#F1F5F9', borderRadius: 3, overflow: 'hidden' },
+  progressBg: { height: 6, backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9', borderRadius: 3, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 3 },
   quizFooterRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
-  quizMeta: { fontSize: 10, color: '#94A3B8', fontWeight: '500' },
+  quizMeta: { fontSize: 10, color: theme.subtext, fontWeight: '500' },
 
   assignmentList: { marginTop: 4 },
   assignmentPerfItem: {
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: theme.border,
   },
   assignmentInfoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  assignmentTitle: { fontSize: 14, fontWeight: '700', color: '#1E293B', flex: 1, marginRight: 8 },
+  assignmentTitle: { fontSize: 14, fontWeight: '700', color: theme.text, flex: 1, marginRight: 8 },
   rateTag: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
   rateTagText: { fontSize: 10, fontWeight: '700' },
-  assignmentSub: { fontSize: 11, color: '#6B7280', marginTop: 4 },
+  assignmentSub: { fontSize: 11, color: theme.subtext, marginTop: 4 },
 
   emptyState: { paddingVertical: 20, alignItems: 'center' },
-  emptyStateText: { fontSize: 13, color: '#94A3B8', fontWeight: '500' },
+  emptyStateText: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
 });
 
 export default TeacherPerformanceScreen;
