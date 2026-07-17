@@ -15,6 +15,10 @@ import FadeInView from '../../components/animations/FadeInView';
 import ScaleButton from '../../components/animations/ScaleButton';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useTheme } from '../../store/ThemeContext';
+import ThemeSelectionModal from '../../components/modals/ThemeSelectionModal';
+
 
 
 const ChevronBackIcon = ({ width = 18, height = 18 }) => (
@@ -59,6 +63,8 @@ interface Props {
 }
 
 const RegisterScreen: React.FC<Props> = ({ navigation }) => {
+  const { theme, themeMode } = useTheme();
+  const [isThemeModalOpen, setThemeModalOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -66,6 +72,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
+  const styles = getStyles(theme);
 
   const handleRegister = async () => {
     if (!email || !password) {
@@ -127,6 +134,22 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
             <ChevronBackIcon width={20} height={20} />
           </View>
           <Text style={styles.backText}>Back</Text>
+        </ScaleButton>
+      </FadeInView>
+
+      <FadeInView delay={100} duration={400} translateYStart={-10} style={styles.themeButtonContainer}>
+        <ScaleButton style={styles.themeButton} onPress={() => setThemeModalOpen(true)} activeOpacity={0.7} scaleTo={0.92}>
+          <Ionicons 
+            name={
+              themeMode === 'light' 
+                ? 'sunny-outline' 
+                : themeMode === 'dark' 
+                ? 'moon-outline' 
+                : 'settings-outline'
+            } 
+            size={20} 
+            color="#FFF" 
+          />
         </ScaleButton>
       </FadeInView>
 
@@ -239,162 +262,182 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           </FadeInView>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <ThemeSelectionModal
+        visible={isThemeModalOpen}
+        onClose={() => setThemeModalOpen(false)}
+      />
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  backButtonContainer: {
-    position: 'absolute',
-    top: Platform.OS === 'android' ? (StatusBar.currentHeight ? StatusBar.currentHeight + 16 : 45) : 45,
-    left: 16,
-    zIndex: 10,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 8,
-    paddingVertical: 7,
-    paddingHorizontal: 14,
-  },
-  backIconSvg: {
-    marginRight: 2,
-    marginLeft: -4,
-  },
-  backText: {
-    color: '#FFF',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 27,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginBottom: 24,
-    letterSpacing: -0.3,
-    lineHeight: 34,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 32,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.05,
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#E9D5FF',
-    marginBottom: 16,
-    height: 56,
-    paddingHorizontal: 16,
-  },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    color: '#1F2937',
-    height: '100%',
-  },
-  passwordInput: {
-    flex: 1,
-    fontSize: 15,
-    color: '#1F2937',
-    height: '100%',
-  },
-  eyeBtn: {
-    paddingLeft: 10,
-  },
-  registerButton: {
-    width: '100%',
-    height: 56,
-    backgroundColor: '#6366F1',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  registerButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-    paddingHorizontal: 0,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#F1F5F9',
-  },
-  dividerText: {
-    fontSize: 13,
-    color: '#6B7280',
-    paddingHorizontal: 16,
-    fontWeight: '500',
-  },
-  socialRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 16,
-    marginBottom: 36,
-  },
-  socialButton: {
-    flex: 1,
-    height: 52,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  socialButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  bottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bottomText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  signInText: {
-    fontSize: 14,
-    color: '#6366F1',
-    fontWeight: '700',
-  },
-  inputContainerBottom: {
-    marginBottom: 24,
-  },
-});
+const getStyles = (theme: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    keyboardView: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      paddingHorizontal: 24,
+    },
+    backButtonContainer: {
+      position: 'absolute',
+      top: Platform.OS === 'android' ? (StatusBar.currentHeight ? StatusBar.currentHeight + 16 : 45) : 45,
+      left: 16,
+      zIndex: 10,
+    },
+    backButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      borderRadius: 8,
+      paddingVertical: 7,
+      paddingHorizontal: 14,
+    },
+    backIconSvg: {
+      marginRight: 2,
+      marginLeft: -4,
+    },
+    backText: {
+      color: '#FFF',
+      fontSize: 15,
+      fontWeight: '600',
+    },
+    themeButtonContainer: {
+      position: 'absolute',
+      top: Platform.OS === 'android' ? (StatusBar.currentHeight ? StatusBar.currentHeight + 16 : 45) : 45,
+      right: 16,
+      zIndex: 10,
+    },
+    themeButton: {
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      borderRadius: 8,
+      paddingVertical: 7,
+      paddingHorizontal: 14,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    title: {
+      fontSize: 27,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      textAlign: 'center',
+      marginBottom: 24,
+      letterSpacing: -0.3,
+      lineHeight: 34,
+    },
+    card: {
+      backgroundColor: theme.surface,
+      borderRadius: 24,
+      padding: 32,
+      width: '100%',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.05,
+      shadowRadius: 16,
+      elevation: 4,
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.background,
+      borderRadius: 12,
+      borderWidth: 1.5,
+      borderColor: theme.border,
+      marginBottom: 16,
+      height: 56,
+      paddingHorizontal: 16,
+    },
+    input: {
+      flex: 1,
+      fontSize: 15,
+      color: theme.text,
+      height: '100%',
+    },
+    passwordInput: {
+      flex: 1,
+      fontSize: 15,
+      color: theme.text,
+      height: '100%',
+    },
+    eyeBtn: {
+      paddingLeft: 10,
+    },
+    registerButton: {
+      width: '100%',
+      height: 56,
+      backgroundColor: theme.primary,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 24,
+    },
+    registerButtonText: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: '700',
+    },
+    dividerContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 24,
+      paddingHorizontal: 0,
+    },
+    dividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: theme.border,
+    },
+    dividerText: {
+      fontSize: 13,
+      color: theme.subtext,
+      paddingHorizontal: 16,
+      fontWeight: '500',
+    },
+    socialRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: 16,
+      marginBottom: 36,
+    },
+    socialButton: {
+      flex: 1,
+      height: 52,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.surface,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 10,
+    },
+    socialButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    bottomRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    bottomText: {
+      fontSize: 14,
+      color: theme.subtext,
+    },
+    signInText: {
+      fontSize: 14,
+      color: theme.primary,
+      fontWeight: '700',
+    },
+    inputContainerBottom: {
+      marginBottom: 24,
+    },
+  });
 
 export default RegisterScreen;
