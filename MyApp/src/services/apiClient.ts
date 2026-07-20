@@ -106,7 +106,7 @@ const normalizeResponse = (response: any): NormalizedResponse => {
 
 const createNormalizedResponseData = (rawData: any): any => {
   const normalized = normalizeResponse(rawData);
-  const target = normalized.data !== undefined && normalized.data !== null ? normalized.data : {};
+  const target = (typeof normalized.data === 'object' && normalized.data !== null) ? normalized.data : {};
 
   return new Proxy(target, {
     get(obj: any, prop: string | symbol) {

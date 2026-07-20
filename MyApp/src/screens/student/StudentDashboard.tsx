@@ -17,16 +17,16 @@ import {
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
-import Animated, { 
-  FadeInUp, 
+import Animated, {
+  FadeInUp,
   FadeInDown,
   ZoomIn,
   SlideInRight,
   Layout,
   LinearTransition,
-  useAnimatedStyle, 
-  withRepeat, 
-  withTiming, 
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
   withSequence,
   interpolate,
   useSharedValue
@@ -44,96 +44,96 @@ import Skeleton from '../../components/common/Skeleton';
 
 const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   // ===== CONTAINERS =====
-  mainContainer: { 
-    flex: 1, 
-    backgroundColor: theme.background 
-  },
-  container: { 
+  mainContainer: {
     flex: 1,
-    backgroundColor: theme.background 
+    backgroundColor: theme.background
+  },
+  container: {
+    flex: 1,
+    backgroundColor: theme.background
   },
   scrollContent: { paddingBottom: 40 },
 
   // ===== HEADER =====
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    paddingHorizontal: 20, 
-    paddingTop: Platform.OS === 'ios' ? 60 : 30, 
-    paddingBottom: 24, 
-    backgroundColor: theme.background 
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 30,
+    paddingBottom: 24,
+    backgroundColor: theme.background
   },
   menuHandle: { paddingRight: 10, paddingVertical: 10 },
-  headerTitle: { 
-    fontSize: 16, 
-    fontWeight: '500', 
-    color: theme.primary, 
-    flex: 1, 
-    textAlign: 'center', 
-    marginHorizontal: 10 
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: theme.primary,
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 10
   },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  iconBtn: { 
-    width: 36, 
-    height: 36, 
-    borderRadius: 18, 
-    backgroundColor: theme.iconBackground || theme.surface, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.iconBackground || theme.surface,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
-  avatar: { 
-    width: 34, 
-    height: 34, 
-    borderRadius: 17, 
-    backgroundColor: theme.primary, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    shadowColor: theme.primary, 
-    shadowOffset: { width: 0, height: 4 }, 
-    shadowOpacity: 0.5, 
-    shadowRadius: 6, 
-    elevation: 8 
+  avatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: theme.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: theme.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 8
   },
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   // ===== HERO BANNER =====
-  heroBannerRow: { 
-    backgroundColor: isDarkMode ? '#312E81' : '#D9DAF9', 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    paddingVertical: 24, 
-    paddingLeft: 16, 
-    paddingRight: 0, 
-    overflow: 'hidden', 
-    minHeight: 180 
+  heroBannerRow: {
+    backgroundColor: isDarkMode ? '#312E81' : '#D9DAF9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingLeft: 16,
+    paddingRight: 0,
+    overflow: 'hidden',
+    minHeight: 180
   },
   heroTextSide: { width: '58%', paddingRight: 8, alignItems: 'center' },
-  heroRowTitle1: { 
-    fontSize: 20, 
-    fontWeight: '800', 
-    color: isDarkMode ? '#F8FAFC' : '#2563EB', 
-    textAlign: 'center' 
+  heroRowTitle1: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: isDarkMode ? '#F8FAFC' : '#2563EB',
+    textAlign: 'center'
   },
-  heroRowTitle2: { 
-    fontSize: 20, 
-    fontWeight: '800', 
-    color: isDarkMode ? '#818CF8' : '#D946EF', 
-    textAlign: 'center' 
+  heroRowTitle2: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: isDarkMode ? '#818CF8' : '#D946EF',
+    textAlign: 'center'
   },
-  heroRowTitle3: { 
-    fontSize: 20, 
-    fontWeight: '800', 
-    color: isDarkMode ? '#F8FAFC' : '#7C3AED', 
-    textAlign: 'center', 
-    marginBottom: 8 
+  heroRowTitle3: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: isDarkMode ? '#F8FAFC' : '#7C3AED',
+    textAlign: 'center',
+    marginBottom: 8
   },
-  heroRowSubtitle: { 
-    fontSize: 10, 
-    color: isDarkMode ? '#CBD5E1' : '#4B5563', 
-    lineHeight: 15, 
-    textAlign: 'center', 
-    fontWeight: '500' 
+  heroRowSubtitle: {
+    fontSize: 10,
+    color: isDarkMode ? '#CBD5E1' : '#4B5563',
+    lineHeight: 15,
+    textAlign: 'center',
+    fontWeight: '500'
   },
   heroImageSide: { width: '42%', justifyContent: 'center', alignItems: 'flex-start' },
   heroRowImage: { width: '100%', height: 140 },
@@ -141,285 +141,285 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   // ===== SECTIONS =====
   section: { paddingHorizontal: 20, marginTop: 32 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  sectionHeaderSpaceBetween: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    marginBottom: 20 
+  sectionHeaderSpaceBetween: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20
   },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center' },
   sectionIconMargin: { marginRight: 8 },
-  sectionTitle: { 
-    fontSize: 20, 
-    fontWeight: '800', 
-    color: theme.primary, 
-    letterSpacing: -0.5 
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: theme.primary,
+    letterSpacing: -0.5
   },
-  sectionTitleNoMargin: { 
-    fontSize: 20, 
-    fontWeight: '800', 
-    color: theme.primary, 
-    letterSpacing: -0.5, 
-    marginLeft: 0, 
-    marginBottom: 16 
+  sectionTitleNoMargin: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: theme.primary,
+    letterSpacing: -0.5,
+    marginLeft: 0,
+    marginBottom: 16
   },
 
   // ===== STATS ROW =====
-  statsRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    paddingHorizontal: 20, 
-    marginTop: 24 
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginTop: 24
   },
 
   // ===== STAT CARDS =====
-  statCard: { 
-    alignItems: 'center', 
-    backgroundColor: theme.surface, 
-    borderRadius: 16, 
-    paddingVertical: 12, 
-    paddingHorizontal: 8, 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 4 }, 
-    shadowOpacity: 0.03, 
-    shadowRadius: 8, 
-    elevation: 2, 
-    borderWidth: 1, 
-    borderColor: theme.border, 
-    width: '31%', 
-    minHeight: 110 
+  statCard: {
+    alignItems: 'center',
+    backgroundColor: theme.surface,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: theme.border,
+    width: '31%',
+    minHeight: 110
   },
-  statIconCircle: { 
-    width: 32, 
-    height: 32, 
-    borderRadius: 16, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    marginBottom: 4 
+  statIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4
   },
-  statValue: { 
-    fontSize: 16, 
-    fontWeight: '800', 
-    color: theme.text, 
-    marginTop: 2 
+  statValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: theme.text,
+    marginTop: 2
   },
-  statTitle: { 
-    fontSize: 10, 
-    fontWeight: '700', 
-    color: theme.subtext, 
-    marginTop: 6, 
-    textAlign: 'center', 
-    width: '100%' 
+  statTitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: theme.subtext,
+    marginTop: 6,
+    textAlign: 'center',
+    width: '100%'
   },
 
   // ===== QUICK ACTIONS =====
-  quickActionsGrid: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap', 
-    justifyContent: 'space-between', 
-    gap: 12 
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12
   },
-  quickActionCard: { 
-    width: '31%', 
-    backgroundColor: theme.surface, 
-    borderRadius: 16, 
-    paddingVertical: 16, 
-    paddingHorizontal: 4, 
-    borderWidth: 1, 
-    borderColor: theme.border, 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 6 }, 
-    shadowOpacity: 0.06, 
-    shadowRadius: 16, 
-    elevation: 4 
+  quickActionCard: {
+    width: '31%',
+    backgroundColor: theme.surface,
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 4,
+    borderWidth: 1,
+    borderColor: theme.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 4
   },
   quickActionTouchable: { alignItems: 'center' },
-  quickActionTitle: { 
-    fontSize: 11, 
-    fontWeight: '600', 
-    color: theme.text, 
-    marginTop: 10, 
-    textAlign: 'center' 
+  quickActionTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.text,
+    marginTop: 10,
+    textAlign: 'center'
   },
 
   // ===== ICON BOX =====
-  iconBox: { 
-    borderRadius: 16, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  iconBox: {
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
 
   // ===== SCHEDULE =====
   scheduleList: { gap: 12 },
-  scheduleCard: { 
-    backgroundColor: theme.surface, 
-    borderRadius: 12, 
-    flexDirection: 'row', 
-    borderWidth: 1, 
-    borderColor: theme.border, 
-    paddingRight: 10, 
-    height: 80, 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 6 }, 
-    shadowOpacity: 0.06, 
-    shadowRadius: 16, 
-    elevation: 4 
+  scheduleCard: {
+    backgroundColor: theme.surface,
+    borderRadius: 12,
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: theme.border,
+    paddingRight: 10,
+    height: 80,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 4
   },
   scheduleLeftCol: { flexDirection: 'row', alignItems: 'stretch', width: 145 },
-  scheduleCardIndicator: { 
-    width: 4, 
-    borderRadius: 2, 
-    marginVertical: 4, 
-    marginLeft: 16, 
-    marginRight: 16 
+  scheduleCardIndicator: {
+    width: 4,
+    borderRadius: 2,
+    marginVertical: 4,
+    marginLeft: 16,
+    marginRight: 16
   },
   scheduleTimeWrapper: { flex: 1, justifyContent: 'center' },
-  scheduleTime: { 
-    fontSize: 11, 
-    fontWeight: '500', 
-    color: theme.subtext 
+  scheduleTime: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: theme.subtext
   },
   scheduleRightCol: { flex: 1, justifyContent: 'center' },
   schedulePillRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
   schedulePill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
   schedulePillText: { fontSize: 10, fontWeight: '700', color: '#FFFFFF' },
   statusContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  scheduleStatus: { 
-    fontSize: 11, 
-    color: theme.subtext, 
-    fontWeight: '500' 
+  scheduleStatus: {
+    fontSize: 11,
+    color: theme.subtext,
+    fontWeight: '500'
   },
-  scheduleUpNext: { 
-    fontSize: 11, 
-    color: theme.primary, 
-    fontWeight: '500' 
+  scheduleUpNext: {
+    fontSize: 11,
+    color: theme.primary,
+    fontWeight: '500'
   },
   ongoingContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   ongoingDot: { width: 6, height: 6, borderRadius: 3 },
   ongoingText: { fontSize: 11, fontWeight: '700' },
-  scheduleTeacher: { 
-    fontSize: 13, 
-    fontWeight: '400', 
-    color: theme.text, 
-    marginBottom: 4 
+  scheduleTeacher: {
+    fontSize: 13,
+    fontWeight: '400',
+    color: theme.text,
+    marginBottom: 4
   },
-  scheduleBottomRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between' 
+  scheduleBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
   },
-  scheduleRoom: { 
-    fontSize: 10, 
-    color: theme.subtext 
+  scheduleRoom: {
+    fontSize: 10,
+    color: theme.subtext
   },
-  joinClassBtn: { 
-    paddingHorizontal: 10, 
-    paddingVertical: 2, 
-    borderRadius: 4, 
-    borderWidth: 1 
+  joinClassBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1
   },
   joinClassBtnText: { fontSize: 10, fontWeight: '600' },
 
   // ===== EVENTS =====
   eventList: { gap: 12 },
-  eventCard: { 
-    backgroundColor: theme.surface, 
-    borderRadius: 14, 
-    flexDirection: 'row', 
-    borderWidth: 1, 
-    borderColor: theme.border, 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 6 }, 
-    shadowOpacity: 0.06, 
-    shadowRadius: 16, 
-    elevation: 4 
+  eventCard: {
+    backgroundColor: theme.surface,
+    borderRadius: 14,
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: theme.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 4
   },
   eventCardContent: { flex: 1, paddingVertical: 16, paddingHorizontal: 16 },
-  eventTitle: { 
-    fontSize: 14, 
-    fontWeight: '700', 
-    color: theme.text, 
-    marginBottom: 6 
+  eventTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.text,
+    marginBottom: 6
   },
   eventDateContainer: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  eventDateText: { 
-    fontSize: 13, 
-    color: theme.subtext 
+  eventDateText: {
+    fontSize: 13,
+    color: theme.subtext
   },
-  awardBadge: { 
-    backgroundColor: '#F97316', 
-    paddingVertical: 6, 
-    borderRadius: 16, 
-    width: 96, 
-    alignItems: 'center', 
-    justifyContent: 'center' 
+  awardBadge: {
+    backgroundColor: '#F97316',
+    paddingVertical: 6,
+    borderRadius: 16,
+    width: 96,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   awardBadgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
 
   // ===== TOP STUDENTS =====
-  topRankingContainer: { 
-    backgroundColor: isDarkMode ? '#1E1B4B' : '#2DD4BF', 
-    borderRadius: 24, 
-    paddingVertical: 20, 
-    paddingHorizontal: 16, 
-    borderWidth: 1, 
-    borderColor: isDarkMode ? '#4F46E5' : '#14B8A6' 
+  topRankingContainer: {
+    backgroundColor: isDarkMode ? '#1E1B4B' : '#2DD4BF',
+    borderRadius: 24,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: isDarkMode ? '#4F46E5' : '#14B8A6'
   },
-  topRankingHeader: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    marginBottom: 20 
+  topRankingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20
   },
   topRankingHeaderEmoji: { fontSize: 18, marginRight: 8 },
-  topRankingHeaderText: { 
-    fontSize: 16, 
-    fontWeight: '800', 
-    color: '#FFFFFF' 
+  topRankingHeaderText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFFFFF'
   },
-  topRankingGrid: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap', 
-    justifyContent: 'space-between' 
+  topRankingGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between'
   },
   topRankCardWrapper: { width: '48%', marginBottom: 12 },
   lastTopRankCard: { width: '48%', alignSelf: 'center' },
-  topRankCard: { 
-    backgroundColor: theme.surface, 
-    borderRadius: 18, 
-    padding: 16, 
-    alignItems: 'center', 
-    elevation: 2, 
-    shadowColor: '#000', 
-    shadowOpacity: 0.05, 
-    shadowRadius: 8 
+  topRankCard: {
+    backgroundColor: theme.surface,
+    borderRadius: 18,
+    padding: 16,
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8
   },
-  topRankCircle: { 
-    width: 44, 
-    height: 44, 
-    borderRadius: 22, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    marginBottom: 10 
+  topRankCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10
   },
   topRankCircleText: { color: '#FFFFFF', fontSize: 18, fontWeight: '900' },
-  topRankName: { 
-    fontSize: 13, 
-    fontWeight: '700', 
-    color: theme.text, 
-    marginBottom: 2 
+  topRankName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.text,
+    marginBottom: 2
   },
-  topRankPercent: { 
-    fontSize: 14, 
-    fontWeight: '800', 
-    color: theme.primary, 
-    marginBottom: 6 
+  topRankPercent: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: theme.primary,
+    marginBottom: 6
   },
-  topRankBadge: { 
-    backgroundColor: isDarkMode ? theme.primary : '#FACC15', 
-    paddingHorizontal: 8, 
-    paddingVertical: 2, 
-    borderRadius: 10 
+  topRankBadge: {
+    backgroundColor: isDarkMode ? theme.primary : '#FACC15',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10
   },
   topRankBadgeText: { fontSize: 9, fontWeight: '900', color: '#FFFFFF' },
 
@@ -441,282 +441,282 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   },
   rankText: { fontSize: 12, fontWeight: '700' },
   topStudentInfo: { flex: 1 },
-  topStudentName: { 
-    fontSize: 13, 
-    fontWeight: '700', 
-    color: theme.text 
+  topStudentName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.text
   },
-  topStudentClass: { 
-    fontSize: 11, 
-    color: theme.subtext 
+  topStudentClass: {
+    fontSize: 11,
+    color: theme.subtext
   },
-  topStudentPercentage: { 
-    fontSize: 13, 
-    fontWeight: '700', 
-    color: theme.primary 
+  topStudentPercentage: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.primary
   },
 
   // ===== HELP CENTER =====
-  helpCenterGrid: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap', 
-    justifyContent: 'space-between', 
-    gap: 12 
+  helpCenterGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12
   },
-  helpCenterCard: { 
-    width: '48%', 
-    height: 204, 
-    backgroundColor: theme.surface, 
-    borderRadius: 12, 
-    paddingVertical: 16, 
-    paddingHorizontal: 16, 
-    borderWidth: 1, 
-    borderColor: theme.border, 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 6 }, 
-    shadowOpacity: 0.06, 
-    shadowRadius: 16, 
-    elevation: 4 
+  helpCenterCard: {
+    width: '48%',
+    height: 204,
+    backgroundColor: theme.surface,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: theme.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 4
   },
-  helpIconContainer: { 
-    width: 36, 
-    height: 36, 
-    borderRadius: 8, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    marginBottom: 12 
+  helpIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12
   },
-  helpCardTitle: { 
-    fontSize: 13, 
-    fontWeight: '700', 
-    color: theme.text, 
-    marginBottom: 6, 
-    lineHeight: 18 
+  helpCardTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.text,
+    marginBottom: 6,
+    lineHeight: 18
   },
-  helpCardDesc: { 
-    fontSize: 10, 
-    color: theme.subtext, 
-    lineHeight: 14 
+  helpCardDesc: {
+    fontSize: 10,
+    color: theme.subtext,
+    lineHeight: 14
   },
-  viewGuidesRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    width: '100%', 
-    marginTop: 'auto', 
-    borderTopWidth: 1, 
-    borderTopColor: theme.border, 
-    paddingTop: 12 
+  viewGuidesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 'auto',
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+    paddingTop: 12
   },
-  helpCardLink: { 
-    fontSize: 11, 
-    fontWeight: '700', 
-    color: theme.primary 
+  helpCardLink: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: theme.primary
   },
 
   // ===== FAQ =====
-  faqListContainer: { 
-    backgroundColor: theme.surface, 
-    borderRadius: 16, 
-    padding: 8, 
-    elevation: 1, 
-    shadowColor: '#000', 
-    shadowOpacity: 0.05, 
+  faqListContainer: {
+    backgroundColor: theme.surface,
+    borderRadius: 16,
+    padding: 8,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
     shadowRadius: 10,
     borderWidth: isDarkMode ? 1 : 0,
     borderColor: theme.border
   },
-  faqItemContainer: { 
-    borderBottomWidth: 1, 
-    borderBottomColor: theme.border 
+  faqItemContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border
   },
-  faqHeader: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    paddingVertical: 16, 
-    paddingHorizontal: 12 
+  faqHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 12
   },
-  faqQuestion: { 
-    fontSize: 13, 
-    fontWeight: '600', 
-    color: theme.text, 
-    flex: 1 
+  faqQuestion: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.text,
+    flex: 1
   },
-  faqAnswerContainer: { 
-    backgroundColor: isDarkMode ? '#1E293B' : '#F0FDF4', 
-    borderRadius: 12, 
-    padding: 12, 
-    marginHorizontal: 10, 
-    marginBottom: 16 
+  faqAnswerContainer: {
+    backgroundColor: isDarkMode ? '#1E293B' : '#F0FDF4',
+    borderRadius: 12,
+    padding: 12,
+    marginHorizontal: 10,
+    marginBottom: 16
   },
-  faqAnswerText: { 
-    fontSize: 13, 
-    color: theme.text, 
-    lineHeight: 20 
+  faqAnswerText: {
+    fontSize: 13,
+    color: theme.text,
+    lineHeight: 20
   },
 
   // ===== ASSIGNMENTS =====
   assignmentList: { gap: 12 },
-  assignmentCard: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: theme.surface, 
-    borderRadius: 16, 
-    padding: 12, 
-    borderWidth: 1, 
-    borderColor: theme.border, 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 2 }, 
-    shadowOpacity: 0.05, 
-    shadowRadius: 4, 
-    elevation: 2 
+  assignmentCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.surface,
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: theme.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2
   },
-  assignIconWrapper: { 
-    width: 44, 
-    height: 44, 
-    borderRadius: 12, 
-    backgroundColor: isDarkMode ? '#312E81' : '#EEF2FF', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    marginRight: 12 
+  assignIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: isDarkMode ? '#312E81' : '#EEF2FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12
   },
   assignContent: { flex: 1 },
-  assignSubject: { 
-    fontSize: 10, 
-    fontWeight: '700', 
-    color: theme.primary, 
-    textTransform: 'uppercase', 
-    marginBottom: 2 
+  assignSubject: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: theme.primary,
+    textTransform: 'uppercase',
+    marginBottom: 2
   },
-  assignTitle: { 
-    fontSize: 13, 
-    fontWeight: '700', 
-    color: theme.text, 
-    marginBottom: 4 
+  assignTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.text,
+    marginBottom: 4
   },
   assignFooter: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  assignDueDate: { 
-    fontSize: 11, 
-    color: theme.subtext, 
-    fontWeight: '500' 
+  assignDueDate: {
+    fontSize: 11,
+    color: theme.subtext,
+    fontWeight: '500'
   },
 
   // ===== LIVE BANNER =====
-  liveBanner: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF', 
-    borderRadius: 16, 
-    padding: 16, 
-    marginBottom: 20, 
-    borderLeftWidth: 4, 
-    shadowColor: '#EF4444', 
-    shadowOffset: { width: 0, height: 4 }, 
-    shadowOpacity: 0.1, 
-    shadowRadius: 12, 
-    elevation: 5, 
-    borderWidth: 1, 
-    borderColor: isDarkMode ? '#334155' : '#FEE2E2' 
+  liveBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: isDarkMode ? '#334155' : '#FEE2E2'
   },
   liveBannerContent: { flex: 1 },
   liveIndicatorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   liveDot: { width: 8, height: 8, borderRadius: 4 },
   liveText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
-  liveSubject: { 
-    fontSize: 16, 
-    fontWeight: '700', 
-    color: theme.text 
+  liveSubject: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.text
   },
-  liveTeacher: { 
-    fontSize: 13, 
-    color: theme.subtext, 
-    marginTop: 2 
+  liveTeacher: {
+    fontSize: 13,
+    color: theme.subtext,
+    marginTop: 2
   },
-  liveJoinBtn: { 
-    paddingHorizontal: 20, 
-    paddingVertical: 10, 
-    borderRadius: 12, 
-    marginLeft: 12 
+  liveJoinBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginLeft: 12
   },
   liveJoinBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
-  liveTrackingContainer: { 
-    height: 8, 
-    width: '100%', 
-    backgroundColor: isDarkMode ? '#334155' : '#FEE2E2', 
-    borderRadius: 4, 
-    overflow: 'hidden', 
-    marginTop: 10, 
-    marginBottom: 8, 
-    borderWidth: 1, 
-    borderColor: isDarkMode ? '#475569' : '#FECACA' 
+  liveTrackingContainer: {
+    height: 8,
+    width: '100%',
+    backgroundColor: isDarkMode ? '#334155' : '#FEE2E2',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginTop: 10,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: isDarkMode ? '#475569' : '#FECACA'
   },
   liveTrackingLine: { height: '100%', backgroundColor: '#EF4444', borderRadius: 4 },
-  shimmerStreak: { 
-    position: 'absolute', 
-    top: 0, 
-    bottom: 0, 
-    width: 60, 
-    backgroundColor: 'rgba(255, 255, 255, 0.6)', 
-    zIndex: 2 
+  shimmerStreak: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 60,
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    zIndex: 2
   },
 
   // ===== NEED HELP BANNER =====
-  needHelpBanner: { 
-    paddingVertical: 24, 
-    paddingHorizontal: 20, 
-    marginHorizontal: 20, 
-    marginTop: 32, 
-    marginBottom: 40, 
-    alignItems: 'center', 
-    shadowColor: '#5A67D8', 
-    shadowOffset: { width: 0, height: 10 }, 
-    shadowOpacity: 0.3, 
-    shadowRadius: 20, 
-    elevation: 8, 
-    overflow: 'hidden', 
-    borderRadius: 20 
+  needHelpBanner: {
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    marginHorizontal: 20,
+    marginTop: 32,
+    marginBottom: 40,
+    alignItems: 'center',
+    shadowColor: '#5A67D8',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 8,
+    overflow: 'hidden',
+    borderRadius: 20
   },
-  needHelpTitle: { 
-    fontSize: 18, 
-    fontWeight: '700', 
-    color: '#FFFFFF', 
-    marginBottom: 8, 
-    zIndex: 2 
+  needHelpTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 8,
+    zIndex: 2
   },
-  needHelpDesc: { 
-    fontSize: 12, 
-    color: '#E0E7FF', 
-    textAlign: 'center', 
-    lineHeight: 18, 
-    marginBottom: 20, 
-    paddingHorizontal: 10, 
-    zIndex: 2 
+  needHelpDesc: {
+    fontSize: 12,
+    color: '#E0E7FF',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 20,
+    paddingHorizontal: 10,
+    zIndex: 2
   },
-  needHelpButtonsRow: { 
-    flexDirection: 'row', 
-    gap: 12, 
-    width: '100%', 
-    zIndex: 2 
+  needHelpButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+    zIndex: 2
   },
-  helpButtonOutlined: { 
-    flex: 1, 
-    paddingVertical: 10, 
-    borderRadius: 24, 
-    borderWidth: 1, 
-    borderColor: '#FFFFFF', 
-    alignItems: 'center', 
-    justifyContent: 'center' 
+  helpButtonOutlined: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   helpButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
 
   // ===== EMPTY STATE =====
-  emptyText: { 
-    fontSize: 14, 
-    color: theme.subtext, 
-    textAlign: 'center', 
-    marginTop: 20, 
-    fontWeight: '500' 
+  emptyText: {
+    fontSize: 14,
+    color: theme.subtext,
+    textAlign: 'center',
+    marginTop: 20,
+    fontWeight: '500'
   },
 });
 
@@ -726,13 +726,13 @@ const DashboardSkeleton = () => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.header}>
-         <Skeleton width={30} height={30} borderRadius={6} />
-         <Skeleton width="40%" height={24} borderRadius={6} />
-         <View style={{flexDirection: 'row', gap: 10}}>
-            <Skeleton width={24} height={24} borderRadius={12} />
-            <Skeleton width={24} height={24} borderRadius={12} />
-            <Skeleton width={32} height={32} borderRadius={16} />
-         </View>
+        <Skeleton width={30} height={30} borderRadius={6} />
+        <Skeleton width="40%" height={24} borderRadius={6} />
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <Skeleton width={24} height={24} borderRadius={12} />
+          <Skeleton width={24} height={24} borderRadius={12} />
+          <Skeleton width={32} height={32} borderRadius={16} />
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -740,18 +740,18 @@ const DashboardSkeleton = () => {
       </View>
 
       <View style={styles.section}>
-         <View style={styles.statsRow}>
-            <Skeleton width="31%" height={100} borderRadius={12} />
-            <Skeleton width="31%" height={100} borderRadius={12} />
-            <Skeleton width="31%" height={100} borderRadius={12} />
-         </View>
+        <View style={styles.statsRow}>
+          <Skeleton width="31%" height={100} borderRadius={12} />
+          <Skeleton width="31%" height={100} borderRadius={12} />
+          <Skeleton width="31%" height={100} borderRadius={12} />
+        </View>
       </View>
 
       <View style={styles.section}>
-         <Skeleton width={120} height={20} style={{marginBottom: 16}} />
-         <View style={styles.quickActionsGrid}>
-            {[1,2,3,4,5,6].map(i => <Skeleton key={i} width="31%" height={90} borderRadius={16} />)}
-         </View>
+        <Skeleton width={120} height={20} style={{ marginBottom: 16 }} />
+        <View style={styles.quickActionsGrid}>
+          {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} width="31%" height={90} borderRadius={16} />)}
+        </View>
       </View>
     </ScrollView>
   );
@@ -919,10 +919,10 @@ const LiveClassBanner = ({ subject, teacher, time, startTime, endTime, color }: 
   }));
 
   return (
-    <Animated.View entering={FadeInUp.springify()} style={[styles.liveBanner, { 
-      backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF', 
+    <Animated.View entering={FadeInUp.springify()} style={[styles.liveBanner, {
+      backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
       borderColor: isDarkMode ? '#334155' : '#FEE2E2',
-      borderLeftColor: color 
+      borderLeftColor: color
     }]}>
       <View style={styles.liveBannerContent}>
         <View style={styles.liveIndicatorRow}>
@@ -932,7 +932,7 @@ const LiveClassBanner = ({ subject, teacher, time, startTime, endTime, color }: 
         <Text style={[styles.liveSubject, { color: theme.text }]}>{subject}</Text>
         <View style={[styles.liveTrackingContainer, { backgroundColor: isDarkMode ? '#334155' : '#FEE2E2', borderColor: isDarkMode ? '#475569' : '#FECACA' }]}>
           <Animated.View style={[styles.liveTrackingLine, { width: `${progress * 100}%` }, animatedPulseStyle]}>
-             <Animated.View style={[styles.shimmerStreak, animatedShimmerStyle]} />
+            <Animated.View style={[styles.shimmerStreak, animatedShimmerStyle]} />
           </Animated.View>
         </View>
         <Text style={[styles.liveTeacher, { color: theme.subtext }]}>{teacher} • {time}</Text>
@@ -967,16 +967,16 @@ const FAQItem = React.memo(({ question, answer, isOpen, onToggle }: { question: 
   const styles = getStyles(theme, isDarkMode);
   return (
     <View style={[styles.faqItemContainer, { borderBottomColor: theme.border }]}>
-      <TouchableOpacity 
-        style={styles.faqHeader} 
+      <TouchableOpacity
+        style={styles.faqHeader}
         onPress={onToggle}
         activeOpacity={0.7}
       >
         <Text style={[styles.faqQuestion, { color: theme.text }]}>{question}</Text>
-        <Ionicons 
-          name={isOpen ? "chevron-down" : "chevron-forward"} 
-          size={20} 
-          color={theme.primary} 
+        <Ionicons
+          name={isOpen ? "chevron-down" : "chevron-forward"}
+          size={20}
+          color={theme.primary}
         />
       </TouchableOpacity>
       {isOpen && (
@@ -1086,7 +1086,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
       const end = new Date(now); end.setHours(eh, em, 0);
       if (now >= start && now <= end) return 'Ongoing';
       if (now > end) return 'Completed';
-    } catch (err) {}
+    } catch (err) { }
     return 'Upcoming';
   }, []);
 
@@ -1097,10 +1097,10 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
       .map(s => {
         const start = normalizeTime(s.time || s.startTime || '');
         const end = normalizeTime(s.endTime || '');
-        return { 
-          ...s, 
-          time: start, 
-          endTime: end, 
+        return {
+          ...s,
+          time: start,
+          endTime: end,
           status: calculateStatus(start, end),
           subject: typeof s.subject === 'object' ? (s.subject?.name || 'Session') : (s.subject || 'Class'),
           teacher: typeof s.teacher === 'object' ? (s.teacher?.name || 'TBA') : (s.teacher || 'TBA')
@@ -1113,217 +1113,217 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
   return (
     <View style={[styles.mainContainer, { backgroundColor: theme.background }]}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
-      
+
       {isLoading ? (
         <DashboardSkeleton />
       ) : (
         <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Header */}
-          <StudentHeader 
-            title={`Welcome back, ${authState.user?.name?.split(' ')[0] || 'Student'}`}
+          <StudentHeader
+            title={`Hi, ${authState.user?.name?.split(' ')[0] || 'Student'}`}
             navigation={navigation}
             onMenuPress={() => setDrawerOpen(true)}
             isDashboard={true}
           />
 
-        {/* Hero Banner */}
-        <Animated.View 
-          entering={FadeInUp.delay(50).springify()} 
-          style={[styles.heroBannerRow, { backgroundColor: isDarkMode ? '#312E81' : '#D9DAF9' }]}
-        >
-          <View style={styles.heroTextSide}>
-            <Text style={[styles.heroRowTitle1, { color: isDarkMode ? '#F8FAFC' : '#1F2937' }]}>Transform <Text style={[styles.heroRowTitle2, { color: isDarkMode ? '#818CF8' : '#4F46E5' }]}>School</Text></Text>
-            <Text style={[styles.heroRowTitle2, { color: isDarkMode ? '#818CF8' : '#4F46E5' }]}>Management with</Text>
-            <Text style={[styles.heroRowTitle3, { color: isDarkMode ? '#F8FAFC' : '#1F2937' }]}>Sharnex</Text>
-            <Text style={[styles.heroRowSubtitle, { color: isDarkMode ? '#CBD5E1' : '#4B5563' }]}>All-in-one platform to streamline attendance, assignments, and analytics for modern educational institutions.</Text>
-          </View>
-          <View style={styles.heroImageSide}>
-            <Image source={require('../../assets/laptop.png')} style={styles.heroRowImage} resizeMode="contain" />
-          </View>
-        </Animated.View>
+          {/* Hero Banner */}
+          <Animated.View
+            entering={FadeInUp.delay(50).springify()}
+            style={[styles.heroBannerRow, { backgroundColor: isDarkMode ? '#312E81' : '#D9DAF9' }]}
+          >
+            <View style={styles.heroTextSide}>
+              <Text style={[styles.heroRowTitle1, { color: isDarkMode ? '#F8FAFC' : '#1F2937' }]}>Transform <Text style={[styles.heroRowTitle2, { color: isDarkMode ? '#818CF8' : '#4F46E5' }]}>School</Text></Text>
+              <Text style={[styles.heroRowTitle2, { color: isDarkMode ? '#818CF8' : '#4F46E5' }]}>Management with</Text>
+              <Text style={[styles.heroRowTitle3, { color: isDarkMode ? '#F8FAFC' : '#1F2937' }]}>Sharnex</Text>
+              <Text style={[styles.heroRowSubtitle, { color: isDarkMode ? '#CBD5E1' : '#4B5563' }]}>All-in-one platform to streamline attendance, assignments, and analytics for modern educational institutions.</Text>
+            </View>
+            <View style={styles.heroImageSide}>
+              <Image source={require('../../assets/laptop.png')} style={styles.heroRowImage} resizeMode="contain" />
+            </View>
+          </Animated.View>
 
-        {/* Stats Row */}
-        {!isLoading && dashboardData && (
-          <View style={styles.statsRow}>
-            <StatCard title="Attendance" value={`${dashboardData.attendance?.percentage || 0}%`} color="#3B82F6" icon="calendar" />
-            <StatCard title="Assignments" value={dashboardData.stats?.upcomingAssignments || 0} color="#F97316" icon="document-text" />
-            <StatCard title="Avg. Score" value="85%" color="#10B981" icon="star" />
-          </View>
-        )}
-
-        {/* Quick Actions */}
-        <View style={styles.section}>
-          {ongoingClass && (
-            <LiveClassBanner subject={ongoingClass.subject} teacher={ongoingClass.teacher} time={`${ongoingClass.time} - ${ongoingClass.endTime}`} startTime={ongoingClass.time} endTime={ongoingClass.endTime} color="#EF4444" />
+          {/* Stats Row */}
+          {!isLoading && dashboardData && (
+            <View style={styles.statsRow}>
+              <StatCard title="Attendance" value={`${dashboardData.attendance?.percentage || 0}%`} color="#3B82F6" icon="calendar" />
+              <StatCard title="Assignments" value={dashboardData.stats?.upcomingAssignments || 0} color="#F97316" icon="document-text" />
+              <StatCard title="Avg. Score" value="85%" color="#10B981" icon="star" />
+            </View>
           )}
-          <View style={styles.sectionHeader}>
-            <Ionicons name="flash" size={20} color="#3B82F6" style={styles.sectionIconMargin} />
-            <Text style={[styles.sectionTitle, { color: '#3B82F6', fontSize: 18, fontWeight: '700' }]}>Quick Actions</Text>
-          </View>
-          <View style={styles.quickActionsGrid}>
-            <QuickActionCard delay={100} title="Ask AI" iconName="information-circle" bgColor="#8B5CF6" />
-            <QuickActionCard delay={150} title="Submit Work" iconName="document-text" bgColor="#EC4899" />
-            <QuickActionCard delay={200} title="Join Class" iconName="school" bgColor="#10B981" />
-            <QuickActionCard delay={250} title="Download Report" iconName="file-document" bgColor="#F97316" iconLibrary="MaterialCommunityIcons" />
-            <QuickActionCard delay={300} title="View Marks" iconName="stats-chart" bgColor="#D946EF" onPress={() => navigation.navigate('ResultManagement')} />
-            <QuickActionCard delay={350} title="View Attendance" iconName="checkmark-circle" bgColor="#0EA5E9" onPress={() => navigation.navigate('Attendance')} />
-          </View>
-        </View>
 
-        {/* Schedule */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="calendar" size={20} color="#4F46E5" style={styles.sectionIconMargin} /><Text style={[styles.sectionTitle, { color: '#4F46E5' }]}>Today’s Schedule</Text>
+          {/* Quick Actions */}
+          <View style={styles.section}>
+            {ongoingClass && (
+              <LiveClassBanner subject={ongoingClass.subject} teacher={ongoingClass.teacher} time={`${ongoingClass.time} - ${ongoingClass.endTime}`} startTime={ongoingClass.time} endTime={ongoingClass.endTime} color="#EF4444" />
+            )}
+            <View style={styles.sectionHeader}>
+              <Ionicons name="flash" size={20} color="#3B82F6" style={styles.sectionIconMargin} />
+              <Text style={[styles.sectionTitle, { color: '#3B82F6', fontSize: 18, fontWeight: '700' }]}>Quick Actions</Text>
+            </View>
+            <View style={styles.quickActionsGrid}>
+              <QuickActionCard delay={100} title="Ask AI" iconName="information-circle" bgColor="#8B5CF6" />
+              <QuickActionCard delay={150} title="Submit Work" iconName="document-text" bgColor="#EC4899" />
+              <QuickActionCard delay={200} title="Join Class" iconName="school" bgColor="#10B981" />
+              <QuickActionCard delay={250} title="Download Report" iconName="file-document" bgColor="#F97316" iconLibrary="MaterialCommunityIcons" />
+              <QuickActionCard delay={300} title="View Marks" iconName="stats-chart" bgColor="#D946EF" onPress={() => navigation.navigate('ResultManagement')} />
+              <QuickActionCard delay={350} title="View Attendance" iconName="checkmark-circle" bgColor="#0EA5E9" onPress={() => navigation.navigate('Attendance')} />
+            </View>
           </View>
-          <View style={styles.scheduleList}>
-            {isLoading ? <ActivityIndicator size="small" color="#4F46E5" /> : processedSchedule.length === 0 ? <Text style={styles.emptyText}>No classes scheduled for today.</Text> :
-              processedSchedule.slice(0, 5).map((item, index) => (
-                <ScheduleCard key={index} time={`${item.time} - ${item.endTime}`} title={item.subject} teacher={item.teacher} room={item.room || 'Room 1'} color={index % 2 === 0 ? "#3B82F6" : "#059669"} status={item.status} isOngoing={item.status === 'Ongoing'} bgStyleColor={item.status === 'Ongoing' ? "#F0FDF4" : undefined} borderStyleColor={item.status === 'Ongoing' ? "#86EFAC" : undefined} />
-              ))
-            }
-          </View>
-        </View>
 
-        {/* Events */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="calendar-outline" size={20} color="#4F46E5" style={styles.sectionIconMargin} /><Text style={[styles.sectionTitle, { color: '#4F46E5' }]}>Upcoming Events</Text>
+          {/* Schedule */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="calendar" size={20} color="#4F46E5" style={styles.sectionIconMargin} /><Text style={[styles.sectionTitle, { color: '#4F46E5' }]}>Today’s Schedule</Text>
+            </View>
+            <View style={styles.scheduleList}>
+              {isLoading ? <ActivityIndicator size="small" color="#4F46E5" /> : processedSchedule.length === 0 ? <Text style={styles.emptyText}>No classes scheduled for today.</Text> :
+                processedSchedule.slice(0, 5).map((item, index) => (
+                  <ScheduleCard key={index} time={`${item.time} - ${item.endTime}`} title={item.subject} teacher={item.teacher} room={item.room || 'Room 1'} color={index % 2 === 0 ? "#3B82F6" : "#059669"} status={item.status} isOngoing={item.status === 'Ongoing'} bgStyleColor={item.status === 'Ongoing' ? "#F0FDF4" : undefined} borderStyleColor={item.status === 'Ongoing' ? "#86EFAC" : undefined} />
+                ))
+              }
+            </View>
           </View>
-          <View style={styles.eventList}>
-            {eventsData.length === 0 ? <Text style={styles.emptyText}>No upcoming events.</Text> :
-              eventsData.slice(0, 3).map((e, i) => <EventCard key={i} title={e.title} date={e.date} color={e.color || "#F97316"} />)
-            }
-          </View>
-        </View>
 
-        {/* Recent Assignments Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="document-text" size={20} color="#4F46E5" style={styles.sectionIconMargin} />
-            <Text style={[styles.sectionTitle, { color: '#4F46E5' }]}>Recent Assignments</Text>
+          {/* Events */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="calendar-outline" size={20} color="#4F46E5" style={styles.sectionIconMargin} /><Text style={[styles.sectionTitle, { color: '#4F46E5' }]}>Upcoming Events</Text>
+            </View>
+            <View style={styles.eventList}>
+              {eventsData.length === 0 ? <Text style={styles.emptyText}>No upcoming events.</Text> :
+                eventsData.slice(0, 3).map((e, i) => <EventCard key={i} title={e.title} date={e.date} color={e.color || "#F97316"} />)
+              }
+            </View>
           </View>
-          <View style={styles.assignmentList}>
-            {assignmentsData.length === 0 ? (
-              <Text style={styles.emptyText}>No recent assignments found.</Text>
-            ) : (
-              assignmentsData.slice(0, 3).map((item, index) => (
-                <TouchableOpacity key={index} style={styles.assignmentCard} activeOpacity={0.8}>
-                   <View style={styles.assignIconWrapper}>
+
+          {/* Recent Assignments Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="document-text" size={20} color="#4F46E5" style={styles.sectionIconMargin} />
+              <Text style={[styles.sectionTitle, { color: '#4F46E5' }]}>Recent Assignments</Text>
+            </View>
+            <View style={styles.assignmentList}>
+              {assignmentsData.length === 0 ? (
+                <Text style={styles.emptyText}>No recent assignments found.</Text>
+              ) : (
+                assignmentsData.slice(0, 3).map((item, index) => (
+                  <TouchableOpacity key={index} style={styles.assignmentCard} activeOpacity={0.8}>
+                    <View style={styles.assignIconWrapper}>
                       <Ionicons name="document-text-outline" size={20} color="#6366F1" />
-                   </View>
-                   <View style={styles.assignContent}>
+                    </View>
+                    <View style={styles.assignContent}>
                       <Text style={styles.assignSubject} numberOfLines={1}>{item.subject_name || item.subject || 'Course'}</Text>
                       <Text style={styles.assignTitle} numberOfLines={1}>{item.title || 'Untitled Assignment'}</Text>
                       <View style={styles.assignFooter}>
-                         <Ionicons name="time-outline" size={11} color="#9CA3AF" />
-                         <Text style={styles.assignDueDate}>Due: {item.due_date ? new Date(item.due_date).toLocaleDateString() : 'N/A'}</Text>
+                        <Ionicons name="time-outline" size={11} color="#9CA3AF" />
+                        <Text style={styles.assignDueDate}>Due: {item.due_date ? new Date(item.due_date).toLocaleDateString() : 'N/A'}</Text>
                       </View>
-                   </View>
-                   <Ionicons name="chevron-forward" size={16} color="#E2E8F0" />
-                </TouchableOpacity>
-              ))
-            )}
-          </View>
-        </View>
-
-        {/* Premium Top 5 Students Section */}
-        <View style={styles.section}>
-          <View style={[styles.topRankingContainer, { 
-            backgroundColor: isDarkMode ? '#1E1B4B' : '#2DD4BF',
-            borderColor: isDarkMode ? '#4F46E5' : '#14B8A6'
-          }]}>
-            <View style={styles.topRankingHeader}>
-               <Text style={styles.topRankingHeaderEmoji}>🏆</Text>
-               <Text style={styles.topRankingHeaderText}>Top 5 Students this year</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#E2E8F0" />
+                  </TouchableOpacity>
+                ))
+              )}
             </View>
-            
-            <View style={styles.topRankingGrid}>
-               {(topStudentsData && topStudentsData.length > 0 ? topStudentsData : [
+          </View>
+
+          {/* Premium Top 5 Students Section */}
+          <View style={styles.section}>
+            <View style={[styles.topRankingContainer, {
+              backgroundColor: isDarkMode ? '#1E1B4B' : '#2DD4BF',
+              borderColor: isDarkMode ? '#4F46E5' : '#14B8A6'
+            }]}>
+              <View style={styles.topRankingHeader}>
+                <Text style={styles.topRankingHeaderEmoji}>🏆</Text>
+                <Text style={styles.topRankingHeaderText}>Top 5 Students this year</Text>
+              </View>
+
+              <View style={styles.topRankingGrid}>
+                {(topStudentsData && topStudentsData.length > 0 ? topStudentsData : [
                   { rank: 1, name: 'Sarah J.', percentage: '98%', color: '#8B5CF6' },
                   { rank: 2, name: 'Michael C.', percentage: '96%', color: '#8B5CF6' },
                   { rank: 3, name: 'Emily R.', percentage: '95%', color: '#8B5CF6' },
                   { rank: 4, name: 'David W.', percentage: '94%', color: '#8B5CF6' },
                   { rank: 5, name: 'Jessica L.', percentage: '93%', color: '#8B5CF6' }
-               ]).slice(0, 5).map((student, index) => (
+                ]).slice(0, 5).map((student, index) => (
                   <View key={index} style={[styles.topRankCardWrapper, index === 4 && styles.lastTopRankCard]}>
                     <View style={[styles.topRankCard, { backgroundColor: theme.surface }]}>
-                       <View style={[styles.topRankCircle, { backgroundColor: student.color || '#8B5CF6' }]}>
-                          <Text style={styles.topRankCircleText}>{student.name?.charAt(0) || 'S'}</Text>
-                       </View>
-                       <Text style={[styles.topRankName, { color: theme.text }]} numberOfLines={1}>{student.name}</Text>
-                       <Text style={[styles.topRankPercent, { color: theme.primary }]}>{student.percentage}</Text>
-                       <View style={[styles.topRankBadge, { backgroundColor: isDarkMode ? theme.primary : '#FACC15' }]}>
-                          <Text style={styles.topRankBadgeText}>TOP</Text>
-                       </View>
+                      <View style={[styles.topRankCircle, { backgroundColor: student.color || '#8B5CF6' }]}>
+                        <Text style={styles.topRankCircleText}>{student.name?.charAt(0) || 'S'}</Text>
+                      </View>
+                      <Text style={[styles.topRankName, { color: theme.text }]} numberOfLines={1}>{student.name}</Text>
+                      <Text style={[styles.topRankPercent, { color: theme.primary }]}>{student.percentage}</Text>
+                      <View style={[styles.topRankBadge, { backgroundColor: isDarkMode ? theme.primary : '#FACC15' }]}>
+                        <Text style={styles.topRankBadgeText}>TOP</Text>
+                      </View>
                     </View>
                   </View>
-               ))}
+                ))}
+              </View>
             </View>
           </View>
-        </View>
 
-        {/* Help Center */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="help-circle" size={20} color={theme.primary} style={styles.sectionIconMargin} />
-            <Text style={[styles.sectionTitle, { color: theme.primary }]}>Student Help Center</Text>
+          {/* Help Center */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="help-circle" size={20} color={theme.primary} style={styles.sectionIconMargin} />
+              <Text style={[styles.sectionTitle, { color: theme.primary }]}>Student Help Center</Text>
+            </View>
+            <View style={styles.helpCenterGrid}>
+              <HelpCenterCard bgColor="#4F46E5" iconName="help" title="Assignments" desc="How to submit assignments and track progress." />
+              <HelpCenterCard bgColor="#10B981" iconName="bar-chart" title="Grades" desc="Understanding your marks and GPA calculation." />
+              <HelpCenterCard bgColor="#EF4444" iconName="tv-outline" title="Technical Support" desc="Troubleshooting app problems and questions." />
+              <HelpCenterCard bgColor="#A855F7" iconName="book" title="Study Resources" desc="Accessing study materials and resources." />
+            </View>
           </View>
-          <View style={styles.helpCenterGrid}>
-            <HelpCenterCard bgColor="#4F46E5" iconName="help" title="Assignments" desc="How to submit assignments and track progress." />
-            <HelpCenterCard bgColor="#10B981" iconName="bar-chart" title="Grades" desc="Understanding your marks and GPA calculation." />
-            <HelpCenterCard bgColor="#EF4444" iconName="tv-outline" title="Technical Support" desc="Troubleshooting app problems and questions." />
-            <HelpCenterCard bgColor="#A855F7" iconName="book" title="Study Resources" desc="Accessing study materials and resources." />
-          </View>
-        </View>
 
-        {/* FAQs */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="help-circle" size={20} color={theme.primary} style={styles.sectionIconMargin} />
-            <Text style={[styles.sectionTitleNoMargin, { color: theme.primary }]}>Frequently Asked Questions</Text>
+          {/* FAQs */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="help-circle" size={20} color={theme.primary} style={styles.sectionIconMargin} />
+              <Text style={[styles.sectionTitleNoMargin, { color: theme.primary }]}>Frequently Asked Questions</Text>
+            </View>
+            <View style={[styles.faqListContainer, { backgroundColor: theme.surface, borderColor: theme.border, borderWidth: isDarkMode ? 1 : 0 }]}>
+              <FAQItem
+                question="How do I submit an assignment?"
+                answer="Go to Assignments page, select the assignment, and click Submit button."
+                isOpen={expandedFaqId === 0}
+                onToggle={() => setExpandedFaqId(expandedFaqId === 0 ? null : 0)}
+              />
+              <FAQItem
+                question="Where can I check my grades?"
+                answer="Navigate to Grades & Reports section from the sidebar menu."
+                isOpen={expandedFaqId === 1}
+                onToggle={() => setExpandedFaqId(expandedFaqId === 1 ? null : 1)}
+              />
+              <FAQItem
+                question="How do I view my attendance?"
+                answer="Click on Attendance in the sidebar to view your detailed attendance calendar."
+                isOpen={expandedFaqId === 2}
+                onToggle={() => setExpandedFaqId(expandedFaqId === 2 ? null : 2)}
+              />
+              <FAQItem
+                question="Where are the quiz results?"
+                answer="Quiz results are available in the Quizzes & Tests section after completion."
+                isOpen={expandedFaqId === 3}
+                onToggle={() => setExpandedFaqId(expandedFaqId === 3 ? null : 3)}
+              />
+            </View>
           </View>
-          <View style={[styles.faqListContainer, { backgroundColor: theme.surface, borderColor: theme.border, borderWidth: isDarkMode ? 1 : 0 }]}>
-            <FAQItem 
-              question="How do I submit an assignment?" 
-              answer="Go to Assignments page, select the assignment, and click Submit button." 
-              isOpen={expandedFaqId === 0}
-              onToggle={() => setExpandedFaqId(expandedFaqId === 0 ? null : 0)}
-            />
-            <FAQItem 
-              question="Where can I check my grades?" 
-              answer="Navigate to Grades & Reports section from the sidebar menu." 
-              isOpen={expandedFaqId === 1}
-              onToggle={() => setExpandedFaqId(expandedFaqId === 1 ? null : 1)}
-            />
-            <FAQItem 
-              question="How do I view my attendance?" 
-              answer="Click on Attendance in the sidebar to view your detailed attendance calendar." 
-              isOpen={expandedFaqId === 2}
-              onToggle={() => setExpandedFaqId(expandedFaqId === 2 ? null : 2)}
-            />
-            <FAQItem 
-              question="Where are the quiz results?" 
-              answer="Quiz results are available in the Quizzes & Tests section after completion." 
-              isOpen={expandedFaqId === 3}
-              onToggle={() => setExpandedFaqId(expandedFaqId === 3 ? null : 3)}
-            />
-          </View>
-        </View>
 
-        {/* Need Help */}
-        <View style={styles.needHelpBanner}>
-          <View style={StyleSheet.absoluteFill}>
-            <Svg height="100%" width="100%"><Defs><SvgLinearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><Stop offset="0" stopColor="#6366F1" stopOpacity="1" /><Stop offset="1" stopColor="#4F46E5" stopOpacity="1" /></SvgLinearGradient></Defs><Rect width="100%" height="100%" fill="url(#grad)" rx="24" ry="24" /></Svg>
+          {/* Need Help */}
+          <View style={styles.needHelpBanner}>
+            <View style={StyleSheet.absoluteFill}>
+              <Svg height="100%" width="100%"><Defs><SvgLinearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><Stop offset="0" stopColor="#6366F1" stopOpacity="1" /><Stop offset="1" stopColor="#4F46E5" stopOpacity="1" /></SvgLinearGradient></Defs><Rect width="100%" height="100%" fill="url(#grad)" rx="24" ry="24" /></Svg>
+            </View>
+            <Text style={styles.needHelpTitle}>Need More Help?</Text>
+            <Text style={styles.needHelpDesc}>We're here to help you succeed! Contact us for any academic or technical questions.</Text>
+            <View style={styles.needHelpButtonsRow}>
+              <TouchableOpacity style={styles.helpButtonOutlined}><Text style={styles.helpButtonText}>Support</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.helpButtonOutlined}><Text style={styles.helpButtonText}>Ask a Teacher</Text></TouchableOpacity>
+            </View>
           </View>
-          <Text style={styles.needHelpTitle}>Need More Help?</Text>
-          <Text style={styles.needHelpDesc}>We're here to help you succeed! Contact us for any academic or technical questions.</Text>
-          <View style={styles.needHelpButtonsRow}>
-            <TouchableOpacity style={styles.helpButtonOutlined}><Text style={styles.helpButtonText}>Support</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.helpButtonOutlined}><Text style={styles.helpButtonText}>Ask a Teacher</Text></TouchableOpacity>
-          </View>
-        </View>
 
-      </ScrollView>
+        </ScrollView>
       )}
 
       <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="student" />

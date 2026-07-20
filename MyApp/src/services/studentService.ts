@@ -1,5 +1,139 @@
 import apiClient from './apiClient';
-import { ENDPOINTS, } from '../constants/api';
+import { ENDPOINTS } from '../constants/api';
+
+function parseInsightsSSEResponse(rawStr: string) {
+  if (typeof rawStr !== 'string') {
+    if (typeof rawStr === 'object' && rawStr !== null) {
+      return rawStr;
+    }
+    return { strengths: [], improve: [], actions: [], motivation: '' };
+  }
+
+  let finalText = '';
+  // Split raw SSE string on \n\n or \n
+  const chunks = rawStr.split(/\n\n|\n/);
+
+  for (let rawChunk of chunks) {
+    let line = rawChunk.trim();
+    if (!line || line.startsWith(':')) continue;
+
+    if (line.startsWith('data:')) {
+      line = line.replace(/^data:\s*/, '').trim();
+    }
+
+    // Handle end-of-stream marker
+    if (line === '[DONE]') {
+      break;
+    }
+
+    // Try parsing chunk JSON with per-chunk try/catch
+    try {
+      const parsed = JSON.parse(line);
+      const delta = parsed?.choices?.[0]?.delta;
+      if (!delta) continue;
+
+      // EXPLICIT FILTER: Skip any internal reasoning / analysis channel chunks
+      if (delta.channel === 'analysis' || delta.reasoning || delta.channel_reasoning) {
+        continue;
+      }
+
+      if (typeof delta.content === 'string') {
+        finalText += delta.content;
+      }
+    } catch (chunkErr) {
+      console.warn('[AI Insights] Warning: Skipping unparseable SSE chunk line:', line);
+    }
+  }
+
+  // 1. Try parsing JSON if model returned JSON
+  const jsonMatch = finalText.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const jsonObj = JSON.parse(jsonMatch[0]);
+      if (jsonObj && (jsonObj.strengths || jsonObj.improve || jsonObj.actions || jsonObj.motivation)) {
+        return {
+          strengths: Array.isArray(jsonObj.strengths) ? jsonObj.strengths : [],
+          improve: Array.isArray(jsonObj.improve) ? jsonObj.improve : Array.isArray(jsonObj.areasToImprove) ? jsonObj.areasToImprove : [],
+          actions: Array.isArray(jsonObj.actions) ? jsonObj.actions : Array.isArray(jsonObj.recommendedActions) ? jsonObj.recommendedActions : [],
+          motivation: typeof jsonObj.motivation === 'string' ? jsonObj.motivation : jsonObj.quote || '',
+        };
+      }
+    } catch (e) {
+      // Fallback to Markdown Section Parser
+    }
+  }
+
+  // 2. Generic Markdown Section Parser for **SectionName**
+  const sectionMap: Record<string, string[]> = {};
+  const textLines = finalText.split('\n');
+  let currentHeader = '';
+
+  for (const rawLine of textLines) {
+    const trimmed = rawLine.trim();
+    if (!trimmed) continue;
+
+    // Check if trimmed starts with **Header**
+    const boldHeaderMatch = trimmed.match(/^\*\*(.+?)\*\*/);
+
+    if (boldHeaderMatch) {
+      currentHeader = boldHeaderMatch[1].trim().toLowerCase();
+      if (!sectionMap[currentHeader]) {
+        sectionMap[currentHeader] = [];
+      }
+      const remainder = trimmed.replace(/^\*\*(.+?)\*\*/, '').trim();
+      if (remainder) {
+        sectionMap[currentHeader].push(remainder);
+      }
+      continue;
+    }
+
+    if (currentHeader) {
+      if (!sectionMap[currentHeader]) {
+        sectionMap[currentHeader] = [];
+      }
+      sectionMap[currentHeader].push(trimmed);
+    }
+  }
+
+  // Helper to extract list items or plain text from a section's lines
+  const parseSectionLines = (lines: string[] = []) => {
+    const bulletItems: string[] = [];
+    let plainText = '';
+
+    for (const l of lines) {
+      const clean = l.replace(/^[-*•\d+.]+\s*/, '').replace(/^["']|["']$/g, '').trim();
+
+      if (clean) {
+        bulletItems.push(clean);
+        plainText = plainText ? `${plainText} ${clean}` : clean;
+      }
+    }
+
+    return { bulletItems, plainText };
+  };
+
+  // Find section content by key fuzzy matching
+  const findSectionData = (keys: string[]) => {
+    for (const key of Object.keys(sectionMap)) {
+      if (keys.some(k => key.includes(k))) {
+        return parseSectionLines(sectionMap[key]);
+      }
+    }
+    return { bulletItems: [], plainText: '' };
+  };
+
+  const strengthsData = findSectionData(['strength']);
+  const improveData = findSectionData(['improve', 'area', 'weakness']);
+  const actionsData = findSectionData(['action', 'recommend', 'tip', 'next']);
+  const motivationData = findSectionData(['motivation', 'quote', 'note']);
+
+  return {
+    strengths: strengthsData.bulletItems,
+    improve: improveData.bulletItems,
+    actions: actionsData.bulletItems,
+    motivation: motivationData.plainText || (motivationData.bulletItems.length > 0 ? motivationData.bulletItems.join(' ') : ''),
+  };
+}
 
 const studentService = {
   // Dashboard
@@ -65,10 +199,39 @@ const studentService = {
   },
 
   // Performance
-  getPerformance(studentId: string) {
+  getPerformance() {
     return apiClient.get(
-      ENDPOINTS.STUDENT.PERFORMANCE(studentId),
+      ENDPOINTS.STUDENT.PERFORMANCE,
     );
+  },
+
+  // AI Insights
+  async getInsights() {
+    const res = await apiClient.post(
+      ENDPOINTS.STUDENT.INSIGHTS,
+    );
+    
+    // Resolve raw SSE string payload from response object
+    let rawText = '';
+    
+    if (typeof res === 'string') {
+      rawText = res;
+    } else if (typeof res?.data === 'string') {
+      rawText = res.data;
+    } else if (typeof res?.normalized?.data === 'string') {
+      rawText = res.normalized.data;
+    } else if (typeof res?.data?.data === 'string') {
+      rawText = res.data.data;
+    } else if (res && typeof res === 'object') {
+      const strVal = Object.values(res).find(v => typeof v === 'string' && (v.includes('data:') || v.includes('choices')));
+      if (typeof strVal === 'string') {
+        rawText = strVal;
+      } else {
+        rawText = JSON.stringify(res);
+      }
+    }
+
+    return parseInsightsSSEResponse(rawText);
   },
 
   // Study Materials
