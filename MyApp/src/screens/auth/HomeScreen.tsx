@@ -191,21 +191,21 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       <View style={styles.header}>
         <Text style={styles.logo}>Sharnex</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity 
-            style={styles.iconButton} 
+          <TouchableOpacity
+            style={styles.iconButton}
             onPress={() => setThemeModalOpen(true)}
             activeOpacity={0.7}
           >
-            <Ionicons 
+            <Ionicons
               name={
-                themeMode === 'light' 
-                  ? 'sunny-outline' 
-                  : themeMode === 'dark' 
-                  ? 'moon-outline' 
-                  : 'settings-outline'
-              } 
-              size={20} 
-              color={theme.text} 
+                themeMode === 'light'
+                  ? 'sunny-outline'
+                  : themeMode === 'dark'
+                    ? 'moon-outline'
+                    : 'settings-outline'
+              }
+              size={20}
+              color={theme.text}
             />
           </TouchableOpacity>
           {/* Removed Login button from header as requested */}
@@ -260,13 +260,13 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
         </TouchableOpacity>
 
         {/* Dashboard Image */}
-        <View style={styles.heroImageContainer}>
+        {/* <View style={styles.heroImageContainer}>
           <Image
             source={require('../../assets/laptop_dashboard.png')}
             style={styles.heroImage}
             resizeMode="contain"
           />
-        </View>
+        </View> */}
       </View>
 
       {/* Features Section */}

@@ -7,11 +7,13 @@ import {
   Image,
   Platform,
   Modal,
+  Pressable,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import ScaleButton from './animations/ScaleButton';
 import { useTheme } from '../store/ThemeContext';
 import { useAuth } from '../store/AuthContext';
+import { ThemeMode } from '../constants/theme';
 
 interface TeacherHeaderProps {
   title: string;
@@ -20,6 +22,13 @@ interface TeacherHeaderProps {
   isStackScreen?: boolean;
   isDashboard?: boolean;
 }
+
+// Three options for the theme picker matching StudentHeader
+const THEME_OPTIONS: { mode: ThemeMode; icon: string; label: string }[] = [
+  { mode: 'light', icon: 'sunny-outline', label: 'Light' },
+  { mode: 'dark', icon: 'moon-outline', label: 'Dark' },
+  { mode: 'system', icon: 'phone-portrait-outline', label: 'System' },
+];
 
 export const TeacherHeader: React.FC<TeacherHeaderProps> = ({
   title,
@@ -30,8 +39,9 @@ export const TeacherHeader: React.FC<TeacherHeaderProps> = ({
 }) => {
   const { theme, isDarkMode, themeMode, setThemeMode } = useTheme();
   const { authState } = useAuth();
-  const [isThemeModalOpen, setThemeModalOpen] = useState(false);
   const styles = getStyles(theme);
+
+  const [pickerVisible, setPickerVisible] = useState(false);
 
   const handleLeftPress = () => {
     if (isStackScreen) {
@@ -40,6 +50,9 @@ export const TeacherHeader: React.FC<TeacherHeaderProps> = ({
       onMenuPress();
     }
   };
+
+  // Icon shown on the toggle button reflects the ACTIVE mode
+  const activeOption = THEME_OPTIONS.find(o => o.mode === themeMode) ?? THEME_OPTIONS[0];
 
   return (
     <View style={styles.globalHeader}>
@@ -50,7 +63,11 @@ export const TeacherHeader: React.FC<TeacherHeaderProps> = ({
         activeOpacity={0.7}
         scaleTo={0.85}
       >
-        <Ionicons name={isStackScreen ? "arrow-back" : "menu"} size={28} color={theme.text} />
+        <Ionicons
+          name={isStackScreen ? 'arrow-back' : 'menu'}
+          size={28}
+          color={theme.text}
+        />
       </ScaleButton>
 
       <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>
@@ -66,16 +83,20 @@ export const TeacherHeader: React.FC<TeacherHeaderProps> = ({
 
             <TouchableOpacity
               style={styles.iconBtnTransparent}
-              onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Preferences' })}
+              onPress={() =>
+                navigation.navigate('AccountSettings', { targetTab: 'Preferences' })
+              }
             >
               <Ionicons name="settings-outline" size={22} color={theme.text} />
             </TouchableOpacity>
 
+            {/* Theme toggle — opens 3-way picker popover */}
             <TouchableOpacity
               style={styles.iconBtnTransparent}
-              onPress={() => setThemeModalOpen(true)}
+              onPress={() => setPickerVisible(true)}
+              accessibilityLabel="Change theme"
             >
-              <Ionicons name={isDarkMode ? "moon-outline" : "sunny-outline"} size={22} color={theme.text} />
+              <Ionicons name={activeOption.icon} size={22} color={theme.text} />
             </TouchableOpacity>
           </>
         )}
@@ -83,14 +104,12 @@ export const TeacherHeader: React.FC<TeacherHeaderProps> = ({
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() =>
-            navigation.navigate('AccountSettings', {
-              targetTab: 'Personal Details',
-            })
+            navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })
           }
         >
           {authState.user?.photoUrl ||
-          authState.user?.profileImage ||
-          authState.user?.image ? (
+            authState.user?.profileImage ||
+            authState.user?.image ? (
             <Image
               source={{
                 uri:
@@ -110,69 +129,66 @@ export const TeacherHeader: React.FC<TeacherHeaderProps> = ({
         </TouchableOpacity>
       </View>
 
+      {/* ------------------------------------------------------------------ */}
+      {/* Theme Picker Modal — popover matching StudentHeader                 */}
+      {/* ------------------------------------------------------------------ */}
       <Modal
-        visible={isThemeModalOpen}
-        transparent={true}
+        visible={pickerVisible}
+        transparent
         animationType="fade"
-        onRequestClose={() => setThemeModalOpen(false)}
+        onRequestClose={() => setPickerVisible(false)}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setThemeModalOpen(false)}
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setPickerVisible(false)}
         >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Theme</Text>
-            <View style={styles.modalDivider} />
-            
-            <TouchableOpacity
-              style={styles.optionRow}
-              onPress={async () => {
-                await setThemeMode('light');
-                setThemeModalOpen(false);
-              }}
-            >
-              <View style={styles.optionLeft}>
-                <Ionicons name="sunny-outline" size={20} color={themeMode === 'light' ? theme.primary : theme.text} />
-                <Text style={[styles.optionText, themeMode === 'light' && styles.optionTextSelected]}>Light</Text>
-              </View>
-              {themeMode === 'light' && <Ionicons name="checkmark" size={20} color={theme.primary} />}
-            </TouchableOpacity>
+          {/* Prevent touches inside the card from closing the modal */}
+          <Pressable style={styles.pickerCard} onPress={() => { }}>
+            <Text style={styles.pickerTitle}>Appearance</Text>
 
-            <TouchableOpacity
-              style={styles.optionRow}
-              onPress={async () => {
-                await setThemeMode('dark');
-                setThemeModalOpen(false);
-              }}
-            >
-              <View style={styles.optionLeft}>
-                <Ionicons name="moon-outline" size={20} color={themeMode === 'dark' ? theme.primary : theme.text} />
-                <Text style={[styles.optionText, themeMode === 'dark' && styles.optionTextSelected]}>Dark</Text>
-              </View>
-              {themeMode === 'dark' && <Ionicons name="checkmark" size={20} color={theme.primary} />}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.optionRow}
-              onPress={async () => {
-                await setThemeMode('system');
-                setThemeModalOpen(false);
-              }}
-            >
-              <View style={styles.optionLeft}>
-                <Ionicons name="settings-outline" size={20} color={themeMode === 'system' ? theme.primary : theme.text} />
-                <Text style={[styles.optionText, themeMode === 'system' && styles.optionTextSelected]}>System Default</Text>
-              </View>
-              {themeMode === 'system' && <Ionicons name="checkmark" size={20} color={theme.primary} />}
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
+            <View style={styles.segmentRow}>
+              {THEME_OPTIONS.map(option => {
+                const isActive = themeMode === option.mode;
+                return (
+                  <TouchableOpacity
+                    key={option.mode}
+                    style={[
+                      styles.segmentBtn,
+                      isActive ? styles.segmentBtnActive : null,
+                    ]}
+                    onPress={() => {
+                      setThemeMode(option.mode);
+                      setPickerVisible(false);
+                    }}
+                    activeOpacity={0.75}
+                  >
+                    <Ionicons
+                      name={option.icon}
+                      size={18}
+                      color={isActive ? '#FFFFFF' : theme.subtext}
+                    />
+                    <Text
+                      style={[
+                        styles.segmentLabel,
+                        isActive ? styles.segmentLabelActive : null,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </View>
   );
 };
 
+// ---------------------------------------------------------------------------
+// Styles — called with the active theme each render
+// ---------------------------------------------------------------------------
 const getStyles = (theme: any) =>
   StyleSheet.create({
     globalHeader: {
@@ -196,7 +212,7 @@ const getStyles = (theme: any) =>
       fontWeight: '500',
       color: theme.primary,
       flex: 1,
-      textAlign: 'center',
+      textAlign: 'left',
     },
     headerRight: { flexDirection: 'row', alignItems: 'center', gap: 20 },
     iconBtnTransparent: {
@@ -224,59 +240,61 @@ const getStyles = (theme: any) =>
       borderRadius: 16,
       marginLeft: 4,
     },
-    modalOverlay: {
+
+    // ---- Theme Picker Modal ----
+    modalBackdrop: {
       flex: 1,
-      backgroundColor: 'rgba(15, 23, 42, 0.6)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 24,
+      backgroundColor: 'rgba(0,0,0,0.45)',
+      justifyContent: 'flex-start',
+      alignItems: 'flex-end',
+      paddingTop: Platform.OS === 'ios' ? 96 : 76,
+      paddingRight: 16,
     },
-    modalContent: {
-      width: '100%',
-      maxWidth: 320,
+    pickerCard: {
       backgroundColor: theme.surface,
-      borderRadius: 20,
-      padding: 20,
-      shadowColor: '#0F172A',
-      shadowOffset: { width: 0, height: 12 },
-      shadowOpacity: 0.15,
-      shadowRadius: 24,
-      elevation: 8,
+      borderRadius: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.18,
+      shadowRadius: 16,
+      elevation: 12,
+      minWidth: 220,
       borderWidth: 1,
       borderColor: theme.border,
     },
-    modalTitle: {
-      fontSize: 16,
-      fontWeight: '800',
-      color: theme.text,
-      textAlign: 'center',
-      marginBottom: 16,
-    },
-    modalDivider: {
-      height: 1,
-      backgroundColor: theme.border,
-      marginBottom: 8,
-    },
-    optionRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingVertical: 14,
-      paddingHorizontal: 8,
-      borderRadius: 12,
-    },
-    optionLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-    },
-    optionText: {
-      fontSize: 14,
+    pickerTitle: {
+      fontSize: 13,
       fontWeight: '600',
-      color: theme.text,
+      color: theme.subtext,
+      marginBottom: 12,
+      textTransform: 'uppercase',
+      letterSpacing: 0.8,
     },
-    optionTextSelected: {
-      color: theme.primary,
-      fontWeight: '700',
+    segmentRow: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    segmentBtn: {
+      flex: 1,
+      flexDirection: 'column',
+      alignItems: 'center',
+      paddingVertical: 10,
+      paddingHorizontal: 6,
+      borderRadius: 12,
+      backgroundColor: theme.iconBackground,
+      gap: 6,
+    },
+    segmentBtnActive: {
+      backgroundColor: '#7C3AED',
+    },
+    segmentLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: theme.subtext,
+    },
+    segmentLabelActive: {
+      color: '#FFFFFF',
     },
   });
