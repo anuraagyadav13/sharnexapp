@@ -131,6 +131,17 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
   const [classes, setClasses] = useState<any[]>([]);
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [activeClassId, setActiveClassId] = useState<string | null>(null);
+  const [attendanceSummary, setAttendanceSummary] = useState<any>(null);
+
+  const fetchAttendanceSummary = async () => {
+    try {
+      const res = await apiClient.get(ENDPOINTS.PRINCIPAL.ATTENDANCE_SUMMARY);
+      setAttendanceSummary(res.originalData || res.data || res);
+    } catch (error) {
+      console.error('Failed to fetch attendance summary:', error);
+      setAttendanceSummary(null);
+    }
+  };
 
   const fetchClasses = async () => {
     try {
@@ -239,6 +250,7 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
   useFocusEffect(
     useCallback(() => {
       fetchClasses();
+      fetchAttendanceSummary();
     }, [])
   );
 
@@ -250,11 +262,135 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
 
   const onRefresh = () => {
     setIsRefreshing(true);
+    const tasks: Promise<any>[] = [fetchClasses(), fetchAttendanceSummary()];
     if (activeClassId) {
-      Promise.all([fetchClasses(), fetchStudents(activeClassId)]);
-    } else {
-      fetchClasses();
+      tasks.push(fetchStudents(activeClassId));
     }
+    Promise.all(tasks).finally(() => setIsRefreshing(false));
+  };
+
+  const getAttendanceRateDisplay = () => {
+    if (!attendanceSummary) return 'N/A';
+
+    const extractRate = (obj: any): string | null => {
+      if (obj === null || obj === undefined) return null;
+
+      if (typeof obj === 'number') {
+        return `${Math.round(obj * 10) / 10}%`;
+      }
+
+      if (typeof obj === 'string') {
+        const cleaned = obj.trim();
+        if (cleaned.endsWith('%')) return cleaned;
+        const num = parseFloat(cleaned);
+        if (!isNaN(num) && num >= 0 && num <= 100) {
+          return `${Math.round(num * 10) / 10}%`;
+        }
+      }
+
+      if (Array.isArray(obj)) {
+        if (obj.length === 0) return null;
+
+        let totalPresentSum = 0;
+        let totalCountSum = 0;
+        let sumRate = 0;
+        let countRate = 0;
+
+        for (const item of obj) {
+          if (typeof item === 'number') {
+            sumRate += item;
+            countRate++;
+          } else if (typeof item === 'string') {
+            const num = parseFloat(item);
+            if (!isNaN(num)) {
+              sumRate += num;
+              countRate++;
+            }
+          } else if (typeof item === 'object' && item !== null) {
+            const p = item.present ?? item.presentCount ?? item.present_count ?? item.totalPresent ?? item.total_present;
+            const tot = item.total ?? item.totalCount ?? item.total_count ?? item.totalStudents ?? item.total_students;
+            if (typeof p === 'number' && typeof tot === 'number' && tot > 0) {
+              totalPresentSum += p;
+              totalCountSum += tot;
+            }
+
+            const candidateKeys = [
+              'avgAttendancePercent', 'avg_attendance_percent', 'avgAttendance', 'avg_attendance',
+              'avgPercentage', 'avg_percentage', 'attendancePercent', 'attendance_percent',
+              'attendanceRate', 'attendance_rate', 'percentage', 'rate',
+              'overallPercentage', 'overall_percentage', 'overallRate', 'overall_rate',
+              'overallAttendance', 'overall_attendance', 'overall', 'average', 'averageAttendance',
+              'attendance', 'value'
+            ];
+            for (const k of candidateKeys) {
+              if (item[k] !== undefined && item[k] !== null) {
+                const num = typeof item[k] === 'number' ? item[k] : parseFloat(item[k]);
+                if (!isNaN(num)) {
+                  sumRate += num;
+                  countRate++;
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        if (totalCountSum > 0) {
+          return `${Math.round((totalPresentSum / totalCountSum) * 1000) / 10}%`;
+        }
+        if (countRate > 0) {
+          return `${Math.round((sumRate / countRate) * 10) / 10}%`;
+        }
+      }
+
+      if (typeof obj === 'object') {
+        const candidateKeys = [
+          'avgAttendancePercent', 'avg_attendance_percent', 'avgAttendance', 'avg_attendance',
+          'avgPercentage', 'avg_percentage', 'attendancePercent', 'attendance_percent',
+          'attendanceRate', 'attendance_rate', 'percentage', 'rate',
+          'overallPercentage', 'overall_percentage', 'overallRate', 'overall_rate',
+          'overallAttendance', 'overall_attendance', 'overall', 'average', 'averageAttendance',
+          'attendance', 'value', 'stat'
+        ];
+
+        for (const key of candidateKeys) {
+          if (obj[key] !== undefined && obj[key] !== null) {
+            const val = obj[key];
+            const res = extractRate(val);
+            if (res) return res;
+          }
+        }
+
+        const present = obj.present ?? obj.presentCount ?? obj.present_count ?? obj.totalPresent ?? obj.total_present;
+        const total = obj.total ?? obj.totalCount ?? obj.total_count ?? obj.totalStudents ?? obj.total_students;
+        if (typeof present === 'number' && typeof total === 'number' && total > 0) {
+          return `${Math.round((present / total) * 1000) / 10}%`;
+        }
+
+        const subTargets = [obj.data, obj.summary, obj.stats, obj.records, obj.items, obj.attendance];
+        for (const sub of subTargets) {
+          if (sub) {
+            const res = extractRate(sub);
+            if (res) return res;
+          }
+        }
+      }
+
+      return null;
+    };
+
+    return extractRate(attendanceSummary) || 'N/A';
+  };
+
+  const getAttendanceSubtitle = () => {
+    if (!attendanceSummary) return 'Coming soon';
+    const data = attendanceSummary.data || attendanceSummary;
+    if (data.subtitle) return data.subtitle;
+    if (data.label) return data.label;
+    if (data.presentCount !== undefined && data.totalCount !== undefined) {
+      return `${data.presentCount}/${data.totalCount} present`;
+    }
+    return undefined;
   };
 
   const currentClass = classes.find(c => (c.id || c.name) === activeClassId);
@@ -304,8 +440,8 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
           {/* Stats Grid (4 Cards) */}
           <View style={styles.statsGrid}>
             <StatCard title="Total Students" value={classes.reduce((sum, cls) => sum + (cls.studentCount || 0), 0)} />
-            <StatCard title="Average Score" value="N/A" subtitle="Coming soon" />
-            <StatCard title="Attendance Rate" value="N/A" subtitle="Coming soon" />
+            {/* <StatCard title="Average Score" value="N/A" subtitle="Coming soon" /> */}
+            <StatCard title="Attendance Rate" value={getAttendanceRateDisplay()} subtitle={getAttendanceRateDisplay() === 'N/A' ? "Coming soon" : getAttendanceSubtitle()} />
             <StatCard title="Active Classes" value={classes.length} />
           </View>
 

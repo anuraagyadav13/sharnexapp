@@ -252,9 +252,9 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
 
           {/* Stats Row - Student Pattern */}
           <View style={styles.statsRow}>
-            <StatCard title="Total Courses" value={subjects.length} color="#8B5CF6" icon="book-open-variant" />
-            <StatCard title="Electives" value="4" color="#F59E0B" icon="bookmark-check-outline" />
-            <StatCard title="Core Units" value={subjects.length - 4} color="#3B82F6" icon="book-education-outline" />
+            <StatCard title="Subjects" value={subjects.length} color="#8B5CF6" icon="book-open-variant" />
+            {/* <StatCard title="Electives" value="4" color="#F59E0B" icon="bookmark-check-outline" />
+            <StatCard title="Core Units" value={subjects.length - 4} color="#3B82F6" icon="book-education-outline" /> */}
           </View>
 
           {/* Search Bar - Student Pattern */}

@@ -143,6 +143,7 @@ export const ENDPOINTS = {
   PRINCIPAL: {
     // Old endpoints to prevent compiler errors on other principal files
     DASHBOARD: '/principal/dashboard',
+    DASHBOARD_METRICS: '/institution/dashboard-metrics',
     STAFF: '/principal/staff',
     ADD_STAFF: '/principal/staff',
     STUDENTS: '/principal/students',
@@ -154,7 +155,9 @@ export const ENDPOINTS = {
     TIMETABLE: '/principal/timetable',
     PERFORMANCE: '/principal/performance',
     CALENDAR: '/principal/calendar',
-    CALENDAR_EVENTS: '/principal/calendar/events',
+    CALENDAR_EVENTS: '/calendar/events',
+    CALENDAR_HOLIDAYS: '/calendar/holidays',
+    CALENDAR_EXAMS: '/calendar/exams',
     REPORTS: '/rms/exams',
     EXAMS: '/rms/exams',
     EXAM_DETAIL: (id: string) => `/rms/exams/${id}`,
@@ -166,6 +169,7 @@ export const ENDPOINTS = {
     RMS_ADMIN: '/rms/results/admin',
     EQUIPMENT_REQUESTS: '/equipment/requests',
     ATTENDANCE: '/attendance',
+    ATTENDANCE_SUMMARY: '/institution/attendance-summary',
 
     // HAR capture verified endpoints
     CLASSES: '/classes',
@@ -184,6 +188,7 @@ export const ENDPOINTS = {
     INVOICE_STATS: '/invoices/stats',
     INVOICES: '/invoices',
     EQUIPMENT_PENDING: '/equipment/approvals/pending',
+    EQUIPMENT_ACTION: (id: string) => `/equipment/approvals/${id}/action`,
     EQUIPMENT_APPROVE: (id: string) => `/equipment/approvals/${id}/approve`,
     EQUIPMENT_REJECT: (id: string) => `/equipment/approvals/${id}/reject`,
     LIBRARY_DASHBOARD: '/library/dashboard',

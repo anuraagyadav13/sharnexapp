@@ -216,10 +216,10 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
         teacherId: finalTeacherId
       });
       setIsAssignModalOpen(false);
-      fetchData(); 
+      fetchData();
       showToast(finalTeacherId ? 'Assignment updated successfully!' : 'Assignment removed.', 'success');
     } catch (error) {
-      fetchData(); 
+      fetchData();
       showToast('Failed to update assignment.', 'error');
     } finally {
       setIsLoading(false);
@@ -232,22 +232,22 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
 
     const action = currentActive ? 'deactivate' : 'reactivate';
     Alert.alert(
-      `${currentActive ? 'Deactivate' : 'Reactivate'} Staff`, 
-      `Are you sure you want to ${action} this staff member?`, 
+      `${currentActive ? 'Deactivate' : 'Reactivate'} Staff`,
+      `Are you sure you want to ${action} this staff member?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: currentActive ? 'Deactivate' : 'Reactivate', 
-          style: currentActive ? 'destructive' : 'default', 
+          text: currentActive ? 'Deactivate' : 'Reactivate',
+          style: currentActive ? 'destructive' : 'default',
           onPress: async () => {
             try {
               setIsLoading(true);
               setStaffList(prev => prev.map(s => s.id === id ? { ...s, isActive: !currentActive } : s));
-              
+
               await principalService.updateTeacherStatus(id, !currentActive);
-              
+
               showToast(`Staff member ${currentActive ? 'deactivated' : 'activated'} successfully.`, 'success');
-              fetchData(); 
+              fetchData();
             } catch (error: any) {
               setStaffList(prev => prev.map(s => s.id === id ? { ...s, isActive: currentActive } : s));
               const errorMsg = getApiErrorMessage(error);
@@ -308,7 +308,7 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.primary]} />}
         >
           <View style={styles.pageHeader}>
-            <Text style={styles.screenTitle}>Teaching Staff</Text>
+            <Text style={styles.screenTitle}>Staff Managment</Text>
             <Text style={styles.screenSubtitle}>Manage teaching and administrative staff members.</Text>
           </View>
 

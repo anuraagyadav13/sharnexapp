@@ -47,7 +47,7 @@ type TabType = 'circulation' | 'catalog' | 'categories' | 'staff';
 
 const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const { authState } = useAuth();
   const showToast = useCallback((message: string, type: string = 'info') => {
     Alert.alert(type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Info', message);
@@ -196,7 +196,12 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
     setIsModalActionLoading(true);
     try {
       const res = await principalService.getClasses();
-      setClassesList(res.data?.classes || []);
+      const resAny = res as any;
+      // Diagnostic log — matches PrincipalClassesScreen pattern; remove once classes populate correctly
+      console.log('[PrincipalLibrary] getClasses raw res.data:', JSON.stringify(resAny.data));
+      const data = resAny.data?.classes ?? (Array.isArray(resAny.data) ? resAny.data : (resAny.data?.data ?? []));
+      console.log('[PrincipalLibrary] classesList resolved:', JSON.stringify(data));
+      setClassesList(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('[PrincipalLibrary] Failed to load classes:', err);
       Alert.alert('Error', 'Failed to fetch classes. Please try again.');
@@ -281,8 +286,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
           onPress: async () => {
             try {
               setIsLoading(true);
-              await apiClient.put(`/library/issues/${issueId}/return`, {
-                returnedAt: new Date().toISOString(),
+              await apiClient.post(`/library/issues/${issueId}/return`, {
                 returnCondition: 'GOOD',
               });
 
@@ -362,17 +366,17 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
   }, [showToast]);
 
   // Fetch Analytics
+  const [analyticsError, setAnalyticsError] = useState(false);
   const fetchAnalytics = useCallback(async () => {
     try {
       setIsLoading(true);
+      setAnalyticsError(false);
       const response = await apiClient.get('/library/analytics');
       setAnalyticsData(response.data?.data || response.data || null);
     } catch (error) {
-      console.log('Analytics fetch error:', error);
-      // Fallback mock data to guarantee display
-      setAnalyticsData({
-        weeklyIssues: [12, 19, 3, 5, 2, 3, 10]
-      });
+      console.log('[PrincipalLibrary] Analytics fetch error:', error);
+      setAnalyticsData(null);
+      setAnalyticsError(true);
     } finally {
       setIsLoading(false);
     }
@@ -382,10 +386,10 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
   const toggleAnalytics = useCallback(async () => {
     const nextShow = !showAnalytics;
     setShowAnalytics(nextShow);
-    if (nextShow && !analyticsData) {
+    if (nextShow && !analyticsData && !analyticsError) {
       await fetchAnalytics();
     }
-  }, [showAnalytics, analyticsData, fetchAnalytics]);
+  }, [showAnalytics, analyticsData, analyticsError, fetchAnalytics]);
 
   // Export Library Data
   const handleExport = useCallback(async (format: 'csv' | 'pdf') => {
@@ -503,7 +507,38 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
 
   // renderAnalytics UI helper
   const renderAnalytics = () => {
-    if (!showAnalytics || !analyticsData) return null;
+    if (!showAnalytics) return null;
+
+    const closeBtn = (
+      <TouchableOpacity onPress={() => setShowAnalytics(false)}>
+        <Ionicons name="close" size={24} color={theme.text} />
+      </TouchableOpacity>
+    );
+
+    if (analyticsError || !analyticsData) {
+      return (
+        <View style={styles.analyticsContainer}>
+          <View style={styles.analyticsHeader}>
+            <Text style={styles.analyticsTitle}>📊 Library Analytics</Text>
+            {closeBtn}
+          </View>
+          <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+            <Ionicons name="bar-chart-outline" size={40} color={theme.subtext} />
+            <Text style={{ fontSize: 14, color: theme.subtext, marginTop: 12, textAlign: 'center' }}>
+              {analyticsError ? "Couldn't load analytics data.\nPull to refresh or try again later." : 'No analytics data available.'}
+            </Text>
+            {analyticsError && (
+              <TouchableOpacity
+                onPress={fetchAnalytics}
+                style={{ marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: theme.primary, borderRadius: 8 }}
+              >
+                <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '700' }}>Retry</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      );
+    }
 
     const data = analyticsData.weeklyIssues || [0, 0, 0, 0, 0, 0, 0];
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -513,9 +548,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
       <View style={styles.analyticsContainer}>
         <View style={styles.analyticsHeader}>
           <Text style={styles.analyticsTitle}>📊 Library Analytics</Text>
-          <TouchableOpacity onPress={() => setShowAnalytics(false)}>
-            <Ionicons name="close" size={24} color={theme.text} />
-          </TouchableOpacity>
+          {closeBtn}
         </View>
 
         <View style={styles.chartContainer}>
@@ -593,7 +626,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.row}>
               <Ionicons name="person-outline" size={14} color={theme.subtext} style={{ marginRight: 6 }} />
               <Text style={styles.bodyText}>
-                {item.studentName} · {item.className || 'Class 10'}
+                {item.studentName} · {item.className || '—'}
               </Text>
             </View>
             <View style={styles.row}>
@@ -602,14 +635,13 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
             </View>
             {item.status === 'OVERDUE' && (
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                <Text style={styles.fineText}>
-                  Fine: ₹{calculateFine(item.dueDate)}
-                </Text>
+                <Ionicons name="alert-circle-outline" size={14} color="#EF4444" style={{ marginRight: 4 }} />
+                <Text style={[styles.fineText, { marginTop: 0 }]}>Overdue</Text>
                 <TouchableOpacity
                   onPress={() => fetchStudentFines(item.studentId, item.studentName)}
-                  style={{ marginLeft: 10, paddingVertical: 2, paddingHorizontal: 6, backgroundColor: isDarkMode ? '#3B82F630' : '#EFF6FF', borderRadius: 4 }}
+                  style={{ marginLeft: 10, paddingVertical: 2, paddingHorizontal: 8, backgroundColor: isDarkMode ? '#3B82F630' : '#EFF6FF', borderRadius: 4 }}
                 >
-                  <Text style={{ fontSize: 10, fontWeight: '700', color: isDarkMode ? '#818CF8' : '#3B82F6' }}>Pay Fine</Text>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: isDarkMode ? '#818CF8' : '#3B82F6' }}>View Fine</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -650,7 +682,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       );
     },
-    [getStatusStyles, formatDate, isBulkMode, selectedIssues, toggleIssueSelection, handleReturnBook, handleRenewBook, calculateFine, fetchStudentFines, isDarkMode, theme]
+    [getStatusStyles, formatDate, isBulkMode, selectedIssues, toggleIssueSelection, handleReturnBook, handleRenewBook, fetchStudentFines, isDarkMode, theme]
   );
 
   // Circulation search logic
@@ -1234,7 +1266,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
       <View style={{ flex: 1 }}>{renderTabContent()}</View>
 
       {/* Floating Action Button for Issuing Book */}
-      {selectedTab === 'circulation' && (
+      {selectedTab === 'circulation' && !isIssueModalOpen && (
         <TouchableOpacity
           style={styles.fab}
           onPress={handleOpenIssueModal}
@@ -1313,20 +1345,23 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
                       <Ionicons name="arrow-back" size={14} color={theme.primary} style={{ marginRight: 6 }} />
                       <Text style={styles.modalBackBtnText}>Back to Students</Text>
                     </TouchableOpacity>
-                    {booksList.map((b) => (
-                      <TouchableOpacity
-                        key={b.id}
-                        style={[styles.modalItemBtn, b.availableCopies <= 0 && { opacity: 0.5 }]}
-                        disabled={b.availableCopies <= 0}
-                        onPress={() => handleSelectBook(b.id)}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.modalItemText}>{b.title}</Text>
-                          <Text style={styles.modalItemSubText}>{b.author} · Available: {b.availableCopies || 0}</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={16} color={theme.subtext} />
-                      </TouchableOpacity>
-                    ))}
+                    {booksList.map((b) => {
+                      const avail = b.availableCopies ?? b.available_copies ?? 1;
+                      return (
+                        <TouchableOpacity
+                          key={b.id}
+                          style={[styles.modalItemBtn, avail <= 0 && { opacity: 0.5 }]}
+                          disabled={avail <= 0}
+                          onPress={() => handleSelectBook(b.id)}
+                        >
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.modalItemText}>{b.title}</Text>
+                            <Text style={styles.modalItemSubText}>{b.author} · Available: {avail}</Text>
+                          </View>
+                          <Ionicons name="chevron-forward" size={16} color={theme.subtext} />
+                        </TouchableOpacity>
+                      );
+                    })}
                     {booksList.length === 0 && (
                       <Text style={styles.modalEmptyText}>No books cataloged.</Text>
                     )}
@@ -1622,7 +1657,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
     </View>
   );
 };
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   safeContainer: {
     flex: 1,
     backgroundColor: theme.background,
@@ -1734,17 +1769,17 @@ const getStyles = (theme: any) => StyleSheet.create({
   categoryPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.isDarkMode ? '#6366F120' : '#EEF2FF',
+    backgroundColor: isDarkMode ? '#6366F120' : '#EEF2FF',
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
     marginRight: 10,
     borderWidth: 1,
-    borderColor: theme.isDarkMode ? '#6366F140' : '#E0E7FF',
+    borderColor: isDarkMode ? '#6366F140' : '#E0E7FF',
   },
   categoryNameText: {
     fontSize: 12,
-    color: theme.isDarkMode ? '#818CF8' : '#4F46E5',
+    color: isDarkMode ? '#818CF8' : '#4F46E5',
     fontWeight: '600',
     marginRight: 6,
   },
@@ -1814,7 +1849,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F9FAFB',
+    backgroundColor: isDarkMode ? '#334155' : '#F9FAFB',
     padding: 10,
     borderRadius: 10,
   },
@@ -1900,16 +1935,26 @@ const getStyles = (theme: any) => StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
   modalContent: {
     backgroundColor: theme.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderRadius: 28,
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    paddingTop: 24,
+    paddingBottom: 24,
+    width: '100%',
+    maxWidth: 440,
     maxHeight: '80%',
+    borderWidth: 1,
+    borderColor: theme.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 8,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1942,7 +1987,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F9FAFB',
+    backgroundColor: isDarkMode ? '#334155' : '#F9FAFB',
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 12,
@@ -1981,7 +2026,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F9FAFB',
+    backgroundColor: isDarkMode ? '#334155' : '#F9FAFB',
     borderWidth: 1,
     borderColor: theme.border,
     borderRadius: 12,

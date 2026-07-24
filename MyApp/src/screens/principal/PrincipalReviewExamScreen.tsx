@@ -87,7 +87,7 @@ const PrincipalReviewExamScreen = ({ navigation, route }: any) => {
         </View>
 
         {/* Premium Audit Hero */}
-        <Animated.View entering={FadeInUp.duration(400)} style={styles.heroCard}>
+        {/* <Animated.View entering={FadeInUp.duration(400)} style={styles.heroCard}>
           <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
             <Defs>
               <SvgLinearGradient id="auditGrad" x1="0" y1="0" x2="1" y2="1">
@@ -95,15 +95,15 @@ const PrincipalReviewExamScreen = ({ navigation, route }: any) => {
                 <Stop offset="1" stopColor="#4F46E5" stopOpacity="1" />
               </SvgLinearGradient>
             </Defs>
-            <Rect width="100%" height="100%" fill="url(#auditGrad)" rx={32} ry={32} />
+            <Rect width="100%" height="100%" fill="url(#auditGrad)" rx={28} ry={28} />
           </Svg>
           <View style={styles.heroContent}>
             <View style={styles.heroTop}>
               <View style={styles.heroIconBox}>
-                <MaterialCommunityIcons name="file-check-outline" size={28} color="#FFF" />
+                <MaterialCommunityIcons name="file-check-outline" size={24} color="#FFF" />
               </View>
               <View style={styles.heroMainText}>
-                <Text style={styles.heroName}>{exam.name}</Text>
+                <Text style={styles.heroName} numberOfLines={2}>{exam.name}</Text>
                 <Text style={styles.heroMeta}>{exam.type} • {exam.year}</Text>
               </View>
               <View style={styles.heroStatus}>
@@ -116,17 +116,19 @@ const PrincipalReviewExamScreen = ({ navigation, route }: any) => {
                 <Text style={styles.hStatVal}>{exam.totalStudents}</Text>
                 <Text style={styles.hStatLab}>SCHOLARS</Text>
               </View>
+              <View style={styles.hStatDivider} />
               <View style={styles.hStat}>
                 <Text style={styles.hStatVal}>{exam.submitted}</Text>
                 <Text style={styles.hStatLab}>ENTRIES</Text>
               </View>
+              <View style={styles.hStatDivider} />
               <View style={styles.hStat}>
                 <Text style={styles.hStatVal}>{exam.avgScore}</Text>
                 <Text style={styles.hStatLab}>MEAN SCORE</Text>
               </View>
             </View>
           </View>
-        </Animated.View>
+        </Animated.View> */}
 
         {/* List Header */}
         <View style={styles.listHeader}>
@@ -218,19 +220,91 @@ const getStyles = (theme: any) => StyleSheet.create({
   screenSubtitle: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
 
   // Hero
-  heroCard: { height: 200, borderRadius: 32, marginHorizontal: 20, padding: 24, justifyContent: 'center', overflow: 'hidden' },
-  heroContent: { flex: 1 },
-  heroTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 25 },
-  heroIconBox: { width: 50, height: 50, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
-  heroMainText: { flex: 1, marginLeft: 15 },
-  heroName: { color: '#FFF', fontSize: 18, fontWeight: '800' },
-  heroMeta: { color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: '600', marginTop: 2 },
-  heroStatus: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
-  heroStatusText: { color: '#FFF', fontSize: 9, fontWeight: '900' },
-  heroStats: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 10 },
-  hStat: { alignItems: 'center' },
-  hStatVal: { color: '#FFF', fontSize: 22, fontWeight: '900' },
-  hStatLab: { color: 'rgba(255,255,255,0.7)', fontSize: 9, fontWeight: '800', marginTop: 4 },
+  heroCard: {
+    borderRadius: 28,
+    marginHorizontal: 20,
+    padding: 20,
+    overflow: 'hidden',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  heroContent: {},
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  heroIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  heroMainText: {
+    flex: 1,
+    marginRight: 8,
+  },
+  heroName: {
+    color: '#FFF',
+    fontSize: 17,
+    fontWeight: '800',
+    lineHeight: 22,
+  },
+  heroMeta: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  heroStatus: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  heroStatusText: {
+    color: '#FFF',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  heroStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.12)',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+  },
+  hStat: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  hStatDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  hStatVal: {
+    color: '#FFF',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  hStatLab: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 9,
+    fontWeight: '800',
+    marginTop: 3,
+    letterSpacing: 0.5,
+  },
 
   // Section
   listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 35, marginBottom: 15 },

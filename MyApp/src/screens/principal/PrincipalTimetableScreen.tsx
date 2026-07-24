@@ -46,7 +46,7 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 
 const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [classes, setClasses] = useState<ClassItem[]>([]);
@@ -222,7 +222,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
       if (isBreak) {
         return (
           <View key={index} style={styles.breakRow}>
-            <Ionicons name="cafe-outline" size={16} color="#D97706" style={{ marginRight: 6 }} />
+            <Ionicons name="cafe-outline" size={18} color="#D97706" style={{ marginRight: 10 }} />
             <Text style={styles.breakText}>
               {label} ({timeRange})
             </Text>
@@ -233,18 +233,27 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
       const hasTeacher = !!slot.teacher?.name;
       const isAbsent = slot.teacher?.is_absent || false;
       const substitutionName = slot.substitution?.name || null;
+      const isFree = !hasTeacher || slot.subject === 'Free Period';
+
+      const borderAccentColor = isAbsent
+        ? '#EF4444'
+        : substitutionName
+        ? '#F59E0B'
+        : isFree
+        ? theme.subtext
+        : theme.primary;
 
       return (
-        <View key={index} style={styles.slotCard}>
+        <View key={index} style={[styles.slotCard, { borderLeftColor: borderAccentColor }, isFree && styles.slotCardFree]}>
           <View style={styles.slotHeader}>
             <Text style={styles.periodLabel}>{slot.period?.label || 'Slot'}</Text>
             {timeRange ? <Text style={styles.timeRangeText}>{timeRange}</Text> : null}
           </View>
           <View style={styles.slotBody}>
-            <Text style={styles.subjectText}>{slot.subject || 'Free Period'}</Text>
+            <Text style={[styles.subjectText, isFree && styles.subjectTextFree]}>{slot.subject || 'Free Period'}</Text>
             {hasTeacher ? (
               <View style={styles.teacherRow}>
-                <Ionicons name="person-outline" size={14} color="#4B5563" style={{ marginRight: 4 }} />
+                <Ionicons name="person-outline" size={14} color={theme.subtext} style={{ marginRight: 6 }} />
                 <Text style={styles.teacherNameText}>{slot.teacher.name}</Text>
                 {isAbsent ? (
                   <View style={styles.absentBadge}>
@@ -258,7 +267,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
 
             {substitutionName ? (
               <View style={styles.substituteRow}>
-                <MaterialCommunityIcons name="swap-horizontal" size={14} color="#D97706" style={{ marginRight: 4 }} />
+                <MaterialCommunityIcons name="swap-horizontal" size={14} color={isDarkMode ? '#FBBF24' : '#D97706'} style={{ marginRight: 6 }} />
                 <Text style={styles.substituteText}>Substituted by: {substitutionName}</Text>
               </View>
             ) : null}
@@ -266,7 +275,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       );
     },
-    [formatTime]
+    [formatTime, theme, isDarkMode, styles]
   );
 
   const renderPeriodItem = useCallback(
@@ -280,7 +289,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
       if (isBreak) {
         return (
           <View key={period.id} style={styles.breakRow}>
-            <Ionicons name="cafe-outline" size={16} color="#D97706" style={{ marginRight: 6 }} />
+            <Ionicons name="cafe-outline" size={18} color="#D97706" style={{ marginRight: 10 }} />
             <Text style={styles.breakText}>
               Period {period.period_number} — {label} ({timeRange})
             </Text>
@@ -296,18 +305,27 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
         const hasTeacher = !!slot.teacher?.name;
         const isAbsent = slot.teacher?.is_absent || false;
         const substitutionName = slot.substitution?.name || null;
+        const isFree = !hasTeacher || slot.subject === 'Free Period';
+
+        const borderAccentColor = isAbsent
+          ? '#EF4444'
+          : substitutionName
+          ? '#F59E0B'
+          : isFree
+          ? theme.subtext
+          : theme.primary;
 
         return (
-          <View key={period.id} style={styles.slotCard}>
+          <View key={period.id} style={[styles.slotCard, { borderLeftColor: borderAccentColor }, isFree && styles.slotCardFree]}>
             <View style={styles.slotHeader}>
               <Text style={styles.periodLabel}>{displayLabel}</Text>
               {timeRange ? <Text style={styles.timeRangeText}>{timeRange}</Text> : null}
             </View>
             <View style={styles.slotBody}>
-              <Text style={styles.subjectText}>{slot.subject || 'Free Period'}</Text>
+              <Text style={[styles.subjectText, isFree && styles.subjectTextFree]}>{slot.subject || 'Free Period'}</Text>
               {hasTeacher ? (
                 <View style={styles.teacherRow}>
-                  <Ionicons name="person-outline" size={14} color="#4B5563" style={{ marginRight: 4 }} />
+                  <Ionicons name="person-outline" size={14} color={theme.subtext} style={{ marginRight: 6 }} />
                   <Text style={styles.teacherNameText}>{slot.teacher.name}</Text>
                   {isAbsent ? (
                     <View style={styles.absentBadge}>
@@ -321,7 +339,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
 
               {substitutionName ? (
                 <View style={styles.substituteRow}>
-                  <MaterialCommunityIcons name="swap-horizontal" size={14} color="#D97706" style={{ marginRight: 4 }} />
+                  <MaterialCommunityIcons name="swap-horizontal" size={14} color={isDarkMode ? '#FBBF24' : '#D97706'} style={{ marginRight: 6 }} />
                   <Text style={styles.substituteText}>Substituted by: {substitutionName}</Text>
                 </View>
               ) : null}
@@ -331,30 +349,32 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
       }
 
       return (
-        <View key={period.id} style={styles.slotCard}>
+        <View key={period.id} style={[styles.slotCard, styles.slotCardFree, { borderLeftColor: theme.subtext }]}>
           <View style={styles.slotHeader}>
             <Text style={styles.periodLabel}>{displayLabel}</Text>
             {timeRange ? <Text style={styles.timeRangeText}>{timeRange}</Text> : null}
           </View>
           <View style={styles.slotBody}>
-            <Text style={styles.subjectText}>Free Period</Text>
+            <Text style={[styles.subjectText, styles.subjectTextFree]}>Free Period</Text>
             <Text style={styles.freePeriodText}>Free Period</Text>
           </View>
         </View>
       );
     },
-    [formatTime]
+    [formatTime, theme, isDarkMode, styles]
   );
 
   const renderDayItem = useCallback(
     ({ item }: { item: ScheduleDay }) => {
       const hasSlots = item.slots && item.slots.length > 0;
       const hasPeriods = sortedPeriods && sortedPeriods.length > 0;
+      const headerString = getDayHeader(item.date);
 
       return (
         <View style={styles.dayContainer}>
           <View style={styles.dayHeader}>
-            <Text style={styles.dayHeaderText}>{getDayHeader(item.date)}</Text>
+            <View style={styles.dayHeaderDot} />
+            <Text style={styles.dayHeaderText}>{headerString}</Text>
           </View>
 
           {hasSlots ? (
@@ -374,20 +394,21 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           ) : (
             <View style={styles.emptyDayContainer}>
+              <MaterialCommunityIcons name="calendar-blank-outline" size={20} color={theme.subtext} style={{ marginBottom: 4 }} />
               <Text style={styles.emptyDayText}>No classes scheduled</Text>
             </View>
           )}
         </View>
       );
     },
-    [getDayHeader, sortedPeriods, renderPeriodItem, renderSlotItem]
+    [getDayHeader, sortedPeriods, renderPeriodItem, renderSlotItem, theme, styles]
   );
 
   if (isLoading) {
     return (
       <View style={styles.loaderContainer}>
-        <StatusBar barStyle="dark-content" />
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -395,13 +416,16 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
   if (isError) {
     return (
       <View style={styles.errorContainer}>
-        <StatusBar barStyle="dark-content" />
-        <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+        <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
+        <View style={styles.errorBadge}>
+          <Ionicons name="alert-circle-outline" size={40} color="#EF4444" />
+        </View>
         <Text style={styles.errorTitle}>Failed to load timetable</Text>
         <Text style={styles.errorSubtitle}>
           An error occurred while fetching timetable data. Please try again.
         </Text>
         <TouchableOpacity style={styles.retryBtn} onPress={loadInitialData}>
+          <Ionicons name="refresh-outline" size={18} color="#FFF" style={{ marginRight: 8 }} />
           <Text style={styles.retryBtnText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -457,21 +481,27 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
       ) : null}
 
       {/* Week Navigator */}
-      <View style={styles.weekNavigatorRow}>
-        <TouchableOpacity style={styles.navArrow} onPress={() => changeWeek(-7)}>
-          <Ionicons name="chevron-back" size={20} color={theme.text} />
-        </TouchableOpacity>
-        <Text style={styles.weekRangeText}>{formatWeekRange}</Text>
-        <TouchableOpacity style={styles.navArrow} onPress={() => changeWeek(7)}>
-          <Ionicons name="chevron-forward" size={20} color={theme.text} />
-        </TouchableOpacity>
+      <View style={styles.weekNavigatorContainer}>
+        <View style={styles.weekNavigatorRow}>
+          <TouchableOpacity style={styles.navArrow} onPress={() => changeWeek(-7)}>
+            <Ionicons name="chevron-back" size={18} color={theme.text} />
+          </TouchableOpacity>
+          <View style={styles.weekRangeBox}>
+            <MaterialCommunityIcons name="calendar-range" size={16} color={theme.primary} style={{ marginRight: 6 }} />
+            <Text style={styles.weekRangeText}>{formatWeekRange}</Text>
+          </View>
+          <TouchableOpacity style={styles.navArrow} onPress={() => changeWeek(7)}>
+            <Ionicons name="chevron-forward" size={18} color={theme.text} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Schedule list */}
       {isScheduleLoading ? (
         <View style={styles.skeletonContainer}>
-          <ActivityIndicator size="small" color="#4F46E5" style={{ marginBottom: 12 }} />
+          <ActivityIndicator size="small" color={theme.primary} style={{ marginBottom: 12 }} />
           <Text style={styles.skeletonText}>Loading schedule...</Text>
+          <Text style={styles.skeletonSubtext}>Fetching this week's timetable</Text>
         </View>
       ) : (
         <FlatList
@@ -484,12 +514,12 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={() => fetchSchedule(true)}
-              colors={['#4F46E5']}
+              colors={[theme.primary]}
             />
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="calendar-outline" size={64} color={theme.subtext} />
+              <Ionicons name="calendar-outline" size={56} color={theme.subtext} />
               <Text style={styles.emptyTitle}>No schedule available</Text>
               <Text style={styles.emptySubtitle}>
                 No working days or slots scheduled for this week.
@@ -504,7 +534,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   safeContainer: {
     flex: 1,
     backgroundColor: theme.background,
@@ -523,11 +553,19 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 24,
     backgroundColor: theme.background,
   },
+  errorBadge: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: isDarkMode ? '#EF444420' : '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
   errorTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: theme.text,
-    marginTop: 16,
     marginBottom: 8,
   },
   errorSubtitle: {
@@ -537,15 +575,17 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginBottom: 24,
   },
   retryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: theme.primary,
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   retryBtnText: {
     color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
   },
   appHeader: {
     flexDirection: 'row',
@@ -567,22 +607,25 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   classSelectorWrapper: {
     backgroundColor: theme.surface,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: theme.border,
   },
   classSelectorContent: {
     paddingHorizontal: 16,
+    gap: 8,
   },
   classPill: {
     backgroundColor: theme.background,
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    marginRight: 8,
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   classPillActive: {
     backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   classPillText: {
     fontSize: 13,
@@ -591,24 +634,51 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   classPillTextActive: {
     color: '#FFF',
+    fontWeight: '800',
+  },
+  weekNavigatorContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    backgroundColor: theme.background,
   },
   weekNavigatorRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: theme.surface,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  weekRangeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.background,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   navArrow: {
-    padding: 6,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: theme.background,
-    borderRadius: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   weekRangeText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: theme.text,
   },
@@ -616,101 +686,141 @@ const getStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: theme.background,
   },
   skeletonText: {
     fontSize: 14,
+    fontWeight: '700',
+    color: theme.text,
+  },
+  skeletonSubtext: {
+    fontSize: 12,
     color: theme.subtext,
+    marginTop: 4,
   },
   listContent: {
     padding: 16,
+    paddingBottom: 40,
   },
   dayContainer: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   dayHeader: {
-    backgroundColor: theme.primary + '15',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  dayHeaderText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: theme.primary,
-  },
-  slotsContainer: {},
-  breakRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.isDarkMode ? '#F59E0B20' : '#FEF3C7',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    marginBottom: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#F59E0B',
-  },
-  breakText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.isDarkMode ? '#FBBF24' : '#D97706',
-  },
-  slotCard: {
     backgroundColor: theme.surface,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: theme.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.02,
-    shadowRadius: 2,
+    shadowRadius: 4,
     elevation: 1,
+  },
+  dayHeaderDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.primary,
+    marginRight: 10,
+  },
+  dayHeaderText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: theme.text,
+    letterSpacing: 0.3,
+  },
+  slotsContainer: {
+    gap: 12,
+  },
+  breakRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: isDarkMode ? '#F59E0B15' : '#FFFBEB',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F59E0B',
+    borderWidth: 1,
+    borderColor: isDarkMode ? '#78350F40' : '#FDE68A',
+  },
+  breakText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: isDarkMode ? '#FBBF24' : '#D97706',
+  },
+  slotCard: {
+    backgroundColor: theme.surface,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderLeftWidth: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  slotCardFree: {
+    opacity: 0.85,
+    borderStyle: 'dashed',
   },
   slotHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   periodLabel: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
     color: theme.subtext,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   timeRangeText: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.subtext,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   slotBody: {},
   subjectText: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
     color: theme.text,
-    marginBottom: 4,
+    marginBottom: 6,
+  },
+  subjectTextFree: {
+    color: theme.subtext,
+    fontWeight: '600',
+    fontStyle: 'italic',
   },
   teacherRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 2,
   },
   teacherNameText: {
     fontSize: 13,
     color: theme.text,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   absentBadge: {
-    backgroundColor: '#FEE2E2',
-    paddingVertical: 1,
-    paddingHorizontal: 6,
-    borderRadius: 4,
+    backgroundColor: isDarkMode ? '#EF444425' : '#FEE2E2',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
     marginLeft: 8,
   },
   absentText: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '800',
     color: '#EF4444',
   },
   freePeriodText: {
@@ -721,29 +831,30 @@ const getStyles = (theme: any) => StyleSheet.create({
   substituteRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 6,
-    backgroundColor: theme.isDarkMode ? '#B4530920' : '#FEF3C7',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
+    marginTop: 8,
+    backgroundColor: isDarkMode ? '#F59E0B15' : '#FFFBEB',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
   },
   substituteText: {
-    fontSize: 11,
-    color: theme.isDarkMode ? '#FBBF24' : '#B45309',
-    fontWeight: '600',
+    fontSize: 12,
+    color: isDarkMode ? '#FBBF24' : '#D97706',
+    fontWeight: '700',
   },
   emptyDayContainer: {
-    padding: 12,
+    padding: 18,
     alignItems: 'center',
     backgroundColor: theme.surface,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: theme.border,
   },
   emptyDayText: {
-    fontSize: 12,
+    fontSize: 13,
     color: theme.subtext,
+    fontWeight: '500',
   },
   emptyContainer: {
     paddingVertical: 80,
@@ -753,7 +864,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
     color: theme.text,
     marginTop: 16,
     marginBottom: 8,
@@ -767,7 +878,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#9F7AEA', // Soft purple
+    backgroundColor: '#9F7AEA',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 4,

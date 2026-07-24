@@ -58,16 +58,46 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
   const [calendarData, setCalendarData] = useState<any>(null);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [showTermHistory, setShowTermHistory] = useState(false);
-  const [selectedTerm, setSelectedTerm] = useState<any>(null);
+
+  // Endpoint specific state
+  const [eventsList, setEventsList] = useState<any[]>([]);
+  const [holidaysList, setHolidaysList] = useState<any[]>([]);
+  const [examsList, setExamsList] = useState<any[]>([]);
+
+  // Add Event Form state
+  const [newEventTitle, setNewEventTitle] = useState('');
+  const [newEventDate, setNewEventDate] = useState('');
+  const [newEventCategory, setNewEventCategory] = useState('Academic');
+  const [newEventDesc, setNewEventDesc] = useState('');
+  const [isSubmittingEvent, setIsSubmittingEvent] = useState(false);
 
   const fetchData = async () => {
     try {
       if (!isRefreshing) setIsLoading(true);
-      const res = await apiClient.get(ENDPOINTS.PRINCIPAL.CALENDAR);
-      setCalendarData(res.normalized?.data || res.data.data || res.data);
+
+      const [eventsRes, holidaysRes, examsRes] = await Promise.all([
+        apiClient.get(ENDPOINTS.PRINCIPAL.CALENDAR_EVENTS).catch(() => ({ data: [] })),
+        apiClient.get(ENDPOINTS.PRINCIPAL.CALENDAR_HOLIDAYS).catch(() => ({ data: [] })),
+        apiClient.get(ENDPOINTS.PRINCIPAL.CALENDAR_EXAMS).catch(() => ({ data: [] })),
+      ]);
+
+      const eventsData = (eventsRes as any).data?.events || (eventsRes as any).data?.data || (Array.isArray((eventsRes as any).data) ? (eventsRes as any).data : []);
+      const holidaysData = (holidaysRes as any).data?.holidays || (holidaysRes as any).data?.data || (Array.isArray((holidaysRes as any).data) ? (holidaysRes as any).data : []);
+      const examsData = (examsRes as any).data?.exams || (examsRes as any).data?.data || (Array.isArray((examsRes as any).data) ? (examsRes as any).data : []);
+
+      setEventsList(Array.isArray(eventsData) ? eventsData : []);
+      setHolidaysList(Array.isArray(holidaysData) ? holidaysData : []);
+      setExamsList(Array.isArray(examsData) ? examsData : []);
+
+      try {
+        const calRes = await apiClient.get(ENDPOINTS.PRINCIPAL.CALENDAR).catch(() => ({ data: null }));
+        if (calRes?.data) {
+          setCalendarData((calRes as any).normalized?.data || (calRes as any).data?.data || calRes.data);
+        }
+      } catch {}
+
     } catch (error) {
-      console.error('Failed to fetch calendar:', error);
-      setCalendarData(null);
+      console.error('Failed to fetch calendar data:', error);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -83,6 +113,34 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
     fetchData();
   };
 
+  const handleCreateEvent = async () => {
+    if (!newEventTitle.trim()) {
+      Alert.alert('Validation Required', 'Please enter an event title.');
+      return;
+    }
+    try {
+      setIsSubmittingEvent(true);
+      const payload = {
+        title: newEventTitle.trim(),
+        date: newEventDate.trim() || new Date().toISOString().split('T')[0],
+        category: newEventCategory,
+        description: newEventDesc.trim(),
+      };
+      await apiClient.post(ENDPOINTS.PRINCIPAL.CALENDAR_EVENTS, payload);
+      Alert.alert('Success', 'Event created successfully!');
+      setShowAddEventModal(false);
+      setNewEventTitle('');
+      setNewEventDate('');
+      setNewEventDesc('');
+      fetchData();
+    } catch (error) {
+      console.error('Failed to create event:', error);
+      Alert.alert('Error', 'Failed to create event. Please try again.');
+    } finally {
+      setIsSubmittingEvent(false);
+    }
+  };
+
   // Calculate curriculum progress
   const curriculumProgress = calendarData?.curriculumProgress || 85;
   const progressColor = curriculumProgress >= 80 ? '#10B981' : curriculumProgress >= 60 ? '#F59E0B' : '#EF4444';
@@ -92,11 +150,15 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
   const currentTerm = calendarData?.terms?.find((t: any) => t.status === 'ONGOING') || calendarData?.terms?.[0];
   const sessionYear = calendarData?.session || '2025-26';
 
+  const displayEvents = eventsList.length > 0 ? eventsList : (calendarData?.events || []);
+  const displayHolidays = holidaysList.length > 0 ? holidaysList : (calendarData?.holidays || []);
+  const displayExams = examsList.length > 0 ? examsList : (calendarData?.exams || []);
+
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} translucent />
 
-      {/* Global Header - Student Pattern */}
+      {/* Global Header */}
       <View style={styles.globalHeader}>
         <ScaleButton onPress={() => setDrawerOpen(true)}>
           <Ionicons name="menu" size={28} color={theme.text} />
@@ -129,7 +191,7 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
             <Text style={styles.screenSubtitle}>Align institutional goals with the official academic timeline.</Text>
           </View>
 
-          {/* ===== INSTITUTION STATUS - FIXED UI ===== */}
+          {/* ===== INSTITUTION STATUS ===== */}
           <Animated.View entering={FadeInUp.duration(400)} style={styles.institutionStatusCard}>
             <View style={styles.statusHeader}>
               <View style={styles.statusTitleRow}>
@@ -211,7 +273,7 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
               <View style={styles.liveBadge}>
                 <View style={styles.pulseDot} />
                 <Text style={styles.liveBadgeText}>● LIVE OPERATIONS</Text>
-                <Text style={styles.liveBadgeSubtext}>• Session 2025-26 is currently in Term 2</Text>
+                <Text style={styles.liveBadgeSubtext}>• Session {sessionYear} is currently in {currentTerm?.title || 'Term 2'}</Text>
               </View>
             </View>
           </Animated.View>
@@ -279,53 +341,109 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
           </View>
 
           <View style={styles.eventsGrid}>
-            {calendarData?.events?.map((event: any, index: number) => (
-              <TouchableOpacity
-                key={event.id}
-                style={styles.eventCard}
-                onPress={() => Alert.alert('Event Details', event.title)}
-              >
-                <View style={[styles.eventCatBox, { backgroundColor: (event.color || '#4F46E5') + '15' }]}>
-                  <MaterialCommunityIcons name="star-outline" size={16} color={event.color || '#4F46E5'} />
-                  <Text style={[styles.eventCatText, { color: event.color || '#4F46E5' }]}>{event.category}</Text>
-                </View>
-                <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
-                <View style={styles.eventFooter}>
-                  <Ionicons name="time-outline" size={14} color="#94A3B8" />
-                  <Text style={styles.eventDate}>{event.date}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+            {displayEvents.length > 0 ? (
+              displayEvents.map((event: any, index: number) => {
+                const eventTitle = event.title || event.name || 'Event';
+                const eventCat = event.category || event.type || 'General';
+                const eventDate = event.date || event.startDate || (event.created_at ? new Date(event.created_at).toLocaleDateString() : 'TBA');
+                const eventColor = event.color || '#4F46E5';
+                return (
+                  <TouchableOpacity
+                    key={event.id || index}
+                    style={styles.eventCard}
+                    onPress={() => Alert.alert(eventTitle, event.description || eventDate)}
+                  >
+                    <View style={[styles.eventCatBox, { backgroundColor: eventColor + '15' }]}>
+                      <MaterialCommunityIcons name="star-outline" size={16} color={eventColor} />
+                      <Text style={[styles.eventCatText, { color: eventColor }]}>{eventCat}</Text>
+                    </View>
+                    <Text style={styles.eventTitle} numberOfLines={2}>{eventTitle}</Text>
+                    <View style={styles.eventFooter}>
+                      <Ionicons name="time-outline" size={14} color={theme.subtext} />
+                      <Text style={styles.eventDate}>{eventDate}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+            ) : (
+              <View style={styles.emptyCardFull}>
+                <Text style={styles.emptyText}>No institutional events scheduled</Text>
+              </View>
+            )}
           </View>
 
-          {/* Holidays */}
+          {/* Public Holidays */}
           <View style={[styles.sectionHeader, { marginTop: 32 }]}>
             <Text style={styles.sectionTitle}>Public Holidays</Text>
           </View>
 
           <View style={styles.holidaysWrapper}>
-            {calendarData?.holidays?.map((holiday: any, index: number) => (
-              <View key={index} style={styles.holidayCard}>
-                <View style={styles.holidayIconBox}>
-                  <MaterialCommunityIcons name="calendar-heart" size={24} color="#F59E0B" />
-                </View>
-                <View style={styles.holidayMain}>
-                  <Text style={styles.holidayName}>{holiday.title}</Text>
-                  <Text style={styles.holidayDateRange}>{holiday.date}</Text>
-                </View>
-                <View style={styles.durationBadge}>
-                  <Text style={styles.durationText}>{holiday.days}d</Text>
-                </View>
+            {displayHolidays.length > 0 ? (
+              displayHolidays.map((holiday: any, index: number) => {
+                const hTitle = holiday.title || holiday.name || 'Public Holiday';
+                const hDate = holiday.date || holiday.startDate || 'TBA';
+                const hDays = holiday.days || holiday.duration || '1';
+                return (
+                  <View key={holiday.id || index} style={styles.holidayCard}>
+                    <View style={styles.holidayIconBox}>
+                      <MaterialCommunityIcons name="calendar-heart" size={24} color="#F59E0B" />
+                    </View>
+                    <View style={styles.holidayMain}>
+                      <Text style={styles.holidayName}>{hTitle}</Text>
+                      <Text style={styles.holidayDateRange}>{hDate}</Text>
+                    </View>
+                    <View style={styles.durationBadge}>
+                      <Text style={styles.durationText}>{hDays}d</Text>
+                    </View>
+                  </View>
+                );
+              })
+            ) : (
+              <View style={styles.emptyCardFull}>
+                <Text style={styles.emptyText}>No public holidays found</Text>
               </View>
-            ))}
+            )}
           </View>
 
-          {/* Calendar View Button */}
-          <TouchableOpacity style={styles.fullCalendarBtn}>
-            <MaterialCommunityIcons name="calendar-month" size={20} color="#FFF" />
-            <Text style={styles.fullCalendarBtnText}>View Full Calendar</Text>
-          </TouchableOpacity>
+          {/* Upcoming Exams Section */}
+          <View style={[styles.sectionHeader, { marginTop: 32 }]}>
+            <Text style={styles.sectionTitle}>Upcoming Exams</Text>
+          </View>
 
+          <View style={styles.examsWrapper}>
+            {displayExams.length > 0 ? (
+              displayExams.map((exam: any, index: number) => {
+                const eTitle = exam.title || exam.name || exam.exam_name || exam.subject_name || 'Scheduled Exam';
+                const eDate = exam.date || exam.exam_date || exam.startDate || 'TBA';
+                const eTime = exam.time || exam.start_time || exam.duration || '09:00 AM';
+                const eClass = exam.class_name || exam.className || exam.grade || 'All Classes';
+                return (
+                  <View key={exam.id || index} style={styles.examCard}>
+                    <View style={styles.examIconBox}>
+                      <MaterialCommunityIcons name="file-document-edit-outline" size={22} color="#EC4899" />
+                    </View>
+                    <View style={styles.examMain}>
+                      <Text style={styles.examTitle}>{eTitle}</Text>
+                      <View style={styles.examMetaRow}>
+                        <Ionicons name="calendar-outline" size={12} color={theme.subtext} />
+                        <Text style={styles.examMetaText}>{eDate}</Text>
+                        <Text style={styles.examMetaDot}>•</Text>
+                        <Ionicons name="time-outline" size={12} color={theme.subtext} />
+                        <Text style={styles.examMetaText}>{eTime}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.examClassBadge}>
+                      <Text style={styles.examClassText}>{eClass}</Text>
+                    </View>
+                  </View>
+                );
+              })
+            ) : (
+              <View style={styles.emptyCardFull}>
+                <Text style={styles.emptyText}>No upcoming exams scheduled</Text>
+              </View>
+            )}
+          </View>
         </ScrollView>
       )}
 
@@ -344,21 +462,35 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
                 style={styles.modalInput}
                 placeholder="Event Title"
                 placeholderTextColor={theme.subtext}
+                value={newEventTitle}
+                onChangeText={setNewEventTitle}
               />
               <TextInput
                 style={styles.modalInput}
-                placeholder="Date"
+                placeholder="Date (e.g. YYYY-MM-DD)"
                 placeholderTextColor={theme.subtext}
+                value={newEventDate}
+                onChangeText={setNewEventDate}
               />
               <TextInput
                 style={[styles.modalInput, styles.modalTextArea]}
                 placeholder="Description"
                 placeholderTextColor={theme.subtext}
+                value={newEventDesc}
+                onChangeText={setNewEventDesc}
                 multiline
                 numberOfLines={4}
               />
-              <TouchableOpacity style={styles.modalSubmitBtn}>
-                <Text style={styles.modalSubmitBtnText}>Create Event</Text>
+              <TouchableOpacity
+                style={[styles.modalSubmitBtn, isSubmittingEvent && { opacity: 0.6 }]}
+                onPress={handleCreateEvent}
+                disabled={isSubmittingEvent}
+              >
+                {isSubmittingEvent ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={styles.modalSubmitBtnText}>Create Event</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -421,7 +553,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   screenTitle: { fontSize: 24, fontWeight: '800', color: theme.isDarkMode ? theme.primary : '#3B82F6', marginBottom: 4 },
   screenSubtitle: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
 
-  // ===== INSTITUTION STATUS CARD - FIXED =====
+  // STATUS CARD
   institutionStatusCard: {
     backgroundColor: theme.surface,
     marginHorizontal: 20,
@@ -499,11 +631,11 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   statusDivider: {
     width: 1,
-    height: 30,
+    height: 24,
     backgroundColor: theme.border,
   },
   progressContainer: {
-    gap: 4,
+    gap: 6,
   },
   progressBar: {
     height: 8,
@@ -518,19 +650,18 @@ const getStyles = (theme: any) => StyleSheet.create({
   progressLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 2,
   },
   progressLabelText: {
-    fontSize: 8,
+    fontSize: 10,
     color: theme.subtext,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   quickStats: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: theme.background,
-    padding: 12,
+    padding: 14,
     borderRadius: 16,
   },
   quickStatItem: {
@@ -538,41 +669,38 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     flex: 1,
-    justifyContent: 'center',
   },
   quickStatInfo: {
-    alignItems: 'flex-start',
+    gap: 2,
   },
   quickStatValue: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '800',
     color: theme.text,
   },
   quickStatLabel: {
-    fontSize: 9,
+    fontSize: 10,
     color: theme.subtext,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   quickStatDivider: {
     width: 1,
-    height: 30,
+    height: 24,
     backgroundColor: theme.border,
   },
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
-    backgroundColor: theme.background,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
     gap: 8,
+    backgroundColor: theme.isDarkMode ? '#10B98115' : '#ECFDF5',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
   liveBadgeText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#10B981',
-    letterSpacing: 0.5,
   },
   liveBadgeSubtext: {
     fontSize: 11,
@@ -580,22 +708,85 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Terms
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 15 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: theme.text },
-  viewAllText: { fontSize: 12, color: theme.isDarkMode ? '#818CF8' : '#4F46E5', fontWeight: '700' },
-  termList: { paddingHorizontal: 20, gap: 12 },
-  termCard: { backgroundColor: theme.surface, borderRadius: 20, padding: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: theme.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2, position: 'relative' },
-  termCardActive: { borderColor: theme.primary, borderWidth: 2 },
-  termIndicator: { width: 4, height: 35, borderRadius: 2, marginRight: 15 },
-  termMain: { flex: 1 },
-  termTitle: { fontSize: 14, fontWeight: '700', color: theme.text },
-  termTitleActive: { color: theme.primary },
-  termPeriod: { fontSize: 11, color: theme.subtext, marginTop: 2, fontWeight: '600' },
-  statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, marginRight: 8 },
-  statusText: { fontSize: 9, fontWeight: '800' },
-  ongoingBadge: { backgroundColor: '#10B981', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, position: 'absolute', top: -8, right: 10 },
-  ongoingBadgeText: { color: '#FFF', fontSize: 7, fontWeight: '900', letterSpacing: 0.5 },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+    marginTop: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: theme.text,
+  },
+  viewAllText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.primary,
+  },
+
+  termList: {
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  termCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.surface,
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  termCardActive: {
+    borderColor: theme.primary,
+  },
+  termIndicator: {
+    width: 4,
+    height: 36,
+    borderRadius: 2,
+    marginRight: 14,
+  },
+  termMain: {
+    flex: 1,
+  },
+  termTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.text,
+  },
+  termTitleActive: {
+    color: theme.primary,
+    fontWeight: '800',
+  },
+  termPeriod: {
+    fontSize: 12,
+    color: theme.subtext,
+    marginTop: 2,
+  },
+  statusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  ongoingBadge: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  ongoingBadgeText: {
+    color: '#FFF',
+    fontSize: 9,
+    fontWeight: '900',
+  },
 
   // Events
   addEventBtn: { backgroundColor: theme.isDarkMode ? '#4F46E530' : '#EEF2FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
@@ -617,6 +808,54 @@ const getStyles = (theme: any) => StyleSheet.create({
   holidayDateRange: { fontSize: 11, color: theme.subtext, marginTop: 2, fontWeight: '600' },
   durationBadge: { borderLeftWidth: 1, borderLeftColor: theme.border, paddingLeft: 15 },
   durationText: { fontSize: 12, fontWeight: '900', color: '#F59E0B' },
+
+  // Upcoming Exams
+  examsWrapper: { paddingHorizontal: 20, gap: 12 },
+  examCard: {
+    backgroundColor: theme.surface,
+    borderRadius: 24,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  examIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: theme.isDarkMode ? '#EC489920' : '#FCE7F3',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  examMain: { flex: 1 },
+  examTitle: { fontSize: 14, fontWeight: '700', color: theme.text, marginBottom: 4 },
+  examMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  examMetaText: { fontSize: 11, color: theme.subtext, fontWeight: '500' },
+  examMetaDot: { fontSize: 11, color: theme.subtext, marginHorizontal: 2 },
+  examClassBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    backgroundColor: theme.isDarkMode ? '#6366F120' : '#EEF2FF',
+  },
+  examClassText: { fontSize: 11, fontWeight: '800', color: theme.primary },
+  emptyCardFull: {
+    width: '100%',
+    backgroundColor: theme.surface,
+    padding: 20,
+    borderRadius: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  emptyText: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
 
   // Full Calendar Button
   fullCalendarBtn: {
@@ -677,7 +916,6 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
-  // Pulse animation for live badge
   pulseDot: {
     width: 8,
     height: 8,

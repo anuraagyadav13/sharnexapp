@@ -418,12 +418,27 @@ const principalService = {
     );
   },
 
-  approveEquipmentRequest(id: string, remark?: string) {
-    return apiClient.post(ENDPOINTS.PRINCIPAL.EQUIPMENT_APPROVE(id), { remark: remark ?? '' });
+  actionEquipmentRequest(id: string, action: 'APPROVED' | 'REJECTED', remarks?: string, items?: any[]) {
+    return apiClient.post(ENDPOINTS.PRINCIPAL.EQUIPMENT_ACTION(id), {
+      action,
+      remarks: remarks ?? '',
+      items: items ?? [],
+    }).catch(async (err) => {
+      // Fallback to legacy endpoints if /action is not found
+      if (err?.response?.status === 404) {
+        const endpoint = action === 'APPROVED' ? ENDPOINTS.PRINCIPAL.EQUIPMENT_APPROVE(id) : ENDPOINTS.PRINCIPAL.EQUIPMENT_REJECT(id);
+        return apiClient.post(endpoint, { remark: remarks ?? '' });
+      }
+      throw err;
+    });
   },
 
-  rejectEquipmentRequest(id: string, remark: string) {
-    return apiClient.post(ENDPOINTS.PRINCIPAL.EQUIPMENT_REJECT(id), { remark });
+  approveEquipmentRequest(id: string, remark?: string, items?: any[]) {
+    return this.actionEquipmentRequest(id, 'APPROVED', remark, items);
+  },
+
+  rejectEquipmentRequest(id: string, remark: string, items?: any[]) {
+    return this.actionEquipmentRequest(id, 'REJECTED', remark, items);
   },
 
   getLibraryDashboard() {

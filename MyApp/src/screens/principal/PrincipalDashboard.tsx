@@ -12,6 +12,7 @@ import {
   LayoutAnimation,
   Image,
   Modal,
+  RefreshControl,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -54,27 +55,25 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isActivityCollapsed, setIsActivityCollapsed] = useState(false);
   const [isApprovalsCollapsed, setIsApprovalsCollapsed] = useState(false);
-  const [isTopStudentsCollapsed, setIsTopStudentsCollapsed] = useState(false);
   const [toast, setToast] = useState<{ visible: boolean; message: string; type: ToastType }>({
     visible: false,
     message: '',
     type: 'info'
   });
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<{ students: number; staff: number; attendance: number | null }>({
     students: 0,
     staff: 0,
-    attendance: 92,
+    attendance: null,
   });
 
   const showToast = (message: string, type: ToastType = 'info') => {
     setToast({ visible: true, message, type });
   };
 
-  const toggleSection = (section: 'activity' | 'approvals' | 'topStudents') => {
+  const toggleSection = (section: 'activity' | 'approvals') => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     if (section === 'activity') setIsActivityCollapsed(!isActivityCollapsed);
     if (section === 'approvals') setIsApprovalsCollapsed(!isApprovalsCollapsed);
-    if (section === 'topStudents') setIsTopStudentsCollapsed(!isTopStudentsCollapsed);
   };
 
   const formatDate = (dateStr: string) => {
@@ -88,31 +87,92 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
     }
   };
 
+  const handleApprovalAction = async (id: string, action: 'APPROVED' | 'REJECTED') => {
+    try {
+      setApprovals(prev => prev.filter(item => item.id !== id));
+      if (action === 'APPROVED') {
+        await principalService.approveEquipmentRequest(id, 'Approved from Dashboard');
+        showToast('Request approved successfully', 'success');
+      } else {
+        await principalService.rejectEquipmentRequest(id, 'Rejected from Dashboard');
+        showToast('Request rejected', 'info');
+      }
+    } catch (err) {
+      console.error('[Dashboard] Approval action failed:', err);
+      showToast('Failed to process request', 'error');
+      fetchDashboard();
+    }
+  };
+
   const fetchDashboard = async () => {
     try {
       if (!isRefreshing) setIsLoading(true);
 
-      const institutionId = authState.user?.institutionId || '';
-      const today = new Date().toISOString().split('T')[0];
-
-      const [dashRes, announceRes, attendRes, equipRes, classesRes, staffRes, todayLogsRes] = await Promise.all([
-        apiClient.get(ENDPOINTS.PRINCIPAL.DASHBOARD).catch(() => ({ data: {} })),
+      const [metricsRes, announceRes, attendRes, attendSummaryRes] = await Promise.all([
+        // Primary source for all metric cards + pending approvals
+        apiClient.get(ENDPOINTS.PRINCIPAL.DASHBOARD_METRICS).catch(() => ({ data: null })),
+        // Upcoming events / announcements
         apiClient.get(ENDPOINTS.STUDENT.ANNOUNCEMENTS).catch(() => ({ data: { announcements: [] } })),
+        // Recent staff activity feed
         apiClient.get(ENDPOINTS.PRINCIPAL.ATTENDANCE, { params: { limit: 10 } }).catch(() => ({ data: { data: [] } })),
-        apiClient.get(ENDPOINTS.PRINCIPAL.EQUIPMENT_REQUESTS, { params: { status: 'PENDING', limit: 5 } }).catch(() => ({ data: { data: [] } })),
-        principalService.getClasses().catch(() => ({ data: { classes: [] } })),
-        institutionId ? principalService.getTeachers(institutionId).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
-        apiClient.get(`${ENDPOINTS.PRINCIPAL.ATTENDANCE}?startDate=${today}&endDate=${today}`).catch(() => ({ data: { data: [] } }))
+        // Attendance fallback (avgAttendancePercent)
+        apiClient.get(ENDPOINTS.PRINCIPAL.ATTENDANCE_SUMMARY).catch(() => ({ data: null })),
       ]);
 
-      const dData = dashRes.data?.data || dashRes.data || {};
-      setDashboardData(dData);
+      // ── /institution/dashboard-metrics ────────────────────────────────────
+      // Confirmed shape:
+      //   { metrics: { totalStudents, teachingStaff, attendanceRate: "79.4%", ... },
+      //     pendingApprovals: [...], institution: {...}, principal: {...} }
+      const metricsAny = metricsRes as any;
+      const mRaw = metricsAny.data?.data ?? metricsAny.data ?? {};
+      const metrics = mRaw.metrics ?? {};
 
+      // Store full metrics response as dashboardData for trend fields etc.
+      setDashboardData(mRaw);
+
+      // ── STUDENTS ──────────────────────────────────────────────────────────
+      const totalStudents = metrics.totalStudents ?? metrics.students ?? 0;
+
+      // ── STAFF ─────────────────────────────────────────────────────────────
+      const totalStaff = metrics.teachingStaff ?? metrics.totalTeachers ?? metrics.staff ?? 0;
+
+      // ── ATTENDANCE ────────────────────────────────────────────────────────
+      // metrics.attendanceRate is a string "79.4%" — parse the number out
+      let attendanceRate: number | null = null;
+      const rawRate = metrics.attendanceRate ?? metrics.attendance ?? null;
+      if (typeof rawRate === 'string') {
+        const parsed = parseFloat(rawRate.replace('%', '').trim());
+        if (!isNaN(parsed)) attendanceRate = Math.round(parsed);
+      } else if (typeof rawRate === 'number') {
+        attendanceRate = Math.round(rawRate);
+      }
+      // Fallback: /institution/attendance-summary → avgAttendancePercent
+      if (attendanceRate === null) {
+        const summaryAny = attendSummaryRes as any;
+        const summaryData = summaryAny.data?.data ?? summaryAny.data ?? null;
+        const summaryRate = summaryData?.avgAttendancePercent ?? null;
+        if (typeof summaryRate === 'number') attendanceRate = Math.round(summaryRate);
+      }
+
+      setStats({ students: totalStudents, staff: totalStaff, attendance: attendanceRate });
+
+      // ── PENDING APPROVALS ─────────────────────────────────────────────────
+      // metrics endpoint returns pendingApprovals directly, already formatted
+      const metricsApprovals = Array.isArray(mRaw.pendingApprovals) ? mRaw.pendingApprovals : [];
+      setApprovals(metricsApprovals.map((e: any) => ({
+        id: e.id || Math.random().toString(),
+        request: e.request || e.equipment_name || e.item || 'Equipment Request',
+        submittedBy: e.by || e.teacher_name || 'Teacher',
+        date: e.date || formatDate(e.created_at),
+        status: e.status,
+      })));
+
+      // ── ANNOUNCEMENTS / UPCOMING EVENTS ───────────────────────────────────
       const rawAnnounce = announceRes.data?.announcements || announceRes.data?.data || announceRes.data;
       const announceList = Array.isArray(rawAnnounce) ? rawAnnounce : (rawAnnounce?.announcements || []);
       setAnnouncements(announceList);
 
-      // Map Attendance to Activity Items
+      // ── RECENT STAFF ACTIVITY ─────────────────────────────────────────────
       const attendData = attendRes.data?.data || [];
       setActivities(attendData.map((a: any) => {
         const timeStr = a.outTime || a.inTime;
@@ -129,51 +189,9 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
           action: `Clocked ${a.outTime ? 'out' : 'in'} (${a.method || 'Biometric'})`,
           time: formattedTime,
           color: a.outTime ? '#8B5CF6' : '#10B981',
-          icon: a.outTime ? 'exit-outline' : 'enter-outline'
+          icon: a.outTime ? 'exit-outline' : 'enter-outline',
         };
       }));
-
-      // Map Equipment Requests to Approvals
-      const equipData = equipRes.data?.data || [];
-      if (Array.isArray(equipData)) {
-        setApprovals(equipData.map((e: any) => ({
-          id: e.id || Math.random().toString(),
-          request: e.equipment_name || e.item || 'Equipment Request',
-          submittedBy: e.teacher_name || 'Teacher',
-          date: formatDate(e.created_at),
-          status: e.status
-        })));
-      }
-
-      // Process Classes and Teachers for stats
-      const classesData = classesRes.data?.classes || (classesRes.data as any)?.data || classesRes.data || [];
-      const staffData = (staffRes as any).data?.data || (staffRes as any).data || [];
-      const todayLogs = todayLogsRes.data?.data || [];
-
-      const totalStudents = Array.isArray(classesData)
-        ? classesData.reduce((sum: number, cls: any) => sum + (cls.studentCount || 0), 0)
-        : 0;
-
-      const teachersList = Array.isArray(staffData) ? staffData : (staffData.staff || []);
-      const totalStaff = teachersList.length;
-
-      // Calculate attendance rate
-      let attendanceRate = 92;
-      if (totalStaff > 0 && todayLogs.length > 0) {
-        attendanceRate = Math.round((todayLogs.length / totalStaff) * 100);
-      } else if (attendRes.data?.data && Array.isArray(attendRes.data.data) && attendRes.data.data.length > 0) {
-        // Fallback calculation using recent logs if today's is empty
-        const activeUnique = new Set(attendRes.data.data.map((l: any) => l.teacherId)).size;
-        if (totalStaff > 0) {
-          attendanceRate = Math.min(100, Math.max(75, Math.round((activeUnique / totalStaff) * 100)));
-        }
-      }
-
-      setStats({
-        students: totalStudents || dData.stats?.students?.value || dData.totalStudents || 0,
-        staff: totalStaff || dData.stats?.teachers?.value || dData.totalTeachers || 0,
-        attendance: attendanceRate || dData.stats?.attendance?.value || dData.attendance?.average || 92,
-      });
 
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
@@ -218,8 +236,16 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
           style={styles.container}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              colors={[theme.primary]}
+              tintColor={theme.primary}
+            />
+          }
         >
-          {/* Top Header */}
+          {/* Top Header — DO NOT MODIFY */}
           <View style={styles.globalHeader}>
             <ScaleButton
               style={styles.menuHandle}
@@ -281,33 +307,37 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                 </Svg>
               </View>
               <View style={styles.heroContent}>
-                <Text style={styles.heroTitle}>Welcome to Institution Portal</Text>
+                <View style={styles.heroBadge}>
+                  <Ionicons name="school-outline" size={14} color="rgba(255,255,255,0.9)" />
+                  <Text style={styles.heroBadgeText}>Institution Portal</Text>
+                </View>
+                <Text style={styles.heroTitle}>Welcome to{'\n'}Your Dashboard</Text>
                 <Text style={styles.heroSubtitle}>Manage your institution, staff, and students efficiently</Text>
               </View>
             </Animated.View>
           </View>
 
-          {/* Metric Cards - Optimized Single Row */}
+          {/* Metric Cards */}
           <View style={[styles.sectionPadding, { marginTop: 16 }]}>
             <View style={styles.metricRow}>
               <MetricCard
                 title="STUDENTS"
                 value={stats.students}
-                trend={dashboardData?.stats?.students?.trend || "+3%"}
+                trend={dashboardData?.stats?.students?.trend}
                 icon="school"
                 color="#4F46E5"
               />
               <MetricCard
                 title="STAFF"
                 value={stats.staff}
-                trend={dashboardData?.stats?.teachers?.trend || "+2"}
+                trend={dashboardData?.stats?.teachers?.trend}
                 icon="people"
                 color="#8B5CF6"
               />
               <MetricCard
                 title="ATTENDANCE"
-                value={`${stats.attendance}%`}
-                trend={dashboardData?.stats?.attendance?.trend || "+1.2%"}
+                value={stats.attendance !== null ? `${stats.attendance}%` : null}
+                trend={dashboardData?.stats?.attendance?.trend}
                 icon="calendar"
                 color="#10B981"
               />
@@ -317,36 +347,39 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
           {/* Quick Actions */}
           <View style={styles.sectionPadding}>
             <View style={styles.fullScreenBox}>
-              <Text style={styles.sectionTitle}>Quick Actions</Text>
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.sectionTitleDot} />
+                <Text style={styles.sectionTitle}>Quick Actions</Text>
+              </View>
               <View style={styles.quickActionsGrid}>
                 <QuickActionCard
                   delay={100}
-                  title="Staff Management"
-                  desc="Manage your school team"
+                  title="Staff"
+                  desc="Manage your team"
                   color="#4F46E5"
                   icon="people"
                   onPress={() => navigation.navigate('PrincipalStaff')}
                 />
                 <QuickActionCard
                   delay={150}
-                  title="Student Management"
-                  desc="Enroll & track students"
+                  title="Students"
+                  desc="Enroll & track"
                   color="#10B981"
                   icon="school"
                   onPress={() => navigation.navigate('PrincipalStudentDetails')}
                 />
                 <QuickActionCard
                   delay={200}
-                  title="Announcements"
-                  desc="Notify teachers & parents"
+                  title="Announce"
+                  desc="Notify everyone"
                   color="#F59E0B"
                   icon="megaphone"
                   onPress={() => navigation.navigate('PrincipalAnnouncements')}
                 />
                 <QuickActionCard
                   delay={250}
-                  title="Schedule Event"
-                  desc="Add to academic calendar"
+                  title="Calendar"
+                  desc="Schedule events"
                   color="#EC4899"
                   icon="calendar"
                   onPress={() => navigation.navigate('PrincipalCalendar')}
@@ -355,68 +388,42 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
             </View>
           </View>
 
-          {/* Performance & Events Grid */}
-          <View style={[styles.sectionPadding, { flexDirection: 'column', gap: 20 }]}>
-            {/* Top Students */}
-            {/* <View>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => toggleSection('topStudents')}
-                style={styles.sectionHeaderSpaceBetween}
-              >
-                <Text style={styles.sectionTitle}>Top Students</Text>
-                <Ionicons name={isTopStudentsCollapsed ? "chevron-down" : "chevron-up"} size={20} color="#6B7280" />
-              </TouchableOpacity>
-
-              {!isTopStudentsCollapsed && (
-                <View style={styles.cardContainer}>
-                  {(dashboardData?.topStudents && dashboardData.topStudents.length > 0) ? (
-                    dashboardData.topStudents.map((student: any, index: number) => (
-                      <TopStudentCard
-                        key={index}
-                        rank={student.rank}
-                        name={student.name}
-                        className={student.className}
-                        percentage={student.percentage}
-                      />
-                    ))
-                  ) : (
-                    <Text style={styles.emptyText}>No data available</Text>
-                  )}
+          {/* Upcoming Events */}
+          <View style={[styles.sectionPadding, { marginTop: 4 }]}>
+            <View style={styles.sectionHeaderRow}>
+              <View style={[styles.sectionTitleDot, { backgroundColor: '#6366F1' }]} />
+              <Text style={styles.sectionTitle}>Upcoming Events</Text>
+            </View>
+            <View style={styles.cardContainer}>
+              {(upcomingEvents && upcomingEvents.length > 0) ? (
+                upcomingEvents.map((event: any, index: number) => (
+                  <EventCard
+                    key={index}
+                    title={event.title}
+                    date={event.date}
+                    color={event.color}
+                  />
+                ))
+              ) : (
+                <View style={styles.emptyStateContainer}>
+                  <Ionicons name="calendar-outline" size={32} color={theme.subtext} style={{ opacity: 0.5 }} />
+                  <Text style={styles.emptyText}>No upcoming events</Text>
                 </View>
               )}
-            </View> */}
-
-            {/* Upcoming Events */}
-            <View>
-              <Text style={styles.sectionTitle}>Upcoming Events</Text>
-              <View style={styles.cardContainer}>
-                {(upcomingEvents && upcomingEvents.length > 0) ? (
-                  upcomingEvents.map((event: any, index: number) => (
-                    <EventCard
-                      key={index}
-                      title={event.title}
-                      date={event.date}
-                      color={event.color}
-                    />
-                  ))
-                ) : (
-                  <Text style={styles.emptyText}>No upcoming events</Text>
-                )}
-              </View>
             </View>
           </View>
 
           {/* Recent Staff Activity */}
-          <View style={[styles.sectionPadding, { marginTop: 24 }]}>
+          <View style={[styles.sectionPadding, { marginTop: 4 }]}>
             <View style={styles.sectionHeaderSpaceBetween}>
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => toggleSection('activity')}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
               >
-                <Text style={styles.sectionTitle}>Recent Staff Activity</Text>
-                <Ionicons name={isActivityCollapsed ? "chevron-down" : "chevron-up"} size={18} color="#6B7280" />
+                <View style={[styles.sectionTitleDot, { backgroundColor: '#10B981' }]} />
+                <Text style={styles.sectionTitle}>Staff Activity</Text>
+                <Ionicons name={isActivityCollapsed ? "chevron-down" : "chevron-up"} size={16} color={theme.subtext} />
               </TouchableOpacity>
               <TouchableOpacity>
                 <Text style={styles.viewAllText}>View All →</Text>
@@ -438,24 +445,28 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                     />
                   ))
                 ) : (
-                  <Text style={styles.emptyText}>No recent staff activity</Text>
+                  <View style={styles.emptyStateContainer}>
+                    <Ionicons name="people-outline" size={32} color={theme.subtext} style={{ opacity: 0.5 }} />
+                    <Text style={styles.emptyText}>No recent staff activity</Text>
+                  </View>
                 )}
               </View>
             )}
           </View>
 
-          {/* Pending Approvals - Requested UI */}
-          <View style={[styles.sectionPadding, { marginTop: 24, marginBottom: 20 }]}>
+          {/* Pending Approvals */}
+          <View style={[styles.sectionPadding, { marginTop: 4, marginBottom: 32 }]}>
             <View style={styles.sectionHeaderSpaceBetween}>
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => toggleSection('approvals')}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
               >
+                <View style={[styles.sectionTitleDot, { backgroundColor: '#F59E0B' }]} />
                 <Text style={styles.sectionTitle}>Pending Approvals</Text>
-                <Ionicons name={isApprovalsCollapsed ? "chevron-down" : "chevron-up"} size={18} color="#6B7280" />
+                <Ionicons name={isApprovalsCollapsed ? "chevron-down" : "chevron-up"} size={16} color={theme.subtext} />
               </TouchableOpacity>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('PrincipalEquipment')}>
                 <Text style={styles.viewAllText}>View All →</Text>
               </TouchableOpacity>
             </View>
@@ -470,17 +481,26 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                         <Text style={styles.approvalBy}>By {app.submittedBy} • {app.date}</Text>
                       </View>
                       <View style={styles.approvalActions}>
-                        <TouchableOpacity style={styles.approveBtn}>
+                        <TouchableOpacity
+                          style={styles.approveBtn}
+                          onPress={() => handleApprovalAction(app.id, 'APPROVED')}
+                        >
                           <Ionicons name="checkmark" size={16} color="#10B981" />
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.rejectBtn}>
+                        <TouchableOpacity
+                          style={styles.rejectBtn}
+                          onPress={() => handleApprovalAction(app.id, 'REJECTED')}
+                        >
                           <Ionicons name="close" size={16} color="#EF4444" />
                         </TouchableOpacity>
                       </View>
                     </View>
                   ))
                 ) : (
-                  <Text style={styles.emptyText}>All requests are processed</Text>
+                  <View style={styles.emptyStateContainer}>
+                    <Ionicons name="checkmark-circle-outline" size={32} color={theme.subtext} style={{ opacity: 0.5 }} />
+                    <Text style={styles.emptyText}>All requests are processed</Text>
+                  </View>
                 )}
               </View>
             )}
@@ -576,10 +596,14 @@ const DashboardSkeleton = () => {
       </View>
 
       <View style={styles.sectionPadding}>
+        <Skeleton width="100%" height={140} borderRadius={16} style={{ marginBottom: 16 }} />
+      </View>
+
+      <View style={styles.sectionPadding}>
         <View style={styles.metricRow}>
-          <Skeleton width="31%" height={100} borderRadius={12} />
-          <Skeleton width="31%" height={100} borderRadius={12} />
-          <Skeleton width="31%" height={100} borderRadius={12} />
+          <Skeleton width="31%" height={110} borderRadius={20} />
+          <Skeleton width="31%" height={110} borderRadius={20} />
+          <Skeleton width="31%" height={110} borderRadius={20} />
         </View>
       </View>
 
@@ -593,14 +617,7 @@ const DashboardSkeleton = () => {
       </View>
 
       <View style={styles.sectionPadding}>
-        <View style={{ flexDirection: 'row', gap: 16 }}>
-          <View style={{ flex: 1 }}>
-            <Skeleton width="100%" height={200} borderRadius={16} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Skeleton width="100%" height={200} borderRadius={16} />
-          </View>
-        </View>
+        <Skeleton width="100%" height={180} borderRadius={16} />
       </View>
     </ScrollView>
   );
@@ -610,10 +627,10 @@ const QuickActionCard = React.memo(({ title, desc, delay, color, icon = 'documen
   const { theme } = useTheme();
   const styles = getStyles(theme);
   return (
-    <Animated.View entering={FadeInUp.delay(delay).springify()} style={[styles.quickActionCard, { borderLeftColor: color, borderLeftWidth: 4 }]}>
+    <Animated.View entering={FadeInUp.delay(delay).springify()} style={[styles.quickActionCard]}>
       <TouchableOpacity style={styles.quickActionTouchable} activeOpacity={0.7} onPress={onPress}>
-        <View style={[styles.quickActionIconBox, { backgroundColor: color + '15' }]}>
-          <Ionicons name={icon} size={20} color={color} />
+        <View style={[styles.quickActionIconBox, { backgroundColor: color + '18' }]}>
+          <Ionicons name={icon} size={22} color={color} />
         </View>
         <Text style={styles.quickActionTitle}>{title}</Text>
         <Text style={styles.quickActionDesc} numberOfLines={2}>{desc}</Text>
@@ -633,8 +650,8 @@ const ActivityItem = React.memo(({ initial, iconBgColor, name, action, time, isL
       <View style={styles.activityContent}>
         <Text style={styles.activityName}>{name}</Text>
         <Text style={styles.activityAction}>{action}</Text>
-        <Text style={styles.activityTime}>{time}</Text>
       </View>
+      <Text style={styles.activityTime}>{time}</Text>
     </View>
   );
 });
@@ -643,11 +660,14 @@ const EventCard = React.memo(({ title, date, color }: any) => {
   const { theme } = useTheme();
   const styles = getStyles(theme);
   return (
-    <View style={[styles.eventCard, { borderLeftColor: color, borderLeftWidth: 4 }]}>
+    <View style={[styles.eventCard, { borderLeftColor: color }]}>
+      <View style={[styles.eventAccent, { backgroundColor: color + '15' }]}>
+        <Ionicons name="calendar" size={16} color={color} />
+      </View>
       <View style={styles.eventCardContent}>
-        <Text style={styles.eventTitle}>{title}</Text>
+        <Text style={styles.eventTitle} numberOfLines={2}>{title}</Text>
         <View style={styles.eventDateContainer}>
-          <Ionicons name="calendar-outline" size={14} color="#9CA3AF" />
+          <Ionicons name="time-outline" size={12} color={theme.subtext} />
           <Text style={styles.eventDateText}>{date}</Text>
         </View>
       </View>
@@ -655,42 +675,30 @@ const EventCard = React.memo(({ title, date, color }: any) => {
   );
 });
 
+// MetricCard: value=null → shows "—" with a "No data" label
 const MetricCard = React.memo(({ title, value, trend, icon, color }: any) => {
   const { theme } = useTheme();
   const styles = getStyles(theme);
+  const hasValue = value !== null && value !== undefined;
   return (
     <View style={styles.metricCard}>
-      <View style={[styles.metricIconBox, { backgroundColor: color + '12' }]}>
-        <Ionicons name={icon} size={16} color={color} />
+      <View style={[styles.metricIconBox, { backgroundColor: color + '18' }]}>
+        <Ionicons name={icon} size={18} color={color} />
       </View>
 
       <View style={styles.metricContentCenter}>
-        <Text style={styles.metricValue}>{value}</Text>
+        <Text style={[styles.metricValue, !hasValue && styles.metricValueEmpty]}>
+          {hasValue ? value : '—'}
+        </Text>
         <Text style={styles.metricTitle}>{title}</Text>
+        {!hasValue && <Text style={styles.metricNoData}>No data</Text>}
       </View>
 
       {trend ? (
-        <View style={styles.trendBadge}>
-          <Text style={[styles.trendText, { color: color }]}>{trend}</Text>
+        <View style={[styles.trendBadge, { backgroundColor: color + '12' }]}>
+          <Text style={[styles.trendText, { color }]}>{trend}</Text>
         </View>
-      ) : <View style={{ height: 14 }} />}
-    </View>
-  );
-});
-
-const TopStudentCard = React.memo(({ rank, name, className, percentage }: any) => {
-  const { theme } = useTheme();
-  const styles = getStyles(theme);
-  return (
-    <View style={styles.topStudentCard}>
-      <View style={styles.rankCircle}>
-        <Text style={styles.rankText}>{rank}</Text>
-      </View>
-      <View style={styles.topStudentInfo}>
-        <Text style={styles.topStudentName}>{name}</Text>
-        <Text style={styles.topStudentClass}>{className}</Text>
-      </View>
-      <Text style={styles.topStudentPercentage}>{percentage}</Text>
+      ) : <View style={{ height: 18 }} />}
     </View>
   );
 });
@@ -701,8 +709,20 @@ const getStyles = (theme: any) => StyleSheet.create({
   scrollContent: { paddingBottom: 40 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background },
   loadingText: { marginTop: 12, color: theme.primary, fontSize: 14, fontWeight: '500' },
-  emptyText: { textAlign: 'center', color: theme.subtext, fontSize: 12, paddingVertical: 20 },
-  cardContainer: { backgroundColor: theme.surface, borderRadius: 16, padding: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
+  emptyText: { textAlign: 'center', color: theme.subtext, fontSize: 13, paddingTop: 8 },
+  emptyStateContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 24 },
+  cardContainer: {
+    backgroundColor: theme.surface,
+    borderRadius: 16,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
 
   // Used for edge-to-edge feeling but standard padding
   sectionPadding: {
@@ -763,44 +783,58 @@ const getStyles = (theme: any) => StyleSheet.create({
 
   // Hero Banner
   heroBanner: {
-    borderRadius: 16,
-    paddingVertical: 36,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
+    borderRadius: 20,
+    paddingVertical: 32,
+    paddingHorizontal: 20,
+    shadowColor: '#4F46E5',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 10,
     overflow: 'hidden',
   },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    marginBottom: 14,
+  },
+  heroBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.95)',
+    letterSpacing: 0.5,
+  },
   heroTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '800',
     color: '#fff',
-    textAlign: 'center',
     marginBottom: 8,
     zIndex: 2,
     letterSpacing: -0.5,
+    lineHeight: 32,
   },
   heroSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.75)',
     lineHeight: 20,
     zIndex: 2,
-    maxWidth: '80%',
+    maxWidth: '85%',
   },
   heroContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
     zIndex: 2,
   },
+
+  // Metric Cards
   metricRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
   metricCard: {
     flex: 1,
@@ -808,7 +842,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 20,
     padding: 12,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     shadowColor: '#64748B',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.08,
@@ -816,19 +850,21 @@ const getStyles = (theme: any) => StyleSheet.create({
     elevation: 4,
     borderWidth: 1,
     borderColor: theme.border,
-    minHeight: 120,
+    minHeight: 130,
+    paddingVertical: 14,
   },
   metricIconBox: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
+    width: 34,
+    height: 34,
+    borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   metricContentCenter: {
     alignItems: 'center',
     justifyContent: 'center',
+    flex: 1,
   },
   metricValue: {
     fontSize: 22,
@@ -836,35 +872,58 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.text,
     letterSpacing: -0.5,
   },
+  metricValueEmpty: {
+    color: theme.subtext,
+    fontSize: 24,
+    fontWeight: '300',
+  },
+  metricNoData: {
+    fontSize: 9,
+    color: theme.subtext,
+    marginTop: 2,
+    fontWeight: '500',
+    opacity: 0.7,
+  },
   metricTitle: {
     fontSize: 8,
     fontWeight: '800',
     color: theme.subtext,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginTop: 2,
+    marginTop: 3,
   },
   trendBadge: {
-    marginTop: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: theme.background,
+    marginTop: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
   trendText: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: '700',
   },
 
-  // Sections
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: theme.text, marginBottom: 14 },
-  sectionHeaderSpaceBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  // Section Headers
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  sectionTitleDot: {
+    width: 4,
+    height: 18,
+    borderRadius: 2,
+    backgroundColor: theme.primary,
+  },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: theme.text },
+  sectionHeaderSpaceBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   viewAllText: { fontSize: 13, fontWeight: '600', color: theme.primary },
 
   // Quick Actions
   fullScreenBox: {
     backgroundColor: theme.surface,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
     shadowColor: '#1E293B',
     shadowOffset: { width: 0, height: 8 },
@@ -874,14 +933,14 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
   },
-  quickActionsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 16 },
+  quickActionsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 },
   quickActionCard: {
     width: '48%',
-    backgroundColor: theme.surface,
-    borderRadius: 12,
+    backgroundColor: theme.background,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: theme.border,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 12,
     shadowColor: '#1E293B',
     shadowOffset: { width: 0, height: 2 },
@@ -891,14 +950,14 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   quickActionTouchable: { alignItems: 'flex-start' },
   quickActionIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
-  quickActionTitle: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 4 },
+  quickActionTitle: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 3 },
   quickActionDesc: { fontSize: 10, color: theme.subtext, lineHeight: 14 },
 
   // Activity List
@@ -908,82 +967,82 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
     shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.1,
-    shadowRadius: 36,
-    elevation: 12,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 6,
+    overflow: 'hidden',
   },
   activityItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 14,
   },
   activityItemBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: theme.border, // slate-200, more visible divider
+    borderBottomColor: theme.border,
   },
   activityAvatarBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   activityInitial: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
   },
   activityContent: { flex: 1, justifyContent: 'center' },
-  activityName: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 1 },
-  activityAction: { fontSize: 11, color: theme.subtext, marginBottom: 1, lineHeight: 15 },
-  activityTime: { fontSize: 11, color: theme.subtext },
+  activityName: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 2 },
+  activityAction: { fontSize: 11, color: theme.subtext, lineHeight: 15 },
+  activityTime: { fontSize: 11, color: theme.subtext, fontWeight: '600' },
 
-  // Event Card Styles
+  // Event Card
   eventCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 12,
-    marginBottom: 10,
+    marginBottom: 8,
+    borderLeftWidth: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
     elevation: 2,
     borderWidth: 1,
     borderColor: theme.border,
+    gap: 12,
+  },
+  eventAccent: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   eventCardContent: { flex: 1 },
   eventTitle: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 4 },
   eventDateContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   eventDateText: { fontSize: 11, color: theme.subtext },
 
-  // Top Student Card Styles
-  topStudentCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
-  },
-  rankCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#F59E0B20',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  rankText: { fontSize: 12, fontWeight: '700', color: '#F59E0B' },
-  topStudentInfo: { flex: 1 },
-  topStudentName: { fontSize: 13, fontWeight: '700', color: theme.text },
-  topStudentClass: { fontSize: 11, color: theme.subtext },
-  topStudentPercentage: { fontSize: 13, fontWeight: '700', color: '#10B981' },
-
   // Approvals
-  approvalsContainer: { backgroundColor: theme.surface, borderRadius: 16, shadowColor: '#1E293B', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.1, shadowRadius: 36, elevation: 12, overflow: 'hidden', borderWidth: 1, borderColor: theme.border },
+  approvalsContainer: {
+    backgroundColor: theme.surface,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.border,
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 6,
+  },
   approvalCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: theme.border },
   approvalInfo: { flex: 1 },
   approvalRequest: { fontSize: 14, fontWeight: '700', color: theme.text },
