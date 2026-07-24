@@ -358,7 +358,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
           {/* Performance & Events Grid */}
           <View style={[styles.sectionPadding, { flexDirection: 'column', gap: 20 }]}>
             {/* Top Students */}
-            <View>
+            {/* <View>
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => toggleSection('topStudents')}
@@ -385,7 +385,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                   )}
                 </View>
               )}
-            </View>
+            </View> */}
 
             {/* Upcoming Events */}
             <View>
@@ -509,7 +509,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Theme</Text>
             <View style={styles.modalDivider} />
-            
+
             <TouchableOpacity
               style={styles.optionRow}
               onPress={async () => {

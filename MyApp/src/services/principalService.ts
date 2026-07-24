@@ -16,6 +16,58 @@ export interface ClassItem {
   updatedAt: string;
 }
 
+export interface StudentItem {
+  id: string;
+  name: string;
+  firstName?: string;
+  lastName?: string;
+  rollNumber?: string;
+  roll_number?: string;
+  attendancePercentage?: number;
+  attendance?: number;
+  status?: string;
+  isActive?: boolean;
+  avatarUrl?: string;
+  photoUrl?: string;
+}
+
+export interface SubjectRequest {
+  classSubjectId?: string;
+  subjectId: string;
+  teacherId?: string | null;
+  weeklyPeriods?: number;
+}
+
+export interface CreateClassRequest {
+  name: string;
+  section?: string;
+  grade?: string;
+  academicYear: string;
+  institutionId?: string;
+  classTeacherId?: string | null;
+  subjects?: SubjectRequest[];
+}
+
+export interface UpdateClassRequest {
+  name: string;
+  section?: string;
+  grade?: string;
+  academicYear: string;
+  classTeacherId?: string | null;
+  subjects?: SubjectRequest[];
+}
+
+export interface ClassResponse {
+  classes?: ClassItem[];
+  class?: ClassItem;
+  data?: ClassItem[] | ClassItem;
+}
+
+export interface StudentsResponse {
+  students?: StudentItem[];
+  data?: StudentItem[];
+}
+
 export interface SubjectItem {
   id: string;
   institution_id: string;
@@ -248,11 +300,27 @@ export interface SessionItem {
 
 const principalService = {
   getClasses() {
-    return apiClient.get<{ classes: ClassItem[] }>(ENDPOINTS.PRINCIPAL.CLASSES);
+    return apiClient.get<ClassResponse>(ENDPOINTS.PRINCIPAL.CLASSES);
+  },
+
+  getClassStudents(classId: string) {
+    return apiClient.get<StudentsResponse>(ENDPOINTS.PRINCIPAL.CLASS_STUDENTS(classId));
   },
 
   getStudentsByClass(classId: string) {
-    return apiClient.get<any>(ENDPOINTS.PRINCIPAL.CLASS_STUDENTS(classId));
+    return apiClient.get<StudentsResponse>(ENDPOINTS.PRINCIPAL.CLASS_STUDENTS(classId));
+  },
+
+  createClass(payload: CreateClassRequest) {
+    return apiClient.post<ClassResponse>(ENDPOINTS.PRINCIPAL.CLASSES, payload);
+  },
+
+  updateClass(classId: string, payload: UpdateClassRequest) {
+    return apiClient.put<ClassResponse>(`${ENDPOINTS.PRINCIPAL.CLASSES}/${classId}`, payload);
+  },
+
+  deleteClass(classId: string) {
+    return apiClient.delete<any>(`${ENDPOINTS.PRINCIPAL.CLASSES}/${classId}`);
   },
 
   getStudentDetail(studentId: string) {
@@ -397,9 +465,6 @@ const principalService = {
 
   updateInstitutionProfile(data: { name: string; schoolType: string; affiliation: string; phone: string; address: string }) {
     return apiClient.patch<InstitutionProfileData>(ENDPOINTS.PRINCIPAL.ACCOUNT_INSTITUTION, data);
-  },
-  deleteClass(classId: string) {
-    return apiClient.delete(`${ENDPOINTS.PRINCIPAL.CLASSES}/${classId}`);
   },
 
   getSessions() {

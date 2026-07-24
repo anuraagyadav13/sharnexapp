@@ -103,7 +103,7 @@ export type RootStackParamList = {
   PrincipalEditSubject: { subjectId: string, initialData?: any };
   PrincipalAddClass: undefined;
   PrincipalManageClass: { classId: string, className: string };
-  PrincipalEditClass: { classId: string };
+  PrincipalEditClass: { classId: string; classData?: any };
   PrincipalEquipment: undefined;
   PrincipalLibrary: undefined;
 };

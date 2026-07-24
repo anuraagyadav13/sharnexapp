@@ -11,6 +11,7 @@ import {
   Platform,
   Alert,
   Image,
+  TextInput,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -48,6 +49,8 @@ const PrincipalClassesScreen: React.FC<Props> = ({ navigation }) => {
 
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [assignments, setAssignments] = useState<ClassAssignment[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFilter, setSelectedFilter] = useState<'ALL' | 'ASSIGNED' | 'UNASSIGNED'>('ALL');
 
   const loadData = useCallback(
     async (showRefreshIndicator = false) => {
@@ -134,6 +137,31 @@ const PrincipalClassesScreen: React.FC<Props> = ({ navigation }) => {
     }, {} as Record<string, ClassAssignment>);
   }, [assignments]);
 
+  const filteredClasses = useMemo(() => {
+    return classes.filter(item => {
+      const assignedTeacher = assignmentMap[item.id]?.teacherName || '';
+      const searchLower = searchQuery.trim().toLowerCase();
+
+      const matchesSearch =
+        !searchLower ||
+        item.name?.toLowerCase().includes(searchLower) ||
+        item.section?.toLowerCase().includes(searchLower) ||
+        item.grade?.toLowerCase().includes(searchLower) ||
+        item.academicYear?.toLowerCase().includes(searchLower) ||
+        assignedTeacher.toLowerCase().includes(searchLower);
+
+      if (!matchesSearch) return false;
+
+      if (selectedFilter === 'ASSIGNED') {
+        return !!assignmentMap[item.id]?.teacherName;
+      } else if (selectedFilter === 'UNASSIGNED') {
+        return !assignmentMap[item.id]?.teacherName;
+      }
+
+      return true;
+    });
+  }, [classes, assignmentMap, searchQuery, selectedFilter]);
+
   const handleCardPress = useCallback(
     (classItem: ClassItem) => {
       navigation.navigate('PrincipalClassDetail', {
@@ -144,10 +172,21 @@ const PrincipalClassesScreen: React.FC<Props> = ({ navigation }) => {
     [navigation]
   );
 
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-GB');
+    } catch {
+      return '';
+    }
+  };
+
   const renderClassCard = useCallback(
     ({ item }: { item: ClassItem }) => {
-      const assignedTeacher = assignmentMap[item.id]?.teacherName || 'No teacher assigned';
-      const classNameFull = item.name + (item.section ? ` ${item.section}` : '');
+      const assignedTeacher = item.classTeacherName || assignmentMap[item.id]?.teacherName || 'Not assigned';
+      const classNameFull = (item.name || '') + (item.section ? ` - Sec ${item.section}` : '');
+      const createdDateFormatted = formatDate(item.createdAt);
 
       return (
         <TouchableOpacity
@@ -157,11 +196,16 @@ const PrincipalClassesScreen: React.FC<Props> = ({ navigation }) => {
         >
           <View style={styles.cardHeader}>
             <View style={styles.classIconCircle}>
-              <MaterialCommunityIcons name="google-classroom" size={24} color="#4F46E5" />
+              <MaterialCommunityIcons name="google-classroom" size={24} color={theme.primary} />
             </View>
             <View style={styles.classNameContainer}>
               <Text style={styles.classNameText}>{classNameFull}</Text>
               <View style={styles.badgeRow}>
+                {!!item.grade && (
+                  <View style={[styles.academicYearBadge, { marginRight: 6 }]}>
+                    <Text style={styles.academicYearText}>Grade {item.grade}</Text>
+                  </View>
+                )}
                 <View style={styles.academicYearBadge}>
                   <Text style={styles.academicYearText}>
                     AY {item.academicYear || '2026'}
@@ -169,17 +213,26 @@ const PrincipalClassesScreen: React.FC<Props> = ({ navigation }) => {
                 </View>
               </View>
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <TouchableOpacity
-                style={{ padding: 8, marginRight: 4 }}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              {/* <TouchableOpacity
+                style={{ padding: 6 }}
                 onPress={(e) => {
                   e.stopPropagation();
-                  handleDeleteClass(item.id, classNameFull);
+                  navigation.navigate('PrincipalEditClass', { classId: item.id, classData: item });
                 }}
               >
-                <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                <Ionicons name="pencil-outline" size={18} color={theme.primary} />
+              </TouchableOpacity> */}
+
+              <TouchableOpacity
+                style={{ padding: 6 }}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleDeleteClass(item.id, item.name || 'this class');
+                }}
+              >
+                <Ionicons name="trash-outline" size={18} color="#EF4444" />
               </TouchableOpacity>
-              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
             </View>
           </View>
 
@@ -187,31 +240,36 @@ const PrincipalClassesScreen: React.FC<Props> = ({ navigation }) => {
 
           <View style={styles.cardBody}>
             <View style={styles.metricItem}>
-              <Ionicons name="people-outline" size={16} color="#6B7280" />
-              <Text style={styles.metricText}>{item.studentCount || 0} Students</Text>
+              <Ionicons name="people-outline" size={16} color={theme.subtext} />
+              <Text style={styles.metricText}>{item.studentCount ?? 0} Students</Text>
             </View>
             <View style={styles.metricItem}>
-              <Ionicons name="person-outline" size={16} color="#6B7280" />
-              <Text style={styles.metricText}>{item.teacherCount || 0} Teachers</Text>
+              <Ionicons name="person-outline" size={16} color={theme.subtext} />
+              <Text style={styles.metricText}>{item.teacherCount ?? 0} Teachers</Text>
             </View>
           </View>
 
           <View style={styles.cardFooter}>
-            <Text style={styles.teacherLabel}>Class Teacher:</Text>
-            <Text
-              style={[
-                styles.teacherValue,
-                assignedTeacher === 'No teacher assigned' && styles.noTeacherStyle,
-              ]}
-              numberOfLines={1}
-            >
-              {assignedTeacher}
-            </Text>
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={styles.teacherLabel}>Class Teacher:</Text>
+              <Text
+                style={[
+                  styles.teacherValue,
+                  assignedTeacher === 'Not assigned' && styles.noTeacherStyle,
+                ]}
+                numberOfLines={1}
+              >
+                {assignedTeacher}
+              </Text>
+            </View>
+            {!!createdDateFormatted && (
+              <Text style={styles.createdDateText}>{createdDateFormatted}</Text>
+            )}
           </View>
         </TouchableOpacity>
       );
     },
-    [assignmentMap, handleCardPress]
+    [assignmentMap, handleCardPress, theme, navigation]
   );
 
   if (isLoading) {
@@ -264,7 +322,7 @@ const PrincipalClassesScreen: React.FC<Props> = ({ navigation }) => {
       </View>
 
       <FlatList
-        data={classes}
+        data={filteredClasses}
         keyExtractor={(item) => item.id}
         renderItem={renderClassCard}
         contentContainerStyle={styles.listContent}
@@ -273,19 +331,70 @@ const PrincipalClassesScreen: React.FC<Props> = ({ navigation }) => {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={() => loadData(true)}
-            colors={['#4F46E5']}
+            colors={[theme.primary]}
           />
+        }
+        ListHeaderComponent={
+          <View style={styles.listHeaderContainer}>
+            <TouchableOpacity
+              style={styles.addClassButton}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('PrincipalAddClass')}
+            >
+              <Ionicons name="add-circle-outline" size={20} color="#FFF" />
+              <Text style={styles.addClassButtonText}>Add New Class</Text>
+            </TouchableOpacity>
+
+            <View style={styles.searchWrapper}>
+              <Ionicons name="search-outline" size={20} color={theme.subtext} style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search classes by name, section, grade..."
+                placeholderTextColor={theme.placeholder}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
+                  <Ionicons name="close-circle" size={18} color={theme.subtext} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={styles.filterRow}>
+              {(['ALL', 'ASSIGNED', 'UNASSIGNED'] as const).map(filter => (
+                <TouchableOpacity
+                  key={filter}
+                  style={[styles.filterPill, selectedFilter === filter && styles.filterPillActive]}
+                  onPress={() => setSelectedFilter(filter)}
+                >
+                  <Text style={[styles.filterPillText, selectedFilter === filter && styles.filterPillTextActive]}>
+                    {filter === 'ALL' ? 'All' : filter === 'ASSIGNED' ? 'Assigned' : 'Unassigned'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <MaterialCommunityIcons name="google-classroom" size={64} color={theme.subtext} />
             <Text style={styles.emptyTitle}>No classes found</Text>
             <Text style={styles.emptySubtitle}>
-              There are no classes registered in your institution yet.
+              {searchQuery ? 'No classes match your search criteria.' : 'There are no classes registered in your institution yet.'}
             </Text>
           </View>
         }
       />
+
+      {/* Floating Action Button */}
+      <TouchableOpacity
+        style={styles.fabButton}
+        activeOpacity={0.8}
+        onPress={() => navigation.navigate('PrincipalAddClass')}
+      >
+        <Ionicons name="add" size={28} color="#FFF" />
+      </TouchableOpacity>
 
       <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
     </View>
@@ -355,6 +464,74 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   listContent: {
     padding: 16,
+  },
+  listHeaderContainer: {
+    marginBottom: 16,
+  },
+  addClassButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    marginBottom: 14,
+    shadowColor: theme.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+    gap: 8,
+  },
+  addClassButtonText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  searchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.border,
+    paddingHorizontal: 12,
+    height: 48,
+    marginBottom: 12,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: theme.text,
+    height: '100%',
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  filterPill: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: theme.surface,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  filterPillActive: {
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
+  },
+  filterPillText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.subtext,
+  },
+  filterPillTextActive: {
+    color: '#FFF',
   },
   classCard: {
     backgroundColor: theme.surface,
@@ -486,6 +663,28 @@ const getStyles = (theme: any) => StyleSheet.create({
     height: 32,
     borderRadius: 16,
     marginLeft: 4,
+  },
+  fabButton: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: theme.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: theme.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  createdDateText: {
+    fontSize: 11,
+    color: theme.subtext,
+    marginLeft: 8,
+    fontWeight: '500',
   },
 });
 
