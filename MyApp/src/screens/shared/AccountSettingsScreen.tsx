@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,15 +10,25 @@ import {
   TextInput,
   Modal,
   Switch,
+  Image,
+  RefreshControl,
+  Keyboard,
 } from 'react-native';
+import { useTheme } from '../../store/ThemeContext';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { StudentHeader } from '../../components/StudentHeader';
 import { useAuth } from '../../store/AuthContext';
 import accountService from '../../services/accountService';
+import teacherService from '../../services/teacherService';
+import principalService from '../../services/principalService';
+import apiClient from '../../services/apiClient';
+import { ENDPOINTS } from '../../constants/api';
+import { launchImageLibrary } from 'react-native-image-picker';
 import { ActivityIndicator, Alert } from 'react-native';
 import axios from 'axios';
 
@@ -37,76 +47,87 @@ const InputField = ({
   onRightIconPress,
   prefixComponent,
   secureTextEntry,
-}: any) => (
-  <View style={styles.fieldContainer}>
-    <View style={styles.labelRow}>
-      <Ionicons name={labelIcon} size={12} color="#3B82F6" />
-      <Text style={styles.labelText}>{label}</Text>
-    </View>
-    <View
-      style={[styles.inputWrapper, multiline && styles.inputWrapperMultiline]}
-    >
-      {prefixComponent ? (
-        prefixComponent
-      ) : (
-        <Ionicons
-          name={inputIcon}
-          size={16}
-          color="#6B7280"
-          style={[styles.inputLeftIcon, multiline && { marginTop: 14 }]}
-        />
-      )}
-      <TextInput
-        style={[styles.textInput, multiline && styles.textInputMultiline]}
-  placeholder={placeholder}
-  placeholderTextColor="#9CA3AF"
-  multiline={multiline}
-  value={value}
-  onChangeText={onChangeText}
-  secureTextEntry={secureTextEntry}
-      />
-      {rightIcon && (
-        <TouchableOpacity
-          onPress={onRightIconPress}
-          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-        >
+}: any) => {
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
+  return (
+    <View style={styles.fieldContainer}>
+      <View style={styles.labelRow}>
+        <Ionicons name={labelIcon} size={12} color={theme.primary} />
+        <Text style={styles.labelText}>{label}</Text>
+      </View>
+      <View
+        style={[styles.inputWrapper, multiline && styles.inputWrapperMultiline]}
+      >
+        {prefixComponent ? (
+          prefixComponent
+        ) : (
           <Ionicons
-            name={rightIcon}
-            size={18}
-            color="#111827"
-            style={styles.inputRightIcon}
+            name={inputIcon}
+            size={16}
+            color={theme.subtext}
+            style={[styles.inputLeftIcon, multiline && { marginTop: 14 }]}
           />
-        </TouchableOpacity>
-      )}
+        )}
+        <TextInput
+          style={[styles.textInput, multiline && styles.textInputMultiline]}
+          placeholder={placeholder}
+          placeholderTextColor={theme.subtext}
+          multiline={multiline}
+          value={value}
+          onChangeText={onChangeText}
+          secureTextEntry={secureTextEntry}
+          keyboardAppearance={isDarkMode ? 'dark' : 'light'}
+        />
+        {rightIcon && (
+          <TouchableOpacity
+            onPress={onRightIconPress}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+          >
+            <Ionicons
+              name={rightIcon}
+              size={18}
+              color={theme.text}
+              style={styles.inputRightIcon}
+            />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 const PreferenceToggle = ({
   title,
   description,
   value,
   onValueChange,
-}: any) => (
-  <View style={styles.toggleCard}>
-    <View style={{ flex: 1, paddingRight: 10 }}>
-      <Text style={styles.toggleTitle}>{title}</Text>
-      <Text style={styles.toggleDesc}>{description}</Text>
+}: any) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+  return (
+    <View style={styles.toggleCard}>
+      <View style={{ flex: 1, paddingRight: 10 }}>
+        <Text style={styles.toggleTitle}>{title}</Text>
+        <Text style={styles.toggleDesc}>{description}</Text>
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ false: theme.border, true: '#22C55E' }}
+        thumbColor="#FFFFFF"
+      />
     </View>
-    <Switch
-      value={value}
-      onValueChange={onValueChange}
-      trackColor={{ false: '#E5E7EB', true: '#22C55E' }}
-      thumbColor="#FFFFFF"
-    />
-  </View>
-);
+  );
+};
 
 const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
-  const { authState } = useAuth();
-  const role = authState.role;
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
+  const { authState, updateUser } = useAuth();
+  const role = authState.role?.toLowerCase() || '';
   const isTeacher = role === 'teacher';
-  const isInstitution = role === 'principal';
+  const isInstitution = role === 'institution' || role === 'principal';
   const roleTitle = isInstitution
     ? 'Institution'
     : isTeacher
@@ -117,143 +138,460 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
     : isTeacher
       ? 'Professional Info'
       : 'Parent Information';
+  const [rollNo, setRollNo] = useState('');
+
   const idLabel = isInstitution
     ? 'PRN2023-01X'
     : isTeacher
       ? 'EMP2023-12A'
-      : 'CS2023-789';
+      : rollNo || 'Loading...';
 
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
-  const [dob, setDob] = useState('');
   const [activeTab, setActiveTab] = useState<string>(
     route.params?.targetTab || 'Personal Details',
   );
   const [profileData, setProfileData] = useState({
-  firstName: '',
-  lastName: '',
-  phone: '',
-  email: '',
-  dob: '',
-  address: '',
-});
-//parent data state
-const [parentData, setParentData] = useState({
-  name: '',
-  relationship: '',
-  email: '',
-  phone: '',
-  address: '',
-});
-//emergency data
-const [emergencyData, setEmergencyData] = useState({
-  name: '',
-  relationship: '',
-  email: '',
-  phone: '',
-});
+    firstName: '',
+    lastName: '',
+    phone: '',
+    email: '',
+    dob: '',
+    address: '',
+    photo: '',
+    biography: '',
+  });
 
-const [isLoading, setIsLoading] = useState(false);
-useEffect(() => {
-  fetchProfile();
-}, []);
+  const [institutionData, setInstitutionData] = useState({
+    name: '',
+    schoolType: '',
+    affiliation: '',
+    phone: '',
+    email: '',
+    address: '',
+    plan: '',
+    totalStudents: 0,
+    totalStaff: 0,
+  });
 
-const fetchProfile = async () => {
-  try {
-    setIsLoading(true);
+  const [sessions, setSessions] = useState<any[]>([]);
 
-   const response = await accountService.getStudentInfo();
-   const parentResponse = await accountService.getParentInfo();
-   const parent = parentResponse.data?.data ?? parentResponse.data ?? {};
+  const [profData, setProfData] = useState({
+    employeeId: '',
+    qualification: '',
+    department: '',
+    designation: '',
+    experience: '',
+    joiningDate: '',
+    bio: '',
+  });
 
-setParentData({
-  name: parent.parentName || '',
-  relationship: parent.parentRelationship || '',
-  email: parent.parentEmail || '',
-  phone: parent.parentPhone || '',
-  address: '',
-});
+  const [bankData, setBankData] = useState({
+    bankName: '',
+    accountNumber: '',
+    accountHolderName: '',
+    accountType: '',
+    ifscCode: '',
+    salaryPaymentMethod: '',
+  });
 
-const emergencyResponse = await accountService.getEmergencyContact();
+  // parent data state
+  const [parentData, setParentData] = useState({
+    name: '',
+    relationship: '',
+    email: '',
+    phone: '',
+    address: '',
+  });
 
-const emergency =
-  emergencyResponse.data?.data ?? emergencyResponse.data ?? {};
+  // emergency data
+  const [emergencyData, setEmergencyData] = useState({
+    name: '',
+    relationship: '',
+    email: '',
+    phone: '',
+  });
 
-setEmergencyData({
-  name: emergency.emergencyName || '',
-  relationship: emergency.emergencyRelationship || '',
-  email: emergency.emergencyEmail || '',
-  phone: emergency.emergencyPhone || '',
-});
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
 
-console.log(
-  '[Account Settings] Emergency Response:',
-  JSON.stringify(emergency, null, 2),
-);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-    const data = response.data?.data ?? response.data ?? {};
+  useEffect(() => {
+    fetchProfile(false);
+  }, [authState.user?.id, role]);
 
-    const fullName = data.name ?? '';
-const nameParts = fullName.trim().split(' ');
+  const onRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchProfile(true);
+    setIsRefreshing(false);
+  };
 
-setProfileData({
-  firstName: nameParts[0] || '',
-  lastName: nameParts.slice(1).join(' ') || '',
-  phone: data.phone || '',
-  email: data.email || '',
-  dob: data.dateOfBirth
-  ? new Date(data.dateOfBirth).toLocaleDateString('en-GB')
-  : '',
-  address: data.address || '',
-});
-  } catch (error) {
-    console.log('Profile fetch failed', error);
-  } finally {
-    setIsLoading(false);
-  }
-};
-const saveParentInfo = async () => {
-  try {
-    setIsLoading(true);
+  const fetchProfile = async (isRefresh = false) => {
+    try {
+      if (!isRefresh) setIsLoading(true);
 
-    const payload = {
-      parentName: parentData.name,
-      parentRelationship: parentData.relationship,
-      parentEmail: parentData.email,
-      parentPhone: parentData.phone,
-    };
+      const prefResponse = await accountService.getPreferences().catch(() => null);
+      if (prefResponse?.data?.data || prefResponse?.data) {
+        const pref = prefResponse.data.data || prefResponse.data;
+        setGradeNotif(pref.gradeNotif ?? true);
+        setAssignNotif(pref.assignNotif ?? true);
+        setClassNotif(pref.classNotif ?? true);
+      }
 
-    console.log(
-      '[Account Settings] Parent Update Payload:',
-      JSON.stringify(payload, null, 2),
-    );
+      if (isTeacher) {
+        // Run both fetches simultaneously
+        const [personalResponse, profResponse] = await Promise.all([
+          teacherService.getPersonalInfo(),
+          teacherService.getProfile(),
+        ]);
 
-    const response = await accountService.updateParentInfo(payload);
+        const personalRaw = personalResponse.data?.data ?? personalResponse.data ?? {};
+        const profRaw = profResponse.data?.data ?? profResponse.data ?? {};
 
-    console.log(
-      '[Account Settings] Parent Update Response:',
-      JSON.stringify(response.data, null, 2),
-    );
+        const fullName = personalRaw.name || '';
+        const nameParts = fullName.trim().split(' ');
 
-    Alert.alert('Success', 'Parent information updated successfully.');
+        let dobString = '';
+        const rawDob = profRaw.dateOfBirth || profRaw.dob;
+        if (rawDob) {
+          dobString = new Date(rawDob).toLocaleDateString('en-GB');
+        }
 
-    // Refresh the latest data from the backend
-    fetchProfile();
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-  console.log(
-    '[Parent Update Error]',
-    JSON.stringify(error.response?.data, null, 2),
-  );
-  console.log('[Parent Update Status]', error.response?.status);
-} else {
-  console.log(error);
-}
-    Alert.alert('Error', 'Failed to update parent information.');
-  } finally {
-    setIsLoading(false);
-  }
-};
+        setProfileData({
+          firstName: nameParts[0] || '',
+          lastName: nameParts.slice(1).join(' ') || '',
+          phone: personalRaw.phone || '',
+          email: personalRaw.email || authState.user?.email || '',
+          dob: dobString,
+          address: personalRaw.address || '',
+          photo: personalRaw.photoUrl || '',
+          biography: '',
+        });
+
+        setProfData({
+          employeeId: profRaw.userId || '',
+          qualification: profRaw.highestQualification || '',
+          department: profRaw.department || '',
+          designation: profRaw.designation || '',
+          experience: String(profRaw.yearsOfExperience ?? ''),
+          joiningDate: profRaw.joiningDate ? new Date(profRaw.joiningDate).toLocaleDateString('en-GB') : '',
+          bio: profRaw.professionalBio || '',
+        });
+
+        try {
+          const bankRes = await teacherService.getBankDetails();
+          const bData = bankRes.data?.data || bankRes.data || {};
+          setBankData({
+            bankName: bData.bankName || '',
+            accountNumber: bData.accountNumber || '',
+            accountHolderName: bData.accountHolderName || '',
+            accountType: bData.accountType || '',
+            ifscCode: bData.ifscCode || bData.ifsc || '',
+            salaryPaymentMethod: bData.salaryPaymentMethod || bData.paymentMethod || '',
+          });
+        } catch (err) {
+          // ignore
+        }
+
+        // Push to global context so header avatar updates immediately
+        updateUser({
+          name: personalRaw.name || authState.user?.name || '',
+          photoUrl: personalRaw.photoUrl || ''
+        });
+      } else if (isInstitution) {
+        const [profileRes, institutionRes, sessionsRes] = await Promise.all([
+          principalService.getPersonalProfile(),
+          principalService.getInstitutionProfile(),
+          principalService.getSessions().catch(() => ({ data: { sessions: [] } })),
+        ]);
+
+        const profileRaw = profileRes.data ?? {};
+        const institutionRaw = institutionRes.data ?? {};
+
+        const fullName = profileRaw.name || '';
+        const nameParts = fullName.trim().split(' ');
+
+        setProfileData({
+          firstName: nameParts[0] || '',
+          lastName: nameParts.slice(1).join(' ') || '',
+          phone: profileRaw.phone || '',
+          email: profileRaw.email || '',
+          dob: '',
+          address: profileRaw.address || '',
+          photo: profileRaw.photoUrl || '',
+          biography: profileRaw.biography || '',
+        });
+
+        setInstitutionData({
+          name: institutionRaw.name || '',
+          schoolType: institutionRaw.schoolType || '',
+          affiliation: institutionRaw.affiliation || '',
+          phone: institutionRaw.phone || '',
+          email: institutionRaw.email || '',
+          address: institutionRaw.address || '',
+          plan: institutionRaw.plan || '',
+          totalStudents: institutionRaw.totalStudents || 0,
+          totalStaff: institutionRaw.totalStaff || 0,
+        });
+
+        setSessions(sessionsRes.data?.sessions || []);
+
+        updateUser({
+          name: profileRaw.name || '',
+          photoUrl: profileRaw.photoUrl || '',
+        });
+      } else {
+        const [profileRes, studentRes, parentRes, emergencyRes] = await Promise.all([
+          accountService.getProfile(),
+          accountService.getStudentInfo(),
+          accountService.getParentInfo(),
+          accountService.getEmergencyContact(),
+        ]);
+
+        const profileRaw = profileRes.data?.data ?? profileRes.data ?? {};
+        const studentRaw = studentRes.data?.data ?? studentRes.data ?? {};
+        const parentRaw = parentRes.data?.data ?? parentRes.data ?? {};
+        const emergencyRaw = emergencyRes.data?.data ?? emergencyRes.data ?? {};
+
+        const fullName = profileRaw.name || '';
+        const nameParts = fullName.trim().split(' ');
+
+        setProfileData({
+          firstName: nameParts[0] || '',
+          lastName: nameParts.slice(1).join(' ') || '',
+          phone: profileRaw.phone || '',
+          email: profileRaw.email || '',
+          address: profileRaw.address || '',
+          photo: profileRaw.photoUrl || '',
+          dob: (() => {
+            const raw = studentRaw.dateOfBirth || '';
+            if (!raw) return '';
+            const parsed = new Date(raw);
+            return isNaN(parsed.getTime()) ? '' : parsed.toLocaleDateString('en-GB');
+          })(),
+          biography: '',
+        });
+
+        setRollNo(studentRaw.rollNo || '');
+
+        setParentData({
+          name: parentRaw.parentName || '',
+          relationship: parentRaw.parentRelationship || '',
+          email: parentRaw.parentEmail || '',
+          phone: parentRaw.parentPhone || '',
+          address: '',
+        });
+
+        setEmergencyData({
+          name: emergencyRaw.emergencyName || '',
+          relationship: emergencyRaw.emergencyRelationship || '',
+          email: emergencyRaw.emergencyEmail || '',
+          phone: emergencyRaw.emergencyPhone || '',
+        });
+
+        updateUser({
+          name: profileRaw.name || '',
+          photoUrl: profileRaw.photoUrl || '',
+        });
+      }
+    } catch (error) {
+      console.error('[AccountSettings] Profile fetch failed', error);
+    } finally {
+      if (!isRefresh) setIsLoading(false);
+    }
+  };
+
+  const saveProfile = async () => {
+    Keyboard.dismiss();
+    try {
+      setIsLoading(true);
+
+      if (isInstitution) {
+        await principalService.updatePersonalProfile({
+          name: `${profileData.firstName} ${profileData.lastName}`.trim(),
+          phone: profileData.phone,
+          address: profileData.address,
+          biography: profileData.biography,
+        });
+      } else {
+        const payload = {
+          name: `${profileData.firstName} ${profileData.lastName}`.trim(),
+          phone: profileData.phone,
+          address: profileData.address,
+        };
+
+        if (isTeacher) {
+          await teacherService.updatePersonalInfo(payload);
+        } else {
+          await accountService.updateProfile(payload);
+        }
+      }
+
+      setTimeout(() => {
+        Alert.alert('Success', 'Profile updated successfully.', [
+          { text: 'OK', onPress: () => fetchProfile() }
+        ]);
+      }, 100);
+    } catch (error) {
+      console.error('[AccountSettings] Profile update error:', error);
+      setTimeout(() => Alert.alert('Error', 'Failed to update profile.'), 100);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveInstitutionInfo = async () => {
+    Keyboard.dismiss();
+    try {
+      setIsLoading(true);
+      await principalService.updateInstitutionProfile({
+        name: institutionData.name,
+        schoolType: institutionData.schoolType,
+        affiliation: institutionData.affiliation,
+        phone: institutionData.phone,
+        address: institutionData.address,
+      });
+      setTimeout(() => {
+        Alert.alert('Success', 'Institution details updated successfully.', [
+          { text: 'OK', onPress: () => fetchProfile() }
+        ]);
+      }, 100);
+    } catch (error) {
+      console.error('[AccountSettings] Institution update error:', error);
+      setTimeout(() => Alert.alert('Error', 'Failed to update institution profile.'), 100);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveProfDetails = async () => {
+    Keyboard.dismiss();
+    try {
+      setIsLoading(true);
+
+      // Prepare payload to handle exactly what the backend expects
+      // Uneditable fields (employeeId, designation, joiningDate) are omitted to avoid "Unknown fields" validation errors!
+      const payload: any = {
+        department: profData.department,
+        yearsOfExperience: parseInt(profData.experience) || 0,
+        highestQualification: profData.qualification,
+        professionalBio: profData.bio,
+      };
+
+      await apiClient.patch(ENDPOINTS.TEACHER.PROFILE, payload);
+
+      setTimeout(() => {
+        Alert.alert('Success', 'Professional Information updated successfully!', [
+          { text: 'OK', onPress: () => fetchProfile() }
+        ]);
+      }, 100);
+    } catch (e: any) {
+      console.error('[AccountSettings] Professional info update error:', e.response?.data || e.message || e);
+      const errData = e.response?.data?.message || e.response?.data || e.message;
+      const errMsg = Array.isArray(errData) ? errData.join(', ') : String(errData);
+      setTimeout(() => Alert.alert('Error', `Failed: ${errMsg}`), 100);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveBankDetails = async () => {
+    Keyboard.dismiss();
+    try {
+      setIsLoading(true);
+      await teacherService.updateBankDetails(bankData);
+      setTimeout(() => {
+        Alert.alert('Success', 'Bank details updated successfully.', [
+          { text: 'OK', onPress: () => fetchProfile() }
+        ]);
+      }, 100);
+    } catch (error) {
+      console.error('[AccountSettings] Bank details update error:', error);
+      setTimeout(() => Alert.alert('Error', 'Failed to update bank details.'), 100);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updatePreferences = async () => {
+    Keyboard.dismiss();
+    try {
+      setIsLoading(true);
+      await accountService.updatePreferences({
+        gradeNotif,
+        assignNotif,
+        classNotif
+      });
+      setTimeout(() => Alert.alert('Success', 'Preferences updated successfully.'), 100);
+    } catch (error) {
+      console.error('[AccountSettings] Preferences update error:', error);
+      setTimeout(() => Alert.alert('Error', 'Failed to update preferences.'), 100);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const changePassword = async () => {
+    Keyboard.dismiss();
+    if (!passwordData.currentPassword || !passwordData.newPassword) {
+      Alert.alert('Error', 'Please enter your current and new password.');
+      return;
+    }
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      Alert.alert('Error', 'New passwords do not match.');
+      return;
+    }
+    try {
+      setIsLoading(true);
+      await accountService.changePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
+      setTimeout(() => Alert.alert('Success', 'Password changed successfully.'), 100);
+      setShowPasswordModal(false);
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error: any) {
+      console.error('[AccountSettings] Password change error:', error?.response?.data || error);
+      setTimeout(() => Alert.alert('Error', error?.response?.data?.message || 'Failed to change password.'), 100);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const saveParentInfo = async () => {
+    Keyboard.dismiss();
+    try {
+      setIsLoading(true);
+
+      const payload = {
+        parentName: parentData.name,
+        parentRelationship: parentData.relationship,
+        parentEmail: parentData.email,
+        parentPhone: parentData.phone,
+      };
+
+      const response = await accountService.updateParentInfo(payload);
+      setTimeout(() => {
+        Alert.alert('Success', 'Parent information updated successfully.');
+      }, 100);
+
+      // Refresh the latest data from the backend
+      fetchProfile();
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error('[AccountSettings] Parent Update Error:', error.response?.data);
+      } else {
+        console.error('[AccountSettings] Parent Update Error:', error);
+      }
+      setTimeout(() => Alert.alert('Error', 'Failed to update parent information.'), 100);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Preferences State
   const [gradeNotif, setGradeNotif] = useState(true);
@@ -261,39 +599,131 @@ const saveParentInfo = async () => {
   const [classNotif, setClassNotif] = useState(true);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
+  const showPhotoOptions = () => {
+    Keyboard.dismiss();
+    setTimeout(() => {
+      Alert.alert('Profile Photo', 'Choose an action', [
+        { text: 'Upload Photo', onPress: handlePhotoUpload },
+        { text: 'Remove Photo', onPress: handlePhotoDelete, style: 'destructive' },
+        { text: 'Cancel', style: 'cancel' }
+      ]);
+    }, 100);
+  };
+
+  const handlePhotoUpload = async () => {
+    try {
+      const result = await launchImageLibrary({
+        mediaType: 'photo',
+        quality: 0.8,
+      });
+
+      if (result.didCancel || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const asset = result.assets[0];
+
+      const formData = new FormData();
+      formData.append('photo', {
+        uri: asset.uri,
+        type: asset.type || 'image/jpeg',
+        name: asset.fileName || 'profile_photo.jpg',
+      } as any);
+
+      setIsLoading(true);
+      if (isTeacher) {
+        await teacherService.uploadPhoto(formData);
+      } else if (isInstitution) {
+        await principalService.uploadPhoto(formData);
+      } else {
+        await accountService.uploadPhoto(formData);
+      }
+      setTimeout(() => {
+        Alert.alert('Success', 'Profile photo updated successfully.', [
+          { text: 'OK', onPress: () => fetchProfile() }
+        ]);
+      }, 100);
+    } catch (error) {
+      console.error('[AccountSettings] Error uploading photo:', error);
+      setTimeout(() => Alert.alert('Error', 'Failed to upload photo.'), 100);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePhotoDelete = async () => {
+    try {
+      setIsLoading(true);
+      if (isTeacher) {
+        await teacherService.deletePhoto();
+      } else if (isInstitution) {
+        await principalService.deletePhoto();
+      } else {
+        await accountService.deletePhoto();
+      }
+      setTimeout(() => {
+        Alert.alert('Success', 'Profile photo removed.', [
+          { text: 'OK', onPress: () => fetchProfile() }
+        ]);
+      }, 100);
+    } catch (error) {
+      console.error('[AccountSettings] Error deleting photo:', error);
+      setTimeout(() => Alert.alert('Error', 'Failed to remove photo.'), 100);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F9" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
 
-      {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <ScaleButton
-          style={styles.menuHandle}
-          onPress={() => setDrawerOpen(true)}
-          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-          activeOpacity={0.7}
-          scaleTo={0.85}
-        >
-          <Ionicons name="menu" size={28} color="#1F2937" />
-        </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>
-          Welcome back, {authState.user?.name?.split(' ')[0] || 'User'}
-        </Text>
-        <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {authState.user?.name?.charAt(0) || 'U'}
-            </Text>
+      {/* Header — role-conditional */}
+      {role === 'student' ? (
+        <StudentHeader
+          title="Account Settings"
+          navigation={navigation}
+          onMenuPress={() => setDrawerOpen(true)}
+        />
+      ) : (
+        <View style={styles.globalHeader}>
+          <ScaleButton
+            style={styles.menuHandle}
+            onPress={() => setDrawerOpen(true)}
+            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+            activeOpacity={0.7}
+            scaleTo={0.85}
+          >
+            <Ionicons name="menu" size={28} color={theme.text} />
+          </ScaleButton>
+          <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>
+            Account Settings
+          </Text>
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => navigation.goBack()}
+              style={styles.avatar}
+            >
+              {authState.user?.photoUrl ? (
+                <Image
+                  source={{ uri: authState.user.photoUrl }}
+                  style={{ width: 34, height: 34, borderRadius: 17 }}
+                />
+              ) : (
+                <Text style={styles.avatarText}>
+                  {authState.user?.name?.charAt(0) || 'U'}
+                </Text>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
-      </View>
+      )}
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#6366F1']} />}
       >
         {/* Page Title */}
         <Animated.View
@@ -315,11 +745,16 @@ const saveParentInfo = async () => {
             activeOpacity={0.8}
             scaleTo={0.92}
             style={styles.heroAvatarContainer}
+            onPress={showPhotoOptions}
           >
             <View style={styles.heroAvatar}>
-              <Text style={styles.heroAvatarText}>
-                {authState.user?.name?.charAt(0) || 'U'}
-              </Text>
+              {authState.user?.photoUrl ? (
+                <Image source={{ uri: authState.user.photoUrl }} style={styles.heroAvatarImage} />
+              ) : (
+                <Text style={styles.heroAvatarText}>
+                  {authState.user?.name?.charAt(0) || 'U'}
+                </Text>
+              )}
             </View>
             <View style={styles.cameraIconBadge}>
               <Ionicons name="camera-outline" size={12} color="#4F46E5" />
@@ -374,7 +809,7 @@ const saveParentInfo = async () => {
               onPress={() => setActiveTab(secondaryTabTitle)}
             >
               <Ionicons
-                name="people"
+                name={isTeacher ? "briefcase" : "people"}
                 size={12}
                 color={activeTab === secondaryTabTitle ? '#3B82F6' : '#9CA3AF'}
               />
@@ -387,6 +822,29 @@ const saveParentInfo = async () => {
                 {secondaryTabTitle}
               </Text>
             </TouchableOpacity>
+            {isTeacher && (
+              <TouchableOpacity
+                style={[
+                  styles.tabBtn,
+                  activeTab === 'Bank Details' && styles.tabActive,
+                ]}
+                onPress={() => setActiveTab('Bank Details')}
+              >
+                <Ionicons
+                  name="card"
+                  size={12}
+                  color={activeTab === 'Bank Details' ? '#3B82F6' : '#9CA3AF'}
+                />
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeTab === 'Bank Details' && styles.tabTextActive,
+                  ]}
+                >
+                  Bank Details
+                </Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[
                 styles.tabBtn,
@@ -422,24 +880,24 @@ const saveParentInfo = async () => {
 
               {/* Fields Loop */}
               <InputField
-               label="First Name"
-  labelIcon="person-outline"
-  inputIcon="person"
-  placeholder="Enter First Name"
-  value={profileData.firstName}
-  onChangeText={(text: string) =>
-    setProfileData({ ...profileData, firstName: text })
-  }
+                label="First Name"
+                labelIcon="person-outline"
+                inputIcon="person"
+                placeholder="Enter First Name"
+                value={profileData.firstName}
+                onChangeText={(text: string) =>
+                  setProfileData({ ...profileData, firstName: text })
+                }
               />
               <InputField
                 label="Last name"
-  labelIcon="person-outline"
-  inputIcon="person"
-  placeholder="Enter Last Name"
-  value={profileData.lastName}
-  onChangeText={(text: string) =>
-    setProfileData({ ...profileData, lastName: text })
-  }
+                labelIcon="person-outline"
+                inputIcon="person"
+                placeholder="Enter Last Name"
+                value={profileData.lastName}
+                onChangeText={(text: string) =>
+                  setProfileData({ ...profileData, lastName: text })
+                }
               />
 
               {/* Static Student ID Block */}
@@ -461,49 +919,63 @@ const saveParentInfo = async () => {
 
               <InputField
                 label="Phone number"
-  labelIcon="call-outline"
-  inputIcon="call"
-  placeholder="Enter Phone Number"
-  value={profileData.phone}
-  onChangeText={(text: string) =>
-    setProfileData({ ...profileData, phone: text })
-  }
+                labelIcon="call-outline"
+                inputIcon="call"
+                placeholder="Enter Phone Number"
+                value={profileData.phone}
+                onChangeText={(text: string) =>
+                  setProfileData({ ...profileData, phone: text })
+                }
               />
 
               <InputField
-  label="Email Address"
-  labelIcon="mail-outline"
-  inputIcon="mail"
-  placeholder="Enter Email Address"
-  value={profileData.email}
-  onChangeText={(text: string) =>
-    setProfileData({ ...profileData, email: text })
-  }
-/>
+                label="Email Address"
+                labelIcon="mail-outline"
+                inputIcon="mail"
+                placeholder="Enter Email Address"
+                value={profileData.email}
+                onChangeText={(text: string) =>
+                  setProfileData({ ...profileData, email: text })
+                }
+              />
               <InputField
                 label="Date of Birth"
                 labelIcon="calendar-outline"
                 inputIcon="calendar"
                 placeholder="MM/DD/YYYY"
-                value={profileData.dob}                
+                value={profileData.dob}
                 rightIcon="calendar"
                 onRightIconPress={() => setShowCalendar(true)}
                 onChangeText={(text: string) =>
-                setProfileData({ ...profileData, dob: text })
-                  }
+                  setProfileData({ ...profileData, dob: text })
+                }
               />
 
               <InputField
-  label="Current Address"
-  labelIcon="location-outline"
-  inputIcon="home"
-  placeholder="Enter Full Address"
-  multiline
-  value={profileData.address}
-  onChangeText={(text: string) =>
-    setProfileData({ ...profileData, address: text })
-  }
-/>
+                label="Current Address"
+                labelIcon="location-outline"
+                inputIcon="home"
+                placeholder="Enter Full Address"
+                multiline
+                value={profileData.address}
+                onChangeText={(text: string) =>
+                  setProfileData({ ...profileData, address: text })
+                }
+              />
+
+              {isInstitution && (
+                <InputField
+                  label="Biography"
+                  labelIcon="document-text-outline"
+                  inputIcon="document-text"
+                  placeholder="Enter professional biography"
+                  multiline
+                  value={profileData.biography}
+                  onChangeText={(text: string) =>
+                    setProfileData({ ...profileData, biography: text })
+                  }
+                />
+              )}
 
               <View style={styles.divider} />
 
@@ -513,6 +985,7 @@ const saveParentInfo = async () => {
                   activeOpacity={0.8}
                   scaleTo={0.96}
                   style={styles.cancelBtn}
+                  onPress={() => fetchProfile()}
                 >
                   <Text style={styles.cancelBtnText}>Cancel</Text>
                 </ScaleButton>
@@ -520,6 +993,7 @@ const saveParentInfo = async () => {
                   activeOpacity={0.9}
                   scaleTo={0.96}
                   style={styles.saveBtn}
+                  onPress={saveProfile}
                 >
                   <Ionicons
                     name="save"
@@ -533,143 +1007,477 @@ const saveParentInfo = async () => {
             </>
           ) : activeTab === secondaryTabTitle ? (
             <>
-              {/* Parent Section Header */}
+              {/* Parent/Professional Section Header */}
               <View style={styles.sectionHeader}>
-                <Ionicons name="school-outline" size={16} color="#3B82F6" />
+                <Ionicons name={isTeacher ? "briefcase-outline" : "school-outline"} size={16} color="#3B82F6" />
                 <Text style={styles.sectionTitle}>{secondaryTabTitle}</Text>
               </View>
 
               <View style={styles.divider} />
 
-              <InputField
-  label="Parent/Guardian Name"
-  labelIcon="person-outline"
-  inputIcon="person"
-  placeholder="Enter Full Name"
-  value={parentData.name}
-  onChangeText={(text: string) =>
-    setParentData({ ...parentData, name: text })
-  }
-/>
-              <InputField
-  label="Relationship"
-  labelIcon="people-outline"
-  inputIcon="person"
-  placeholder="Enter Relationship"
-  value={parentData.relationship}
-  onChangeText={(text: string) =>
-    setParentData({ ...parentData, relationship: text })
-  }
-/>
-              <InputField
-  label="Email Address"
-  labelIcon="mail-outline"
-  inputIcon="mail"
-  placeholder="Enter Email Address"
-  value={parentData.email}
-  onChangeText={(text: string) =>
-    setParentData({ ...parentData, email: text })
-  }
-/>
-              <InputField
-  label="Phone number"
-  labelIcon="call-outline"
-  inputIcon="call"
-  placeholder="Enter Phone Number"
-  value={parentData.phone}
-  onChangeText={(text: string) =>
-    setParentData({ ...parentData, phone: text })
-  }
-/>
-              <InputField
-  label="Current Address"
-  labelIcon="location-outline"
-  inputIcon="home"
-  placeholder="Enter Address"
-  multiline
-  value={parentData.address}
-  onChangeText={(text: string) =>
-    setParentData({ ...parentData, address: text })
-  }
-/>
+              {isInstitution ? (
+                <>
+                  <InputField
+                    label="Institution Name"
+                    labelIcon="business-outline"
+                    inputIcon="business"
+                    placeholder="Enter Institution Name"
+                    value={institutionData.name}
+                    onChangeText={(text: string) =>
+                      setInstitutionData({ ...institutionData, name: text })
+                    }
+                  />
+                  <InputField
+                    label="School Type"
+                    labelIcon="school-outline"
+                    inputIcon="school"
+                    placeholder="Enter School Type"
+                    value={institutionData.schoolType}
+                    onChangeText={(text: string) =>
+                      setInstitutionData({ ...institutionData, schoolType: text })
+                    }
+                  />
+                  <InputField
+                    label="Affiliation"
+                    labelIcon="ribbon-outline"
+                    inputIcon="ribbon"
+                    placeholder="Enter Affiliation (e.g. CBSE, ICSE)"
+                    value={institutionData.affiliation}
+                    onChangeText={(text: string) =>
+                      setInstitutionData({ ...institutionData, affiliation: text })
+                    }
+                  />
+                  <InputField
+                    label="Phone"
+                    labelIcon="call-outline"
+                    inputIcon="call"
+                    placeholder="Enter Phone Number"
+                    value={institutionData.phone}
+                    onChangeText={(text: string) =>
+                      setInstitutionData({ ...institutionData, phone: text })
+                    }
+                  />
 
-              {/* Emergency Section Header */}
-              <View style={[styles.sectionHeader, { paddingTop: 8 }]}>
-                <Ionicons name="call-outline" size={16} color="#3B82F6" />
-                <Text style={styles.sectionTitle}>
-                  Emergency Contact Information
-                </Text>
+                  {/* Email */}
+                  <View style={styles.fieldContainer}>
+                    <View style={styles.labelRow}>
+                      <Ionicons name="mail-outline" size={12} color="#3B82F6" />
+                      <Text style={styles.labelText}>Email (Read Only)</Text>
+                    </View>
+                    <View style={styles.staticFieldWrapper}>
+                      <Ionicons name="mail" size={16} color="#6B7280" style={{ marginRight: 10 }} />
+                      <Text style={styles.staticFieldText}>{institutionData.email}</Text>
+                    </View>
+                  </View>
+
+                  <InputField
+                    label="Address"
+                    labelIcon="location-outline"
+                    inputIcon="home"
+                    placeholder="Enter Address"
+                    multiline
+                    value={institutionData.address}
+                    onChangeText={(text: string) =>
+                      setInstitutionData({ ...institutionData, address: text })
+                    }
+                  />
+
+                  {/* Plan */}
+                  <View style={styles.fieldContainer}>
+                    <View style={styles.labelRow}>
+                      <Ionicons name="card-outline" size={12} color="#3B82F6" />
+                      <Text style={styles.labelText}>Plan (Read Only)</Text>
+                    </View>
+                    <View style={styles.staticFieldWrapper}>
+                      <Ionicons name="card" size={16} color="#6B7280" style={{ marginRight: 10 }} />
+                      <Text style={styles.staticFieldText}>{institutionData.plan}</Text>
+                    </View>
+                  </View>
+
+                  {/* Total Students */}
+                  <View style={styles.fieldContainer}>
+                    <View style={styles.labelRow}>
+                      <Ionicons name="people-outline" size={12} color="#3B82F6" />
+                      <Text style={styles.labelText}>Total Students (Read Only)</Text>
+                    </View>
+                    <View style={styles.staticFieldWrapper}>
+                      <Ionicons name="people" size={16} color="#6B7280" style={{ marginRight: 10 }} />
+                      <Text style={styles.staticFieldText}>{String(institutionData.totalStudents)}</Text>
+                    </View>
+                  </View>
+
+                  {/* Total Staff */}
+                  <View style={styles.fieldContainer}>
+                    <View style={styles.labelRow}>
+                      <Ionicons name="people-outline" size={12} color="#3B82F6" />
+                      <Text style={styles.labelText}>Total Staff (Read Only)</Text>
+                    </View>
+                    <View style={styles.staticFieldWrapper}>
+                      <Ionicons name="people" size={16} color="#6B7280" style={{ marginRight: 10 }} />
+                      <Text style={styles.staticFieldText}>{String(institutionData.totalStaff)}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.divider} />
+
+                  <View style={styles.buttonsRow}>
+                    <ScaleButton
+                      activeOpacity={0.8}
+                      scaleTo={0.96}
+                      style={styles.cancelBtn}
+                      onPress={() => fetchProfile()}
+                    >
+                      <Text style={styles.cancelBtnText}>Cancel</Text>
+                    </ScaleButton>
+                    <ScaleButton
+                      activeOpacity={0.9}
+                      scaleTo={0.96}
+                      style={styles.saveBtn}
+                      onPress={saveInstitutionInfo}
+                    >
+                      <Ionicons name="save" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
+                      <Text style={styles.saveBtnText}>Save Institution Info</Text>
+                    </ScaleButton>
+                  </View>
+                </>
+              ) : isTeacher ? (
+                <>
+                  <InputField
+                    label="Employee ID (Read Only)"
+                    labelIcon="id-card-outline"
+                    inputIcon="barcode-outline"
+                    placeholder="Enter Employee ID"
+                    value={profData.employeeId}
+                    editable={false}
+                    onChangeText={(text: string) =>
+                      setProfData({ ...profData, employeeId: text })
+                    }
+                  />
+                  <InputField
+                    label="Department"
+                    labelIcon="business-outline"
+                    inputIcon="body"
+                    placeholder="Enter Department"
+                    value={profData.department}
+                    onChangeText={(text: string) =>
+                      setProfData({ ...profData, department: text })
+                    }
+                  />
+                  <InputField
+                    label="Highest Qualification"
+                    labelIcon="school-outline"
+                    inputIcon="document-text"
+                    placeholder="Enter Qualification"
+                    value={profData.qualification}
+                    onChangeText={(text: string) =>
+                      setProfData({ ...profData, qualification: text })
+                    }
+                  />
+                  <InputField
+                    label="Designation (Read Only)"
+                    labelIcon="star-outline"
+                    inputIcon="person"
+                    placeholder="Enter Designation"
+                    value={profData.designation}
+                    editable={false}
+                    onChangeText={(text: string) =>
+                      setProfData({ ...profData, designation: text })
+                    }
+                  />
+                  <InputField
+                    label="Years of Experience"
+                    labelIcon="time-outline"
+                    inputIcon="briefcase-outline"
+                    placeholder="Enter Years of Experience"
+                    value={profData.experience}
+                    onChangeText={(text: string) =>
+                      setProfData({ ...profData, experience: text })
+                    }
+                  />
+                  <InputField
+                    label="Joining Date (Read Only)"
+                    labelIcon="calendar-outline"
+                    inputIcon="today-outline"
+                    placeholder="Enter Joining Date"
+                    value={profData.joiningDate}
+                    editable={false}
+                    onChangeText={(text: string) =>
+                      setProfData({ ...profData, joiningDate: text })
+                    }
+                  />
+                  <InputField
+                    label="Professional Bio"
+                    labelIcon="information-circle-outline"
+                    inputIcon="document-text-outline"
+                    placeholder="Enter Professional Bio"
+                    multiline
+                    value={profData.bio}
+                    onChangeText={(text: string) =>
+                      setProfData({ ...profData, bio: text })
+                    }
+                  />
+
+                  <View style={styles.divider} />
+
+                  <View style={styles.buttonsRow}>
+                    <ScaleButton
+                      activeOpacity={0.8}
+                      scaleTo={0.96}
+                      style={styles.cancelBtn}
+                      onPress={() => fetchProfile()}
+                    >
+                      <Text style={styles.cancelBtnText}>Cancel</Text>
+                    </ScaleButton>
+                    <ScaleButton
+                      activeOpacity={0.9}
+                      scaleTo={0.96}
+                      style={styles.saveBtn}
+                      onPress={saveProfDetails}
+                    >
+                      <Ionicons
+                        name="save"
+                        size={14}
+                        color="#FFFFFF"
+                        style={{ marginRight: 6 }}
+                      />
+                      <Text style={styles.saveBtnText}>Save Info</Text>
+                    </ScaleButton>
+                  </View>
+                </>
+              ) : (
+                <>
+
+                  <InputField
+                    label="Parent/Guardian Name"
+                    labelIcon="person-outline"
+                    inputIcon="person"
+                    placeholder="Enter Full Name"
+                    value={parentData.name}
+                    onChangeText={(text: string) =>
+                      setParentData({ ...parentData, name: text })
+                    }
+                  />
+                  <InputField
+                    label="Relationship"
+                    labelIcon="people-outline"
+                    inputIcon="person"
+                    placeholder="Enter Relationship"
+                    value={parentData.relationship}
+                    onChangeText={(text: string) =>
+                      setParentData({ ...parentData, relationship: text })
+                    }
+                  />
+                  <InputField
+                    label="Email Address"
+                    labelIcon="mail-outline"
+                    inputIcon="mail"
+                    placeholder="Enter Email Address"
+                    value={parentData.email}
+                    onChangeText={(text: string) =>
+                      setParentData({ ...parentData, email: text })
+                    }
+                  />
+                  <InputField
+                    label="Phone number"
+                    labelIcon="call-outline"
+                    inputIcon="call"
+                    placeholder="Enter Phone Number"
+                    value={parentData.phone}
+                    onChangeText={(text: string) =>
+                      setParentData({ ...parentData, phone: text })
+                    }
+                  />
+                  <InputField
+                    label="Current Address"
+                    labelIcon="location-outline"
+                    inputIcon="home"
+                    placeholder="Enter Address"
+                    multiline
+                    value={parentData.address}
+                    onChangeText={(text: string) =>
+                      setParentData({ ...parentData, address: text })
+                    }
+                  />
+
+                  {/* Emergency Section Header */}
+                  <View style={[styles.sectionHeader, { paddingTop: 8 }]}>
+                    <Ionicons name="call-outline" size={16} color="#3B82F6" />
+                    <Text style={styles.sectionTitle}>
+                      Emergency Contact Information
+                    </Text>
+                  </View>
+
+                  <View style={styles.divider} />
+
+                  <InputField
+                    label="Emergency Contact Name"
+                    labelIcon="person-outline"
+                    inputIcon="person"
+                    placeholder="Enter Name"
+                    value={emergencyData.name}
+                    onChangeText={(text: string) =>
+                      setEmergencyData({ ...emergencyData, name: text })
+                    }
+                  />
+                  <InputField
+                    label="Relationship"
+                    labelIcon="people-outline"
+                    inputIcon="person"
+                    placeholder="Enter Relationship"
+                    value={emergencyData.relationship}
+                    onChangeText={(text: string) =>
+                      setEmergencyData({ ...emergencyData, relationship: text })
+                    }
+                  />
+                  <InputField
+                    label="Email Address"
+                    labelIcon="mail-outline"
+                    inputIcon="mail"
+                    placeholder="Enter Email Address"
+                    value={emergencyData.email}
+                    onChangeText={(text: string) =>
+                      setEmergencyData({ ...emergencyData, email: text })
+                    }
+                  />
+                  <InputField
+                    label="Phone number"
+                    labelIcon="call-outline"
+                    inputIcon="call"
+                    placeholder="Enter Phone Number"
+                    value={emergencyData.phone}
+                    onChangeText={(text: string) =>
+                      setEmergencyData({ ...emergencyData, phone: text })
+                    }
+                  />
+                </>
+              )}
+
+              <View style={styles.divider} />
+
+              {/* Action Buttons */}
+              {!isTeacher && !isInstitution && (
+                <View style={styles.buttonsRow}>
+                  <ScaleButton
+                    activeOpacity={0.8}
+                    scaleTo={0.96}
+                    style={styles.cancelBtn}
+                    onPress={() => fetchProfile()}
+                  >
+                    <Text style={styles.cancelBtnText}>Cancel</Text>
+                  </ScaleButton>
+                  <ScaleButton
+                    activeOpacity={0.9}
+                    scaleTo={0.96}
+                    style={styles.saveBtn}
+                    onPress={saveParentInfo}
+                  >
+                    <Ionicons
+                      name="save"
+                      size={14}
+                      color="#FFFFFF"
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text style={styles.saveBtnText}>
+                      Save {secondaryTabTitle}
+                    </Text>
+                  </ScaleButton>
+                </View>
+              )}
+            </>
+          ) : activeTab === 'Bank Details' && isTeacher ? (
+            <>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="card" size={16} color="#3B82F6" />
+                <Text style={styles.sectionTitle}>Bank Account Details</Text>
               </View>
 
               <View style={styles.divider} />
 
               <InputField
-  label="Emergency Contact Name"
-  labelIcon="person-outline"
-  inputIcon="person"
-  placeholder="Enter Name"
-  value={emergencyData.name}
-  onChangeText={(text: string) =>
-    setEmergencyData({ ...emergencyData, name: text })
-  }
-/>
+                label="Bank Name"
+                labelIcon="business-outline"
+                inputIcon="business"
+                placeholder="Enter Bank Name"
+                value={bankData.bankName}
+                onChangeText={(text: string) =>
+                  setBankData({ ...bankData, bankName: text })
+                }
+              />
               <InputField
-  label="Relationship"
-  labelIcon="people-outline"
-  inputIcon="person"
-  placeholder="Enter Relationship"
-  value={emergencyData.relationship}
-  onChangeText={(text: string) =>
-    setEmergencyData({ ...emergencyData, relationship: text })
-  }
-/>
+                label="Account Holder Name"
+                labelIcon="person-outline"
+                inputIcon="person"
+                placeholder="Enter Account Holder Name"
+                value={bankData.accountHolderName}
+                onChangeText={(text: string) =>
+                  setBankData({ ...bankData, accountHolderName: text })
+                }
+              />
               <InputField
-  label="Email Address"
-  labelIcon="mail-outline"
-  inputIcon="mail"
-  placeholder="Enter Email Address"
-  value={emergencyData.email}
-  onChangeText={(text: string) =>
-    setEmergencyData({ ...emergencyData, email: text })
-  }
-/>
+                label="Account Number"
+                labelIcon="keypad-outline"
+                inputIcon="list"
+                placeholder="Enter Account Number"
+                value={bankData.accountNumber}
+                onChangeText={(text: string) =>
+                  setBankData({ ...bankData, accountNumber: text })
+                }
+              />
               <InputField
-  label="Phone number"
-  labelIcon="call-outline"
-  inputIcon="call"
-  placeholder="Enter Phone Number"
-  value={emergencyData.phone}
-  onChangeText={(text: string) =>
-    setEmergencyData({ ...emergencyData, phone: text })
-  }
-/>
+                label="IFSC Code"
+                labelIcon="barcode-outline"
+                inputIcon="code"
+                placeholder="Enter IFSC Code"
+                value={bankData.ifscCode}
+                onChangeText={(text: string) =>
+                  setBankData({ ...bankData, ifscCode: text })
+                }
+              />
+              <InputField
+                label="Account Type"
+                labelIcon="wallet-outline"
+                inputIcon="wallet"
+                placeholder="E.g. Savings, Current"
+                value={bankData.accountType}
+                onChangeText={(text: string) =>
+                  setBankData({ ...bankData, accountType: text })
+                }
+              />
+              <InputField
+                label="Salary Payment Method"
+                labelIcon="cash-outline"
+                inputIcon="cash"
+                placeholder="E.g. Bank Transfer"
+                value={bankData.salaryPaymentMethod}
+                onChangeText={(text: string) =>
+                  setBankData({ ...bankData, salaryPaymentMethod: text })
+                }
+              />
 
               <View style={styles.divider} />
 
-              {/* Action Buttons */}
               <View style={styles.buttonsRow}>
                 <ScaleButton
                   activeOpacity={0.8}
                   scaleTo={0.96}
                   style={styles.cancelBtn}
+                  onPress={() => fetchProfile()}
                 >
                   <Text style={styles.cancelBtnText}>Cancel</Text>
                 </ScaleButton>
                 <ScaleButton
-  activeOpacity={0.9}
-  scaleTo={0.96}
-  style={styles.saveBtn}
-  onPress={saveParentInfo}
->
+                  activeOpacity={0.9}
+                  scaleTo={0.96}
+                  style={styles.saveBtn}
+                  onPress={saveBankDetails}
+                >
                   <Ionicons
                     name="save"
                     size={14}
                     color="#FFFFFF"
                     style={{ marginRight: 6 }}
                   />
-                  <Text style={styles.saveBtnText}>
-                    Save {secondaryTabTitle}
-                  </Text>
+                  <Text style={styles.saveBtnText}>Save Bank Details</Text>
                 </ScaleButton>
               </View>
             </>
@@ -745,6 +1553,7 @@ const saveParentInfo = async () => {
                   activeOpacity={0.9}
                   scaleTo={0.96}
                   style={styles.saveBtn}
+                  onPress={updatePreferences}
                 >
                   <Ionicons
                     name="save"
@@ -755,6 +1564,44 @@ const saveParentInfo = async () => {
                   <Text style={styles.saveBtnText}>Save Preferences</Text>
                 </ScaleButton>
               </View>
+
+              {isInstitution && (
+                <>
+                  <View style={[styles.sectionHeader, { marginTop: 24 }]}>
+                    <Ionicons name="desktop-outline" size={16} color="#3B82F6" />
+                    <Text style={styles.sectionTitle}>Active Sessions</Text>
+                  </View>
+                  <View style={styles.divider} />
+                  {sessions.length > 0 ? (
+                    sessions.map((session) => (
+                      <View
+                        key={session.id}
+                        style={[
+                          styles.sessionCard,
+                          session.isCurrent && styles.currentSessionCard,
+                        ]}
+                      >
+                        <View style={styles.sessionHeaderRow}>
+                          <Text style={styles.sessionDeviceText}>
+                            {session.browser || 'Unknown Browser'} on {session.os || 'Unknown OS'}
+                          </Text>
+                          {session.isCurrent && (
+                            <View style={styles.currentBadge}>
+                              <Text style={styles.currentBadgeText}>Current Session</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={styles.sessionIpText}>IP: {session.ipAddress}</Text>
+                        <Text style={styles.sessionActiveText}>
+                          Last Active: {new Date(session.lastActiveAt).toLocaleString('en-GB')}
+                        </Text>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.noSessionsText}>No active sessions found.</Text>
+                  )}
+                </>
+              )}
             </>
           ) : null}
         </Animated.View>
@@ -803,7 +1650,8 @@ const saveParentInfo = async () => {
                     key={i}
                     style={[styles.calDayBox, isActive && styles.calDayActive]}
                     onPress={() => {
-                      setDob(`10/${day.toString().padStart(2, '0')}/2023`);
+                      const selected = `10/${day.toString().padStart(2, '0')}/2023`;
+                      setProfileData(prev => ({ ...prev, dob: selected }));
                       setShowCalendar(false);
                     }}
                   >
@@ -910,24 +1758,27 @@ const saveParentInfo = async () => {
                 labelIcon="lock-closed"
                 inputIcon="key"
                 placeholder="Enter your current password"
-                rightIcon="eye"
                 secureTextEntry={true}
+                value={passwordData.currentPassword}
+                onChangeText={(text: string) => setPasswordData(prev => ({ ...prev, currentPassword: text }))}
               />
               <InputField
                 label="New Password"
                 labelIcon="lock-closed"
                 inputIcon="lock-closed"
                 placeholder="Create a strong new password"
-                rightIcon="eye"
                 secureTextEntry={true}
+                value={passwordData.newPassword}
+                onChangeText={(text: string) => setPasswordData(prev => ({ ...prev, newPassword: text }))}
               />
               <InputField
                 label="Confirm New Password"
                 labelIcon="lock-closed"
                 inputIcon="lock-closed"
-                placeholder="Re - enter your new password"
-                rightIcon="eye"
+                placeholder="Re-enter your new password"
                 secureTextEntry={true}
+                value={passwordData.confirmPassword}
+                onChangeText={(text: string) => setPasswordData(prev => ({ ...prev, confirmPassword: text }))}
               />
 
               <View style={styles.divider} />
@@ -946,6 +1797,7 @@ const saveParentInfo = async () => {
                   activeOpacity={0.9}
                   scaleTo={0.96}
                   style={styles.saveBtn}
+                  onPress={changePassword}
                 >
                   <Ionicons
                     name="save"
@@ -971,8 +1823,8 @@ const saveParentInfo = async () => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FAF9F9' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 
   globalHeader: {
@@ -982,19 +1834,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
     elevation: 8,
     zIndex: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
   },
   menuHandle: { paddingRight: 10, paddingVertical: 10 },
   headerTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5',
+    color: theme.primary,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -1014,24 +1868,29 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  headerAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 17,
+  },
 
   pageTitleWrapper: { marginBottom: 16, paddingHorizontal: 20, marginTop: 10 },
   pageTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#3B82F6',
+    color: theme.primary,
     marginBottom: 4,
   },
-  pageSubtitle: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
+  pageSubtitle: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
 
   /* Hero ID Card */
   heroCard: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     borderRadius: 14,
     padding: 20,
     marginHorizontal: 20,
     marginBottom: 20,
-    shadowColor: '#4F46E5',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -1058,6 +1917,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
   },
+  heroAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 28,
+  },
   cameraIconBadge: {
     position: 'absolute',
     bottom: -4,
@@ -1069,7 +1933,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#4F46E5',
+    borderColor: theme.primary,
   },
   heroInfo: {
     flex: 1,
@@ -1093,14 +1957,14 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   heroStatusText: {
-    color: '#3B82F6',
+    color: theme.primary,
     fontSize: 10,
     fontWeight: '700',
   },
 
   /* Form Container */
   formContainerCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 14,
     marginHorizontal: 20,
     shadowColor: '#1E293B',
@@ -1109,13 +1973,13 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     paddingBottom: 24,
   },
   tabsRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.border,
   },
   tabBtn: {
     flex: 1,
@@ -1128,15 +1992,15 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   tabActive: {
-    borderBottomColor: '#3B82F6',
+    borderBottomColor: theme.primary,
   },
   tabText: {
     fontSize: 9,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: theme.subtext,
   },
   tabTextActive: {
-    color: '#3B82F6',
+    color: theme.primary,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -1148,11 +2012,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#3B82F6',
+    color: theme.primary,
   },
   divider: {
     height: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.border,
     marginVertical: 16,
     marginHorizontal: 20,
   },
@@ -1171,15 +2035,15 @@ const styles = StyleSheet.create({
   labelText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.background,
     paddingHorizontal: 12,
   },
   inputWrapperMultiline: {
@@ -1191,7 +2055,7 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     height: 44,
-    color: '#111827',
+    color: theme.text,
     fontSize: 12,
     fontWeight: '500',
   },
@@ -1209,11 +2073,11 @@ const styles = StyleSheet.create({
     marginRight: 10,
     paddingRight: 10,
     borderRightWidth: 1,
-    borderRightColor: '#E5E7EB',
+    borderRightColor: theme.border,
   },
   prefixSelectText: {
     fontSize: 12,
-    color: '#111827',
+    color: theme.text,
     fontWeight: '600',
   },
 
@@ -1225,7 +2089,7 @@ const styles = StyleSheet.create({
   },
   staticFieldText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.subtext,
     fontWeight: '500',
   },
 
@@ -1238,21 +2102,22 @@ const styles = StyleSheet.create({
   cancelBtn: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
+    backgroundColor: theme.surface,
   },
   cancelBtnText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
   },
   saveBtn: {
     flex: 1.5,
     flexDirection: 'row',
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1273,7 +2138,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   calendarModalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 24,
     width: '100%',
@@ -1282,6 +2147,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 15,
     elevation: 10,
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   calendarHeader: {
     flexDirection: 'row',
@@ -1292,7 +2159,7 @@ const styles = StyleSheet.create({
   calendarMonth: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
   },
   calendarDaysRow: {
     flexDirection: 'row',
@@ -1304,7 +2171,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 12,
     fontWeight: '700',
-    color: '#9CA3AF',
+    color: theme.subtext,
   },
   calendarGrid: {
     flexDirection: 'row',
@@ -1320,8 +2187,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   calDayActive: {
-    backgroundColor: '#4F46E5',
-    shadowColor: '#4F46E5',
+    backgroundColor: theme.primary,
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 6,
@@ -1329,7 +2196,7 @@ const styles = StyleSheet.create({
   },
   calDayText: {
     fontSize: 14,
-    color: '#111827',
+    color: theme.text,
     fontWeight: '600',
   },
   calDayTextActive: {
@@ -1339,7 +2206,7 @@ const styles = StyleSheet.create({
 
   /* Preferences Settings */
   toggleCard: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.background,
     borderRadius: 12,
     padding: 16,
     marginHorizontal: 20,
@@ -1347,22 +2214,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   toggleTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 4,
   },
   toggleDesc: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.subtext,
     fontWeight: '500',
   },
 
   /* Password Modal */
   passwordModalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     width: '100%',
     overflow: 'hidden',
@@ -1371,9 +2240,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 15,
     elevation: 10,
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   pwdHeader: {
-    backgroundColor: '#6366F1',
+    backgroundColor: theme.primary,
     flexDirection: 'row',
     alignItems: 'flex-start',
     padding: 24,
@@ -1407,22 +2278,24 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   pwdBody: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
   },
   pwdReqBox: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.background,
     borderRadius: 12,
     marginHorizontal: 20,
     marginTop: -32,
     marginBottom: 24,
     padding: 16,
     borderLeftWidth: 4,
-    borderLeftColor: '#3B82F6',
+    borderLeftColor: theme.primary,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   pwdReqHeaderRow: {
     flexDirection: 'row',
@@ -1432,7 +2305,7 @@ const styles = StyleSheet.create({
   pwdReqTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#3B82F6',
+    color: theme.primary,
   },
   pwdReqColumns: {
     flexDirection: 'row',
@@ -1449,13 +2322,72 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#9CA3AF',
+    backgroundColor: theme.subtext,
     marginRight: 8,
   },
   pwdReqText: {
     fontSize: 10,
-    color: '#4B5563',
+    color: theme.text,
     fontWeight: '600',
+  },
+
+  /* Sessions Styles */
+  sessionCard: {
+    backgroundColor: theme.surface,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  currentSessionCard: {
+    borderColor: '#10B981',
+    borderWidth: 1.5,
+    backgroundColor: theme.isDarkMode ? '#10B98120' : '#F0FDF4',
+  },
+  sessionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  sessionDeviceText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.text,
+  },
+  currentBadge: {
+    backgroundColor: '#10B981',
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  currentBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  sessionIpText: {
+    fontSize: 12,
+    color: theme.subtext,
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  sessionActiveText: {
+    fontSize: 11,
+    color: theme.subtext,
+    fontWeight: '500',
+  },
+  noSessionsText: {
+    fontSize: 13,
+    color: theme.subtext,
+    textAlign: 'center',
+    marginTop: 12,
   },
 });
 

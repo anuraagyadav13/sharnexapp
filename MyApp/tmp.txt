@@ -1,0 +1,24 @@
+{
+  "attendance": [
+    {
+      "id": "d6cc5870-0629-4812-b361-258379ee6983",
+      "studentId": "stu-1782827371462-c4w271v",
+      "classId": "class-1767726363334-bjdcw5u2x",
+      "date": "2026-07-02T00:00:00.000Z",
+      "status": "present",
+      "markedBy": "teacher-1767726773138",
+      "markedAt": "2026-07-02T06:19:40.657Z",
+      "notes": null
+    },
+    {
+      "id": "70d5c428-eb96-45c0-b097-1f7fc26cad1c",
+      "studentId": "stu-1777569590652-1gd36ap",
+      "classId": "class-1767726363334-bjdcw5u2x",
+      "date": "2026-07-02T00:00:00.000Z",
+      "status": "present",
+      "markedBy": "teacher-1767726773138",
+      "markedAt": "2026-07-02T06:19:40.657Z",
+      "notes": null
+    }
+  ]
+}

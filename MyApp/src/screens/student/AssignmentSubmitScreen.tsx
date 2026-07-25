@@ -8,6 +8,8 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Image,
+  TouchableOpacity,
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -16,8 +18,9 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import { useTheme } from '../../store/ThemeContext';
+import { StudentHeader } from '../../components/StudentHeader';
+import studentService from '../../services/studentService';
 
 type AssignmentSubmitNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AssignmentSubmit'>;
 
@@ -26,7 +29,23 @@ interface Props {
   route?: any;
 }
 
+let DocumentPicker: any = null;
+let DocumentPickerTypes: any = null;
+
+const ensureDocumentPicker = () => {
+  if (DocumentPicker && DocumentPickerTypes) return;
+  try {
+    const module = require('@react-native-documents/picker');
+    DocumentPicker = module.default || module;
+    DocumentPickerTypes = module.types || module.Types || DocumentPicker?.types || DocumentPicker?.Types || module;
+  } catch (e) {
+    console.error('DocumentPicker failed to load:', e);
+  }
+};
+
 const AssignmentSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { theme, isDarkMode, toggleDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const { authState } = useAuth();
   const assignmentId = route?.params?.assignmentId;
   const [assignmentData, setAssignmentData] = useState<any>(null);
@@ -35,12 +54,38 @@ const AssignmentSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const handlePickFile = async () => {
+    try {
+      ensureDocumentPicker();
+      if (!DocumentPicker || !DocumentPickerTypes) {
+        Alert.alert('Error', 'File picker is not available on this device.');
+        return;
+      }
+      const result = await DocumentPicker.pick({
+        type: [DocumentPickerTypes.allFiles],
+      });
+      const file = Array.isArray(result) ? result[0] : result;
+      setUploadedFiles([
+        {
+          uri: file.uri,
+          name: file.name || 'document.pdf',
+          type: file.type,
+          size: file.size,
+        },
+      ]);
+    } catch (err) {
+      if (!DocumentPicker?.isCancel?.(err)) {
+        console.error('Document picking error:', err);
+      }
+    }
+  };
+
   useEffect(() => {
     const fetchAssignmentDetails = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const res = await apiClient.get(ENDPOINTS.STUDENT.ASSIGNMENT_DETAIL(assignmentId));
+        const res = await studentService.getAssignmentDetails(assignmentId);
         const data = res.data.assignment || res.data.data || res.data || {};
         setAssignmentData(data);
       } catch (err: any) {
@@ -66,8 +111,7 @@ const AssignmentSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
       setIsSubmitting(true);
       const submissionFileUrl = uploadedFiles && uploadedFiles.length > 0 ? uploadedFiles[0].uri || uploadedFiles[0].url : null;
       
-      // @ts-ignore
-      await apiClient.post(ENDPOINTS.STUDENT.ASSIGNMENT_SUBMIT(assignmentId), {
+      await studentService.submitAssignment(assignmentId, {
         submissionFileUrl,
         submissionText: `Submitted via Mobile App at ${new Date().toLocaleString()}`,
         submittedAt: new Date().toISOString()
@@ -89,20 +133,14 @@ const AssignmentSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
   };
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <Text style={styles.globalHeaderTitle} numberOfLines={1}>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
-        <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
-          </View>
-        </View>
-      </View>
+      <StudentHeader 
+        title="Assignment Submission"
+        navigation={navigation}
+        isStackScreen={true}
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
@@ -126,8 +164,8 @@ const AssignmentSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
           {isLoading ? (
             <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
           ) : error ? (
-            <View style={{ padding: 16, backgroundColor: '#FEE2E2', borderRadius: 12 }}>
-              <Text style={{ color: '#DC2626', fontWeight: '500' }}>{error}</Text>
+            <View style={{ padding: 16, backgroundColor: isDarkMode ? '#7F1D1D30' : '#FEE2E2', borderRadius: 12, marginHorizontal: 16 }}>
+              <Text style={{ color: isDarkMode ? '#FCA5A5' : '#DC2626', fontWeight: '500' }}>{error}</Text>
             </View>
           ) : !assignmentData ? (
             <Text style={{ textAlign: 'center', marginTop: 40, color: '#9CA3AF' }}>No assignment data found</Text>
@@ -166,12 +204,12 @@ const AssignmentSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
           {/* Card 2: Upload Files */}
           <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.card}>
             <View style={styles.uploadCardHeader}>
-              <Ionicons name="cloud-upload" size={22} color="#3B82F6" />
+              <Ionicons name="cloud-upload" size={22} color={theme.primary} />
               <Text style={styles.uploadCardTitle}>Upload Files</Text>
             </View>
 
             <View style={styles.infoBanner}>
-              <Ionicons name="information-circle" size={16} color="#6B7280" style={{ marginRight: 6 }} />
+              <Ionicons name="information-circle" size={16} color={theme.subtext} style={{ marginRight: 6 }} />
               <Text style={styles.infoBannerText}>Maximum file size: 50 MB per file</Text>
             </View>
 
@@ -179,23 +217,39 @@ const AssignmentSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
               <Ionicons
                 name="cloud-upload"
                 size={54}
-                color="#4F46E5"
+                color={theme.primary}
                 style={{ marginBottom: 16 }}
               />
               <Text style={styles.dragDropText}>Drag and Drop your files here</Text>
               <Text style={styles.orClickText}>or click the button below to browse files</Text>
 
-              <ScaleButton style={styles.browseButton} activeOpacity={0.8} scaleTo={0.95}>
+              <ScaleButton style={styles.browseButton} activeOpacity={0.8} scaleTo={0.95} onPress={handlePickFile}>
                 <MaterialCommunityIcons name="folder-upload" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
                 <Text style={styles.browseButtonText}>Browse files</Text>
               </ScaleButton>
             </View>
+
+            {uploadedFiles.length > 0 && (
+              <View style={{ marginTop: 16 }}>
+                {uploadedFiles.map((file, index) => (
+                  <View key={index} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDarkMode ? '#1E293B' : '#F3F4F6', padding: 10, borderRadius: 8, marginBottom: 8, justifyContent: 'space-between' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                      <Ionicons name="document-text" size={20} color={theme.primary} style={{ marginRight: 8 }} />
+                      <Text style={{ color: theme.text, fontSize: 13, flex: 1 }} numberOfLines={1}>{file.name}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setUploadedFiles(prev => prev.filter((_, i) => i !== index))}>
+                      <Ionicons name="close-circle" size={20} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
           </Animated.View>
 
           {/* Action Buttons */}
           <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.bottomButtonsRow}>
             <ScaleButton style={styles.saveDraftBtn} activeOpacity={0.7} scaleTo={0.95}>
-              <MaterialCommunityIcons name="content-save" size={20} color="#3B82F6" />
+              <MaterialCommunityIcons name="content-save" size={20} color={theme.primary} />
               <Text style={styles.saveDraftText}>Save As Draft</Text>
             </ScaleButton>
 
@@ -226,8 +280,8 @@ const AssignmentSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
 
   globalHeader: {
     flexDirection: 'row',
@@ -236,12 +290,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
   },
   globalHeaderTitle: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#4F46E5',
+    color: theme.primary,
     marginRight: 'auto',
     marginLeft: 32,
   },
@@ -250,7 +304,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -261,7 +315,7 @@ const styles = StyleSheet.create({
   },
 
   heroSection: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 32,
@@ -296,17 +350,16 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 24,
-    // Peak detailing premium shadow
     shadowColor: '#1E293B',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
     borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.6)',
+    borderColor: theme.border,
   },
 
   infoCard: {
@@ -323,7 +376,7 @@ const styles = StyleSheet.create({
   infoCardTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
     marginLeft: 8,
   },
   infoGrid: {
@@ -336,13 +389,13 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.subtext,
     marginBottom: 6,
     fontWeight: '500',
   },
   infoValue: {
     fontSize: 13,
-    color: '#111827',
+    color: theme.text,
     fontWeight: '600',
   },
 
@@ -353,34 +406,34 @@ const styles = StyleSheet.create({
   },
   uploadCardTitle: {
     fontSize: 18,
-    fontWeight: '800', // Making it as bold as the screenshot
-    color: '#111827',
+    fontWeight: '800',
+    color: theme.text,
     marginLeft: 8,
   },
 
   infoBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F8FAFC',
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderRadius: 6,
     borderLeftWidth: 3,
-    borderLeftColor: '#4F46E5', // screenshot shows blue here
+    borderLeftColor: theme.primary,
     marginBottom: 24,
   },
   infoBannerText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: theme.subtext,
     fontWeight: '400',
   },
 
   uploadDashedArea: {
     borderWidth: 1.5,
-    borderColor: '#93C5FD',
+    borderColor: theme.border,
     borderStyle: 'dashed',
     borderRadius: 16,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F8FAFC',
     paddingVertical: 36,
     paddingHorizontal: 20,
     alignItems: 'center',
@@ -389,19 +442,19 @@ const styles = StyleSheet.create({
   dragDropText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.text,
     marginTop: 8,
     marginBottom: 6,
   },
   orClickText: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: theme.subtext,
     marginBottom: 24,
   },
   browseButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
@@ -423,22 +476,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 8, // Light padding for touch target
+    paddingHorizontal: 8,
   },
   saveDraftText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#4F46E5',
+    color: theme.primary,
     marginLeft: 6,
   },
   submitFinalBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 8,
-    shadowColor: '#4F46E5',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

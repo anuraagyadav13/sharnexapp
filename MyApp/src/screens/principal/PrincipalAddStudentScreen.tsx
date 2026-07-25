@@ -21,6 +21,7 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
+import principalService from '../../services/principalService';
 import { ENDPOINTS } from '../../constants/api';
 import { COUNTRIES } from '../../constants/countries';
 import SelectionModal from '../../components/modals/SelectionModal';
@@ -152,8 +153,9 @@ const PrincipalAddStudentScreen = ({ navigation }: any) => {
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        const response = await apiClient.get(ENDPOINTS.PRINCIPAL.CLASSES);
-        const data = response.data?.data || response.data || [];
+        const response = await principalService.getClasses();
+        const rawData = response.data?.classes || (response.data as any)?.data || response.data;
+        const data = Array.isArray(rawData) ? rawData : [];
         setClasses(data);
       } catch (error) {
         console.error('Failed to fetch classes:', error);
@@ -223,7 +225,7 @@ const PrincipalAddStudentScreen = ({ navigation }: any) => {
       updateForm(
         'classId',
         selectedClass
-          ? selectedClass.id || selectedClass.name || selectedClass.className
+          ? selectedClass.id
           : option,
       );
     } else {
@@ -279,17 +281,27 @@ const PrincipalAddStudentScreen = ({ navigation }: any) => {
         sendInvite: formData.sendWelcomeEmail,
       };
 
-      await apiClient.post('/students', payload);
-      Alert.alert('Success', 'Student registration completed successfully.', [
-        { text: 'Done', onPress: () => navigation.goBack() },
-      ]);
-    } catch (error: any) {
-      const { getApiErrorMessage } = require('../../services/apiClient');
-      Alert.alert(
-        'Registration Failed',
-        getApiErrorMessage(error) ||
+      console.log('STUDENT_CREATE_REQUEST_PAYLOAD:', JSON.stringify(payload, null, 2));
+      try {
+        const res = await principalService.createStudent(payload);
+        console.log('STUDENT_CREATE_RESPONSE_SUCCESS:', JSON.stringify(res.data, null, 2));
+        Alert.alert('Success', 'Student registration completed successfully.', [
+          { text: 'Done', onPress: () => navigation.goBack() },
+        ]);
+      } catch (error: any) {
+        console.log('STUDENT_CREATE_RESPONSE_ERROR:', error);
+        if (error.response) {
+          console.log('STUDENT_CREATE_RESPONSE_ERROR_DATA:', JSON.stringify(error.response.data, null, 2));
+        }
+        const { getApiErrorMessage } = require('../../services/apiClient');
+        Alert.alert(
+          'Registration Failed',
+          getApiErrorMessage(error) ||
           'Failed to register the student. Please try again.',
-      );
+        );
+      }
+    } catch (outerError: any) {
+      console.log('STUDENT_CREATE_OUTER_ERROR:', outerError);
     } finally {
       setIsSubmitting(false);
     }
@@ -703,8 +715,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 30,
-    paddingBottom: 16,
+    paddingTop:
+      Platform.OS === 'ios'
+        ? 60
+        : (StatusBar.currentHeight ?? 0),
+    paddingBottom: 24,
     backgroundColor: '#FAFAFF',
   },
   headerTitle: {

@@ -12,12 +12,14 @@ import {
   Alert
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../App';
+import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import { useTheme } from '../../store/ThemeContext';
+import { TeacherHeader } from '../../components/TeacherHeader';
+import { Linking } from 'react-native';
+import teacherService from '../../services/teacherService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherViewSubmission'>;
 
@@ -25,17 +27,20 @@ const TeacherViewSubmissionScreen: React.FC<Props> = ({ navigation, route }) => 
   // @ts-ignore
   const { assignmentId, assignmentTitle, className, dueDate, maxMarks } = route.params || {};
   const { authState } = useAuth();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles({ ...theme, isDarkMode });
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [grades, setGrades] = useState<Record<string, string>>({});
+  const [feedbacks, setFeedbacks] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchSubmissions = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const res = await apiClient.get(ENDPOINTS.TEACHER.SUBMISSIONS(assignmentId));
+        const res = await teacherService.getSubmissions(assignmentId);
         const data = res.normalized?.data || {};
         setSubmissions(Array.isArray(data) ? data : data.submissions || []);
       } catch (error: any) {
@@ -53,19 +58,35 @@ const TeacherViewSubmissionScreen: React.FC<Props> = ({ navigation, route }) => 
     setGrades(prev => ({ ...prev, [id]: val }));
   };
 
+  const handleFeedbackChange = (id: string, val: string) => {
+    setFeedbacks(prev => ({ ...prev, [id]: val }));
+  };
+
   const submitGrade = async (submissionId: string) => {
+    const scoreStr = grades[submissionId];
+    if (scoreStr === undefined || scoreStr.trim() === '') {
+      Alert.alert('Validation Error', 'Please enter a grade first.');
+      return;
+    }
+
+    const score = parseFloat(scoreStr);
+    const maximum = Number(maxMarks) || 100;
+    if (isNaN(score) || score < 0 || score > maximum) {
+      Alert.alert('Validation Error', `Grade must be a valid number between 0 and ${maximum}.`);
+      return;
+    }
+
+    const feedback = feedbacks[submissionId] || 'Graded via mobile app';
+
     try {
-      const score = grades[submissionId];
-      if (!score) return;
-      
-      await apiClient.put(ENDPOINTS.TEACHER.GRADE_SUBMISSION(assignmentId, submissionId), {
-        marksObtained: parseInt(score),
-        feedback: 'Graded via mobile app'
+      await teacherService.gradeSubmission(assignmentId, submissionId, {
+        marksObtained: score,
+        feedback: feedback.trim()
       });
-      Alert.alert('Success', 'Grade submitted!');
-    } catch (e) {
+      Alert.alert('Success', 'Grade and remarks submitted successfully!');
+    } catch (e: any) {
       console.error('Failed to submit grade:', e);
-      Alert.alert('Error', 'Failed to submit grade');
+      Alert.alert('Error', e.response?.data?.message || 'Failed to submit grade. Please try again.');
     }
   };
 
@@ -74,18 +95,11 @@ const TeacherViewSubmissionScreen: React.FC<Props> = ({ navigation, route }) => 
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
-        <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
-          </View>
-        </View>
-      </View>
+      <TeacherHeader
+        title="Submissions"
+        navigation={navigation}
+        isStackScreen={true}
+      />
 
       {/* Blue Header Section */}
       <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
@@ -151,40 +165,60 @@ const TeacherViewSubmissionScreen: React.FC<Props> = ({ navigation, route }) => 
                   ))}
                </View>
 
-               {/* Grade Input */}
-               <View style={styles.gradeInputContainer}>
-                  <TextInput 
-                     style={styles.gradeInput}
-                     placeholder={`Enter Grade / ${submission.maxPoints || 100}`}
-                     placeholderTextColor="#9CA3AF"
-                     keyboardType="numeric"
-                     value={grades[submission.studentId] || submission.grade?.toString() || ''}
-                     onChangeText={(val) => handleGradeChange(submission.studentId, val)}
-                  />
-               </View>
+                {/* Grade & Remarks Input */}
+                <View style={styles.gradeInputContainer}>
+                   <TextInput 
+                      style={styles.gradeInput}
+                      placeholder={`Enter Grade / ${submission.maxPoints || 100}`}
+                      placeholderTextColor="#9CA3AF"
+                      keyboardType="numeric"
+                      value={grades[submission.id] || submission.grade?.toString() || ''}
+                      onChangeText={(val) => handleGradeChange(submission.id, val)}
+                   />
+                </View>
 
-               {/* Action Buttons Row */}
-               <View style={styles.actionRow}>
-                  <TouchableOpacity 
-                    style={[styles.actionBtnDownload, { opacity: submission.files?.length > 0 ? 1 : 0.5 }]} 
-                    activeOpacity={0.8} 
-                    disabled={!submission.files?.length}
-                    onPress={() => {/* Handle view */}}
-                  >
-                     <Ionicons name="eye-outline" size={16} color="#4F46E5" style={{marginRight: 6}} />
-                     <Text style={styles.actionBtnDownloadText}>View File</Text>
-                  </TouchableOpacity>
+                <View style={[styles.gradeInputContainer, { marginTop: 10 }]}>
+                   <TextInput 
+                      style={styles.gradeInput}
+                      placeholder="Enter Teacher Feedback / Remarks..."
+                      placeholderTextColor="#9CA3AF"
+                      value={feedbacks[submission.id] || submission.feedback || ''}
+                      onChangeText={(val) => handleFeedbackChange(submission.id, val)}
+                   />
+                </View>
 
-                  <TouchableOpacity 
-                    style={[styles.actionBtnFeedback, { opacity: submission.id ? 1 : 0.5 }]} 
-                    activeOpacity={0.8}
-                    disabled={!submission.id}
-                    onPress={() => submission.id && submitGrade(submission.id)}
-                  >
-                     <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={{marginRight: 6}} />
-                     <Text style={styles.actionBtnFeedbackText}>Save Grade</Text>
-                  </TouchableOpacity>
-               </View>
+                {/* Action Buttons Row */}
+                <View style={styles.actionRow}>
+                   <TouchableOpacity 
+                     style={[styles.actionBtnDownload, { opacity: submission.files?.length > 0 ? 1 : 0.5 }]} 
+                     activeOpacity={0.8} 
+                     disabled={!submission.files?.length}
+                     onPress={() => {
+                       const fileUrl = submission.files?.[0]?.url || submission.files?.[0]?.fileUrl;
+                       if (fileUrl) {
+                         Linking.openURL(fileUrl).catch(err => {
+                           console.error("Failed to open file URL:", err);
+                           Alert.alert("Error", "Failed to open file link.");
+                         });
+                       } else {
+                         Alert.alert("Unavailable", "No file URL is associated with this submission.");
+                       }
+                     }}
+                   >
+                      <Ionicons name="eye-outline" size={16} color={theme.primary} style={{marginRight: 6}} />
+                      <Text style={styles.actionBtnDownloadText}>View File</Text>
+                   </TouchableOpacity>
+
+                   <TouchableOpacity 
+                     style={[styles.actionBtnFeedback, { opacity: submission.id ? 1 : 0.5 }]} 
+                     activeOpacity={0.8}
+                     disabled={!submission.id}
+                     onPress={() => submission.id && submitGrade(submission.id)}
+                   >
+                      <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={{marginRight: 6}} />
+                      <Text style={styles.actionBtnFeedbackText}>Save Grade</Text>
+                   </TouchableOpacity>
+                </View>
 
             </Animated.View>
           ))
@@ -195,8 +229,8 @@ const TeacherViewSubmissionScreen: React.FC<Props> = ({ navigation, route }) => 
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40, paddingHorizontal: 16, paddingTop: 16 },
 
   globalHeader: {
@@ -206,7 +240,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -217,7 +251,7 @@ const styles = StyleSheet.create({
   menuHandle: { paddingRight: 10, paddingVertical: 10 },
   headerTitle: { fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5', 
+    color: theme.primary, 
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -239,7 +273,7 @@ const styles = StyleSheet.create({
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   blueHeader: {
-    backgroundColor: '#5266EB', // royal blue matching the screenshot
+    backgroundColor: theme.primary, 
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 24,
@@ -276,12 +310,12 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 11,
-    color: '#E0E7FF', // faint light blue/white
+    color: '#E0E7FF', 
     fontWeight: '500',
   },
 
   submissionCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 24,
     marginBottom: 20,
@@ -291,7 +325,7 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 6,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -302,17 +336,17 @@ const styles = StyleSheet.create({
   studentName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 4,
   },
   studentId: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#6B7280',
+    color: theme.subtext,
   },
   submitTimeText: {
     fontSize: 11,
-    color: '#5266EB',
+    color: theme.primary,
     fontWeight: '500',
     marginTop: 2,
   },
@@ -326,6 +360,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 10,
+    backgroundColor: theme.isDarkMode ? '#33415530' : '#F1F5F9',
   },
   pdfIconBox: {
     marginRight: 12,
@@ -346,12 +381,12 @@ const styles = StyleSheet.create({
   fileName: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 2,
   },
   fileSize: {
     fontSize: 11,
-    color: '#111827',
+    color: theme.text,
   },
 
   gradeInputContainer: {
@@ -359,13 +394,13 @@ const styles = StyleSheet.create({
   },
   gradeInput: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 8,
     fontSize: 14,
-    color: '#111827',
-    backgroundColor: '#F8FAFC',
+    color: theme.text,
+    backgroundColor: theme.isDarkMode ? '#33415550' : '#F8FAFC',
   },
 
   actionRow: {
@@ -378,7 +413,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 20,
@@ -386,14 +421,14 @@ const styles = StyleSheet.create({
   actionBtnDownloadText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#5266EB',
+    color: theme.primary,
   },
   actionBtnFeedback: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#5266EB',
+    backgroundColor: theme.primary,
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 20,

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, ScrollView, Image } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -15,6 +15,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { useAuth } from '../store/AuthContext';
+import { useTheme } from '../store/ThemeContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DRAWER_WIDTH = SCREEN_WIDTH * 0.75;
@@ -43,13 +44,15 @@ const STUDENT_MENU: MenuItem[] = [
   { id: 'timetable', label: 'Timetable', icon: 'calendar-clear-outline' },
   { id: '5', label: 'Study Material', icon: 'book-outline' },
   { id: '6', label: 'Attendance', icon: 'calendar-outline' },
-  { id: '7', label: 'Announcements', icon: 'chatbox-ellipses-outline' },
+  { id: '7', label: 'Announcements', icon: 'megaphone-outline' },
+
   { id: '8', label: 'Grades & Reports', icon: 'document-text-outline' },
   { id: 'result-mgmt', label: 'Official Result', icon: 'reader-outline' },
   { id: '9', label: 'Fees Portal', icon: 'receipt-outline' },
   { id: 'div2', label: '', icon: '', isDivider: true },
-  { id: '10', label: 'Account Settings', icon: 'settings-outline' },
-  { id: '11', label: 'Logout', icon: 'log-out-outline' },
+  { id: '10', label: 'Messages', icon: 'chatbox-ellipses-outline' },
+  { id: '11', label: 'Account Settings', icon: 'settings-outline' },
+  { id: '12', label: 'Logout', icon: 'log-out-outline' },
 ];
 
 const PRINCIPAL_MENU: MenuItem[] = [
@@ -67,11 +70,11 @@ const PRINCIPAL_MENU: MenuItem[] = [
   { id: '5', label: 'Students details', icon: 'person-outline' },
   { id: '6', label: 'Academic Calendar', icon: 'calendar-outline' },
   { id: '7', label: 'Timetable', icon: 'time-outline' },
-  { id: '8', label: 'Performance', icon: 'trending-up-outline' },
   { id: '11', label: 'Result Management', icon: 'reader-outline' },
   { id: '9', label: 'Announcements', icon: 'megaphone-outline' },
   { id: '10', label: 'Fees & Payments', icon: 'card-outline' },
   { id: 'equip', label: 'Equipment Requests', icon: 'construct-outline' },
+  { id: 'library', label: 'Library', icon: 'book-outline' },
   { id: 'div1', label: '', icon: '', isDivider: true },
   { id: '12', label: 'Account Settings', icon: 'settings-outline' },
   { id: '13', label: 'Logout', icon: 'log-out-outline' },
@@ -90,13 +93,15 @@ const TEACHER_MENU: MenuItem[] = [
   { id: 'result-mgmt', label: 'Result Management', icon: 'reader-outline' },
   { id: 'my-attendance', label: 'My Attendance', icon: 'person-check-outline' },
   { id: 'div1', label: '', icon: '', isDivider: true },
-  { id: '9', label: 'Account Settings', icon: 'settings-outline' },
-  { id: '10', label: 'Logout', icon: 'log-out-outline' },
+  { id: '9', label: 'Messages', icon: 'chatbox-ellipses-outline' },
+  { id: '10', label: 'Account Settings', icon: 'settings-outline' },
+  { id: '11', label: 'Logout', icon: 'log-out-outline' },
 ];
 
 export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onClose, role = 'student' }) => {
+  const { theme, isDarkMode } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { logout } = useAuth();
+  const { authState, logout } = useAuth();
   const route = useRoute();
   const currentRouteName = route.name;
 
@@ -107,7 +112,10 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
   useEffect(() => {
     if (isOpen) {
       setIsRendered(true);
-      translateX.value = withTiming(0, { duration: 200 });
+
+      requestAnimationFrame(() => {
+        translateX.value = withTiming(0, { duration: 250 });
+      });
     } else {
       translateX.value = withTiming(-DRAWER_WIDTH, { duration: 200 }, (finished) => {
         if (finished) {
@@ -186,14 +194,14 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
         case 'Class Attendance': return currentRouteName === 'TeacherAttendance' || currentRouteName === 'TeacherViewAttendance' || currentRouteName === 'TeacherMarkAttendance';
         case 'Exams': return currentRouteName === 'TeacherQuiz' || currentRouteName === 'TeacherCreateQuiz' || currentRouteName === 'TeacherCreateQuizStep2' || currentRouteName === 'TeacherCreateQuizStep3' || currentRouteName === 'TeacherAddQuestion' || currentRouteName === 'TeacherViewQuizResult' || currentRouteName === 'TeacherMonitorLive';
         case 'Study Material': return currentRouteName === 'StudyMaterial' || currentRouteName === 'TeacherStudyMaterial';
-        case 'Performance': return currentRouteName === 'PrincipalPerformance' || currentRouteName === 'Performance' || currentRouteName === 'TeacherPerformance';
         case 'Performance Report': return currentRouteName === 'TeacherPerformance';
         case 'My Attendance': return currentRouteName === 'TeacherSelfAttendance';
         case 'Announcements': return currentRouteName === 'PrincipalAnnouncements' || currentRouteName === 'Announcements';
         case 'Fees & Payments': return currentRouteName === 'PrincipalFees' || currentRouteName === 'Fees';
         case 'Equipment': return currentRouteName === 'TeacherEquipment' || currentRouteName === 'TeacherAddEquipmentRequest' || currentRouteName === 'TeacherEquipmentDetail';
-        case 'Equipment Requests': return false;
-        case 'Result Management': return currentRouteName === 'PrincipalRSM' || currentRouteName === 'ResultManagement' || currentRouteName === 'TeacherResultManagement';
+        case 'Equipment Requests': return currentRouteName === 'PrincipalEquipment';
+        case 'Library': return currentRouteName === 'PrincipalLibrary';
+        case 'Result Management': return currentRouteName === 'PrincipalRSM' || currentRouteName === 'PrincipalRMS' || currentRouteName === 'ResultManagement' || currentRouteName === 'TeacherResultManagement';
         case 'Account Settings': return currentRouteName === 'AccountSettings';
         case 'Attendance': return currentRouteName === 'Attendance';
         default: return false;
@@ -247,17 +255,18 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
           if (role === 'principal') navigation.navigate('PrincipalTimetable');
           else if (role === 'teacher') navigation.navigate('TeacherTimetable');
           else navigation.navigate('Timetable');
-        } else if (label === 'Performance') navigation.navigate('PrincipalPerformance');
-        else if (label === 'Announcements') {
+        } else if (label === 'Announcements') {
           if (role === 'principal') navigation.navigate('PrincipalAnnouncements');
           else navigation.navigate('Announcements');
         } else if (label === 'Fees & Payments') navigation.navigate('PrincipalFees');
         else if (label === 'Equipment') navigation.navigate('TeacherEquipment');
-        else if (label === 'Equipment Requests') navigation.navigate('PrincipalDashboard');
+        else if (label === 'Equipment Requests') navigation.navigate('PrincipalEquipment');
+        else if (label === 'Library') navigation.navigate('PrincipalLibrary');
         else if (label === 'Result Management') {
-          if (role === 'principal') navigation.navigate('PrincipalRSM');
+          if (role === 'principal') navigation.navigate('PrincipalRMS');
           else if (role === 'teacher') navigation.navigate('TeacherResultManagement');
-        } else if (label === 'Account Settings') navigation.navigate('AccountSettings');
+        } //navigation for messgaes
+        else if (label === 'Messages') navigation.navigate('Messages'); else if (label === 'Account Settings') navigation.navigate('AccountSettings');
         else if (label === 'Logout') logout();
       }, 250);
     };
@@ -266,8 +275,15 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
         {role === 'principal' && (
           <View style={styles.headerInfo}>
-            <Text style={styles.headerTitle}>Institution Portal</Text>
-            <Text style={styles.headerSubtitle}>Manage your institution</Text>
+            {/* {authState.user?.photoUrl ? (
+              <Image source={{ uri: authState.user.photoUrl }} style={styles.drawerAvatarImage} />
+            ) : (
+              // <View style={styles.drawerAvatarPlaceholder}>
+              //   <Ionicons name="person" size={24} color="#8B5CF6" />
+              // </View>
+            )} */}
+            {/* <Text style={styles.headerTitle}>{authState.user?.name || 'Institution Admin'}</Text>
+            <Text style={styles.headerSubtitle}>{authState.user?.email || 'admin@sharnex.com'}</Text> */}
           </View>
         )}
         {menuItems.map((item) => {
@@ -317,8 +333,15 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
     );
   };
 
+  if (!isRendered) {
+    return null;
+  }
+
   return (
-    <View style={[StyleSheet.absoluteFill, { zIndex: 9999, elevation: 9999 }]} pointerEvents={isOpen ? 'auto' : 'none'}>
+    <View
+      style={[StyleSheet.absoluteFill, { zIndex: 9999, elevation: 9999 }]}
+      pointerEvents="box-none"
+    >
       {/* Dimmed Backdrop */}
       <Animated.View style={[styles.backdrop, backdropStyle]}>
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
@@ -328,7 +351,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
       <GestureDetector gesture={panGesture}>
         <Animated.View style={[styles.drawerContainer, drawerStyle]}>
           {/* Uniform Semi-transparent overlay background */}
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: role === 'principal' ? '#8B5CF6' : 'rgba(139, 92, 246, 0.95)' }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: isDarkMode ? '#1E293B' : (role === 'principal' ? '#8B5CF6' : 'rgba(139, 92, 246, 0.95)') }]} />
 
           <TouchableOpacity style={styles.closeBtn} onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name="close" size={26} color="#FFFFFF" />
@@ -435,6 +458,23 @@ const styles = StyleSheet.create({
     marginHorizontal: 0,
     marginVertical: 10,
   },
+  // drawerAvatarImage: {
+  //   width: 60,
+  //   height: 60,
+  //   borderRadius: 30,
+  //   marginBottom: 12,
+  //   borderWidth: 2,
+  //   borderColor: '#FFFFFF',
+  // },
+  // drawerAvatarPlaceholder: {
+  //   width: 60,
+  //   height: 60,
+  //   borderRadius: 30,
+  //   backgroundColor: '#FFFFFF',
+  //   alignItems: 'center',
+  //   justifyContent: 'center',
+  //   marginBottom: 12,
+  // },
 });
 
 

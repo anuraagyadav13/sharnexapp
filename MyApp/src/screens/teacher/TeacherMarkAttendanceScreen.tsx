@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,57 +8,79 @@ import {
   TouchableOpacity,
   Platform,
   ActivityIndicator,
-  Alert
+  Alert,
+  RefreshControl
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../App';
+import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import { useTheme } from '../../store/ThemeContext';
+import { TeacherHeader } from '../../components/TeacherHeader';
+// Import our easy-to-use teacherService for talking to the server
+import teacherService from '../../services/teacherService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherMarkAttendance'>;
 
 const TeacherMarkAttendanceScreen: React.FC<Props> = ({ navigation, route }) => {
   const { classId, className } = route.params;
   const { authState } = useAuth();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles({ ...theme, isDarkMode });
   const [students, setStudents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attendanceState, setAttendanceState] = useState<Record<string, 'P' | 'A' | 'L'>>({});
 
-  useEffect(() => {
-    const fetchInitialData = async () => {
+  const fetchInitialData = useCallback(async (isRefresh = false) => {
       try {
-        setIsLoading(true);
+        if (!isRefresh) setIsLoading(true);
         const dateStr = new Date().toISOString().split('T')[0];
         
+        // Ask the server for both the list of students and today's attendance records at once
         const [studentsRes, attendanceRes] = await Promise.all([
-          apiClient.get(ENDPOINTS.TEACHER.CLASS_STUDENTS(classId)),
-          apiClient.get(`${ENDPOINTS.TEACHER.ATTENDANCE(classId)}?date=${dateStr}`)
+          teacherService.getClassStudents(classId),
+          teacherService.getAttendance(classId, dateStr)
         ]);
         
-        const studentsData = studentsRes.data.data || [];
+        // Students come back as: { data: { students: [...] } } or just { data: [...] }
+        const studentsPayload = studentsRes.data?.data ?? studentsRes.data;
+        const studentsData = Array.isArray(studentsPayload)
+          ? studentsPayload
+          : (studentsPayload?.students ?? studentsPayload?.data ?? []);
         setStudents(studentsData);
 
-        // Pre-fill attendance state if records exist
-        const existingRecords = attendanceRes.data.attendance || [];
+        // Attendance records come as: { data: { attendance: [...] } }
+        const attendancePayload = attendanceRes.data?.data ?? attendanceRes.data;
+        const existingRecords = attendancePayload?.attendance ?? attendancePayload?.records ?? [];
+        // If attendance was already marked today, pre-fill the buttons so teacher can edit
         if (existingRecords.length > 0) {
           const prevState: Record<string, 'P' | 'A' | 'L'> = {};
           existingRecords.forEach((rec: any) => {
-            prevState[rec.studentId] = rec.status === 'present' ? 'P' : rec.status === 'absent' ? 'A' : 'L';
+            const sid = rec.studentId ?? rec.student_id;
+            const s = rec.status;
+            prevState[sid] = s === 'present' ? 'P' : s === 'absent' ? 'A' : 'L';
           });
           setAttendanceState(prevState);
         }
       } catch (error) {
         console.error('Failed to fetch initial marking data:', error);
       } finally {
-        setIsLoading(false);
+        if (!isRefresh) setIsLoading(false);
       }
-    };
-    fetchInitialData();
-  }, [classId]);
+    }, [classId]);
+
+  useEffect(() => {
+    fetchInitialData(false);
+  }, [fetchInitialData]);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchInitialData(true);
+    setIsRefreshing(false);
+  }, [fetchInitialData]);
 
   const markAll = (status: 'P' | 'A') => {
     const newState: Record<string, 'P' | 'A' | 'L'> = {};
@@ -85,7 +107,8 @@ const TeacherMarkAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
         return;
       }
 
-      await apiClient.post(ENDPOINTS.TEACHER.MARK_ATTENDANCE(classId), { 
+      // Send the newly marked attendance records back to the server
+      await teacherService.markAttendance(classId, { 
         date: new Date().toISOString().split('T')[0],
         attendanceRecords: data 
       });
@@ -105,18 +128,11 @@ const TeacherMarkAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
-        <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
-          </View>
-        </View>
-      </View>
+      <TeacherHeader
+        title="Mark Attendance"
+        navigation={navigation}
+        isStackScreen={true}
+      />
 
       {/* Blue Header Section */}
       <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
@@ -133,7 +149,11 @@ const TeacherMarkAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
          <Text style={styles.blueSubtitle}>{students.length} Students</Text>
       </Animated.View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+      >
         
         {/* Main Content Card */}
         <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.mainCard}>
@@ -264,8 +284,8 @@ const TeacherMarkAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 110 }, 
 
   globalHeader: {
@@ -275,18 +295,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
     elevation: 8,
-    zIndex: 10
+    zIndex: 10,
   },
   menuHandle: { paddingRight: 10, paddingVertical: 10 },
-  headerTitle: { fontSize: 16,
+  headerTitle: {
+    fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5', 
+    color: theme.primary,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -308,7 +329,7 @@ const styles = StyleSheet.create({
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   blueHeader: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 16,
@@ -342,7 +363,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   todayBtn: {
-    backgroundColor: '#79A4F2', // matching light blue
+    backgroundColor: '#79A4F2', 
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 8,
@@ -359,7 +380,7 @@ const styles = StyleSheet.create({
   },
 
   mainCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 24,
     marginHorizontal: 16,
@@ -370,12 +391,12 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 6,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 20,
   },
 
@@ -421,7 +442,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: theme.border,
   },
   studentInfoLeft: {
     flexDirection: 'row',
@@ -431,7 +452,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: theme.isDarkMode ? '#33415530' : '#EEF2FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
@@ -439,17 +460,17 @@ const styles = StyleSheet.create({
   avatarInitials: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#4F46E5',
+    color: theme.primary,
   },
   studentName: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1F2937',
+    color: theme.text,
     marginBottom: 2,
   },
   studentId: {
     fontSize: 9,
-    color: '#9CA3AF',
+    color: theme.subtext,
     textTransform: 'uppercase',
   },
 
@@ -481,8 +502,8 @@ const styles = StyleSheet.create({
   toggleBtnAbsentActive: { backgroundColor: '#EF4444' },
   toggleTextAbsent: { color: '#EF4444' },
 
-  toggleBtnLeave: { backgroundColor: '#FEF3C7' }, // pale yellow orange
-  toggleBtnLeaveActive: { backgroundColor: '#F59E0B' }, // solid orange
+  toggleBtnLeave: { backgroundColor: '#FEF3C7' },
+  toggleBtnLeaveActive: { backgroundColor: '#F59E0B' },
   toggleTextLeave: { color: '#F59E0B' },
 
   bottomBar: {
@@ -494,24 +515,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.surface,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
   },
   submitBtn: {
     flex: 2.2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 20,
     marginRight: 12,
   
-    shadowColor: '#4F46E5',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 4,},
+    elevation: 4,
+  },
   submitBtnText: {
     fontSize: 14,
     fontWeight: '600',
@@ -522,21 +546,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.isDarkMode ? '#33415530' : '#F8FAFC',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     paddingVertical: 14,
     paddingHorizontal: 20,
   },
   cancelBtnText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
   emptyText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.subtext,
     textAlign: 'center',
     marginTop: 20,
     fontWeight: '500',

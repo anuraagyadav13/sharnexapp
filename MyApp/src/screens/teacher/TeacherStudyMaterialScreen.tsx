@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,9 @@ import {
   Alert,
   Modal,
   Dimensions,
-  FlatList
+  FlatList,
+  RefreshControl,
+  Linking
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -20,8 +22,8 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Animated, { FadeInUp, FadeIn, Layout } from 'react-native-reanimated';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import { useTheme } from '../../store/ThemeContext';
+import teacherService from '../../services/teacherService';
 
 const { width } = Dimensions.get('window');
 
@@ -32,11 +34,14 @@ let DocumentPickerTypes: any = null;
 const TeacherStudyMaterialScreen = ({ navigation }: any) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles({ ...theme, isDarkMode });
   const [isLoading, setIsLoading] = useState(true);
   const [materials, setMaterials] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('All Material');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Modal State
   const [isUploadModalVisible, setUploadModalVisible] = useState(false);
@@ -50,18 +55,18 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
   const categories = ['All Material', 'PDFs', 'Videos', 'Documents', 'Notes'];
 
   useEffect(() => {
-    fetchInitialData();
-  }, []);
+    fetchInitialData(false);
+  }, [authState.user?.id]);
 
-  const fetchInitialData = async () => {
+  const fetchInitialData = useCallback(async (isRefresh = false) => {
     try {
-      setIsLoading(true);
+      if (!isRefresh) setIsLoading(true);
       const teacherId = authState.user?.id;
       if (!teacherId) return;
 
       const [materialsRes, classesRes] = await Promise.all([
-        apiClient.get(ENDPOINTS.TEACHER.STUDY_MATERIALS),
-        apiClient.get(ENDPOINTS.TEACHER.CLASSES(teacherId))
+        teacherService.getStudyMaterials(),
+        teacherService.getClasses(teacherId)
       ]);
 
       const materialList = materialsRes.data?.materials || [];
@@ -73,9 +78,15 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
     } catch (err) {
       console.error('Failed to fetch initial data:', err);
     } finally {
-      setIsLoading(false);
+      if (!isRefresh) setIsLoading(false);
     }
-  };
+  }, [authState.user?.id]);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchInitialData(true);
+    setIsRefreshing(false);
+  }, [fetchInitialData]);
 
   const ensureDocumentPicker = () => {
     if (DocumentPicker && DocumentPickerTypes) return;
@@ -116,28 +127,34 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
   };
 
   const handleUpload = async () => {
-    if (!newTitle || !newClassId || !selectedFile) {
-      Alert.alert('Required Fields', 'Please provide a title, class, and select a file.');
+    if (!newTitle.trim()) {
+      Alert.alert('Validation Error', 'Please enter a title.');
+      return;
+    }
+    if (!newClassId) {
+      Alert.alert('Validation Error', 'Please select a target class.');
+      return;
+    }
+    if (!selectedFile) {
+      Alert.alert('Validation Error', 'Please choose a file to upload.');
       return;
     }
 
     try {
       setIsUploading(true);
-      
-      // Note: in a real production app, you'd upload binary to S3/Cloudinary first.
-      // Here we simulate getting a fileUrl.
-      const mockFileUrl = `https://sharnex-storage.com/${(selectedFile?.name || 'file').replace(/\s+/g, '_')}`;
 
-      await apiClient.post(ENDPOINTS.TEACHER.STUDY_MATERIALS, {
-        title: newTitle,
-        description: newDescription,
-        classId: newClassId,
-        subject: newSubject,
-        fileUrl: mockFileUrl,
-        fileName: selectedFile.name,
-        fileType: selectedFile.type?.includes('pdf') ? 'pdf' : selectedFile.type?.includes('video') ? 'video' : 'document',
-        fileSize: selectedFile.size
-      });
+      const formData = new FormData();
+      formData.append('title', newTitle.trim());
+      formData.append('description', newDescription.trim());
+      formData.append('classId', newClassId);
+      formData.append('subject', newSubject.trim());
+      formData.append('file', {
+        uri: selectedFile.uri,
+        name: selectedFile.name,
+        type: selectedFile.type || 'application/octet-stream'
+      } as any);
+
+      await teacherService.uploadStudyMaterial(formData);
 
       Alert.alert('Success', 'Study material uploaded successfully!');
       setUploadModalVisible(false);
@@ -145,7 +162,7 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
       fetchInitialData();
     } catch (err: any) {
       console.error('Upload failed:', err);
-      Alert.alert('Upload Failed', err.message || 'An error occurred during upload.');
+      Alert.alert('Upload Failed', err.response?.data?.message || err.message || 'An error occurred during upload.');
     } finally {
       setIsUploading(false);
     }
@@ -169,7 +186,7 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await apiClient.delete(ENDPOINTS.TEACHER.DELETE_STUDY_MATERIAL(id));
+              await teacherService.deleteStudyMaterial(id);
               fetchInitialData();
             } catch (err: any) {
               Alert.alert('Error', 'Failed to delete material.');
@@ -210,8 +227,21 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
         <TouchableOpacity style={styles.actionIcon} onPress={() => handleDeleteMaterial(item.id)}>
           <Ionicons name="trash-outline" size={20} color="#EF4444" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionIcon}>
-          <Ionicons name="download-outline" size={20} color="#6B7280" />
+        <TouchableOpacity 
+          style={styles.actionIcon}
+          onPress={() => {
+            const url = item.file_url || item.fileUrl || item.url;
+            if (url) {
+              Linking.openURL(url).catch(err => {
+                console.error("Failed to open study material URL:", err);
+                Alert.alert("Error", "Failed to open study material file link.");
+              });
+            } else {
+              Alert.alert("Unavailable", "No file download URL is associated with this study material.");
+            }
+          }}
+        >
+          <Ionicons name="download-outline" size={20} color={theme.text} />
         </TouchableOpacity>
       </View>
     </Animated.View>
@@ -219,7 +249,7 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F9" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.surface} />
       
       {/* Attendance-Style Header */}
       <View style={styles.topHeader}>
@@ -230,7 +260,7 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
           activeOpacity={0.7}
           scaleTo={0.85}
         >
-          <Ionicons name="menu" size={28} color="#111827" />
+          <Ionicons name="menu" size={28} color={theme.text} />
         </ScaleButton>
 
         <Text style={styles.topHeaderTitle} numberOfLines={1}>Study Material</Text>
@@ -247,7 +277,10 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
         </View>
       </View>
 
-      <View style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+      >
         {/* Search Bar */}
         <View style={styles.searchSection}>
           <View style={styles.searchContainer}>
@@ -293,10 +326,10 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
             renderItem={({ item }) => <MaterialItem item={item} />}
             keyExtractor={item => item.id}
             contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
+            scrollEnabled={false}
           />
         )}
-      </View>
+      </ScrollView>
 
       {/* Upload Modal */}
       <Modal
@@ -403,8 +436,8 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FAF9F9' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   container: { flex: 1 },
   centerFill: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
@@ -415,7 +448,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -427,14 +460,14 @@ const styles = StyleSheet.create({
   topHeaderTitle: { 
     fontSize: 16, 
     fontWeight: '500', 
-    color: '#4F46E5',
+    color: theme.primary,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
   },
   headerRight: { flexDirection: 'row', alignItems: 'center' },
   uploadBtnHeader: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
@@ -447,13 +480,13 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
   },
-  searchInput: { flex: 1, paddingVertical: 10, paddingHorizontal: 8, fontSize: 14, color: '#1E293B' },
+  searchInput: { flex: 1, paddingVertical: 10, paddingHorizontal: 8, fontSize: 14, color: theme.text },
 
   categoryContainer: { marginBottom: 16 },
   categoryScroll: { paddingHorizontal: 16 },
@@ -461,19 +494,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#FFF',
+    backgroundColor: theme.surface,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
   },
-  categoryPillActive: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
-  categoryText: { fontSize: 13, fontWeight: '600', color: '#64748B' },
+  categoryPillActive: { backgroundColor: theme.primary, borderColor: theme.primary },
+  categoryText: { fontSize: 13, fontWeight: '600', color: theme.subtext },
   categoryTextActive: { color: '#FFF' },
 
   listContent: { padding: 16 },
   materialItem: {
     flexDirection: 'row',
-    backgroundColor: '#FFF',
+    backgroundColor: theme.surface,
     padding: 16,
     borderRadius: 16,
     marginBottom: 12,
@@ -484,76 +517,77 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: theme.border,
   },
   materialIconContainer: {
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.background,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
   materialInfo: { flex: 1 },
-  materialTitle: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
-  materialMeta: { fontSize: 12, color: '#64748B', marginTop: 2 },
-  materialDate: { fontSize: 10, color: '#94A3B8', marginTop: 4 },
+  materialTitle: { fontSize: 15, fontWeight: '700', color: theme.text },
+  materialMeta: { fontSize: 12, color: theme.subtext, marginTop: 2 },
+  materialDate: { fontSize: 10, color: theme.subtext, marginTop: 4 },
   materialActions: { flexDirection: 'row', gap: 12 },
   actionIcon: { padding: 4 },
 
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-  emptyStateTitle: { fontSize: 18, fontWeight: '700', color: '#1E293B', marginTop: 16 },
-  emptyStateSubtext: { fontSize: 14, color: '#64748B', textAlign: 'center', marginTop: 8 },
+  emptyStateTitle: { fontSize: 18, fontWeight: '700', color: theme.text, marginTop: 16 },
+  emptyStateSubtext: { fontSize: 14, color: theme.subtext, textAlign: 'center', marginTop: 8 },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: {
-    backgroundColor: '#FFF',
+    backgroundColor: theme.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     height: '85%',
     padding: 24,
   },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  modalTitle: { fontSize: 20, fontWeight: '800', color: '#1E293B' },
+  modalTitle: { fontSize: 20, fontWeight: '800', color: theme.text },
   modalForm: { flex: 1 },
-  inputLabel: { fontSize: 13, fontWeight: '700', color: '#1E293B', marginBottom: 8, marginTop: 16 },
+  inputLabel: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 8, marginTop: 16 },
   input: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.background,
     borderRadius: 12,
     padding: 12,
     fontSize: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
+    color: theme.text,
   },
   textArea: { minHeight: 80, textAlignVertical: 'top' },
   inputRow: { flexDirection: 'row', marginBottom: 8 },
   pickerContainer: { marginTop: 4 },
-  miniClassPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#F1F5F9', marginRight: 8, borderWidth: 1, borderColor: 'transparent' },
-  miniClassPillActive: { backgroundColor: '#EEF2FF', borderColor: '#4F46E5' },
-  miniClassText: { fontSize: 12, color: '#64748B', fontWeight: '500' },
-  miniClassTextActive: { color: '#4F46E5', fontWeight: '700' },
+  miniClassPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9', marginRight: 8, borderWidth: 1, borderColor: 'transparent' },
+  miniClassPillActive: { backgroundColor: theme.isDarkMode ? '#312E8140' : '#EEF2FF', borderColor: theme.primary },
+  miniClassText: { fontSize: 12, color: theme.subtext, fontWeight: '500' },
+  miniClassTextActive: { color: theme.primary, fontWeight: '700' },
 
   filePickerBox: {
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: '#D1D5DB',
+    borderColor: theme.border,
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.background,
     marginTop: 8,
   },
-  uploadText: { fontSize: 14, fontWeight: '600', color: '#4F46E5', marginTop: 12 },
-  uploadSubtext: { fontSize: 11, color: '#64748B', marginTop: 4 },
+  uploadText: { fontSize: 14, fontWeight: '600', color: theme.primary, marginTop: 12 },
+  uploadSubtext: { fontSize: 11, color: theme.subtext, marginTop: 4 },
   selectedFileView: { alignItems: 'center', width: '100%' },
-  fileName: { fontSize: 14, fontWeight: '600', color: '#1F2937', marginTop: 8 },
+  fileName: { fontSize: 14, fontWeight: '600', color: theme.text, marginTop: 8 },
   removeFile: { color: '#EF4444', fontSize: 12, fontWeight: '700', marginTop: 8 },
 
   modalActions: { flexDirection: 'row', gap: 12, marginTop: 32, marginBottom: 40 },
-  modalCancelBtn: { flex: 1, paddingVertical: 14, alignItems: 'center', borderRadius: 12, backgroundColor: '#F1F5F9' },
-  modalCancelText: { fontSize: 15, fontWeight: '600', color: '#64748B' },
-  modalUploadBtn: { flex: 1.5, paddingVertical: 14, alignItems: 'center', borderRadius: 12, backgroundColor: '#4F46E5' },
+  modalCancelBtn: { flex: 1, paddingVertical: 14, alignItems: 'center', borderRadius: 12, backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9' },
+  modalCancelText: { fontSize: 15, fontWeight: '600', color: theme.subtext },
+  modalUploadBtn: { flex: 1.5, paddingVertical: 14, alignItems: 'center', borderRadius: 12, backgroundColor: theme.primary },
   modalUploadText: { fontSize: 15, fontWeight: '600', color: '#FFF' },
   disabledBtn: { opacity: 0.6 },
 });

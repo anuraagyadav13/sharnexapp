@@ -12,17 +12,20 @@ import {
   Alert
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../App';
+import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import { useTheme } from '../../store/ThemeContext';
+import { TeacherHeader } from '../../components/TeacherHeader';
+import teacherService from '../../services/teacherService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherCreateAssignment'>;
 
 const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
   const { authState } = useAuth();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const [selectedType, setSelectedType] = useState('Homework');
   const [title, setTitle] = useState('');
   const [classId, setClassId] = useState('');
@@ -39,7 +42,7 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
       try {
         const teacherId = authState.user?.id;
         if (!teacherId) return;
-        const res = await apiClient.get(ENDPOINTS.TEACHER.CLASSES(teacherId));
+        const res = await teacherService.getClasses(teacherId);
         // More robust parsing for proxied response
         const data = res.data || res;
         const fetchedClasses = Array.isArray(data) ? data : (data.classes || []);
@@ -57,9 +60,42 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
   }, [authState.user?.id]);
 
   const handlePublish = async () => {
-    if (!title || !classId) {
-      Alert.alert('Error', 'Please enter a title and select a class.');
+    if (!title.trim()) {
+      Alert.alert('Validation Error', 'Please enter an assignment title.');
       return;
+    }
+    if (!classId) {
+      Alert.alert('Validation Error', 'Please select a target class.');
+      return;
+    }
+
+    const parsedMaxMarks = parseInt(maxMarks, 10);
+    if (isNaN(parsedMaxMarks) || parsedMaxMarks <= 0) {
+      Alert.alert('Validation Error', 'Total Points must be a positive integer greater than 0.');
+      return;
+    }
+
+    let resolvedDueDate = '';
+    if (dueDate.trim()) {
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(dueDate.trim())) {
+        Alert.alert('Validation Error', 'Due Date must be in YYYY-MM-DD format.');
+        return;
+      }
+      const parsedDate = Date.parse(dueDate.trim());
+      if (isNaN(parsedDate)) {
+        Alert.alert('Validation Error', 'Please enter a valid date.');
+        return;
+      }
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (new Date(parsedDate) < today) {
+        Alert.alert('Validation Error', 'Due Date cannot be in the past.');
+        return;
+      }
+      resolvedDueDate = new Date(parsedDate).toISOString();
+    } else {
+      resolvedDueDate = new Date(Date.now() + 86400000 * 7).toISOString(); // Default to 7 days from now
     }
 
     try {
@@ -69,13 +105,13 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
         return;
       }
       setIsPublishing(true);
-      await apiClient.post(ENDPOINTS.TEACHER.CREATE_ASSIGNMENT(teacherId), {
-        title,
+      await teacherService.createAssignment(teacherId, {
+        title: title.trim(),
         description: instruction,
-        dueDate: dueDate || new Date(Date.now() + 86400000 * 7).toISOString(),
+        dueDate: resolvedDueDate,
         classId,
         subject: course,
-        maxMarks: parseInt(maxMarks) || 100,
+        maxMarks: parsedMaxMarks,
         type: selectedType.toLowerCase(),
         teacherId,
         institutionId: authState.user?.institutionId
@@ -96,18 +132,11 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
-        <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
-          </View>
-        </View>
-      </View>
+      <TeacherHeader
+        title="Create Assignment"
+        navigation={navigation}
+        isStackScreen={true}
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
@@ -273,8 +302,8 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40, paddingHorizontal: 16 },
 
   globalHeader: {
@@ -284,7 +313,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -295,7 +324,7 @@ const styles = StyleSheet.create({
   menuHandle: { paddingRight: 10, paddingVertical: 10 },
   headerTitle: { fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5', 
+    color: theme.primary, 
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -323,19 +352,19 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 20,
   },
-  pageTitle: { fontSize: 24, fontWeight: '800', color: '#5266EB', marginBottom: 4 },
-  pageSubtitle: { fontSize: 12, color: '#9CA3AF', fontWeight: '500' },
+  pageTitle: { fontSize: 24, fontWeight: '800', color: theme.primary, marginBottom: 4 },
+  pageSubtitle: { fontSize: 12, color: theme.subtext, fontWeight: '500' },
   backButton: {
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: '#7FA4FF', // slightly lighter blue to match the icon bg
+    backgroundColor: 'rgba(255,255,255,0.25)', 
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   formCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 24,
     shadowColor: '#1E293B',
@@ -344,7 +373,7 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 6,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -354,7 +383,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
   },
 
   fieldContainer: {
@@ -363,7 +392,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 8,
   },
   textInput: {
@@ -371,8 +400,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 13,
-    color: '#111827',
-    backgroundColor: '#FFFFFF',
+    color: theme.text,
+    backgroundColor: theme.surface,
   },
   textArea: {
     minHeight: 100,
@@ -384,10 +413,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderRadius: 6,
     paddingHorizontal: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
   },
 
   radioGroup: {
@@ -397,13 +426,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderRadius: 6,
     padding: 12,
   },
   radioItemSelected: {
-    borderColor: '#5266EB',
-    backgroundColor: '#F5F7FF',
+    borderColor: theme.primary,
+    backgroundColor: theme.isDarkMode ? '#312E8130' : '#F5F7FF',
   },
   radioIcon: {
     marginRight: 10,
@@ -411,38 +440,38 @@ const styles = StyleSheet.create({
   radioTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
   radioSubtitle: {
     fontSize: 10,
-    color: '#9CA3AF',
+    color: theme.subtext,
     marginTop: 2,
   },
 
   dashedUploadBox: {
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderRadius: 16,
     paddingVertical: 8,
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
   },
   dragDropTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 4,
   },
   dragDropSubtitle: {
     fontSize: 10,
-    color: '#9CA3AF',
+    color: theme.subtext,
     marginBottom: 20,
   },
   browseButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#5266EB',
+    backgroundColor: theme.primary,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 8,
@@ -463,7 +492,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 20,
@@ -471,13 +500,13 @@ const styles = StyleSheet.create({
   actionBtnCancelText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#5266EB',
+    color: theme.primary,
   },
   actionBtnPublish: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#5266EB',
+    backgroundColor: theme.primary,
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 20,

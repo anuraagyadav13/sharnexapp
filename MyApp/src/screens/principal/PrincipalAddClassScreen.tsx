@@ -12,14 +12,15 @@ import {
   Modal,
   KeyboardAvoidingView,
   Dimensions,
-  Alert,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
-import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
+import { useTheme } from '../../store/ThemeContext';
 import apiClient from '../../services/apiClient';
+import principalService from '../../services/principalService';
 import { ENDPOINTS } from '../../constants/api';
 import Toast, { ToastType } from '../../components/Toast';
 
@@ -29,6 +30,9 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const PrincipalAddClassScreen: React.FC<Props> = ({ navigation }) => {
   const { authState } = useAuth();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
+
   const [isLoading, setIsLoading] = useState(false);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [allAvailableSubjects, setAllAvailableSubjects] = useState<any[]>([]);
@@ -64,37 +68,60 @@ const PrincipalAddClassScreen: React.FC<Props> = ({ navigation }) => {
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
+        const institutionId = authState.user?.institutionId || '';
         const [staffRes, allSubsRes] = await Promise.all([
-          apiClient.get(ENDPOINTS.PRINCIPAL.STAFF),
-          apiClient.get('/subjects'),
+          principalService.getTeachers(institutionId).catch(() => ({ data: [] })),
+          principalService.getSubjects().catch(() => ({ data: [] })),
         ]);
 
-        const staffList =
-          staffRes.data.data || staffRes.data.staff || staffRes.data || [];
-        const availableSubjects = allSubsRes.data.subjects || [];
+        let staffList =
+          (staffRes as any).data?.data || (staffRes as any).data?.teachers || (Array.isArray((staffRes as any).data) ? (staffRes as any).data : []);
+        if (!staffList || staffList.length === 0) {
+          try {
+            const fallbackStaff = await apiClient.get('/teachers');
+            staffList = fallbackStaff.data?.data || fallbackStaff.data?.teachers || (Array.isArray(fallbackStaff.data) ? fallbackStaff.data : []);
+          } catch {}
+        }
+
+        let availableSubjects =
+          (allSubsRes as any).data?.subjects || (allSubsRes as any).data?.data || (Array.isArray((allSubsRes as any).data) ? (allSubsRes as any).data : []);
+        if (!availableSubjects || availableSubjects.length === 0) {
+          try {
+            const fallbackSubs = await apiClient.get('/subjects');
+            availableSubjects = fallbackSubs.data?.subjects || fallbackSubs.data?.data || (Array.isArray(fallbackSubs.data) ? fallbackSubs.data : []);
+          } catch {}
+        }
 
         setTeachers(Array.isArray(staffList) ? staffList : []);
-        setAllAvailableSubjects(availableSubjects);
+        setAllAvailableSubjects(Array.isArray(availableSubjects) ? availableSubjects : []);
       } catch (error) {
         console.error('Failed to fetch metadata:', error);
       }
     };
     fetchMetadata();
-  }, []);
+  }, [authState.user?.institutionId]);
 
   const handleCreate = async () => {
-    if (!form.name) {
+    if (!form.name.trim()) {
       showToast('Class Name is a required field.', 'warning');
+      return;
+    }
+    if (!form.section.trim()) {
+      showToast('Section is a required field.', 'warning');
+      return;
+    }
+    if (!form.academicYear.trim()) {
+      showToast('Academic Year is a required field.', 'warning');
       return;
     }
 
     try {
       setIsLoading(true);
       const payload = {
-        name: form.name,
-        section: form.section,
-        grade: form.grade,
-        academicYear: form.academicYear,
+        name: form.name.trim(),
+        section: form.section.trim(),
+        grade: form.grade.trim(),
+        academicYear: form.academicYear.trim(),
         institutionId: authState.user?.institutionId,
         subjects: form.subjects.map(s => ({
           subjectId: s.subjectId,
@@ -103,9 +130,9 @@ const PrincipalAddClassScreen: React.FC<Props> = ({ navigation }) => {
         })),
       };
 
-      await apiClient.post('/classes', payload);
+      await principalService.createClass(payload as any);
       showToast('Class created successfully!', 'success');
-      setTimeout(() => navigation.goBack(), 1500);
+      setTimeout(() => navigation.goBack(), 1200);
     } catch (e: any) {
       console.error('Failed to create class:', e);
       const errorMsg = e.response?.data?.message || 'Failed to create class.';
@@ -142,12 +169,33 @@ const PrincipalAddClassScreen: React.FC<Props> = ({ navigation }) => {
     setForm({ ...form, subjects: newSubs });
   };
 
+  const getDisplaySubjectName = (sub: any) => {
+    if (sub.name && sub.name !== 'Select Subject' && sub.name !== 'Select') {
+      return sub.name;
+    }
+    if (sub.subjectId) {
+      const found = allAvailableSubjects.find(s => (s.id || s.subject_id || s.subjectId || s._id) === sub.subjectId);
+      if (found) return found.name || found.subject_name || found.subjectName || 'Select';
+    }
+    return 'Select';
+  };
+
+  const getDisplayTeacherName = (sub: any) => {
+    if (sub.teacherId) {
+      const found = teachers.find(t => (t.id || t.teacher_id || t.teacherId || t._id) === sub.teacherId);
+      if (found) {
+        return found.name || found.teacher_name || found.teacherName || (found.firstName ? `${found.firstName} ${found.lastName || ''}`.trim() : 'Select');
+      }
+    }
+    return sub.teacherName || sub.teacher_name || 'Select';
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.mainContainer}
     >
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFF" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
 
       {toast.visible && (
         <Toast
@@ -163,7 +211,7 @@ const PrincipalAddClassScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => navigation.goBack()}
           style={styles.backBtn}
         >
-          <Ionicons name="close" size={24} color="#64748B" />
+          <Ionicons name="close" size={24} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerLabel}>CLASSES</Text>
@@ -189,19 +237,19 @@ const PrincipalAddClassScreen: React.FC<Props> = ({ navigation }) => {
               value={form.name}
               onChangeText={text => setForm({ ...form, name: text })}
               placeholder="e.g. Class 1, Grade 5"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={theme.placeholder}
             />
           </View>
 
           <View style={styles.inputRow}>
             <View style={[styles.inputSection, { flex: 1 }]}>
-              <Text style={styles.inputLabel}>Section (optional)</Text>
+              <Text style={styles.inputLabel}>Section *</Text>
               <TextInput
                 style={styles.premiumInput}
                 value={form.section}
                 onChangeText={text => setForm({ ...form, section: text })}
                 placeholder="e.g. A, B, Morning"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={theme.placeholder}
               />
             </View>
             <View style={[styles.inputSection, { flex: 1 }]}>
@@ -211,19 +259,19 @@ const PrincipalAddClassScreen: React.FC<Props> = ({ navigation }) => {
                 value={form.grade}
                 onChangeText={text => setForm({ ...form, grade: text })}
                 placeholder="e.g. 5, 10, 12"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={theme.placeholder}
               />
             </View>
           </View>
 
           <View style={styles.inputSection}>
-            <Text style={styles.inputLabel}>Academic Year</Text>
+            <Text style={styles.inputLabel}>Academic Year *</Text>
             <TextInput
               style={styles.premiumInput}
               value={form.academicYear}
               onChangeText={text => setForm({ ...form, academicYear: text })}
               placeholder="2026"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={theme.placeholder}
             />
           </View>
 
@@ -249,9 +297,9 @@ const PrincipalAddClassScreen: React.FC<Props> = ({ navigation }) => {
                       }}
                     >
                       <Text style={styles.dropdownText} numberOfLines={1}>
-                        {sub.name || 'Select'}
+                        {getDisplaySubjectName(sub)}
                       </Text>
-                      <Ionicons name="chevron-down" size={14} color="#94A3B8" />
+                      <Ionicons name="chevron-down" size={14} color={theme.subtext} />
                     </TouchableOpacity>
                   </View>
 
@@ -265,10 +313,9 @@ const PrincipalAddClassScreen: React.FC<Props> = ({ navigation }) => {
                       }}
                     >
                       <Text style={styles.dropdownText} numberOfLines={1}>
-                        {teachers.find(t => t.id === sub.teacherId)?.name ||
-                          'Select'}
+                        {getDisplayTeacherName(sub)}
                       </Text>
-                      <Ionicons name="chevron-down" size={14} color="#94A3B8" />
+                      <Ionicons name="chevron-down" size={14} color={theme.subtext} />
                     </TouchableOpacity>
                   </View>
 
@@ -290,7 +337,7 @@ const PrincipalAddClassScreen: React.FC<Props> = ({ navigation }) => {
                     onPress={() => removeSubject(index)}
                     style={styles.rowDeleteBtn}
                   >
-                    <Ionicons name="trash-outline" size={18} color="#94A3B8" />
+                    <Ionicons name="trash-outline" size={18} color="#EF4444" />
                   </TouchableOpacity>
                 </View>
               ))
@@ -334,28 +381,32 @@ const PrincipalAddClassScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.pickerHeader}>
               <Text style={styles.pickerTitle}>Select Subject</Text>
               <TouchableOpacity onPress={() => setSubjectPickerVisible(false)}>
-                <Ionicons name="close" size={24} color="#64748B" />
+                <Ionicons name="close" size={24} color={theme.text} />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.pickerList}>
-              {allAvailableSubjects.map(s => (
-                <TouchableOpacity
-                  key={s.id}
-                  style={styles.pickerItem}
-                  onPress={() => {
-                    if (activeRowIndex !== null) {
-                      updateSubjectRow(activeRowIndex, {
-                        subjectId: s.id,
-                        name: s.name,
-                      });
-                    }
-                    setSubjectPickerVisible(false);
-                  }}
-                >
-                  <Text style={styles.pickerItemText}>{s.name}</Text>
-                  {s.code && <Text style={styles.pickerItemSub}>{s.code}</Text>}
-                </TouchableOpacity>
-              ))}
+              {allAvailableSubjects.map((s, sIdx) => {
+                const sId = s.id || s.subject_id || s.subjectId || s._id || String(sIdx);
+                const sName = s.name || s.subject_name || s.subjectName || 'Unnamed Subject';
+                return (
+                  <TouchableOpacity
+                    key={sId}
+                    style={styles.pickerItem}
+                    onPress={() => {
+                      if (activeRowIndex !== null) {
+                        updateSubjectRow(activeRowIndex, {
+                          subjectId: sId,
+                          name: sName,
+                        });
+                      }
+                      setSubjectPickerVisible(false);
+                    }}
+                  >
+                    <Text style={styles.pickerItemText}>{sName}</Text>
+                    {s.code && <Text style={styles.pickerItemSub}>{s.code}</Text>}
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
         </View>
@@ -368,7 +419,7 @@ const PrincipalAddClassScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.pickerHeader}>
               <Text style={styles.pickerTitle}>Assign Teacher</Text>
               <TouchableOpacity onPress={() => setTeacherPickerVisible(false)}>
-                <Ionicons name="close" size={24} color="#64748B" />
+                <Ionicons name="close" size={24} color={theme.text} />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.pickerList}>
@@ -376,7 +427,7 @@ const PrincipalAddClassScreen: React.FC<Props> = ({ navigation }) => {
                 style={styles.removeAssignmentBtn}
                 onPress={() => {
                   if (activeRowIndex !== null)
-                    updateSubjectRow(activeRowIndex, { teacherId: null });
+                    updateSubjectRow(activeRowIndex, { teacherId: null, teacherName: '' });
                   setTeacherPickerVisible(false);
                 }}
               >
@@ -398,19 +449,21 @@ const PrincipalAddClassScreen: React.FC<Props> = ({ navigation }) => {
                 </View>
               ) : (
                 teachers.map((t, idx) => {
+                  const tId = t.id || t.teacher_id || t.teacherId || t._id;
+                  const tName = t.name || t.teacher_name || t.teacherName || (t.firstName ? `${t.firstName} ${t.lastName || ''}`.trim() : 'Unknown Teacher');
                   const isSelected =
                     activeRowIndex !== null &&
-                    form.subjects[activeRowIndex]?.teacherId === t.id;
+                    (form.subjects[activeRowIndex]?.teacherId === tId || form.subjects[activeRowIndex]?.teacherId === t.id);
                   return (
                     <TouchableOpacity
-                      key={t.id}
+                      key={tId || idx}
                       style={[
                         styles.teacherOption,
                         isSelected && styles.teacherOptionActive,
                       ]}
                       onPress={() => {
                         if (activeRowIndex !== null) {
-                          updateSubjectRow(activeRowIndex, { teacherId: t.id });
+                          updateSubjectRow(activeRowIndex, { teacherId: tId, teacherName: tName });
                         }
                         setTeacherPickerVisible(false);
                       }}
@@ -425,24 +478,21 @@ const PrincipalAddClassScreen: React.FC<Props> = ({ navigation }) => {
                             isSelected && styles.teacherNameTextActive,
                           ]}
                         >
-                          {t.name ||
-                            (t.firstName
-                              ? `${t.firstName} ${t.lastName}`
-                              : 'Unknown Teacher')}
+                          {tName}
                         </Text>
-                        <Text style={styles.teacherEmailText}>{t.email}</Text>
+                        {!!t.email && <Text style={styles.teacherEmailText}>{t.email}</Text>}
                       </View>
                       {isSelected ? (
                         <Ionicons
                           name="checkmark-circle"
                           size={20}
-                          color="#4F46E5"
+                          color={theme.primary}
                         />
                       ) : (
                         <Ionicons
                           name="chevron-forward"
                           size={16}
-                          color="#CBD5E1"
+                          color={theme.subtext}
                         />
                       )}
                     </TouchableOpacity>
@@ -457,8 +507,8 @@ const PrincipalAddClassScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FAFAFF' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   container: { flex: 1 },
   scrollContent: { padding: 20 },
 
@@ -470,14 +520,16 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    backgroundColor: '#FAFAFF',
+    borderBottomColor: theme.border,
+    backgroundColor: theme.background,
   },
   backBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: theme.surface,
+    borderWidth: 1,
+    borderColor: theme.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -491,12 +543,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#1E293B',
+    color: theme.text,
     marginTop: 2,
   },
 
   formCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: theme.surface,
     borderRadius: 24,
     padding: 20,
     shadowColor: '#000',
@@ -504,6 +556,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 20,
     elevation: 8,
+    borderWidth: 1,
+    borderColor: theme.border,
   },
 
   inputSection: { marginBottom: 20 },
@@ -511,19 +565,19 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1E293B',
+    color: theme.text,
     marginBottom: 8,
   },
   premiumInput: {
-    backgroundColor: '#FFF',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     paddingHorizontal: 16,
     height: 52,
     fontSize: 14,
-    color: '#1E293B',
+    color: theme.text,
     fontWeight: '600',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
   },
 
   subjectsHeader: {
@@ -536,21 +590,23 @@ const styles = StyleSheet.create({
   subjectsTitle: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#94A3B8',
+    color: theme.subtext,
     letterSpacing: 0.5,
   },
-  addSubjectText: { fontSize: 12, fontWeight: '700', color: '#4F46E5' },
+  addSubjectText: { fontSize: 12, fontWeight: '700', color: theme.primary },
 
   subjectsContainer: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.background,
     borderRadius: 16,
     padding: 12,
     marginBottom: 25,
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   emptySubjects: { padding: 30, alignItems: 'center' },
   emptySubjectsText: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: theme.subtext,
     textAlign: 'center',
     lineHeight: 18,
     fontWeight: '500',
@@ -560,19 +616,19 @@ const styles = StyleSheet.create({
   subjectRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    backgroundColor: '#FFF',
-    borderRadius: 12,
+    backgroundColor: theme.surface,
+    borderRadius: 14,
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: theme.border,
   },
   rowColumnLarge: { flex: 2.5, marginRight: 8 },
   rowColumnSmall: { flex: 1.2, marginRight: 8 },
   rowLabel: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: '800',
-    color: '#94A3B8',
+    color: theme.subtext,
     marginBottom: 6,
     letterSpacing: 0.5,
   },
@@ -580,34 +636,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    height: 40,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    height: 44,
+    paddingHorizontal: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFF',
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
   },
   dropdownText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#1E293B',
+    color: theme.text,
     flex: 1,
     marginRight: 4,
   },
   periodsInputBox: {
-    height: 40,
-    borderRadius: 8,
+    height: 44,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFF',
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
     textAlign: 'center',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
-    color: '#1E293B',
+    color: theme.text,
   },
   rowDeleteBtn: {
-    height: 40,
-    width: 30,
+    height: 44,
+    width: 34,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -617,27 +673,27 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 50,
     borderRadius: 12,
-    borderWeight: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: theme.surface,
   },
-  cancelBtnText: { color: '#64748B', fontSize: 14, fontWeight: '700' },
+  cancelBtnText: { color: theme.subtext, fontSize: 14, fontWeight: '700' },
   submitBtn: {
     flex: 2,
     height: 50,
     borderRadius: 12,
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#4F46E5',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 6,
   },
-  submitBtnDisabled: { backgroundColor: '#94A3B8', shadowOpacity: 0 },
+  submitBtnDisabled: { backgroundColor: theme.subtext, shadowOpacity: 0 },
   submitBtnText: { color: '#FFF', fontSize: 14, fontWeight: '800' },
 
   // Picker Modals
@@ -647,11 +703,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   pickerModal: {
-    backgroundColor: '#FFF',
+    backgroundColor: theme.surface,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     height: '70%',
     padding: 20,
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   pickerHeader: {
     flexDirection: 'row',
@@ -660,20 +718,20 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     paddingBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: theme.border,
   },
-  pickerTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B' },
+  pickerTitle: { fontSize: 18, fontWeight: '800', color: theme.text },
   pickerList: { flex: 1 },
   pickerItem: {
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F8FAFC',
+    borderBottomColor: theme.border,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  pickerItemText: { fontSize: 15, fontWeight: '600', color: '#1E293B' },
-  pickerItemSub: { fontSize: 12, color: '#94A3B8', fontWeight: '500' },
+  pickerItemText: { fontSize: 15, fontWeight: '600', color: theme.text },
+  pickerItemSub: { fontSize: 12, color: theme.subtext, fontWeight: '500' },
 
   teacherOption: {
     flexDirection: 'row',
@@ -682,29 +740,29 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
-    backgroundColor: '#FFF',
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
   },
   teacherIndexBox: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.background,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
-  teacherIndexText: { fontSize: 11, fontWeight: '800', color: '#64748B' },
+  teacherIndexText: { fontSize: 11, fontWeight: '800', color: theme.subtext },
   teacherDetails: { flex: 1 },
   teacherNameText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1E293B',
+    color: theme.text,
     marginBottom: 2,
   },
-  teacherNameTextActive: { color: '#4F46E5' },
-  teacherOptionActive: { borderColor: '#4F46E5', backgroundColor: '#F5F3FF' },
-  teacherEmailText: { fontSize: 11, color: '#94A3B8', fontWeight: '500' },
+  teacherNameTextActive: { color: theme.primary },
+  teacherOptionActive: { borderColor: theme.primary, backgroundColor: theme.primary + '10' },
+  teacherEmailText: { fontSize: 11, color: theme.subtext, fontWeight: '500' },
   removeAssignmentBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -724,7 +782,7 @@ const styles = StyleSheet.create({
   },
   emptyTeachersText: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: theme.subtext,
     fontWeight: '500',
     fontStyle: 'italic',
   },

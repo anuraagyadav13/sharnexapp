@@ -15,16 +15,20 @@ import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
+import { useTheme } from '../../store/ThemeContext';
+import { TeacherHeader } from '../../components/TeacherHeader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherAddQuestion'>;
 
 
 const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation, route }) => {
   const { authState } = useAuth();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const editQuestion = route.params?.editQuestion;
   
   const [questionText, setQuestionText] = useState(editQuestion?.text || '');
-  const [options, setOptions] = useState(editQuestion?.options || [
+  const [options, setOptions] = useState<Array<{ letter: string; value: string }>>(editQuestion?.options || [
     { letter: 'A', value: '' },
     { letter: 'B', value: '' },
     { letter: 'C', value: '' },
@@ -79,18 +83,11 @@ const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation, route }) => {
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
-        <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
-          </View>
-        </View>
-      </View>
+      <TeacherHeader
+        title={editQuestion ? 'Edit Question' : 'Add Question'}
+        navigation={navigation}
+        isStackScreen={true}
+      />
 
       {/* Blue Header Section */}
       <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
@@ -224,8 +221,8 @@ const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 110 },
 
   globalHeader: {
@@ -235,7 +232,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -246,7 +243,7 @@ const styles = StyleSheet.create({
   menuHandle: { paddingRight: 10, paddingVertical: 10, width: 28 },
   headerTitle: { fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5', 
+    color: theme.primary, 
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -268,7 +265,7 @@ const styles = StyleSheet.create({
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   blueHeader: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 24,
@@ -297,7 +294,7 @@ const styles = StyleSheet.create({
   },
 
   mainCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 8,
     padding: 16,
     marginHorizontal: 16,
@@ -308,12 +305,12 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 2,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.02)',
+    borderColor: theme.border,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 20,
   },
 
@@ -322,19 +319,19 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 13,
-    color: '#111827',
+    color: theme.text,
     marginBottom: 8,
     fontWeight: '500',
   },
   textArea: {
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 10,
     fontSize: 13,
-    color: '#1E293B',
-    backgroundColor: '#F8FAFC',
+    color: theme.text,
+    backgroundColor: theme.background,
     height: 80,
   },
   rowInputsWrapper: {
@@ -345,25 +342,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 13,
-    color: '#111827',
+    color: theme.text,
   },
   dropdownInput: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   dropdownTextPlaceholder: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: theme.subtext,
   },
 
   answerBox: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.isDarkMode ? '#33415530' : '#F8FAFC',
     borderRadius: 8,
     padding: 16,
     marginBottom: 20,
@@ -377,14 +374,14 @@ const styles = StyleSheet.create({
   answerBoxTitle: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#000',
+    color: theme.text,
   },
   addOptionBtn: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 6,
-    shadowColor: '#4F46E5',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -398,17 +395,17 @@ const styles = StyleSheet.create({
   optionInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 10,
     marginBottom: 8,
   },
   optionInputRowSelected: {
-    backgroundColor: '#D1FAE5',
-    borderColor: '#A7F3D0',
+    backgroundColor: theme.isDarkMode ? '#065F4630' : '#D1FAE5',
+    borderColor: theme.isDarkMode ? '#059669' : '#A7F3D0',
   },
   checkboxIcon: {
     marginRight: 10,
@@ -418,18 +415,18 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#9CA3AF',
+    borderColor: theme.border,
     marginRight: 12,
   },
   optionInputText: {
     flex: 1,
     fontSize: 13,
-    color: '#111827',
+    color: theme.text,
     padding: 0,
   },
   answerBoxFooterHint: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.subtext,
     marginTop: 6,
     fontWeight: '400',
   },
@@ -442,9 +439,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 20,
@@ -452,18 +449,18 @@ const styles = StyleSheet.create({
   clearFormBtnText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
   },
   addQuesBtn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     borderRadius: 6,
     paddingVertical: 10,
     paddingHorizontal: 16,
   
-    shadowColor: '#4F46E5',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
@@ -476,13 +473,13 @@ const styles = StyleSheet.create({
 
   quizSummaryText: {
     fontSize: 13,
-    color: '#4F46E5',
+    color: theme.primary,
     fontWeight: '600',
     marginBottom: 20,
   },
   divider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.border,
     marginBottom: 20,
     marginHorizontal: -16,
   },
@@ -500,7 +497,7 @@ const styles = StyleSheet.create({
   existingQuesTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 8,
   },
   existingQuesMeta: {
@@ -509,7 +506,7 @@ const styles = StyleSheet.create({
   },
   metaGray: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.subtext,
     fontWeight: '500',
   },
   existingQuesActions: {
@@ -529,18 +526,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.surface,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: theme.border,
   },
   cancelBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 20,
@@ -549,19 +546,19 @@ const styles = StyleSheet.create({
   cancelBtnText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
   },
   saveBtn: {
     flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     borderRadius: 6,
     paddingVertical: 10,
     paddingHorizontal: 16,
   
-    shadowColor: '#4F46E5',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
@@ -574,8 +571,8 @@ const styles = StyleSheet.create({
   optionBadge: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#9CA3AF',
-    backgroundColor: '#F3F4F6',
+    color: theme.subtext,
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
@@ -592,11 +589,11 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: '#999',
+    color: theme.subtext,
   },
   emptySubtext: {
     fontSize: 12,
-    color: '#bbb',
+    color: theme.subtext,
   },
 });
 

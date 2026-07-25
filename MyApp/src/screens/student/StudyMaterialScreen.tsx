@@ -7,6 +7,8 @@ import {
   StatusBar,
   Platform,
   ActivityIndicator,
+  Image,
+  TouchableOpacity,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -15,8 +17,9 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import { useTheme } from '../../store/ThemeContext';
+import { StudentHeader } from '../../components/StudentHeader';
+import studentService from '../../services/studentService';
 
 type StudyMaterialScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'StudyMaterial'>;
 
@@ -24,37 +27,39 @@ interface Props {
   navigation: StudyMaterialScreenNavigationProp;
 }
 
-const MaterialCard = ({ delay, type, title, desc, tags }: any) => {
-  return (
-    <Animated.View entering={FadeInUp.delay(delay).springify()} style={styles.cardContainer}>
-       <View style={styles.cardTop}>
-         <View style={styles.typePill}>
-           <Text style={styles.typePillText}>{type}</Text>
-         </View>
-         <Text style={styles.cardTitle}>{title}</Text>
-       </View>
-       <View style={styles.cardDivider} />
-       <View style={styles.cardBottom}>
-         <Text style={styles.cardDesc}>{desc}</Text>
-         <View style={styles.tagsRow}>
-           {tags.map((tag: string, index: number) => (
-             <View key={index} style={styles.tagPill}>
-               <Text style={styles.tagPillText}>{tag}</Text>
-             </View>
-           ))}
-         </View>
-         <ScaleButton activeOpacity={0.8} scaleTo={0.97} style={styles.downloadBtn}>
-            <Ionicons name="download-outline" size={16} color="#FFFFFF" style={{marginRight: 6}} />
-            <Text style={styles.downloadBtnText}>Download</Text>
-         </ScaleButton>
-       </View>
-    </Animated.View>
-  );
-}
-
 const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
+
+  const MaterialCard = ({ delay, type, title, desc, tags }: any) => {
+    return (
+      <Animated.View entering={FadeInUp.delay(delay).springify()} style={styles.cardContainer}>
+         <View style={styles.cardTop}>
+           <View style={styles.typePill}>
+             <Text style={styles.typePillText}>{type}</Text>
+           </View>
+           <Text style={styles.cardTitle}>{title}</Text>
+         </View>
+         <View style={styles.cardDivider} />
+         <View style={styles.cardBottom}>
+           <Text style={styles.cardDesc}>{desc}</Text>
+           <View style={styles.tagsRow}>
+             {tags.map((tag: string, index: number) => (
+               <View key={index} style={styles.tagPill}>
+                 <Text style={styles.tagPillText}>{tag}</Text>
+               </View>
+             ))}
+           </View>
+           <ScaleButton activeOpacity={0.8} scaleTo={0.97} style={styles.downloadBtn}>
+              <Ionicons name="download-outline" size={16} color="#FFFFFF" style={{marginRight: 6}} />
+              <Text style={styles.downloadBtnText}>Download</Text>
+           </ScaleButton>
+         </View>
+      </Animated.View>
+    );
+  }
   const [materials, setMaterials] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -63,15 +68,15 @@ const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
       try {
         setIsLoading(true);
         // 1. Resolve student ID reliably
-        const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+        const profileRes = await studentService.getProfile();
         const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
 
         if (!studentId) {
           throw new Error('Student ID not found');
         }
 
-        // 2. Fetch materials using the the resolved ID
-        const res = await apiClient.get(ENDPOINTS.STUDENT.STUDY_MATERIALS(studentId));
+        // 2. Fetch materials using the resolved ID
+        const res = await studentService.getStudyMaterials(studentId);
         // Handle various response types including normalized
         const materialData = res.normalized?.data?.materials || res.normalized?.data || res.data?.materials || res.data?.data || [];
         setMaterials(Array.isArray(materialData) ? materialData : []);
@@ -88,7 +93,7 @@ const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
   if (isLoading && materials.length === 0) {
     return (
       <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -97,26 +102,14 @@ const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F9" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <ScaleButton 
-          style={styles.menuHandle} 
-          onPress={() => setDrawerOpen(true)}
-          hitSlop={{top: 20, bottom: 20, left: 20, right: 20}}
-          activeOpacity={0.7}
-          scaleTo={0.85}
-        >
-          <Ionicons name="menu" size={28} color="#1F2937" />
-        </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
-        <View style={styles.headerRight}>
-             <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
-             </View>
-        </View>
-      </View>
+      <StudentHeader 
+        title="Study Material"
+        navigation={navigation}
+        onMenuPress={() => setDrawerOpen(true)}
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
@@ -164,8 +157,9 @@ const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FAF9F9' },
+
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 
   globalHeader: {
@@ -173,9 +167,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40, 
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF', 
+    backgroundColor: theme.surface, 
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -187,20 +181,20 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5',
+    color: theme.primary,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
   },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  headerRight: { flexDirection: 'row', alignItems: 'center' },
   avatar: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#A855F7',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
@@ -209,13 +203,13 @@ const styles = StyleSheet.create({
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   pageTitleWrapper: { marginBottom: 16, paddingHorizontal: 20, marginTop: 10 },
-  pageTitle: { fontSize: 22, fontWeight: '800', color: '#3B82F6', marginBottom: 4 },
-  pageSubtitle: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
+  pageTitle: { fontSize: 22, fontWeight: '800', color: theme.primary, marginBottom: 4 },
+  pageSubtitle: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
 
   infoBanner: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F3F4F6',
     borderLeftWidth: 4,
-    borderLeftColor: '#3B82F6',
+    borderLeftColor: theme.primary,
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginHorizontal: 20,
@@ -224,22 +218,22 @@ const styles = StyleSheet.create({
   },
   infoBannerText: {
     fontSize: 11,
-    color: '#4B5563',
+    color: theme.subtext,
     lineHeight: 18,
   },
 
   /* Card Styles */
   cardContainer: {
-    backgroundColor: '#FAFAFA', 
+    backgroundColor: theme.surface, 
     borderRadius: 12,
     marginHorizontal: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     overflow: 'hidden', 
   },
   cardTop: {
-    backgroundColor: '#F3F8FF', 
+    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F3F8FF', 
     padding: 16,
   },
   typePill: {
@@ -260,20 +254,20 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
   },
   cardDivider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.border,
     width: '100%',
   },
   cardBottom: {
     padding: 16,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: theme.surface,
   },
   cardDesc: {
     fontSize: 12,
-    color: '#6B7280',
+    color: theme.subtext,
     lineHeight: 18,
     marginBottom: 16,
   },
@@ -283,19 +277,19 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   tagPill: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: theme.isDarkMode ? '#312E8130' : '#EEF2FF',
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 16,
     marginRight: 8,
   },
   tagPillText: {
-    color: '#3B82F6',
+    color: theme.primary,
     fontSize: 11,
     fontWeight: '600',
   },
   downloadBtn: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -317,7 +311,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     fontWeight: '600',
-    color: '#6B7280',
+    color: theme.subtext,
   },
 });
 

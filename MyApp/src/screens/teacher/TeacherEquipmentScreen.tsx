@@ -19,6 +19,7 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import { useAuth } from '../../store/AuthContext';
+import { useTheme } from '../../store/ThemeContext';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
 
@@ -35,6 +36,8 @@ const STATUS_TABS = [
 
 const TeacherEquipmentScreen: React.FC<Props> = ({ navigation }) => {
   const { authState } = useAuth();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles({ ...theme, isDarkMode });
   const [requests, setRequests] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -94,7 +97,7 @@ const TeacherEquipmentScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.surface} />
       
       {/* Attendance-Style Header */}
       <View style={styles.header}>
@@ -103,7 +106,7 @@ const TeacherEquipmentScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => setDrawerOpen(true)}
           hitSlop={{top: 20, bottom: 20, left: 20, right: 20}}
         >
-          <Ionicons name="menu" size={28} color="#111827" />
+          <Ionicons name="menu" size={28} color={theme.text} />
         </ScaleButton>
 
         <Text style={styles.headerTitle} numberOfLines={1}>Equipment Requests</Text>
@@ -241,8 +244,8 @@ const TeacherEquipmentScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+const getStyles = (theme: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -250,7 +253,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -262,7 +265,7 @@ const styles = StyleSheet.create({
   headerTitle: { 
     fontSize: 16, 
     fontWeight: '500', 
-    color: '#4F46E5', 
+    color: theme.primary, 
     flex: 1, 
     textAlign: 'center',
     marginHorizontal: 10,
@@ -270,7 +273,7 @@ const styles = StyleSheet.create({
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   iconBtn: { padding: 4 },
   addBtn: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
@@ -280,37 +283,37 @@ const styles = StyleSheet.create({
   },
   addBtnText: { color: '#FFF', fontSize: 13, fontWeight: '700', marginLeft: 4 },
 
-  tabsContainer: { backgroundColor: '#FFFFFF', paddingVertical: 10 },
+  tabsContainer: { backgroundColor: theme.surface, paddingVertical: 10 },
   tabsScrollContent: { paddingHorizontal: 20, gap: 8 },
   tab: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9',
   },
-  activeTab: { backgroundColor: '#4F46E5' },
-  tabText: { fontSize: 13, fontWeight: '600', color: '#64748B' },
+  activeTab: { backgroundColor: theme.primary },
+  tabText: { fontSize: 13, fontWeight: '600', color: theme.subtext },
   activeTabText: { color: '#FFF' },
 
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     margin: 16,
     borderRadius: 12,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
     height: 46,
   },
   searchIcon: { marginRight: 10 },
-  searchInput: { flex: 1, fontSize: 14, color: '#1E293B', fontWeight: '500' },
+  searchInput: { flex: 1, fontSize: 14, color: theme.text, fontWeight: '500' },
 
   content: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },
 
   requestCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     marginBottom: 12,
     shadowColor: '#1E293B',
@@ -319,19 +322,19 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: theme.border,
   },
   cardContent: { padding: 16 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  requestNumber: { fontSize: 14, fontWeight: '800', color: '#1E293B' },
+  requestNumber: { fontSize: 14, fontWeight: '800', color: theme.text },
   statusPill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   statusText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
   
-  purpose: { fontSize: 15, fontWeight: '600', color: '#334155', marginBottom: 12 },
+  purpose: { fontSize: 15, fontWeight: '600', color: theme.text, marginBottom: 12 },
   
   cardDetails: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 16 },
   detailItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  detailText: { fontSize: 12, fontWeight: '600', color: '#64748B' },
+  detailText: { fontSize: 12, fontWeight: '600', color: theme.subtext },
   
   priorityPill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
   priorityText: { fontSize: 10, fontWeight: '800', color: '#FFF' },
@@ -342,16 +345,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9'
+    borderTopColor: theme.border
   },
-  neededBy: { fontSize: 12, fontWeight: '600', color: '#94A3B8' },
+  neededBy: { fontSize: 12, fontWeight: '600', color: theme.subtext },
   actionRow: { flexDirection: 'row', gap: 12 },
   iconAction: { padding: 4 },
 
   emptyContainer: { alignItems: 'center', marginTop: 80 },
-  emptyText: { marginTop: 16, fontSize: 16, fontWeight: '700', color: '#64748B' },
-  emptyBtn: { marginTop: 20, backgroundColor: '#EEF2FF', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 },
-  emptyBtnText: { color: '#4F46E5', fontWeight: '700' },
+  emptyText: { marginTop: 16, fontSize: 16, fontWeight: '700', color: theme.subtext },
+  emptyBtn: { marginTop: 20, backgroundColor: theme.isDarkMode ? '#312E8140' : '#EEF2FF', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 },
+  emptyBtnText: { color: theme.primary, fontWeight: '700' },
 });
 
 export default TeacherEquipmentScreen;

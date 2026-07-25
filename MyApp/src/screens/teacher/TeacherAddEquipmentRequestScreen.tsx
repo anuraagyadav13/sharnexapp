@@ -17,9 +17,10 @@ import { RootStackParamList } from '../../types/navigation';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Animated, { FadeIn, FadeInUp, Layout } from 'react-native-reanimated';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import teacherService from '../../services/teacherService';
 import { useAuth } from '../../store/AuthContext';
+import { useTheme } from '../../store/ThemeContext';
+import { TeacherHeader } from '../../components/TeacherHeader';
 
 let DateTimePicker: any = null;
 try {
@@ -53,6 +54,8 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
   route,
 }) => {
   const { authState } = useAuth();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles({ ...theme, isDarkMode });
   const requestId = route.params?.requestId;
   const isEditing = !!requestId;
 
@@ -78,9 +81,7 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
   const loadRequestData = async () => {
     try {
       setIsLoading(true);
-      const res = await apiClient.get(
-        ENDPOINTS.TEACHER.EQUIPMENT.DETAIL(requestId),
-      );
+      const res = await teacherService.getEquipmentRequestDetail(requestId!);
       const data = res.data?.data || res.data;
       if (data) {
         setPurpose(data.purpose || '');
@@ -132,7 +133,7 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
   };
 
   const validateForm = () => {
-    if (purpose.length < 5) {
+    if (purpose.trim().length < 5) {
       Alert.alert(
         'Validation Error',
         'Purpose must be at least 5 characters long',
@@ -141,6 +142,16 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
     }
     if (items.some(item => !item.itemName.trim())) {
       Alert.alert('Validation Error', 'All items must have a name');
+      return false;
+    }
+    if (items.some(item => isNaN(item.requestedQuantity) || item.requestedQuantity <= 0)) {
+      Alert.alert('Validation Error', 'All items must have a quantity greater than 0.');
+      return false;
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (neededByDate < today) {
+      Alert.alert('Validation Error', 'Needed By Date cannot be in the past.');
       return false;
     }
     return true;
@@ -152,13 +163,13 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
     try {
       setIsSaving(true);
       const payload = {
-        purpose,
+        purpose: purpose.trim(),
         priority,
         neededByDate: neededByDate.toISOString(),
         teacherNote,
         items: items.map(item => ({
           id: item.id,
-          itemName: item.itemName,
+          itemName: item.itemName.trim(),
           requestedQuantity: item.requestedQuantity,
           unit: item.unit,
           itemNote: item.itemNote,
@@ -167,20 +178,14 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
 
       let currentId = requestId;
       if (isEditing) {
-        await apiClient.put(
-          ENDPOINTS.TEACHER.EQUIPMENT.UPDATE(requestId),
-          payload,
-        );
+        await teacherService.updateEquipmentRequest(requestId, payload);
       } else {
-        const res = await apiClient.post(
-          ENDPOINTS.TEACHER.EQUIPMENT.CREATE,
-          payload,
-        );
+        const res = await teacherService.createEquipmentRequest(payload);
         currentId = res.data?.data?.id || res.data?.id;
       }
 
       if (submit && currentId) {
-        await apiClient.post(ENDPOINTS.TEACHER.EQUIPMENT.SUBMIT(currentId));
+        await teacherService.submitEquipmentRequest(currentId);
         Alert.alert('Success', 'Request submitted successfully!');
       } else {
         Alert.alert(
@@ -214,17 +219,11 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#1E293B" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {isEditing ? 'Edit Request' : 'New Equipment Request'}
-        </Text>
-      </View>
+      <TeacherHeader
+        title={isEditing ? 'Edit Request' : 'New Equipment Request'}
+        navigation={navigation}
+        isStackScreen={true}
+      />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -475,32 +474,32 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+const getStyles = (theme: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.background },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: theme.border,
   },
   backBtn: { padding: 4, marginRight: 12 },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B' },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: theme.text },
 
   content: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },
 
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 16,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: theme.border,
     shadowColor: '#1E293B',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -513,38 +512,38 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 16,
   },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1E293B' },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: theme.text },
 
   inputGroup: { marginBottom: 16 },
-  label: { fontSize: 13, fontWeight: '600', color: '#64748B', marginBottom: 8 },
+  label: { fontSize: 13, fontWeight: '600', color: theme.subtext, marginBottom: 8 },
   labelSmall: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: theme.subtext,
     marginBottom: 6,
     textTransform: 'uppercase',
   },
   required: { color: '#EF4444' },
   input: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.background,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 14,
-    color: '#1E293B',
+    color: theme.text,
     fontWeight: '500',
   },
   inputSmall: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.background,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 13,
-    color: '#1E293B',
+    color: theme.text,
     fontWeight: '500',
   },
   textArea: { textAlignVertical: 'top', minHeight: 80 },
@@ -555,25 +554,25 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.background,
   },
-  priorityLabel: { fontSize: 12, fontWeight: '700', color: '#64748B' },
+  priorityLabel: { fontSize: 12, fontWeight: '700', color: theme.subtext },
 
   dateSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.background,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
   },
-  dateValue: { flex: 1, fontSize: 14, fontWeight: '500', color: '#1E293B' },
+  dateValue: { flex: 1, fontSize: 14, fontWeight: '500', color: theme.text },
 
   addItemBtn: {
     flexDirection: 'row',
@@ -581,16 +580,15 @@ const styles = StyleSheet.create({
     gap: 4,
     padding: 4,
   },
-  addItemText: { fontSize: 13, fontWeight: '700', color: '#4F46E5' },
+  addItemText: { fontSize: 13, fontWeight: '700', color: theme.primary },
 
   itemCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
-    backgroundColor: '#FAFBFE',
+    borderColor: theme.border,
+    backgroundColor: theme.isDarkMode ? '#33415550' : '#FAFBFE',
   },
   itemCardHeader: {
     flexDirection: 'row',
@@ -598,7 +596,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  itemIndex: { fontSize: 12, fontWeight: '800', color: '#6366F1' },
+  itemIndex: { fontSize: 12, fontWeight: '800', color: theme.primary },
 
   footerActions: { gap: 12, marginTop: 10 },
   primaryActions: { flexDirection: 'row', gap: 8 },
@@ -610,14 +608,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelBtn: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
   },
-  cancelBtnText: { color: '#64748B', fontWeight: '700' },
+  cancelBtnText: { color: theme.subtext, fontWeight: '700' },
   draftBtn: { backgroundColor: '#8B5CF6' },
   draftBtnText: { color: '#FFF', fontWeight: '700' },
-  submitBtn: { backgroundColor: '#4F46E5', flex: 1.5 },
+  submitBtn: { backgroundColor: theme.primary, flex: 1.5 },
   submitBtnText: { color: '#FFF', fontWeight: '700' },
 });
 

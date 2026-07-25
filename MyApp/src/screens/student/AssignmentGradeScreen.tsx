@@ -7,6 +7,8 @@ import {
   StatusBar,
   Platform,
   ActivityIndicator,
+  Image,
+  TouchableOpacity,
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -14,8 +16,9 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import { useTheme } from '../../store/ThemeContext';
+import { StudentHeader } from '../../components/StudentHeader';
+import studentService from '../../services/studentService';
 
 type AssignmentGradeNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AssignmentGrade'>;
 
@@ -25,6 +28,8 @@ interface Props {
 }
 
 const AssignmentGradeScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { theme, isDarkMode, toggleDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const { authState } = useAuth();
   const assignmentId = route?.params?.assignmentId;
   const [gradeData, setGradeData] = useState<any>(null);
@@ -38,12 +43,12 @@ const AssignmentGradeScreen: React.FC<Props> = ({ navigation, route }) => {
         setError(null);
         
         // Use student assignments list to find the specific grade info
-        const profileRes = await apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+        const profileRes = await studentService.getProfile();
         const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
         
         if (!studentId) throw new Error('Student ID not found');
         
-        const res = await apiClient.get(ENDPOINTS.STUDENT.ASSIGNMENTS(studentId));
+        const res = await studentService.getAssignments(studentId);
         const assignments = res.normalized?.data || res.data?.assignments || res.data?.data || [];
         
         const currentAssignment = assignments.find((a: any) => a.id === assignmentId);
@@ -82,20 +87,14 @@ const AssignmentGradeScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <Text style={styles.globalHeaderTitle} numberOfLines={1}>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
-        <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
-          </View>
-        </View>
-      </View>
+      <StudentHeader 
+        title="Assignment Grade"
+        navigation={navigation}
+        isStackScreen={true}
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
@@ -133,8 +132,8 @@ const AssignmentGradeScreen: React.FC<Props> = ({ navigation, route }) => {
                   </View>
                 </View>
                 
-                <View style={styles.submittedDateContainer}>
-                  <Ionicons name="calendar-outline" size={14} color="#6B7280" />
+                 <View style={styles.submittedDateContainer}>
+                  <Ionicons name="calendar-outline" size={14} color={theme.subtext} />
                   <Text style={styles.submittedDateText}>
                     Submitted on {gradeData?.submittedAt ? new Date(gradeData.submittedAt).toLocaleDateString() : 'N/A'}
                   </Text>
@@ -162,7 +161,7 @@ const AssignmentGradeScreen: React.FC<Props> = ({ navigation, route }) => {
               {/* Card 2: Instructor Feedback */}
               <Animated.View entering={FadeInUp.delay(200).springify()} style={[styles.card, styles.feedbackCard]}>
                 <View style={styles.cardFeedbackHeader}>
-                  <Ionicons name="chatbubble-ellipses-outline" size={18} color="#3B82F6" />
+                  <Ionicons name="chatbubble-ellipses-outline" size={18} color={theme.primary} />
                   <Text style={styles.cardHeaderTitleFeed}>Instructor Feedback</Text>
                 </View>
 
@@ -194,8 +193,8 @@ const AssignmentGradeScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   
   globalHeader: {
     flexDirection: 'row',
@@ -204,12 +203,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40, 
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF', 
+    backgroundColor: theme.surface, 
   },
   globalHeaderTitle: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#4F46E5',
+    color: theme.primary,
     marginRight: 'auto', 
     marginLeft: 32, 
   },
@@ -218,7 +217,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -229,7 +228,7 @@ const styles = StyleSheet.create({
   },
 
   heroSection: {
-    backgroundColor: '#4361EE', 
+    backgroundColor: theme.primary, 
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 32,
@@ -279,12 +278,12 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#34D399', 
-    backgroundColor: '#ECFDF5', 
+    backgroundColor: theme.isDarkMode ? '#065F4630' : '#ECFDF5', 
   },
   gradedBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#00C48C',
+    color: theme.isDarkMode ? '#34D399' : '#00C48C',
     marginLeft: 6,
   },
   submittedDateContainer: {
@@ -295,17 +294,17 @@ const styles = StyleSheet.create({
   submittedDateText: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#111827',
+    color: theme.text,
     marginLeft: 6,
   },
   assignmentMainTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
   },
 
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16, 
     paddingVertical: 24,
     paddingHorizontal: 20,
@@ -315,7 +314,7 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 8,
     borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.6)', 
+    borderColor: theme.border, 
   },
   
   gradeCard: {
@@ -331,7 +330,7 @@ const styles = StyleSheet.create({
   cardHeaderTitle: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
     marginLeft: 8,
   },
   gradeCenterCol: {
@@ -351,17 +350,17 @@ const styles = StyleSheet.create({
   marksObtained: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
   },
   marksTotal: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4B5563',
+    color: theme.subtext,
   },
   
   feedbackCard: {
     borderTopWidth: 5,
-    borderTopColor: '#4361EE', 
+    borderTopColor: theme.primary, 
     paddingBottom: 24, 
   },
   cardFeedbackHeader: {
@@ -372,25 +371,25 @@ const styles = StyleSheet.create({
   cardHeaderTitleFeed: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
     marginLeft: 10,
   },
   feedbackBox: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F8FAFC',
     borderRadius: 12,
     padding: 24,
     marginBottom: 24,
   },
   feedbackText: {
     fontSize: 13,
-    color: '#374151',
+    color: theme.text,
     lineHeight: 24,
     fontWeight: '400',
     letterSpacing: 0.2,
   },
   divider: {
     height: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: theme.border,
     marginBottom: 20,
     marginHorizontal: -20, 
   },
@@ -402,7 +401,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#6366F1', 
+    backgroundColor: theme.primary, 
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -418,12 +417,12 @@ const styles = StyleSheet.create({
   instructorName: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 2,
   },
   instructorRole: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: theme.subtext,
     fontWeight: '500',
   },
 });

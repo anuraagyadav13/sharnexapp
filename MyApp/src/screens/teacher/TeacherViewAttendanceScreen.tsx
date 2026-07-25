@@ -10,20 +10,26 @@ import {
   Dimensions,
   ActivityIndicator,
   Modal,
+  Alert,
+  RefreshControl
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../App';
+import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import { useTheme } from '../../store/ThemeContext';
+// Import our easy-to-use teacherService for talking to the server
+import teacherService from '../../services/teacherService';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { TeacherHeader } from '../../components/TeacherHeader';
+import RNFS from 'react-native-fs';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherViewAttendance'>;
 
 const CustomCalendarPickerOverlay = ({ visible, onClose, onSelect, selectedDate }: any) => {
+  const { theme, isDarkMode } = useTheme();
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const [currentDate, setCurrentDate] = React.useState(new Date(selectedDate));
 
@@ -44,25 +50,25 @@ const CustomCalendarPickerOverlay = ({ visible, onClose, onSelect, selectedDate 
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
         <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} />
-        <Animated.View entering={FadeIn.duration(300)} style={{ backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, width: '100%', maxWidth: 400, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 15 }}>
+        <Animated.View entering={FadeIn.duration(300)} style={{ backgroundColor: theme.surface, borderRadius: 24, padding: 20, width: '100%', maxWidth: 400, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 15 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <TouchableOpacity onPress={handlePrevMonth} style={{ padding: 10 }}><Ionicons name="chevron-back" size={20} color="#4F46E5" /></TouchableOpacity>
-            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E293B' }}>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</Text>
-            <TouchableOpacity onPress={handleNextMonth} style={{ padding: 10 }}><Ionicons name="chevron-forward" size={20} color="#4F46E5" /></TouchableOpacity>
+            <TouchableOpacity onPress={handlePrevMonth} style={{ padding: 10 }}><Ionicons name="chevron-back" size={20} color={theme.primary} /></TouchableOpacity>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: theme.text }}>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</Text>
+            <TouchableOpacity onPress={handleNextMonth} style={{ padding: 10 }}><Ionicons name="chevron-forward" size={20} color={theme.primary} /></TouchableOpacity>
           </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10 }}>
-            {days.map(d => <Text key={d} style={{ width: `${100 / 7}%`, textAlign: 'center', fontSize: 12, fontWeight: '700', color: '#94A3B8', marginBottom: 10 }}>{d}</Text>)}
+            {days.map(d => <Text key={d} style={{ width: `${100 / 7}%`, textAlign: 'center', fontSize: 12, fontWeight: '700', color: theme.subtext, marginBottom: 10 }}>{d}</Text>)}
             {calendarDays.map((d, i) => {
               const isToday = d && new Date().toDateString() === new Date(currentDate.getFullYear(), currentDate.getMonth(), d).toDateString();
               const isSelected = d && new Date(selectedDate).toDateString() === new Date(currentDate.getFullYear(), currentDate.getMonth(), d).toDateString();
               return (
-                <TouchableOpacity key={i} disabled={!d} onPress={() => { if (d) { onSelect(new Date(currentDate.getFullYear(), currentDate.getMonth(), d)); onClose(); } }} style={{ width: `${100 / 7}%`, height: 45, justifyContent: 'center', alignItems: 'center', borderRadius: 12, backgroundColor: isSelected ? '#4F46E5' : 'transparent', borderWidth: isToday ? 1 : 0, borderColor: '#4F46E5' }}>
-                  {d && <Text style={{ fontSize: 14, fontWeight: isSelected || isToday ? '900' : '500', color: isSelected ? '#FFFFFF' : isToday ? '#4F46E5' : '#1E293B' }}>{d}</Text>}
+                <TouchableOpacity key={i} disabled={!d} onPress={() => { if (d) { onSelect(new Date(currentDate.getFullYear(), currentDate.getMonth(), d)); onClose(); } }} style={{ width: `${100 / 7}%`, height: 45, justifyContent: 'center', alignItems: 'center', borderRadius: 12, backgroundColor: isSelected ? theme.primary : 'transparent', borderWidth: isToday ? 1 : 0, borderColor: theme.primary }}>
+                  {d && <Text style={{ fontSize: 14, fontWeight: isSelected || isToday ? '900' : '500', color: isSelected ? '#FFFFFF' : isToday ? theme.primary : theme.text }}>{d}</Text>}
                 </TouchableOpacity>
               );
             })}
           </View>
-          <TouchableOpacity onPress={onClose} style={{ marginTop: 10, padding: 15, backgroundColor: '#F1F5F9', borderRadius: 16, alignItems: 'center' }}><Text style={{ color: '#64748B', fontWeight: '800' }}>Cancel</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onClose} style={{ marginTop: 10, padding: 15, backgroundColor: isDarkMode ? '#33415530' : '#F1F5F9', borderRadius: 16, alignItems: 'center' }}><Text style={{ color: theme.subtext, fontWeight: '800' }}>Cancel</Text></TouchableOpacity>
         </Animated.View>
       </View>
     </Modal>
@@ -72,152 +78,218 @@ const CustomCalendarPickerOverlay = ({ visible, onClose, onSelect, selectedDate 
 const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation, route }) => {
   const { classId } = route.params;
   const { authState } = useAuth();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles({ ...theme, isDarkMode });
   const [selectedDate, setSelectedDate] = React.useState(new Date());
   const [isCalendarVisible, setIsCalendarVisible] = React.useState(false);
   const [attendance, setAttendance] = React.useState<any[]>([]);
+  const [students, setStudents] = React.useState<any[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [stats, setStats] = React.useState({ total: 0, present: 0, absent: 0 });
 
-  const fetchAttendance = async () => {
+  const fetchAttendance = React.useCallback(async (isRefresh = false) => {
     try {
-      setIsLoading(true);
+      if (!isRefresh) setIsLoading(true);
       const dateStr = selectedDate.toISOString().split('T')[0];
-      const res = await apiClient.get(`${ENDPOINTS.TEACHER.ATTENDANCE(classId)}?date=${dateStr}`);
-        const data = res.data.attendance || [];
-        setAttendance(data);
-        
-        setStats({
-          total: data.length,
-          present: data.filter((a: any) => a.status === 'present' || a.status === 'late').length,
-          absent: data.filter((a: any) => a.status === 'absent').length,
-        });
+      // Ask the server: "give me attendance for this class on this date", plus fetching class roster
+      const [res, rosterRes] = await Promise.all([
+        teacherService.getAttendance(classId, dateStr),
+        teacherService.getClassStudents(classId)
+      ]);
+
+      // Map Roster array to a state
+      const rosterData = rosterRes.data?.data || rosterRes.data?.students || rosterRes.data || [];
+      setStudents(rosterData);
+
+      // The server responds with: { data: { attendance: [...] } }
+      // Our API client normalizes it, so res.data.data is the real stuff
+      const payload = res.data?.data ?? res.data;
+      const data: any[] = payload?.attendance ?? payload?.records ?? [];
+
+      // Map mappedNames into attendance records directly before saving slightly easier logic in render
+      const mappedData = data.map(record => {
+        const rosterStudent = rosterData.find((s: any) => s.id === record.studentId || s.studentId === record.studentId || (s.user && s.user.id === record.studentId));
+        return {
+          ...record,
+          studentName: rosterStudent?.name || rosterStudent?.user?.name || rosterStudent?.studentName || 'Student',
+          rollNo: rosterStudent?.rollNo || rosterStudent?.rollNumber || record.studentId.slice(0, 8)
+        };
+      });
+
+      setAttendance(mappedData);
+
+      // Calculate the summary numbers from the list of students
+      setStats({
+        total: mappedData.length,
+        // Count anyone marked as 'present' or 'late' as being there
+        present: mappedData.filter((a: any) => a.status === 'present' || a.status === 'late').length,
+        absent: mappedData.filter((a: any) => a.status === 'absent').length,
+      });
+    } catch (err) {
+      console.error('Failed to fetch attendance records:', err);
     } finally {
-      setIsLoading(false);
+      if (!isRefresh) setIsLoading(false);
     }
-  };
+  }, [classId, selectedDate]);
 
   React.useEffect(() => {
-    fetchAttendance();
-  }, [classId, selectedDate]);
+    fetchAttendance(false);
+  }, [fetchAttendance]);
+
+  const onRefresh = React.useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchAttendance(true);
+    setIsRefreshing(false);
+  }, [fetchAttendance]);
+
+  const handleExport = async () => {
+    try {
+      Alert.alert('Exporting', 'Generating CSV file...');
+      
+      let csvContent = 'Name,Roll No,Status,Date,Marked At\n';
+      attendance.forEach(record => {
+        const dateStr = selectedDate.toLocaleDateString();
+        const timeStr = record.markedAt ? new Date(record.markedAt).toLocaleTimeString() : '';
+        const safeName = (record.studentName || 'Student').replace(/,/g, ''); // Escaping commas just in case
+        csvContent += `${safeName},${record.rollNo},${record.status},${dateStr},${timeStr}\n`;
+      });
+
+      const datePart = selectedDate.toISOString().split('T')[0];
+      const fileName = `Attendance_${classId.slice(0,8)}_${datePart}.csv`;
+      const path = Platform.OS === 'android' 
+        ? `${RNFS.DownloadDirectoryPath}/${fileName}` 
+        : `${RNFS.DocumentDirectoryPath}/${fileName}`;
+
+      await RNFS.writeFile(path, csvContent, 'utf8');
+      
+      Alert.alert('Success', `Attendance CSV saved locally!\n\nPath: ${path}`);
+    } catch (e: any) {
+      console.error('Attendance Export error', e);
+      Alert.alert('Error', 'Failed to export the attendance.');
+    }
+  };
 
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <View style={styles.menuHandle} />
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Welcome back, {authState.user?.name?.split(' ')[0] || 'Teacher'}</Text>
-        <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          <Ionicons name="settings-outline" size={22} color="#1F2937" />
-          <Ionicons name="moon-outline" size={22} color="#1F2937" />
-          <View style={styles.avatar}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'T'}</Text>
-          </View>
-        </View>
-      </View>
+      <TeacherHeader
+        title="Attendance Details"
+        navigation={navigation}
+        isStackScreen={true}
+      />
 
-       {/* Blue Header Section */}
-       <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+      {/* Blue Header Section */}
+      <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+          <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View>
+            <Text style={styles.blueTitle}>Attendance Details</Text>
+            <Text style={styles.blueSubtitle}>{stats.total} Students Recorded • {selectedDate.toLocaleDateString()}</Text>
+          </View>
+          <TouchableOpacity style={styles.dateSelector} onPress={() => setIsCalendarVisible(true)}>
+            <Ionicons name="calendar" size={18} color="#FFF" />
+            <Text style={styles.dateSelectorText}>Select Date</Text>
           </TouchableOpacity>
-          <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
-             <View>
-                <Text style={styles.blueTitle}>Attendance Details</Text>
-                <Text style={styles.blueSubtitle}>{stats.total} Students Recorded • {selectedDate.toLocaleDateString()}</Text>
-             </View>
-             <TouchableOpacity style={styles.dateSelector} onPress={() => setIsCalendarVisible(true)}>
-                <Ionicons name="calendar" size={18} color="#FFF" />
-                <Text style={styles.dateSelectorText}>Select Date</Text>
-             </TouchableOpacity>
-          </View>
-       </Animated.View>
+        </View>
+      </Animated.View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+      >
+
         {/* Main Content Card */}
         <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.mainCard}>
-           
-           {/* Summary Stats Grid */}
-           <View style={styles.statsRow}>
-              <View style={[styles.statBox, { borderTopColor: '#4F46E5' }]}>
-                 <Text style={styles.statNumber}>{stats.total}</Text>
-                 <Text style={styles.statLabel}>Students</Text>
-              </View>
-              <View style={[styles.statBox, { borderTopColor: '#EF4444' }]}>
-                 <Text style={styles.statNumber}>{stats.absent}</Text>
-                 <Text style={styles.statLabel}>Absent</Text>
-              </View>
-              <View style={[styles.statBox, { borderTopColor: '#22C55E' }]}>
-                 <Text style={styles.statNumber}>{stats.present}</Text>
-                 <Text style={styles.statLabel}>Present</Text>
-              </View>
-           </View>
 
-           {/* Title */}
-           <Text style={styles.sectionTitle}>Student Attendance</Text>
+          {/* Summary Stats Grid */}
+          <View style={styles.statsRow}>
+            <View style={[styles.statBox, { borderTopColor: '#4F46E5' }]}>
+              <Text style={styles.statNumber}>{stats.total}</Text>
+              <Text style={styles.statLabel}>Students</Text>
+            </View>
+            <View style={[styles.statBox, { borderTopColor: '#EF4444' }]}>
+              <Text style={styles.statNumber}>{stats.absent}</Text>
+              <Text style={styles.statLabel}>Absent</Text>
+            </View>
+            <View style={[styles.statBox, { borderTopColor: '#22C55E' }]}>
+              <Text style={styles.statNumber}>{stats.present}</Text>
+              <Text style={styles.statLabel}>Present</Text>
+            </View>
+          </View>
 
-           {/* List */}
-           {isLoading ? (
-             <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 20 }} />
-           ) : attendance.length === 0 ? (
-             <Text style={styles.emptyText}>No attendance records found for today.</Text>
-           ) : (
-             attendance.map((student, index) => {
-               const initials = student.studentName ? student.studentName.split(' ').map((n: string) => n[0]).join('') : 'S';
-               const isPresent = student.status === 'present' || student.status === 'late';
-               
-               return (
-                 <Animated.View key={index} entering={FadeInUp.delay(150 + index * 50).springify()} style={styles.studentRow}>
-                    <View style={styles.studentInfoLeft}>
-                       <View style={styles.avatarCircle}>
-                          <Text style={styles.avatarInitials}>{initials}</Text>
-                       </View>
-                       <View>
-                          <Text style={styles.studentName}>{student.studentName}</Text>
-                          <Text style={styles.studentId}>ID: {student.rollNo || student.studentId.slice(0, 8)}</Text>
-                       </View>
+          {/* Title */}
+          <Text style={styles.sectionTitle}>Student Attendance</Text>
+
+          {/* List */}
+          {isLoading ? (
+            <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 20 }} />
+          ) : attendance.length === 0 ? (
+            <Text style={styles.emptyText}>No attendance records found for today.</Text>
+          ) : (
+            attendance.map((student, index) => {
+              // Handle both camelCase (studentName) and snake_case (student_name) — the API might use either
+              const name = student.studentName ?? student.student_name ?? student.name ?? 'Student';
+              const rollNo = student.rollNo ?? student.roll_no ?? student.roll_number;
+              const studentId = student.studentId ?? student.student_id ?? '';
+              const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
+              const isPresent = student.status === 'present' || student.status === 'late';
+
+              return (
+                <Animated.View key={studentId || index} entering={FadeInUp.delay(150 + index * 50).springify()} style={styles.studentRow}>
+                  <View style={styles.studentInfoLeft}>
+                    <View style={styles.avatarCircle}>
+                      <Text style={styles.avatarInitials}>{initials}</Text>
                     </View>
-                    <View style={[styles.statusPill, isPresent ? styles.statusPillPresent : styles.statusPillAbsent]}>
-                       <Text style={[styles.statusText, isPresent ? styles.statusTextPresent : styles.statusTextAbsent]}>
-                          {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
-                       </Text>
+                    <View>
+                      <Text style={styles.studentName}>{name}</Text>
+                      {/* Show roll number if available, otherwise show a short ID */}
+                      <Text style={styles.studentId}>ID: {rollNo ?? studentId.slice(0, 8)}</Text>
                     </View>
-                 </Animated.View>
-               );
-             })
-           )}
+                  </View>
+                  <View style={[styles.statusPill, isPresent ? styles.statusPillPresent : styles.statusPillAbsent]}>
+                    <Text style={[styles.statusText, isPresent ? styles.statusTextPresent : styles.statusTextAbsent]}>
+                      {student.status ? student.status.charAt(0).toUpperCase() + student.status.slice(1) : 'Unknown'}
+                    </Text>
+                  </View>
+                </Animated.View>
+              );
+            })
+          )}
 
         </Animated.View>
       </ScrollView>
 
       {/* Bottom Fixed Action Bar */}
       <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.bottomBar}>
-         <TouchableOpacity style={styles.exportBtn} activeOpacity={0.8}>
-            <Ionicons name="download-outline" size={16} color="#4F46E5" style={{marginRight: 6}} />
-            <Text style={styles.exportBtnText}>Export</Text>
-         </TouchableOpacity>
-         <TouchableOpacity style={styles.doneBtn} activeOpacity={0.8} onPress={() => navigation.goBack()}>
-            <Ionicons name="checkmark" size={16} color="#FFFFFF" style={{marginRight: 6}} />
-            <Text style={styles.doneBtnText}>Done</Text>
-         </TouchableOpacity>
+        <TouchableOpacity style={styles.exportBtn} activeOpacity={0.8} onPress={handleExport}>
+          <Ionicons name="download-outline" size={16} color="#4F46E5" style={{ marginRight: 6 }} />
+          <Text style={styles.exportBtnText}>Export</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.doneBtn} activeOpacity={0.8} onPress={() => navigation.goBack()}>
+          <Ionicons name="checkmark" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+          <Text style={styles.doneBtnText}>Done</Text>
+        </TouchableOpacity>
       </Animated.View>
 
-      <CustomCalendarPickerOverlay 
-         visible={isCalendarVisible} 
-         onClose={() => setIsCalendarVisible(false)} 
-         onSelect={setSelectedDate} 
-         selectedDate={selectedDate}
+      <CustomCalendarPickerOverlay
+        visible={isCalendarVisible}
+        onClose={() => setIsCalendarVisible(false)}
+        onSelect={setSelectedDate}
+        selectedDate={selectedDate}
       />
 
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 100 }, // enough padding for bottom bar
 
   globalHeader: {
@@ -227,7 +299,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -236,9 +308,10 @@ const styles = StyleSheet.create({
     zIndex: 10
   },
   menuHandle: { paddingRight: 10, paddingVertical: 10 },
-  headerTitle: { fontSize: 16,
+  headerTitle: {
+    fontSize: 16,
     fontWeight: '500',
-    color: '#4F46E5', 
+    color: theme.primary,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
@@ -260,7 +333,7 @@ const styles = StyleSheet.create({
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   blueHeader: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 16,
@@ -303,7 +376,7 @@ const styles = StyleSheet.create({
   },
 
   mainCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 24,
     marginHorizontal: 16,
@@ -314,7 +387,7 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 6,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
   },
 
   statsRow: {
@@ -324,10 +397,10 @@ const styles = StyleSheet.create({
   },
   statBox: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     borderTopWidth: 3,
     paddingVertical: 12,
     marginHorizontal: 4,
@@ -341,19 +414,19 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#4B5563',
+    color: theme.subtext,
   },
 
   sectionTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 20,
   },
 
@@ -363,7 +436,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: theme.border,
   },
   studentInfoLeft: {
     flexDirection: 'row',
@@ -373,7 +446,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: theme.isDarkMode ? '#33415530' : '#EEF2FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -381,17 +454,17 @@ const styles = StyleSheet.create({
   avatarInitials: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#4F46E5',
+    color: theme.primary,
   },
   studentName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
+    color: theme.text,
     marginBottom: 2,
   },
   studentId: {
     fontSize: 10,
-    color: '#9CA3AF',
+    color: theme.subtext,
     textTransform: 'uppercase',
   },
   statusPill: {
@@ -425,16 +498,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: theme.border,
   },
   exportBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 20,
@@ -443,23 +516,24 @@ const styles = StyleSheet.create({
   exportBtnText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4F46E5',
+    color: theme.primary,
   },
   doneBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4F46E5', 
+    backgroundColor: theme.primary,
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 20,
-  
-    shadowColor: '#4F46E5',
+
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 4,},
+    elevation: 4,
+  },
   doneBtnText: {
     fontSize: 14,
     fontWeight: '600',
@@ -467,7 +541,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.subtext,
     textAlign: 'center',
     marginTop: 20,
     fontWeight: '500',

@@ -8,6 +8,8 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Image,
+  TouchableOpacity,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -17,8 +19,9 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
+import { useTheme } from '../../store/ThemeContext';
+import { StudentHeader } from '../../components/StudentHeader';
+import studentService from '../../services/studentService';
 
 type StartQuizNavigationProp = NativeStackNavigationProp<RootStackParamList, 'StartQuiz'>;
 type StartQuizRouteProp = RouteProp<RootStackParamList, 'StartQuiz'>;
@@ -29,6 +32,8 @@ interface Props {
 }
 
 const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { theme, isDarkMode, toggleDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const { authState } = useAuth();
   const [quizData, setQuizData] = useState<any>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -78,13 +83,13 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
       }
 
       // 1. Validate and start attempt on server to get verified timestamp
-      const startRes = await apiClient.post(ENDPOINTS.STUDENT.START_QUIZ(quizId));
+      const startRes = await studentService.startQuiz(quizId);
       const startData = startRes.normalized?.data || startRes.data;
       const verifiedStart = startData?.startedAt;
       setStartedAt(verifiedStart);
 
       // 2. Fetch quiz questions and content
-      const response = await apiClient.get(ENDPOINTS.STUDENT.START_QUIZ(quizId));
+      const response = await studentService.getStartQuiz(quizId);
       const data = response.normalized?.data || response.data;
       
       setQuizData(data);
@@ -142,7 +147,7 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
 
       const quizId = route?.params?.quizId;
       
-      await apiClient.post(ENDPOINTS.STUDENT.SUBMIT_QUIZ(quizId), {
+      await studentService.submitQuiz(quizId, {
         answers,
         startedAt,
         timeSpent: ((Number(quizData?.duration) || 60) * 60) - timeRemaining,
@@ -183,7 +188,7 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={theme.primary} />
         <Text style={styles.loadingText}>Loading quiz...</Text>
       </View>
     );
@@ -211,23 +216,14 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFF" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
 
       {/* Global Header */}
-      <View style={styles.globalHeader}>
-         <ScaleButton style={styles.menuHandle} onPress={() => {}}>
-           <View style={{width: 28}} /> 
-         </ScaleButton>
-         <Text style={styles.headerTitle} numberOfLines={1}>Welcome back, {authState.user?.name?.split(' ')[0] || 'Student'}</Text>
-         <View style={styles.headerRight}>
-           <Ionicons name="notifications-outline" size={20} color="#1F2937" />
-           <Ionicons name="settings-outline" size={20} color="#1F2937" />
-           <Ionicons name="moon-outline" size={20} color="#1F2937" />
-           <View style={styles.avatar}>
-             <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'S'}</Text>
-           </View>
-         </View>
-      </View>
+      <StudentHeader 
+        title="Quiz"
+        navigation={navigation}
+        isStackScreen={true}
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
         
@@ -336,7 +332,7 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
                  onPress={handlePrevQuestion}
                  disabled={currentQuestionIndex === 0}
                >
-                 <Ionicons name="arrow-back" size={16} color={currentQuestionIndex === 0 ? "#9CA3AF" : "#4F46E5"} style={{marginRight: 6}} />
+                 <Ionicons name="arrow-back" size={16} color={currentQuestionIndex === 0 ? theme.subtext : theme.primary} style={{marginRight: 6}} />
                  <Text style={[styles.prevBtnText, currentQuestionIndex === 0 && styles.disabledBtnText]}>Previous</Text>
                </ScaleButton>
 
@@ -356,7 +352,7 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
               style={[styles.submitBtn, isSubmitting && styles.disabledBtn]}
               activeOpacity={0.8}
               scaleTo={0.95}
-              onPress={handleSubmitQuiz}
+              onPress={() => handleSubmitQuiz()}
               disabled={isSubmitting}
             >
               <Ionicons name="paper-plane" size={18} color="#FFFFFF" style={{marginRight: 8}} />
@@ -373,8 +369,8 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FAF9F9' }, 
+const getStyles = (theme: any) => StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: theme.background }, 
   scrollContent: { paddingBottom: 40 },
 
   globalHeader: {
@@ -384,16 +380,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40, 
     paddingBottom: 12,
-    backgroundColor: '#FAFAFF', 
+    backgroundColor: theme.surface, 
   },
   menuHandle: { paddingRight: 10, paddingVertical: 10 },
-  headerTitle: { fontSize: 14, fontWeight: '500', color: '#4F46E5', flex: 1, textAlign: 'center' },
+  headerTitle: { fontSize: 14, fontWeight: '500', color: theme.primary, flex: 1, textAlign: 'center' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#A855F7', justifyContent: 'center', alignItems: 'center', marginLeft: 4 },
+  avatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center', marginLeft: 4 },
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
 
   heroContainer: {
-    backgroundColor: '#4E5EEE', 
+    backgroundColor: theme.primary, 
     paddingHorizontal: 20,
     paddingTop: 24, 
     paddingBottom: 36, 
@@ -408,64 +404,64 @@ const styles = StyleSheet.create({
 
   timerCard: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: '#FFFFFF', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16,
+    backgroundColor: theme.surface, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16,
     shadowColor: '#1E293B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4,
-    borderWidth: 1, borderColor: '#F1F5F9'
+    borderWidth: 1, borderColor: theme.border
   },
   
   timerBox: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFBEB', 
-    borderWidth: 1, borderColor: '#FDE68A', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: theme.isDarkMode ? '#7F1D1D30' : '#FFFBEB', 
+    borderWidth: 1, borderColor: theme.isDarkMode ? '#EF444450' : '#FDE68A', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8,
   },
-  timerTextMain: { fontSize: 13, fontWeight: '800', color: '#111827', marginBottom: 2 },
-  timerTextSub: { fontSize: 9, color: '#6B7280', fontWeight: '500' },
+  timerTextMain: { fontSize: 13, fontWeight: '800', color: theme.text, marginBottom: 2 },
+  timerTextSub: { fontSize: 9, color: theme.subtext, fontWeight: '500' },
   
   questionCounterBlock: { flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginRight: 4 },
-  counterCurrent: { fontSize: 26, fontWeight: '400', color: '#3B82F6', lineHeight: 30 },
-  counterTotal: { fontSize: 12, color: '#9CA3AF', fontWeight: '500' },
+  counterCurrent: { fontSize: 26, fontWeight: '400', color: theme.primary, lineHeight: 30 },
+  counterTotal: { fontSize: 12, color: theme.subtext, fontWeight: '500' },
 
   progressContainer: { marginTop: 24, marginBottom: 20, paddingHorizontal: 2 },
   progressLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  progressLabel: { fontSize: 11, fontWeight: '700', color: '#111827' },
-  progressBarTrack: { height: 6, backgroundColor: '#E5E7EB', borderRadius: 3, width: '100%', overflow: 'hidden' },
-  progressBarFill: { width: '0%', height: '100%', backgroundColor: '#4F46E5', borderRadius: 3 },
+  progressLabel: { fontSize: 11, fontWeight: '700', color: theme.text },
+  progressBarTrack: { height: 6, backgroundColor: theme.isDarkMode ? '#334155' : '#E5E7EB', borderRadius: 3, width: '100%', overflow: 'hidden' },
+  progressBarFill: { width: '0%', height: '100%', backgroundColor: theme.primary, borderRadius: 3 },
 
   questionCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16,
+    backgroundColor: theme.surface, borderRadius: 12, padding: 16,
     shadowColor: '#1E293B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4,
-    marginBottom: 20, borderWidth: 1, borderColor: '#F1F5F9'
+    marginBottom: 20, borderWidth: 1, borderColor: theme.border
   },
   questionHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 20 },
   questionNumberCircle: {
-    width: 26, height: 26, borderRadius: 13, backgroundColor: '#4F46E5',
+    width: 26, height: 26, borderRadius: 13, backgroundColor: theme.primary,
     justifyContent: 'center', alignItems: 'center', marginRight: 12, marginTop: 2,
   },
   questionNumberText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
-  questionMainText: { flex: 1, fontSize: 13, fontWeight: '700', color: '#111827', lineHeight: 18, marginRight: 8 },
-  pointsBadge: { backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' },
+  questionMainText: { flex: 1, fontSize: 13, fontWeight: '700', color: theme.text, lineHeight: 18, marginRight: 8 },
+  pointsBadge: { backgroundColor: theme.isDarkMode ? '#065F4630' : '#DCFCE7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' },
   pointsBadgeText: { color: '#10B981', fontSize: 9, fontWeight: '800' },
 
   optionsList: { gap: 10, marginBottom: 20 },
   optionItem: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10,
-    borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#FFFFFF'
+    borderRadius: 8, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface
   },
-  optionItemSelected: { borderColor: '#4F46E5', backgroundColor: '#EEF2FF' }, 
+  optionItemSelected: { borderColor: theme.isDarkMode ? '#312E81' : theme.primary, backgroundColor: theme.isDarkMode ? '#1E1B4B' : '#EEF2FF' }, 
   
   optionLetterBox: {
-    width: 24, height: 24, borderRadius: 12, backgroundColor: '#F3F4F6',
+    width: 24, height: 24, borderRadius: 12, backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
     justifyContent: 'center', alignItems: 'center', marginRight: 16,
   },
-  optionLetterBoxSelected: { backgroundColor: '#4F46E5' },
-  optionLetterText: { fontSize: 11, fontWeight: '700', color: '#4B5563' },
+  optionLetterBoxSelected: { backgroundColor: theme.primary },
+  optionLetterText: { fontSize: 11, fontWeight: '700', color: theme.text },
   optionLetterTextSelected: { color: '#FFFFFF' },
   
-  optionTextMain: { fontSize: 13, color: '#4B5563', fontWeight: '500' },
-  optionTextMainSelected: { color: '#4F46E5', fontWeight: '700' },
+  optionTextMain: { fontSize: 13, color: theme.text, fontWeight: '500' },
+  optionTextMainSelected: { color: theme.primary, fontWeight: '700' },
 
   flagButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#FFFBEB', borderWidth: 1, borderColor: '#FDE68A', borderRadius: 8, paddingVertical: 10,
+    backgroundColor: theme.isDarkMode ? '#7F1D1D30' : '#FFFBEB', borderWidth: 1, borderColor: theme.isDarkMode ? '#EF444450' : '#FDE68A', borderRadius: 8, paddingVertical: 10,
   },
   flagButtonText: { color: '#F59E0B', fontSize: 13, fontWeight: '700' },
 
@@ -473,13 +469,13 @@ const styles = StyleSheet.create({
   navigationRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   prevBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: '#4F46E5', borderRadius: 6, paddingVertical: 10, backgroundColor: '#FFFFFF'
+    borderWidth: 1, borderColor: theme.primary, borderRadius: 6, paddingVertical: 10, backgroundColor: theme.surface
   },
-  prevBtnText: { color: '#4F46E5', fontSize: 13, fontWeight: '700' },
+  prevBtnText: { color: theme.primary, fontSize: 13, fontWeight: '700' },
   
   nextBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#4E5EEE', borderRadius: 6, paddingVertical: 10,
+    backgroundColor: theme.primary, borderRadius: 6, paddingVertical: 10,
   },
   nextBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
 
@@ -495,12 +491,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FAF9F9',
+    backgroundColor: theme.background,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#6B7280',
+    color: theme.subtext,
     fontWeight: '500',
   },
 
@@ -508,7 +504,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FAF9F9',
+    backgroundColor: theme.background,
     paddingHorizontal: 20,
   },
   errorText: {
@@ -519,7 +515,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -536,6 +532,7 @@ const styles = StyleSheet.create({
   },
   disabledBtnText: {
     opacity: 0.5,
+    color: theme.subtext,
   },
 });
 

@@ -84,10 +84,14 @@ import PrincipalEditStudentScreen from './src/screens/principal/PrincipalEditStu
 import PrincipalViewStudentScreen from './src/screens/principal/PrincipalViewStudentScreen';
 import PrincipalCalendarScreen from './src/screens/principal/PrincipalCalendarScreen';
 import PrincipalTimetable from './src/screens/principal/PrincipalTimetableScreen';
-import PrincipalPerformance from './src/screens/principal/PrincipalPerformanceScreen';
 import PrincipalAnnouncements from './src/screens/principal/PrincipalAnnouncementsScreen';
 import PrincipalFees from './src/screens/principal/PrincipalFeesScreen';
-import PrincipalRSM from './src/screens/principal/PrincipalRSMscreen';
+import PrincipalRMS from './src/screens/principal/PrincipalRMSScreen';
+import PrincipalReviewExamScreen from './src/screens/principal/PrincipalReviewExamScreen';
+import PrincipalClassDetailScreen from './src/screens/principal/PrincipalClassDetailScreen';
+import PrincipalTeachersScreen from './src/screens/principal/PrincipalTeachersScreen';
+import PrincipalEquipmentScreen from './src/screens/principal/PrincipalEquipmentScreen';
+import PrincipalLibraryScreen from './src/screens/principal/PrincipalLibraryScreen';
 import PrincipalCreateExam from './src/screens/principal/PrincipalCreateExamScreen';
 import PrincipalAddSubject from './src/screens/principal/PrincipalAddSubjectScreen';
 import PrincipalEditSubject from './src/screens/principal/PrincipalEditSubjectScreen';
@@ -95,6 +99,8 @@ import PrincipalAddClass from './src/screens/principal/PrincipalAddClassScreen';
 import PrincipalManageClass from './src/screens/principal/PrincipalManageClassScreen';
 import PrincipalEditClass from './src/screens/principal/PrincipalEditClassScreen';
 import LibraryScreen from './src/screens/library/LibraryScreen';
+import StudentMessagesScreen from './src/screens/student/Messages';
+import TeacherMessagesScreen from './src/screens/teacher/Messages';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -185,6 +191,7 @@ function RootNavigator() {
                 component={OfficialResultScreen}
               />
               <Stack.Screen name="Timetable" component={TimetableScreen} />
+              <Stack.Screen name="Messages" component={StudentMessagesScreen} />
             </>
           )}
 
@@ -292,6 +299,7 @@ function RootNavigator() {
                 name="Announcements"
                 component={AnnouncementScreen}
               />
+              <Stack.Screen name="Messages" component={TeacherMessagesScreen} />
             </>
           )}
 
@@ -352,15 +360,17 @@ function RootNavigator() {
                 component={PrincipalTimetable}
               />
               <Stack.Screen
-                name="PrincipalPerformance"
-                component={PrincipalPerformance}
-              />
-              <Stack.Screen
                 name="PrincipalAnnouncements"
                 component={PrincipalAnnouncements}
               />
               <Stack.Screen name="PrincipalFees" component={PrincipalFees} />
-              <Stack.Screen name="PrincipalRSM" component={PrincipalRSM} />
+              <Stack.Screen name="PrincipalRSM" component={PrincipalRMS} />
+              <Stack.Screen name="PrincipalRMS" component={PrincipalRMS} />
+              <Stack.Screen name="PrincipalReviewExam" component={PrincipalReviewExamScreen} />
+              <Stack.Screen name="PrincipalClassDetail" component={PrincipalClassDetailScreen} />
+              <Stack.Screen name="PrincipalTeachers" component={PrincipalTeachersScreen} />
+              <Stack.Screen name="PrincipalEquipment" component={PrincipalEquipmentScreen} />
+              <Stack.Screen name="PrincipalLibrary" component={PrincipalLibraryScreen} />
               <Stack.Screen
                 name="PrincipalCreateExam"
                 component={PrincipalCreateExam}
@@ -403,11 +413,6 @@ function ThemedApp() {
   const { isDarkMode } = useTheme();
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor="transparent"
-        translucent
-      />
       <NavigationContainer theme={isDarkMode ? DarkNavigationTheme : undefined}>
         <RootNavigator />
       </NavigationContainer>

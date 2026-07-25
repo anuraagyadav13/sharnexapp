@@ -17,7 +17,7 @@ const accountService = {
     },
 
     updateProfile(data: UpdateProfileRequest) {
-        return apiClient.put(ENDPOINTS.ACCOUNT.PROFILE, data);
+        return apiClient.patch(ENDPOINTS.ACCOUNT.PROFILE, data);
     },
 
     getStudentInfo() {
@@ -49,6 +49,18 @@ const accountService = {
 
     updatePreferences(data: any) {
         return apiClient.put(ENDPOINTS.ACCOUNT.PREFERENCES, data);
+    },
+
+    uploadPhoto(data: FormData) {
+        return apiClient.post('/account/student/photo', data, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+    },
+
+    deletePhoto() {
+        return apiClient.delete('/account/student/photo');
     },
 };
 

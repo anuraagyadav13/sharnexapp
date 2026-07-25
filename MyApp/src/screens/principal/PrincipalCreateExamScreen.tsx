@@ -60,7 +60,7 @@ const PrincipalCreateExamScreen = ({ navigation }: any) => {
         </ScaleButton>
         <Text style={styles.headerTitle} numberOfLines={1}>Define Examination</Text>
         <View style={styles.headerRight}>
-           <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}>
             <View style={styles.avatarHeader}>
               <Text style={styles.avatarTextHeader}>{authState.user?.name?.charAt(0) || 'A'}</Text>
             </View>
@@ -70,7 +70,7 @@ const PrincipalCreateExamScreen = ({ navigation }: any) => {
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          
+
           <View style={styles.pageHeader}>
             <Text style={styles.screenTitle}>Assessment Setup</Text>
             <Text style={styles.screenSubtitle}>Configure examination lifecycle, grading parameters, and academic scope.</Text>
@@ -78,82 +78,82 @@ const PrincipalCreateExamScreen = ({ navigation }: any) => {
 
           <Animated.View entering={FadeInUp.duration(400)} style={styles.formSection}>
             <View style={styles.sectionHeader}>
-               <Text style={styles.sectionTitle}>Basic Configuration</Text>
+              <Text style={styles.sectionTitle}>Basic Configuration</Text>
             </View>
 
             <View style={styles.field}>
-               <Text style={styles.label}>OFFICIAL EXAM TITLE</Text>
-               <View style={styles.premiumInputBox}>
-                  <MaterialCommunityIcons name="file-certificate-outline" size={20} color="#94A3B8" />
-                  <TextInput 
-                    style={styles.premiumInput} 
-                    placeholder="e.g. Annual Final Term 2026" 
-                    placeholderTextColor="#94A3B8"
-                    value={examName}
-                    onChangeText={setExamName}
-                  />
-               </View>
+              <Text style={styles.label}>OFFICIAL EXAM TITLE</Text>
+              <View style={styles.premiumInputBox}>
+                <MaterialCommunityIcons name="file-certificate-outline" size={20} color="#94A3B8" />
+                <TextInput
+                  style={styles.premiumInput}
+                  placeholder="e.g. Annual Final Term 2026"
+                  placeholderTextColor="#94A3B8"
+                  value={examName}
+                  onChangeText={setExamName}
+                />
+              </View>
             </View>
 
             <View style={styles.inputRow}>
-               <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>ASSESSMENT TYPE</Text>
-                  <TouchableOpacity style={styles.picker}>
-                     <Text style={styles.pickerText}>{examType}</Text>
-                     <Ionicons name="chevron-down" size={18} color="#94A3B8" />
-                  </TouchableOpacity>
-               </View>
-               <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>ACADEMIC YEAR</Text>
-                  <TextInput 
-                    style={styles.premiumInputMinimal} 
-                    value={academicYear}
-                    onChangeText={setAcademicYear}
-                  />
-               </View>
+              <View style={[styles.field, { flex: 1 }]}>
+                <Text style={styles.label}>ASSESSMENT TYPE</Text>
+                <TouchableOpacity style={styles.picker}>
+                  <Text style={styles.pickerText}>{examType}</Text>
+                  <Ionicons name="chevron-down" size={18} color="#94A3B8" />
+                </TouchableOpacity>
+              </View>
+              <View style={[styles.field, { flex: 1 }]}>
+                <Text style={styles.label}>ACADEMIC YEAR</Text>
+                <TextInput
+                  style={styles.premiumInputMinimal}
+                  value={academicYear}
+                  onChangeText={setAcademicYear}
+                />
+              </View>
             </View>
 
             <View style={styles.field}>
-               <Text style={styles.label}>SCOPE & NOTES</Text>
-               <TextInput 
-                 style={[styles.premiumInputBox, styles.textArea]} 
-                 placeholder="Define the scope or add specific instructions for staff..." 
-                 placeholderTextColor="#94A3B8"
-                 multiline
-                 value={description}
-                 onChangeText={setDescription}
-               />
+              <Text style={styles.label}>SCOPE & NOTES</Text>
+              <TextInput
+                style={[styles.premiumInputBox, styles.textArea]}
+                placeholder="Define the scope or add specific instructions for staff..."
+                placeholderTextColor="#94A3B8"
+                multiline
+                value={description}
+                onChangeText={setDescription}
+              />
             </View>
           </Animated.View>
 
           <Animated.View entering={FadeInUp.delay(100)} style={styles.formSection}>
             <View style={styles.sectionHeader}>
-               <Text style={styles.sectionTitle}>Academic Mapping</Text>
-               <Text style={styles.sectionSubtitleSmall}>Synchronize participative classes and result thresholds.</Text>
+              <Text style={styles.sectionTitle}>Academic Mapping</Text>
+              <Text style={styles.sectionSubtitleSmall}>Synchronize participative classes and result thresholds.</Text>
             </View>
 
             <TouchableOpacity style={styles.dashedBtn}>
-               <Ionicons name="add-circle-outline" size={22} color="#4F46E5" />
-               <Text style={styles.dashedBtnText}>Configure Participating Classes</Text>
+              <Ionicons name="add-circle-outline" size={22} color="#4F46E5" />
+              <Text style={styles.dashedBtnText}>Configure Participating Classes</Text>
             </TouchableOpacity>
           </Animated.View>
 
           <View style={styles.footerActions}>
-             <TouchableOpacity style={styles.secondaryBtn} onPress={() => navigation.goBack()}>
-                <Text style={styles.secondaryBtnText}>Cancel</Text>
-             </TouchableOpacity>
-             <TouchableOpacity 
-               style={[styles.primarySubmitBtn, isSubmitting && { opacity: 0.7 }]} 
-               onPress={handleCreate}
-               disabled={isSubmitting}
-             >
-                {isSubmitting ? <ActivityIndicator color="#FFF" /> : (
-                  <>
-                    <Text style={styles.primarySubmitText}>Publish Definition</Text>
-                    <Ionicons name="rocket-outline" size={20} color="#FFF" />
-                  </>
-                )}
-             </TouchableOpacity>
+            <TouchableOpacity style={styles.secondaryBtn} onPress={() => navigation.goBack()}>
+              <Text style={styles.secondaryBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.primarySubmitBtn, isSubmitting && { opacity: 0.7 }]}
+              onPress={handleCreate}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? <ActivityIndicator color="#FFF" /> : (
+                <>
+                  <Text style={styles.primarySubmitText}>Publish Definition</Text>
+                  <Ionicons name="rocket-outline" size={20} color="#FFF" />
+                </>
+              )}
+            </TouchableOpacity>
           </View>
 
         </ScrollView>
@@ -173,7 +173,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 30,
+    paddingTop:
+      Platform.OS === 'ios'
+        ? 60
+        : (StatusBar.currentHeight ?? 0),
     paddingBottom: 24,
     backgroundColor: '#FAFAFF',
   },
@@ -191,7 +194,7 @@ const styles = StyleSheet.create({
   sectionHeader: { marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B' },
   sectionSubtitleSmall: { fontSize: 12, color: '#94A3B8', fontWeight: '600', marginTop: 4 },
-  
+
   field: { marginBottom: 20 },
   label: { fontSize: 10, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5, marginBottom: 8 },
   premiumInputBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 16, paddingHorizontal: 16, height: 56, borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.02, shadowRadius: 8, elevation: 1 },
@@ -199,7 +202,7 @@ const styles = StyleSheet.create({
   premiumInputMinimal: { backgroundColor: '#FFF', borderRadius: 16, paddingHorizontal: 16, height: 56, fontSize: 14, color: '#1E293B', fontWeight: '600', borderWidth: 1, borderColor: '#F1F5F9' },
   inputRow: { flexDirection: 'row', gap: 15 },
   textArea: { height: 120, alignItems: 'flex-start', paddingTop: 15 },
-  
+
   picker: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 16, paddingHorizontal: 16, height: 56, borderWidth: 1, borderColor: '#F1F5F9' },
   pickerText: { fontSize: 14, color: '#1E293B', fontWeight: '700' },
 

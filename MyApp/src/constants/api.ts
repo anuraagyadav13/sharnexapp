@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import Messages from '../screens/student/Messages';
 
 interface ExpoExtra {
   API_HOST?: string;
@@ -30,7 +31,7 @@ const API_HOST =
   (Platform.OS === 'android' ? '10.0.2.2' : 'localhost');
 const API_PORT = expoExtra.API_PORT ?? '3000';
 
-export const API_BASE_URL = 'https://www.sharnex.com/api';
+export const API_BASE_URL = 'https://sharnex.com/api';
 export const ENDPOINTS = {
   AUTH: {
     LOGIN: '/auth/login',
@@ -70,7 +71,8 @@ export const ENDPOINTS = {
     QUIZ_RESULT: (id: string) => `/quizzes/${id}/results`,
     QUIZ_ANALYSIS: (id: string) => `/quizzes/${id}/analysis`,
     PAYMENT_RECEIPT: (id: string) => `/payments/${id}/receipt`,
-    PERFORMANCE: (id: string) => `/students/${id}/performance`,
+    PERFORMANCE: '/students/performance',
+    INSIGHTS: '/students/insights',
     REPORT: (id: string) => `/students/${id}/report`,
     STUDY_MATERIALS: (id: string) => `/students/${id}/study-materials`,
     STUDY_MATERIAL_DOWNLOAD: (studentId: string, materialId: string) => `/students/${studentId}/study-materials/${materialId}/download`,
@@ -135,9 +137,13 @@ export const ENDPOINTS = {
     },
     ANNOUNCEMENTS: '/announcements',
     PENDING_TASKS: (id: string) => `/teachers/${id}/pending-tasks`,
+    // Timetable: periods config (same endpoint used by the website)
+    TIMETABLE_PERIODS: '/timetable/periods',
   },
   PRINCIPAL: {
+    // Old endpoints to prevent compiler errors on other principal files
     DASHBOARD: '/principal/dashboard',
+    DASHBOARD_METRICS: '/institution/dashboard-metrics',
     STAFF: '/principal/staff',
     ADD_STAFF: '/principal/staff',
     STUDENTS: '/principal/students',
@@ -145,14 +151,13 @@ export const ENDPOINTS = {
     ADD_STUDENT: '/principal/students',
     FEES: '/principal/fees',
     CREATE_FEE: '/principal/fees',
-    ANNOUNCEMENTS: '/principal/announcements',
     CREATE_ANNOUNCEMENT: '/principal/announcements',
-    CLASSES: '/principal/classes',
-    SUBJECTS: '/subjects',
     TIMETABLE: '/principal/timetable',
     PERFORMANCE: '/principal/performance',
     CALENDAR: '/principal/calendar',
-    CALENDAR_EVENTS: '/principal/calendar/events',
+    CALENDAR_EVENTS: '/calendar/events',
+    CALENDAR_HOLIDAYS: '/calendar/holidays',
+    CALENDAR_EXAMS: '/calendar/exams',
     REPORTS: '/rms/exams',
     EXAMS: '/rms/exams',
     EXAM_DETAIL: (id: string) => `/rms/exams/${id}`,
@@ -164,6 +169,47 @@ export const ENDPOINTS = {
     RMS_ADMIN: '/rms/results/admin',
     EQUIPMENT_REQUESTS: '/equipment/requests',
     ATTENDANCE: '/attendance',
-  }
+    ATTENDANCE_SUMMARY: '/institution/attendance-summary',
+
+    // HAR capture verified endpoints
+    CLASSES: '/classes',
+    SUBJECTS: '/subjects',
+    TEACHERS: (institutionId: string) => `/tenants/${institutionId}/teachers`,
+    CLASS_ASSIGNMENTS: (institutionId: string) => `/tenants/${institutionId}/class-assignments`,
+    TIMETABLE_PERIODS: '/timetable/periods',
+    CLASS_SCHEDULE: (classId: string) => `/classes/${classId}/schedule`,
+    CLASS_STUDENTS: (classId: string) => `/classes/${classId}/students`,
+    DELETE_STUDENT: (id: string) => `/students/${id}`,
+    UPDATE_STUDENT: (id: string) => `/students/${id}`,
+    CREATE_STUDENT: '/students',
+    EXPORT_STUDENTS: (classId: string) => `/classes/${classId}/students/export`,
+    RMS_EXAMS: '/rms/exams',
+    ANNOUNCEMENTS: '/announcements',
+    INVOICE_STATS: '/invoices/stats',
+    INVOICES: '/invoices',
+    EQUIPMENT_PENDING: '/equipment/approvals/pending',
+    EQUIPMENT_ACTION: (id: string) => `/equipment/approvals/${id}/action`,
+    EQUIPMENT_APPROVE: (id: string) => `/equipment/approvals/${id}/approve`,
+    EQUIPMENT_REJECT: (id: string) => `/equipment/approvals/${id}/reject`,
+    LIBRARY_DASHBOARD: '/library/dashboard',
+    LIBRARY_CATEGORIES: '/library/categories',
+    LIBRARY_ISSUES: '/library/issues',
+    ACCOUNT_PROFILE: '/account/profile',
+    ACCOUNT_INSTITUTION: '/account/institution',
+    ACCOUNT_SESSIONS: '/account/sessions',
+  },
+  MESSAGES: {
+    CONVERSATION: '/messages',
+    CONTACTS: '/messages/contacts',
+
+    MESSAGES: (recipientId: string, limit = 50) =>
+      `/messages?recipientId=${recipientId}&limit=${limit}`,
+
+    MESSAGE: '/messages',
+
+    READ: '/messages/read',
+
+    STREAM: '/messages/stream',
+  },
 };
 

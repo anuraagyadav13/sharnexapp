@@ -9,9 +9,11 @@ import {
   StatusBar,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import apiClient, { getApiErrorMessage } from '../../services/apiClient';
+import principalService from '../../services/principalService';
 import { ENDPOINTS } from '../../constants/api';
 
 const InfoField = ({ label, value }: { label: string, value: string | null | undefined }) => (
@@ -29,7 +31,7 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
   useEffect(() => {
     const fetchStudentData = async () => {
       try {
-        const response = await apiClient.get(ENDPOINTS.PRINCIPAL.STUDENT_DETAIL(studentId));
+        const response = await principalService.getStudentDetail(studentId);
         const rawData = response.data?.data || response.data || {};
         const data = rawData.student || rawData;
         setStudent(data);
@@ -44,6 +46,26 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
     };
     fetchStudentData();
   }, [studentId]);
+
+  const handleDeleteStudent = () => {
+    Alert.alert('Delete Student', 'Are you sure you want to delete this student?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        try {
+          setIsLoading(true);
+          await principalService.deleteStudent(studentId);
+          Alert.alert('Success', 'Student deleted successfully', [
+            { text: 'OK', onPress: () => navigation.goBack() }
+          ]);
+        } catch (error) {
+          console.error('Failed to delete student:', error);
+          Alert.alert('Error', getApiErrorMessage(error));
+        } finally {
+          setIsLoading(false);
+        }
+      }}
+    ]);
+  };
 
   if (isLoading) {
     return (
@@ -71,16 +93,25 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
 
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
-        {/* Top Back Nav */}
-        <TouchableOpacity style={styles.backNav} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={16} color="#3B82F6" />
-          <Text style={styles.backNavText}>Back to Students</Text>
-        </TouchableOpacity>
+        {/* Top Header */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingTop: Platform.OS === 'ios' ? 40 : 20 }}>
+          <TouchableOpacity style={[styles.backNav, { marginBottom: 0, paddingTop: 0 }]} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={16} color="#3B82F6" />
+            <Text style={styles.backNavText}>Back to Students</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleDeleteStudent}>
+            <Ionicons name="trash-outline" size={20} color="#EF4444" />
+          </TouchableOpacity>
+        </View>
 
         {/* Hero Card */}
         <View style={styles.heroCard}>
           <View style={styles.heroAvatar}>
-            <Text style={styles.heroAvatarText}>{student.name?.charAt(0).toUpperCase()}</Text>
+            {student.photoUrl || student.profilePhoto ? (
+              <Image source={{ uri: student.photoUrl || student.profilePhoto }} style={{ width: 64, height: 64, borderRadius: 32 }} />
+            ) : (
+              <Text style={styles.heroAvatarText}>{student.name ? student.name.charAt(0).toUpperCase() : '?'}</Text>
+            )}
           </View>
           <View style={styles.heroInfo}>
             <Text style={styles.heroName}>{student.name}</Text>
@@ -177,6 +208,73 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
             <InfoField label="Account Status" value={student.isActive ? 'Active' : 'Inactive'} />
             <InfoField label="Enrolled Since" value={formatDate(student.createdAt)} />
           </View>
+        </View>
+
+        {/* Attendance Details */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="calendar-outline" size={18} color="#6366F1" />
+            <Text style={styles.sectionTitle}>Attendance Details</Text>
+          </View>
+          <View style={styles.gridRow}>
+            <InfoField 
+              label="Attendance Rate" 
+              value={student.attendanceRate !== undefined && student.attendanceRate !== null ? `${student.attendanceRate}%` : '-'} 
+            />
+            <InfoField 
+              label="Classes Attended" 
+              value={student.classesAttended !== undefined && student.classesAttended !== null ? `${student.classesAttended}/${student.totalClasses || 0}` : '-'} 
+            />
+          </View>
+          <View style={styles.gridRow}>
+            <InfoField label="Present" value={student.presentCount?.toString()} />
+            <InfoField label="Absent" value={student.absentCount?.toString()} />
+          </View>
+          <View style={styles.gridRow}>
+            <InfoField label="Late" value={student.lateCount?.toString()} />
+            <InfoField label="Leave" value={student.leaveCount?.toString()} />
+          </View>
+        </View>
+
+        {/* Performance & Grades */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="trending-up" size={18} color="#6366F1" />
+            <Text style={styles.sectionTitle}>Performance & Grades</Text>
+          </View>
+          <View style={styles.gridRow}>
+            <InfoField label="Average Score" value={student.averageScore?.toString()} />
+            <InfoField label="Overall Grade" value={student.overallGrade || student.grade} />
+          </View>
+          <View style={styles.gridRow}>
+            <InfoField label="Rank" value={student.rank?.toString()} />
+            <InfoField label="Academic Standing" value={student.performance} />
+          </View>
+          {student.remarks ? (
+            <View style={styles.gridRow}>
+              <InfoField label="Remarks" value={student.remarks} />
+            </View>
+          ) : null}
+        </View>
+
+        {/* Fee & Payment Status */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="cash-outline" size={18} color="#6366F1" />
+            <Text style={styles.sectionTitle}>Fee & Payment Status</Text>
+          </View>
+          <View style={styles.gridRow}>
+            <InfoField label="Fee Status" value={student.feeStatus} />
+            <InfoField 
+              label="Outstanding Balance" 
+              value={student.outstandingBalance !== undefined && student.outstandingBalance !== null ? `₹${student.outstandingBalance.toLocaleString('en-IN')}` : '-'} 
+            />
+          </View>
+          {student.lastPaymentDate ? (
+            <View style={styles.gridRow}>
+              <InfoField label="Last Payment Date" value={formatDate(student.lastPaymentDate)} />
+            </View>
+          ) : null}
         </View>
 
       </ScrollView>

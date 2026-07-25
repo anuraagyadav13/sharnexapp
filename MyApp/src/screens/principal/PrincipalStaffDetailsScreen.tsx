@@ -320,6 +320,30 @@ const styles = StyleSheet.create({
   eliteSuccessBtn: { flex: 1, backgroundColor: '#10B981', height: 48, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, shadowColor: '#10B981', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.2, shadowRadius: 10, elevation: 6 },
 
   footerActions: { flexDirection: 'row', gap: 12, marginTop: 30, width: '100%', alignItems: 'center' },
+  field: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#94A3B8',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
+  readOnlyInput: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 48,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  readOnlyVal: {
+    fontSize: 14,
+    color: '#1E293B',
+    fontWeight: '600',
+  },
 });
 
 export default PrincipalStaffDetailsScreen;

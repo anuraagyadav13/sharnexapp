@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Platform, ActivityIndicator, Image } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
+import { useTheme } from '../../store/ThemeContext';
+import { StudentHeader } from '../../components/StudentHeader';
 import studentService from '../../services/studentService';
 
 type TimetableNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Timetable'>;
@@ -16,17 +18,19 @@ interface Props {
 // const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const ALL_DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
-const getSubjectColors = (subject?: string) => {
+const getSubjectColors = (subject?: string, isDarkMode?: boolean) => {
   const norm = typeof subject === 'string' ? subject.toLowerCase().trim() : '';
-  if (norm.includes('science')) return { bg: '#EEF2FF', text: '#4338CA', accent: '#6366F1' };
-  if (norm.includes('maths')) return { bg: '#FFF1F2', text: '#BE123C', accent: '#F43F5E' };
-  if (norm.includes('english')) return { bg: '#F0FDF4', text: '#15803D', accent: '#22C55E' };
-  if (norm.includes('computer')) return { bg: '#FFFBEB', text: '#B45309', accent: '#F59E0B' };
-  if (norm.includes('hindi')) return { bg: '#FAF5FF', text: '#7E22CE', accent: '#A855F7' };
-  return { bg: '#F8FAFC', text: '#334155', accent: '#64748B' };
+  if (norm.includes('science')) return isDarkMode ? { bg: '#1E1B4B', text: '#A5B4FC', accent: '#6366F1' } : { bg: '#EEF2FF', text: '#4338CA', accent: '#6366F1' };
+  if (norm.includes('maths')) return isDarkMode ? { bg: '#881337', text: '#FDA4AF', accent: '#F43F5E' } : { bg: '#FFF1F2', text: '#BE123C', accent: '#F43F5E' };
+  if (norm.includes('english')) return isDarkMode ? { bg: '#064E3B', text: '#6EE7B7', accent: '#22C55E' } : { bg: '#F0FDF4', text: '#15803D', accent: '#22C55E' };
+  if (norm.includes('computer')) return isDarkMode ? { bg: '#78350F', text: '#FDE68A', accent: '#F59E0B' } : { bg: '#FFFBEB', text: '#B45309', accent: '#F59E0B' };
+  if (norm.includes('hindi')) return isDarkMode ? { bg: '#581C87', text: '#E9D5FF', accent: '#A855F7' } : { bg: '#FAF5FF', text: '#7E22CE', accent: '#A855F7' };
+  return isDarkMode ? { bg: '#1E293B', text: '#E2E8F0', accent: '#64748B' } : { bg: '#F8FAFC', text: '#334155', accent: '#64748B' };
 };
 
 const TimetableScreen: React.FC<Props> = ({ navigation }) => {
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'day' | 'week'>('week');
@@ -283,7 +287,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
   if (isLoading && schedule.length === 0) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -291,10 +295,10 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
   if (error) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FAF9F9" />
+        <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
         <View style={styles.globalHeader}>
           <TouchableOpacity style={styles.menuHandle} onPress={() => setDrawerOpen(true)}>
-            <Ionicons name="menu" size={26} color="#111827" />
+            <Ionicons name="menu" size={26} color={theme.text} />
           </TouchableOpacity>
           <View style={styles.centerHeaderContainer}>
             <Text style={styles.headerTitle}>
@@ -317,16 +321,16 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity style={styles.iconBtn}>
-              <Ionicons name="settings-outline" size={22} color="#111827" />
+              <Ionicons name="settings-outline" size={22} color={theme.text} />
             </TouchableOpacity>
           </View>
         </View>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
           <Ionicons name="alert-circle" size={64} color="#EF4444" style={{ marginBottom: 16 }} />
-          <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', textAlign: 'center' }}>Unable to Load Timetable</Text>
-          <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>{error}</Text>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: theme.text, textAlign: 'center' }}>Unable to Load Timetable</Text>
+          <Text style={{ fontSize: 13, color: theme.subtext, textAlign: 'center', marginTop: 8 }}>{error}</Text>
           <TouchableOpacity
-            style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
+            style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: theme.primary, borderRadius: 8 }}
             onPress={() => { setError(null); fetchTimetable(); }}
           >
             <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
@@ -340,11 +344,11 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
   if (!isLoading && !error && schedule.length === 0) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FAF9F9" />
+        <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
         {/* Header with toggle so user can switch modes */}
         <View style={styles.globalHeader}>
           <TouchableOpacity style={styles.menuHandle} onPress={() => setDrawerOpen(true)}>
-            <Ionicons name="menu" size={26} color="#111827" />
+            <Ionicons name="menu" size={26} color={theme.text} />
           </TouchableOpacity>
           <View style={styles.centerHeaderContainer}>
             <Text style={styles.headerTitle}>
@@ -367,26 +371,19 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity style={styles.iconBtn}>
-              <Ionicons name="settings-outline" size={22} color="#111827" />
+              <Ionicons name="settings-outline" size={22} color={theme.text} />
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Empty state */}
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
-          <Ionicons name="calendar-outline" size={64} color="#4F46E5" style={{ marginBottom: 16 }} />
-          <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', textAlign: 'center' }}>No Data Available</Text>
-          <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 8 }}>
+          <Ionicons name="calendar-outline" size={64} color={theme.primary} style={{ marginBottom: 16 }} />
+          <Text style={{ fontSize: 18, fontWeight: '700', color: theme.text, textAlign: 'center' }}>No Data Available</Text>
+          <Text style={{ fontSize: 13, color: theme.subtext, textAlign: 'center', marginTop: 8 }}>
             {viewMode === 'day' ? 'No classes scheduled for today.' : 'No timetable available for this week.'}
           </Text>
-          <TouchableOpacity
-            style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
-            onPress={() => { setError(null); setSchedule([]); fetchTimetable(); }}
-          >
-            <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Reload</Text>
-          </TouchableOpacity>
         </View>
-
         <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="student" />
       </View>
     );
@@ -394,71 +391,49 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F9" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />      {/* Global Header */}
+      <StudentHeader 
+        title="Timetable"
+        navigation={navigation}
+        onMenuPress={() => setDrawerOpen(true)}
+      />
 
-      {/* Global Header */}
-      <View style={styles.globalHeader}>
-        <TouchableOpacity
-          style={styles.menuHandle}
-          onPress={() => setDrawerOpen(true)}
-          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-        >
-          <Ionicons name="menu" size={26} color="#111827" />
-        </TouchableOpacity>
-        {/* toogle button */}
-        <View style={styles.centerHeaderContainer}>
-          <Text style={styles.headerTitle}>
-            {viewMode === 'week' ? 'Weekly Timetable' : 'Today Timetable'}
-          </Text>
-
-          <View style={styles.modeToggle}>
-            <TouchableOpacity
-              style={[
-                styles.modeButton,
-                viewMode === 'day' && styles.modeButtonActive,
-              ]}
-              onPress={() => setViewMode('day')}
-            >
-              <Text
-                style={[
-                  styles.modeButtonText,
-                  viewMode === 'day' && styles.modeButtonTextActive,
-                ]}
-              >
-                Day
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.modeButton,
-                viewMode === 'week' && styles.modeButtonActive,
-              ]}
-              onPress={() => setViewMode('week')}
-            >
-              <Text
-                style={[
-                  styles.modeButtonText,
-                  viewMode === 'week' && styles.modeButtonTextActive,
-                ]}
-              >
-                Week
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.headerRight}>
+      {/* Mode Toggle Bar */}
+      <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 10 }}>
+        <View style={styles.modeToggle}>
           <TouchableOpacity
-            style={styles.iconBtn}
-            onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Preferences' })}
+            style={[
+              styles.modeButton,
+              viewMode === 'day' && styles.modeButtonActive,
+            ]}
+            onPress={() => setViewMode('day')}
           >
-            <Ionicons name="settings-outline" size={22} color="#111827" />
+            <Text
+              style={[
+                styles.modeButtonText,
+                viewMode === 'day' && styles.modeButtonTextActive,
+              ]}
+            >
+              Day
+            </Text>
           </TouchableOpacity>
+
           <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
-          ><View style={[styles.avatar, { marginLeft: 12 }]}><Text style={styles.avatarText}>{String(authState.user?.name ?? 'S').charAt(0)}</Text></View></TouchableOpacity>
+            style={[
+              styles.modeButton,
+              viewMode === 'week' && styles.modeButtonActive,
+            ]}
+            onPress={() => setViewMode('week')}
+          >
+            <Text
+              style={[
+                styles.modeButtonText,
+                viewMode === 'week' && styles.modeButtonTextActive,
+              ]}
+            >
+              Week
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -526,8 +501,10 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
                         const isCompleted = data?.status === 'Completed';
 
                         const colors = isOngoing
-                          ? { bg: '#ECFDF5', accent: '#10B981', text: '#064E3B' } // Vibrant Green for Ongoing
-                          : getSubjectColors(subjectLabel);
+                          ? (isDarkMode 
+                              ? { bg: '#065F4630', accent: '#10B981', text: '#A7F3D0' }
+                              : { bg: '#ECFDF5', accent: '#10B981', text: '#064E3B' })
+                          : getSubjectColors(subjectLabel, isDarkMode);
 
                         return (
                           <View key={day} style={styles.cellOuter}>
@@ -590,8 +567,8 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#EFF6FF' }, // Soft blue/gray ambient background
+const getStyles = (theme: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.background }, 
   globalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -599,7 +576,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 56 : 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     shadowColor: '#3B82F6',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
@@ -621,12 +598,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#111827',
+    color: theme.text,
     letterSpacing: 0.2,
   },
   headerSubtitle: {
     fontSize: 11,
-    color: '#6B7280',
+    color: theme.subtext,
     fontWeight: '600',
     marginTop: 2,
     letterSpacing: 0.5,
@@ -641,7 +618,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -649,7 +626,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -657,7 +634,7 @@ const styles = StyleSheet.create({
 
   gridCanvas: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     margin: 14,
     borderRadius: 20,
     shadowColor: '#1E293B',
@@ -670,13 +647,13 @@ const styles = StyleSheet.create({
   timeColumn: {
     width: 60,
     paddingRight: 6,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRightWidth: 1,
-    borderRightColor: '#F1F5F9', // Subtle separator for time col
+    borderRightColor: theme.border, 
     zIndex: 10,
   },
   timeCell: {
-    height: 96, // Increased height for premium feel
+    height: 96, 
     alignItems: 'center',
     paddingTop: 18,
   },
@@ -688,7 +665,7 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: theme.subtext,
   },
 
   daysHeaderRow: {
@@ -696,10 +673,10 @@ const styles = StyleSheet.create({
     height: 46,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9', // Subtle header separator
+    borderBottomColor: theme.border, 
   },
   dayHeaderCell: {
-    width: 156, // Slightly wider columns
+    width: 156, 
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -710,8 +687,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   dayBadgeActive: {
-    backgroundColor: '#4F46E5',
-    shadowColor: '#4F46E5',
+    backgroundColor: theme.primary,
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -720,7 +697,7 @@ const styles = StyleSheet.create({
   dayHeaderText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#94A3B8',
+    color: theme.subtext,
     letterSpacing: 1.0,
   },
   dayHeaderTextActive: {
@@ -737,8 +714,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     borderTopWidth: 1,
-    borderColor: '#F8FAFC',
-    borderStyle: 'dashed', // Awesome premium grid-feel
+    borderColor: theme.isDarkMode ? '#334155' : '#F8FAFC',
+    borderStyle: 'dashed', 
   },
   cellOuter: {
     width: 156,
@@ -790,21 +767,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 10,
-    width: 6 * 156, // Updates width to match wider cells
+    width: 6 * 156, 
   },
   lunchLineIndicator: {
     position: 'absolute',
-    top: 19, // exact middle of 38
+    top: 19, 
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.border,
     borderStyle: 'dashed',
     zIndex: 0,
   },
   lunchBarWrapper: {
     flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F3F4F6',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 6,
@@ -815,13 +792,13 @@ const styles = StyleSheet.create({
   lunchText: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#6B7280',
+    color: theme.subtext,
     letterSpacing: 1.5,
   },
   modeToggle: {
     flexDirection: 'row',
     marginTop: 6,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F3F4F6',
     borderRadius: 8,
     padding: 2,
   },
@@ -831,12 +808,12 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   modeButtonActive: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
   },
   modeButtonText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#6B7280',
+    color: theme.subtext,
   },
   modeButtonTextActive: {
     color: '#FFFFFF',

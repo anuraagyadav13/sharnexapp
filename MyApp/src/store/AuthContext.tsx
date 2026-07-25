@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setAuthToken, storeTokens, clearStoredTokens, getStoredTokens } from '../services/apiClient';
+import { clearCache } from '../utils/cache';
 
 type Role = 'student' | 'teacher' | 'principal' | null;
 
@@ -16,6 +17,7 @@ interface AuthContextType {
   authState: AuthState;
   login: (accessToken: string, refreshToken: string, role: Role, user: any) => void;
   logout: () => void;
+  updateUser: (userUpdates: any) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -130,6 +132,10 @@ const login = async (accessToken: string, refreshToken: string, role: Role, user
 //changes till here
   const logout = async () => {
     try {
+      // Clear all cached API data first — prevents stale data leaking
+      // between sessions if a different teacher logs in next.
+      clearCache();
+
       // Clear all stored tokens and state
       await clearStoredTokens();
       await AsyncStorage.removeItem(AUTH_STORAGE_KEY);
@@ -150,10 +156,33 @@ const login = async (accessToken: string, refreshToken: string, role: Role, user
     }
   };
 
+  const updateUser = (userUpdates: any) => {
+    setAuthState(prev => {
+      if (!prev.user) return prev;
+      
+      const updatedUser = { ...prev.user, ...userUpdates };
+      const nextState = { ...prev, user: updatedUser };
+      
+      // Persist the changes to async storage so it persists across reloads
+      AsyncStorage.setItem(
+        AUTH_STORAGE_KEY,
+        JSON.stringify({
+          token: nextState.token,
+          refreshToken: nextState.refreshToken,
+          role: nextState.role,
+          user: updatedUser
+        })
+      ).catch(e => console.error('Error persisting updated user to storage', e));
+      
+      return nextState;
+    });
+  };
+
   const memoizedValue = React.useMemo(() => ({
     authState,
     login,
-    logout
+    logout,
+    updateUser
   }), [authState]);
 
   return (

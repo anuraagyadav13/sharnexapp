@@ -10,7 +10,7 @@ export type RootStackParamList = {
   Assignments: undefined;
   AssignmentDetails: { assignmentId: string };
   AssignmentSubmit: { assignmentId: string };
-  AssignmentGrade: undefined;
+  AssignmentGrade: { assignmentId: string };
   Quizzes: undefined;
   QuizDetails: { quizId: string };
   StartQuiz: { quizId: string };
@@ -23,6 +23,7 @@ export type RootStackParamList = {
   Grades: undefined;
   Fees: undefined;
   AccountSettings: { targetTab?: 'Personal Details' | 'Parent Information' | 'Preferences' } | undefined;
+  Messages: { recipientId?: string; recipientName?: string } | undefined;
 
   OfficialResult: { resultId: string };
   ResultManagement: undefined;
@@ -34,12 +35,20 @@ export type RootStackParamList = {
   TeacherViewAttendance: { classId: string, className?: string };
   TeacherMarkAttendance: { classId: string, className?: string };
   TeacherAssignment: undefined;
-  TeacherViewSubmission: { assignmentId: string };
+  TeacherViewSubmission: { 
+    assignmentId: string;
+    classId?: string;
+    title?: string;
+    className?: string;
+    assignmentTitle?: string;
+    dueDate?: string;
+    maxMarks?: number;
+  };
   TeacherCreateAssignment: undefined;
   TeacherQuiz: undefined;
-  TeacherCreateQuiz: { initialQuiz?: any };
+  TeacherCreateQuiz: { initialQuiz?: any; quizId?: string; updatedQuizData?: any } | undefined;
   TeacherCreateQuizStep2: { quizData: any };
-  TeacherAddQuestion: undefined;
+  TeacherAddQuestion: { editQuestion?: any; quizData?: any } | undefined;
   TeacherCreateQuizStep3: { quizData: any };
   TeacherViewQuizResult: { quizId: string };
   TeacherMonitorLive: { quizId: string };
@@ -70,8 +79,10 @@ export type RootStackParamList = {
   // Principal Screens
   PrincipalDashboard: undefined;
   PrincipalClasses: undefined;
+  PrincipalClassDetail: { classId: string; classData: any };
   PrincipalSubjects: undefined;
   PrincipalStaff: undefined;
+  PrincipalTeachers: undefined;
   PrincipalMarkStaffAttendance: undefined;
   PrincipalAddStaff: undefined;
   PrincipalStaffDetails: { staffId: string };
@@ -82,14 +93,17 @@ export type RootStackParamList = {
   PrincipalViewStudent: { studentId: string };
   PrincipalCalendar: undefined;
   PrincipalTimetable: undefined;
-  PrincipalPerformance: undefined;
   PrincipalAnnouncements: undefined;
   PrincipalFees: undefined;
   PrincipalRSM: undefined;
+  PrincipalRMS: undefined;
+  PrincipalReviewExam: { examId: string };
   PrincipalCreateExam: undefined;
   PrincipalAddSubject: undefined;
   PrincipalEditSubject: { subjectId: string, initialData?: any };
   PrincipalAddClass: undefined;
   PrincipalManageClass: { classId: string, className: string };
-  PrincipalEditClass: { classId: string };
+  PrincipalEditClass: { classId: string; classData?: any };
+  PrincipalEquipment: undefined;
+  PrincipalLibrary: undefined;
 };
