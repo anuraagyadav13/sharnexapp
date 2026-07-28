@@ -55,6 +55,18 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [selectedWeek, setSelectedWeek] = useState<string>(getMonday(new Date()));
 
+  // New View Mode & Day Navigation state
+  const [viewMode, setViewMode] = useState<'week' | 'day'>('week');
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  const [selectedDay, setSelectedDay] = useState<string>(todayStr);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isScheduleLoading, setIsScheduleLoading] = useState(false);
@@ -66,7 +78,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
     return [...periods].sort((a, b) => a.period_number - b.period_number);
   }, [periods]);
 
-  // Initial load of classes and periods
+  // Initial load of classes and periods (UNTOUCHED API LOGIC)
   const loadInitialData = useCallback(async () => {
     setIsLoading(true);
     setIsError(false);
@@ -97,7 +109,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
     loadInitialData();
   }, [loadInitialData]);
 
-  // Fetch schedule when class or week changes
+  // Fetch schedule when class or week changes (UNTOUCHED API LOGIC)
   const fetchSchedule = useCallback(
     async (showRefreshIndicator = false) => {
       if (!selectedClassId) return;
@@ -189,6 +201,36 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
     });
   }, []);
 
+  const changeDay = useCallback((offsetDays: number) => {
+    setSelectedDay((prevDay) => {
+      const d = new Date(prevDay);
+      d.setDate(d.getDate() + offsetDays);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const newDayStr = `${year}-${month}-${day}`;
+
+      const mondayOfNewDay = getMonday(d);
+      if (mondayOfNewDay !== selectedWeek) {
+        setSelectedWeek(mondayOfNewDay);
+      }
+      return newDayStr;
+    });
+  }, [selectedWeek]);
+
+  const handleGoToToday = useCallback(() => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const todayFormattedStr = `${year}-${month}-${day}`;
+
+    const mondayOfToday = getMonday(d);
+    setSelectedWeek(mondayOfToday);
+    setSelectedDay(todayFormattedStr);
+    setViewMode('day');
+  }, []);
+
   const formatWeekRange = useMemo(() => {
     const mon = new Date(selectedWeek);
     const sat = new Date(mon);
@@ -196,10 +238,19 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
     return `${mon.toLocaleDateString('en-GB')} – ${sat.toLocaleDateString('en-GB')}`;
   }, [selectedWeek]);
 
+  const formatDayDisplay = useCallback((dateStr: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const dayName = DAY_NAMES[date.getDay()] ? DAY_NAMES[date.getDay()].substring(0, 3) : '';
+    const dayNum = date.getDate();
+    const monthName = date.toLocaleString('en-US', { month: 'short' });
+    return `${dayName}, ${dayNum} ${monthName}`;
+  }, []);
+
   const getDayHeader = useCallback((dateStr: string) => {
     const date = new Date(dateStr);
     const dayName = DAY_NAMES[date.getDay()] || '';
-    const dateFormatted = date.toLocaleDateString('en-GB'); // DD/MM/YYYY
+    const dateFormatted = date.toLocaleDateString('en-GB');
     return `${dayName}, ${dateFormatted}`;
   }, []);
 
@@ -210,158 +261,99 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
     return `${parts[0]}:${parts[1]}`;
   }, []);
 
-  const renderSlotItem = useCallback(
-    (slot: any, index: number) => {
-      const isPeriod4 = slot.period?.label?.toLowerCase() === 'period 4';
-      const isBreak = slot.period?.is_break || isPeriod4;
-      const startFormatted = isPeriod4 ? '11:15' : formatTime(slot.period?.start || '');
-      const endFormatted = isPeriod4 ? '12:00' : formatTime(slot.period?.end || '');
-      const timeRange = startFormatted && endFormatted ? `${startFormatted} - ${endFormatted}` : '';
-      const label = isPeriod4 ? 'Lunch' : (slot.period?.label || 'Break');
+  const displaySchedule = useMemo(() => {
+    if (!scheduleData?.schedule) return [];
+    if (viewMode === 'week') return scheduleData.schedule;
+
+    const match = scheduleData.schedule.filter((day) => {
+      const dayDate = day.date ? day.date.split('T')[0] : '';
+      return dayDate === selectedDay;
+    });
+
+    if (match.length > 0) return match;
+    return [{ date: selectedDay, slots: [] }];
+  }, [scheduleData, viewMode, selectedDay]);
+
+  const renderPeriodCard = useCallback(
+    (periodLabel: string, timeRange: string, slot: any, periodId: string) => {
+      const isPeriod4 = periodLabel.toLowerCase() === 'period 4' || periodLabel.toLowerCase() === 'lunch';
+      const isBreak = slot?.period?.is_break || (slot?.period?.label?.toLowerCase() === 'lunch') || isPeriod4;
+
+      const startFormatted = isPeriod4 ? '11:15' : formatTime(slot?.period?.start || slot?.period?.start_time || '');
+      const endFormatted = isPeriod4 ? '12:00' : formatTime(slot?.period?.end || slot?.period?.end_time || '');
+      const displayTime = timeRange || (startFormatted && endFormatted ? `${startFormatted} - ${endFormatted}` : '');
+      const labelText = isPeriod4 ? 'Lunch' : (periodLabel || 'Break');
 
       if (isBreak) {
         return (
-          <View key={index} style={styles.breakRow}>
-            <Ionicons name="cafe-outline" size={18} color="#D97706" style={{ marginRight: 10 }} />
-            <Text style={styles.breakText}>
-              {label} ({timeRange})
-            </Text>
+          <View key={periodId} style={styles.breakRow}>
+            <View style={styles.breakLeft}>
+              <Ionicons name="cafe-outline" size={16} color="#D97706" style={{ marginRight: 8 }} />
+              <Text style={styles.breakText}>{labelText}</Text>
+            </View>
+            {displayTime ? <Text style={styles.breakTimeText}>{displayTime}</Text> : null}
           </View>
         );
       }
 
-      const hasTeacher = !!slot.teacher?.name;
-      const isAbsent = slot.teacher?.is_absent || false;
-      const substitutionName = slot.substitution?.name || null;
-      const isFree = !hasTeacher || slot.subject === 'Free Period';
+      const hasTeacher = !!slot?.teacher?.name;
+      const isAbsent = slot?.teacher?.is_absent || false;
+      const substitutionName = slot?.substitution?.name || null;
+      const isFree = !slot || !hasTeacher || slot.subject === 'Free Period';
+      const subjectName = slot?.subject || 'Free Period';
+      const teacherName = slot?.teacher?.name || '';
 
       const borderAccentColor = isAbsent
         ? '#EF4444'
         : substitutionName
         ? '#F59E0B'
         : isFree
-        ? theme.subtext
-        : theme.primary;
+        ? (isDarkMode ? '#64748B' : '#94A3B8')
+        : (theme.primary || '#3B82F6');
 
       return (
-        <View key={index} style={[styles.slotCard, { borderLeftColor: borderAccentColor }, isFree && styles.slotCardFree]}>
-          <View style={styles.slotHeader}>
-            <Text style={styles.periodLabel}>{slot.period?.label || 'Slot'}</Text>
-            {timeRange ? <Text style={styles.timeRangeText}>{timeRange}</Text> : null}
-          </View>
-          <View style={styles.slotBody}>
-            <Text style={[styles.subjectText, isFree && styles.subjectTextFree]}>{slot.subject || 'Free Period'}</Text>
-            {hasTeacher ? (
-              <View style={styles.teacherRow}>
-                <Ionicons name="person-outline" size={14} color={theme.subtext} style={{ marginRight: 6 }} />
-                <Text style={styles.teacherNameText}>{slot.teacher.name}</Text>
-                {isAbsent ? (
-                  <View style={styles.absentBadge}>
-                    <Text style={styles.absentText}>Absent</Text>
-                  </View>
-                ) : null}
+        <View key={periodId} style={[styles.slotCard, { borderLeftColor: borderAccentColor }, isFree && styles.slotCardFree]}>
+          <View style={styles.slotCardMain}>
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <View style={styles.periodLabelRow}>
+                <Text style={styles.periodLabelText}>{labelText}</Text>
               </View>
-            ) : (
-              <Text style={styles.freePeriodText}>Free Period</Text>
-            )}
+              <Text style={[styles.subjectText, isFree && styles.subjectTextFree]} numberOfLines={1}>
+                {subjectName}
+              </Text>
+              {hasTeacher ? (
+                <View style={styles.teacherRow}>
+                  <Ionicons name="person-outline" size={12} color={theme.subtext} style={{ marginRight: 4 }} />
+                  <Text style={styles.teacherNameText} numberOfLines={1}>{teacherName}</Text>
+                  {isAbsent && (
+                    <View style={styles.absentBadge}>
+                      <Text style={styles.absentText}>Absent</Text>
+                    </View>
+                  )}
+                </View>
+              ) : (
+                <Text style={styles.freePeriodText}>Free Period</Text>
+              )}
 
-            {substitutionName ? (
-              <View style={styles.substituteRow}>
-                <MaterialCommunityIcons name="swap-horizontal" size={14} color={isDarkMode ? '#FBBF24' : '#D97706'} style={{ marginRight: 6 }} />
-                <Text style={styles.substituteText}>Substituted by: {substitutionName}</Text>
+              {substitutionName && (
+                <View style={styles.substituteRow}>
+                  <MaterialCommunityIcons name="swap-horizontal" size={12} color={isDarkMode ? '#FBBF24' : '#D97706'} style={{ marginRight: 4 }} />
+                  <Text style={styles.substituteText} numberOfLines={1}>Substituted by: {substitutionName}</Text>
+                </View>
+              )}
+            </View>
+
+            {displayTime ? (
+              <View style={styles.timeBadgeBox}>
+                <Ionicons name="time-outline" size={12} color={theme.subtext} style={{ marginRight: 4 }} />
+                <Text style={styles.timeRangeText}>{displayTime}</Text>
               </View>
             ) : null}
           </View>
         </View>
       );
     },
-    [formatTime, theme, isDarkMode, styles]
-  );
-
-  const renderPeriodItem = useCallback(
-    (period: TimetablePeriod, slot: any) => {
-      const isBreak = period.is_break;
-      const startFormatted = formatTime(period.start_time || '');
-      const endFormatted = formatTime(period.end_time || '');
-      const timeRange = startFormatted && endFormatted ? `${startFormatted} - ${endFormatted}` : '';
-      const label = period.label || 'Break';
-
-      if (isBreak) {
-        return (
-          <View key={period.id} style={styles.breakRow}>
-            <Ionicons name="cafe-outline" size={18} color="#D97706" style={{ marginRight: 10 }} />
-            <Text style={styles.breakText}>
-              Period {period.period_number} — {label} ({timeRange})
-            </Text>
-          </View>
-        );
-      }
-
-      const displayLabel = (period.label || '').toLowerCase().startsWith('period')
-        ? `Period ${period.period_number}`
-        : `Period ${period.period_number} — ${period.label || ''}`;
-
-      if (slot) {
-        const hasTeacher = !!slot.teacher?.name;
-        const isAbsent = slot.teacher?.is_absent || false;
-        const substitutionName = slot.substitution?.name || null;
-        const isFree = !hasTeacher || slot.subject === 'Free Period';
-
-        const borderAccentColor = isAbsent
-          ? '#EF4444'
-          : substitutionName
-          ? '#F59E0B'
-          : isFree
-          ? theme.subtext
-          : theme.primary;
-
-        return (
-          <View key={period.id} style={[styles.slotCard, { borderLeftColor: borderAccentColor }, isFree && styles.slotCardFree]}>
-            <View style={styles.slotHeader}>
-              <Text style={styles.periodLabel}>{displayLabel}</Text>
-              {timeRange ? <Text style={styles.timeRangeText}>{timeRange}</Text> : null}
-            </View>
-            <View style={styles.slotBody}>
-              <Text style={[styles.subjectText, isFree && styles.subjectTextFree]}>{slot.subject || 'Free Period'}</Text>
-              {hasTeacher ? (
-                <View style={styles.teacherRow}>
-                  <Ionicons name="person-outline" size={14} color={theme.subtext} style={{ marginRight: 6 }} />
-                  <Text style={styles.teacherNameText}>{slot.teacher.name}</Text>
-                  {isAbsent ? (
-                    <View style={styles.absentBadge}>
-                      <Text style={styles.absentText}>Absent</Text>
-                    </View>
-                  ) : null}
-                </View>
-              ) : (
-                <Text style={styles.freePeriodText}>Free Period</Text>
-              )}
-
-              {substitutionName ? (
-                <View style={styles.substituteRow}>
-                  <MaterialCommunityIcons name="swap-horizontal" size={14} color={isDarkMode ? '#FBBF24' : '#D97706'} style={{ marginRight: 6 }} />
-                  <Text style={styles.substituteText}>Substituted by: {substitutionName}</Text>
-                </View>
-              ) : null}
-            </View>
-          </View>
-        );
-      }
-
-      return (
-        <View key={period.id} style={[styles.slotCard, styles.slotCardFree, { borderLeftColor: theme.subtext }]}>
-          <View style={styles.slotHeader}>
-            <Text style={styles.periodLabel}>{displayLabel}</Text>
-            {timeRange ? <Text style={styles.timeRangeText}>{timeRange}</Text> : null}
-          </View>
-          <View style={styles.slotBody}>
-            <Text style={[styles.subjectText, styles.subjectTextFree]}>Free Period</Text>
-            <Text style={styles.freePeriodText}>Free Period</Text>
-          </View>
-        </View>
-      );
-    },
-    [formatTime, theme, isDarkMode, styles]
+    [formatTime, isDarkMode, theme, styles]
   );
 
   const renderDayItem = useCallback(
@@ -369,12 +361,19 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
       const hasSlots = item.slots && item.slots.length > 0;
       const hasPeriods = sortedPeriods && sortedPeriods.length > 0;
       const headerString = getDayHeader(item.date);
+      const dateOnly = item.date ? item.date.split('T')[0] : '';
+      const isToday = dateOnly === todayStr;
 
       return (
         <View style={styles.dayContainer}>
-          <View style={styles.dayHeader}>
-            <View style={styles.dayHeaderDot} />
-            <Text style={styles.dayHeaderText}>{headerString}</Text>
+          <View style={[styles.dayHeader, isToday && styles.dayHeaderToday]}>
+            <View style={[styles.dayHeaderDot, isToday && styles.dayHeaderDotToday]} />
+            <Text style={[styles.dayHeaderText, isToday && styles.dayHeaderTextToday]}>{headerString}</Text>
+            {isToday && (
+              <View style={styles.todayBadge}>
+                <Text style={styles.todayBadgeText}>TODAY</Text>
+              </View>
+            )}
           </View>
 
           {hasSlots ? (
@@ -386,22 +385,38 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
                       s.period?.id === period.id ||
                       s.period?.label?.toLowerCase() === period.label?.toLowerCase()
                   );
-                  return renderPeriodItem(period, slot);
+                  const startFormatted = formatTime(period.start_time || '');
+                  const endFormatted = formatTime(period.end_time || '');
+                  const timeRange = startFormatted && endFormatted ? `${startFormatted} - ${endFormatted}` : '';
+                  const displayLabel = (period.label || '').toLowerCase().startsWith('period')
+                    ? `Period ${period.period_number}`
+                    : `Period ${period.period_number} — ${period.label || ''}`;
+
+                  return renderPeriodCard(displayLabel, timeRange, slot, period.id);
                 })
               ) : (
-                item.slots.map((slot, index) => renderSlotItem(slot, index))
+                item.slots.map((slot, index) => {
+                  const isPeriod4 = slot.period?.label?.toLowerCase() === 'period 4';
+                  const startFormatted = isPeriod4 ? '11:15' : formatTime(slot.period?.start || '');
+                  const endFormatted = isPeriod4 ? '12:00' : formatTime(slot.period?.end || '');
+                  const timeRange = startFormatted && endFormatted ? `${startFormatted} - ${endFormatted}` : '';
+                  const label = slot.period?.label || 'Slot';
+
+                  return renderPeriodCard(label, timeRange, slot, `slot-${index}`);
+                })
               )}
             </View>
           ) : (
             <View style={styles.emptyDayContainer}>
-              <MaterialCommunityIcons name="calendar-blank-outline" size={20} color={theme.subtext} style={{ marginBottom: 4 }} />
-              <Text style={styles.emptyDayText}>No classes scheduled</Text>
+              <MaterialCommunityIcons name="calendar-blank-outline" size={24} color={theme.subtext} style={{ marginBottom: 6 }} />
+              <Text style={styles.emptyDayTitle}>No classes scheduled</Text>
+              <Text style={styles.emptyDayText}>There are no sessions planned for this day.</Text>
             </View>
           )}
         </View>
       );
     },
-    [getDayHeader, sortedPeriods, renderPeriodItem, renderSlotItem, theme, styles]
+    [getDayHeader, todayStr, sortedPeriods, formatTime, renderPeriodCard, theme, styles]
   );
 
   if (isLoading) {
@@ -436,13 +451,13 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
     <View style={styles.safeContainer}>
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
 
-      {/* Header */}
+      {/* Header (UNTOUCHED appHeader) */}
       <View style={styles.appHeader}>
-        <TouchableOpacity style={styles.headerBtn} onPress={() => setDrawerOpen(true)}>
+        <TouchableOpacity style={styles.headerBtn} onPress={() => setDrawerOpen(true)} accessibilityLabel="Open menu">
           <Ionicons name="menu" size={28} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.appHeaderTitle}>Timetable</Text>
-        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}>
+        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })} accessibilityLabel="Account settings">
           {authState.user?.photoUrl ? (
             <Image source={{ uri: authState.user.photoUrl }} style={styles.headerAvatarImage} />
           ) : (
@@ -453,7 +468,27 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Class Selector Row */}
+      {/* 1. Week / Day View Toggle Segmented Control */}
+      <View style={styles.viewToggleContainer}>
+        <TouchableOpacity
+          style={[styles.toggleBtn, viewMode === 'week' && styles.toggleBtnActive]}
+          onPress={() => setViewMode('week')}
+          accessibilityLabel="Switch to week view"
+        >
+          <Ionicons name="calendar-outline" size={14} color={viewMode === 'week' ? '#FFF' : theme.subtext} style={{ marginRight: 6 }} />
+          <Text style={[styles.toggleBtnText, viewMode === 'week' && styles.toggleBtnTextActive]}>Week View</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.toggleBtn, viewMode === 'day' && styles.toggleBtnActive]}
+          onPress={() => setViewMode('day')}
+          accessibilityLabel="Switch to day view"
+        >
+          <Ionicons name="today-outline" size={14} color={viewMode === 'day' ? '#FFF' : theme.subtext} style={{ marginRight: 6 }} />
+          <Text style={[styles.toggleBtnText, viewMode === 'day' && styles.toggleBtnTextActive]}>Day View</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* 2. Class Selector Row */}
       {classes.length > 0 ? (
         <View style={styles.classSelectorWrapper}>
           <ScrollView
@@ -469,6 +504,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
                   key={cls.id}
                   style={[styles.classPill, isSelected && styles.classPillActive]}
                   onPress={() => setSelectedClassId(cls.id)}
+                  accessibilityLabel={`Select class ${nameFull}`}
                 >
                   <Text style={[styles.classPillText, isSelected && styles.classPillTextActive]}>
                     {nameFull}
@@ -480,32 +516,65 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       ) : null}
 
-      {/* Week Navigator */}
+      {/* 3. Week / Day Navigator & Today Button */}
       <View style={styles.weekNavigatorContainer}>
         <View style={styles.weekNavigatorRow}>
-          <TouchableOpacity style={styles.navArrow} onPress={() => changeWeek(-7)}>
+          <TouchableOpacity
+            style={styles.navArrow}
+            onPress={() => (viewMode === 'week' ? changeWeek(-7) : changeDay(-1))}
+            accessibilityLabel={viewMode === 'week' ? "Previous week" : "Previous day"}
+          >
             <Ionicons name="chevron-back" size={18} color={theme.text} />
           </TouchableOpacity>
+
           <View style={styles.weekRangeBox}>
-            <MaterialCommunityIcons name="calendar-range" size={16} color={theme.primary} style={{ marginRight: 6 }} />
-            <Text style={styles.weekRangeText}>{formatWeekRange}</Text>
+            <MaterialCommunityIcons
+              name={viewMode === 'week' ? "calendar-range" : "calendar-today"}
+              size={16}
+              color={theme.primary}
+              style={{ marginRight: 6 }}
+            />
+            <Text style={styles.weekRangeText}>
+              {viewMode === 'week' ? formatWeekRange : formatDayDisplay(selectedDay)}
+            </Text>
           </View>
-          <TouchableOpacity style={styles.navArrow} onPress={() => changeWeek(7)}>
+
+          <TouchableOpacity
+            style={styles.navArrow}
+            onPress={() => (viewMode === 'week' ? changeWeek(7) : changeDay(1))}
+            accessibilityLabel={viewMode === 'week' ? "Next week" : "Next day"}
+          >
             <Ionicons name="chevron-forward" size={18} color={theme.text} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.todayBtn}
+            onPress={handleGoToToday}
+            accessibilityLabel="Jump to today"
+          >
+            <Ionicons name="sparkles" size={12} color={theme.primary} style={{ marginRight: 4 }} />
+            <Text style={styles.todayBtnText}>Today</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Schedule list */}
+      {/* 4. Schedule List / Skeleton Loading */}
       {isScheduleLoading ? (
         <View style={styles.skeletonContainer}>
-          <ActivityIndicator size="small" color={theme.primary} style={{ marginBottom: 12 }} />
-          <Text style={styles.skeletonText}>Loading schedule...</Text>
-          <Text style={styles.skeletonSubtext}>Fetching this week's timetable</Text>
+          {[1, 2, 3, 4].map((i) => (
+            <View key={i} style={styles.skeletonCard}>
+              <View style={styles.skeletonHeaderRow}>
+                <View style={[styles.skeletonLine, { width: 70, height: 12 }]} />
+                <View style={[styles.skeletonLine, { width: 80, height: 12 }]} />
+              </View>
+              <View style={[styles.skeletonLine, { width: '60%', height: 16, marginTop: 8 }]} />
+              <View style={[styles.skeletonLine, { width: '40%', height: 12, marginTop: 6 }]} />
+            </View>
+          ))}
         </View>
       ) : (
         <FlatList
-          data={scheduleData?.schedule || []}
+          data={displaySchedule}
           keyExtractor={(item) => item.date}
           renderItem={renderDayItem}
           contentContainerStyle={styles.listContent}
@@ -522,7 +591,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
               <Ionicons name="calendar-outline" size={56} color={theme.subtext} />
               <Text style={styles.emptyTitle}>No schedule available</Text>
               <Text style={styles.emptySubtitle}>
-                No working days or slots scheduled for this week.
+                No working days or slots scheduled for this period.
               </Text>
             </View>
           }
@@ -587,6 +656,8 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
+
+  // App Header (UNTOUCHED)
   appHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -605,27 +676,69 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     fontWeight: '700',
     color: theme.text,
   },
-  classSelectorWrapper: {
+
+  // View Toggle (Week / Day)
+  viewToggleContainer: {
+    flexDirection: 'row',
     backgroundColor: theme.surface,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
+    marginHorizontal: 16,
+    marginTop: 10,
+    padding: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  toggleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  toggleBtnActive: {
+    backgroundColor: theme.primary,
+  },
+  toggleBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.subtext,
+  },
+  toggleBtnTextActive: {
+    color: '#FFF',
+    fontWeight: '700',
+  },
+
+  // Class Selector Row
+  classSelectorWrapper: {
+    backgroundColor: theme.background,
+    paddingVertical: 10,
   },
   classSelectorContent: {
     paddingHorizontal: 16,
     gap: 8,
   },
   classPill: {
-    backgroundColor: theme.background,
+    backgroundColor: theme.surface,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: theme.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
   },
   classPillActive: {
     backgroundColor: theme.primary,
     borderColor: theme.primary,
+    shadowColor: theme.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   classPillText: {
     fontSize: 13,
@@ -636,9 +749,11 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     color: '#FFF',
     fontWeight: '800',
   },
+
+  // Week/Day Navigator
   weekNavigatorContainer: {
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingBottom: 10,
     backgroundColor: theme.background,
   },
   weekNavigatorRow: {
@@ -646,9 +761,9 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: theme.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: theme.border,
     shadowColor: '#000',
@@ -658,143 +773,197 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     elevation: 2,
   },
   weekRangeBox: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: theme.background,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 10,
+    marginHorizontal: 8,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: theme.border,
   },
   navArrow: {
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.background,
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: theme.border,
   },
   weekRangeText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: theme.text,
-  },
-  skeletonContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.background,
-  },
-  skeletonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: theme.text,
-  },
-  skeletonSubtext: {
     fontSize: 12,
-    color: theme.subtext,
-    marginTop: 4,
+    fontWeight: '700',
+    color: theme.text,
   },
+  todayBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: isDarkMode ? '#3B82F620' : '#EFF6FF',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: isDarkMode ? '#3B82F640' : '#BFDBFE',
+  },
+  todayBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.primary,
+  },
+
+  // Skeleton Loading
+  skeletonContainer: {
+    padding: 16,
+    gap: 12,
+  },
+  skeletonCard: {
+    backgroundColor: theme.surface,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderLeftWidth: 4,
+    borderLeftColor: theme.border,
+  },
+  skeletonHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  skeletonLine: {
+    backgroundColor: isDarkMode ? '#334155' : '#E2E8F0',
+    borderRadius: 4,
+  },
+
+  // List & Day Items
   listContent: {
     padding: 16,
     paddingBottom: 40,
   },
   dayContainer: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   dayHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.surface,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 16,
-    marginBottom: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: theme.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 4,
-    elevation: 1,
+  },
+  dayHeaderToday: {
+    backgroundColor: isDarkMode ? '#1E293B' : '#EFF6FF',
+    borderColor: theme.primary,
   },
   dayHeaderDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
+    backgroundColor: theme.subtext,
+    marginRight: 8,
+  },
+  dayHeaderDotToday: {
     backgroundColor: theme.primary,
-    marginRight: 10,
   },
   dayHeaderText: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
     color: theme.text,
-    letterSpacing: 0.3,
   },
+  dayHeaderTextToday: {
+    color: theme.primary,
+    fontWeight: '800',
+  },
+  todayBadge: {
+    backgroundColor: theme.primary,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    marginLeft: 'auto',
+  },
+  todayBadgeText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+
+  // Slots
   slotsContainer: {
-    gap: 12,
+    gap: 10,
   },
   breakRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: isDarkMode ? '#F59E0B15' : '#FFFBEB',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
     borderLeftWidth: 4,
     borderLeftColor: '#F59E0B',
     borderWidth: 1,
     borderColor: isDarkMode ? '#78350F40' : '#FDE68A',
+  },
+  breakLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   breakText: {
     fontSize: 13,
     fontWeight: '700',
     color: isDarkMode ? '#FBBF24' : '#D97706',
   },
+  breakTimeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: isDarkMode ? '#FBBF24' : '#D97706',
+  },
   slotCard: {
     backgroundColor: theme.surface,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 12,
+    padding: 12,
     borderWidth: 1,
     borderColor: theme.border,
     borderLeftWidth: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 4,
+    elevation: 1,
   },
   slotCardFree: {
     opacity: 0.85,
     borderStyle: 'dashed',
   },
-  slotHeader: {
+  slotCardMain: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    alignItems: 'flex-start',
   },
-  periodLabel: {
-    fontSize: 11,
+  periodLabelRow: {
+    marginBottom: 2,
+  },
+  periodLabelText: {
+    fontSize: 10,
     fontWeight: '800',
     color: theme.subtext,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  timeRangeText: {
-    fontSize: 12,
-    color: theme.subtext,
-    fontWeight: '600',
-  },
-  slotBody: {},
   subjectText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '800',
     color: theme.text,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   subjectTextFree: {
     color: theme.subtext,
@@ -807,54 +976,74 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     marginTop: 2,
   },
   teacherNameText: {
-    fontSize: 13,
+    fontSize: 12,
     color: theme.text,
     fontWeight: '600',
   },
   absentBadge: {
     backgroundColor: isDarkMode ? '#EF444425' : '#FEE2E2',
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    marginLeft: 8,
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+    marginLeft: 6,
   },
   absentText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '800',
     color: '#EF4444',
   },
   freePeriodText: {
-    fontSize: 13,
+    fontSize: 12,
     color: theme.subtext,
     fontStyle: 'italic',
   },
   substituteRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 6,
     backgroundColor: isDarkMode ? '#F59E0B15' : '#FFFBEB',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
   },
   substituteText: {
-    fontSize: 12,
+    fontSize: 11,
     color: isDarkMode ? '#FBBF24' : '#D97706',
     fontWeight: '700',
   },
+  timeBadgeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.background,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  timeRangeText: {
+    fontSize: 11,
+    color: theme.subtext,
+    fontWeight: '600',
+  },
   emptyDayContainer: {
-    padding: 18,
+    padding: 16,
     alignItems: 'center',
     backgroundColor: theme.surface,
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: theme.border,
   },
-  emptyDayText: {
+  emptyDayTitle: {
     fontSize: 13,
+    fontWeight: '700',
+    color: theme.text,
+    marginBottom: 2,
+  },
+  emptyDayText: {
+    fontSize: 11,
     color: theme.subtext,
-    fontWeight: '500',
   },
   emptyContainer: {
     paddingVertical: 80,

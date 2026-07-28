@@ -112,11 +112,11 @@ function RootNavigator() {
   }
 
   const getInitialRoute = () => {
-    if (!authState.token) return 'Home';
+    if (!authState.token) return 'Login';
     if (authState.role === 'student') return 'StudentDashboard';
     if (authState.role === 'teacher') return 'TeacherDashboard';
     if (authState.role === 'principal') return 'PrincipalDashboard';
-    return 'Home';
+    return 'Login';
   };
 
   const effectiveToken = authState.token;
@@ -132,8 +132,8 @@ function RootNavigator() {
     >
       {!effectiveToken ? (
         <>
-          <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen
             name="ForgotPassword"
             component={ForgotPasswordScreen}

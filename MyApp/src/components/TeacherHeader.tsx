@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import ScaleButton from './animations/ScaleButton';
+import ThemeToggle from './common/ThemeToggle';
 import { useTheme } from '../store/ThemeContext';
 import { useAuth } from '../store/AuthContext';
 import { ThemeMode } from '../constants/theme';
@@ -90,14 +91,7 @@ export const TeacherHeader: React.FC<TeacherHeaderProps> = ({
               <Ionicons name="settings-outline" size={22} color={theme.text} />
             </TouchableOpacity>
 
-            {/* Theme toggle — opens 3-way picker popover */}
-            <TouchableOpacity
-              style={styles.iconBtnTransparent}
-              onPress={() => setPickerVisible(true)}
-              accessibilityLabel="Change theme"
-            >
-              <Ionicons name={activeOption.icon} size={22} color={theme.text} />
-            </TouchableOpacity>
+            <ThemeToggle />
           </>
         )}
 
@@ -128,60 +122,6 @@ export const TeacherHeader: React.FC<TeacherHeaderProps> = ({
           )}
         </TouchableOpacity>
       </View>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* Theme Picker Modal — popover matching StudentHeader                 */}
-      {/* ------------------------------------------------------------------ */}
-      <Modal
-        visible={pickerVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPickerVisible(false)}
-      >
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => setPickerVisible(false)}
-        >
-          {/* Prevent touches inside the card from closing the modal */}
-          <Pressable style={styles.pickerCard} onPress={() => { }}>
-            <Text style={styles.pickerTitle}>Appearance</Text>
-
-            <View style={styles.segmentRow}>
-              {THEME_OPTIONS.map(option => {
-                const isActive = themeMode === option.mode;
-                return (
-                  <TouchableOpacity
-                    key={option.mode}
-                    style={[
-                      styles.segmentBtn,
-                      isActive ? styles.segmentBtnActive : null,
-                    ]}
-                    onPress={() => {
-                      setThemeMode(option.mode);
-                      setPickerVisible(false);
-                    }}
-                    activeOpacity={0.75}
-                  >
-                    <Ionicons
-                      name={option.icon}
-                      size={18}
-                      color={isActive ? '#FFFFFF' : theme.subtext}
-                    />
-                    <Text
-                      style={[
-                        styles.segmentLabel,
-                        isActive ? styles.segmentLabelActive : null,
-                      ]}
-                    >
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </View>
   );
 };

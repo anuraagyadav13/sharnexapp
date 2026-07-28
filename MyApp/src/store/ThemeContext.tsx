@@ -8,7 +8,7 @@ type ThemeContextType = {
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
   toggleDarkMode: () => void;
-  theme: typeof LIGHT_COLORS;
+  theme: typeof LIGHT_COLORS | typeof DARK_COLORS;
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);

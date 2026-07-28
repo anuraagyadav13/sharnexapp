@@ -141,9 +141,9 @@ const chipStyles = StyleSheet.create({
 // HeroCarousel — 3-slide swipeable image carousel
 // ─────────────────────────────────────────────────────────────────────────────
 const CAROUSEL_IMAGES = [
-  require('../../assets/animationpic1.avif'),
-  require('../../assets/animationpic2.avif'),
-  require('../../assets/animationpic3.avif'),
+  require('../../assets/animationpic1.jpg'),
+  require('../../assets/animationpic2.jpg'),
+  require('../../assets/animationpic3.jpg'),
 ];
 
 const HeroCarousel = () => {
@@ -926,51 +926,7 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
 
 
 
-          {/* Announcements */}
-          {/* <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <MaterialCommunityIcons name="bullhorn-outline" size={20} color="#F97316" style={styles.sectionIconMargin} />
-              <Text style={styles.sectionTitle}>Announcements & Deadlines</Text>
-            </View>
-            <View style={styles.announcementCard}>
-              <View style={StyleSheet.absoluteFill}>
-                <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
-                  <Defs>
-                    <SvgLinearGradient id="announcementGrad" x1="0" y1="0" x2="1" y2="0">
-                      <Stop offset="0" stopColor="#EA580C" stopOpacity="1" />
-                      <Stop offset="1" stopColor="#FBBF24" stopOpacity="1" />
-                    </SvgLinearGradient>
-                  </Defs>
-                  <Rect x="0" y="0" width="100%" height="100%" fill="url(#announcementGrad)" />
-                </Svg>
-              </View>
-              <View style={styles.announcementContent}>
-                <View style={styles.announcementList}>
-                  {isAnnouncementsLoading ? (
-                    <View style={{ gap: 12, paddingVertical: 8 }}>
-                      <Skeleton width="100%" height={18} borderRadius={6} />
-                      <Skeleton width="90%" height={18} borderRadius={6} />
-                      <Skeleton width="95%" height={18} borderRadius={6} />
-                    </View>
-                  ) : announcements && announcements.length > 0 ? (
-                    announcements.slice(0, 4).map((item: any, index: number) => (
-                      <Animated.View key={item.id || index} entering={FadeInUp.delay(index * 150).springify()} style={styles.announcementItem}>
-                        <Text style={styles.announcementBullet}>•</Text>
-                        <Text style={styles.announcementText}>
-                          <Text style={styles.boldText}>{item.title}</Text>: {item.content || item.message || ''}
-                        </Text>
-                      </Animated.View>
-                    ))
-                  ) : (
-                    <View style={styles.announcementItem}>
-                      <Text style={styles.announcementBullet}>•</Text>
-                      <Text style={styles.announcementText}>No new announcements or deadlines posted.</Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-            </View>
-          </View> */}
+
 
           {/* ── SECTION 4: TEACHER HELP CENTER ────────────────────────────── */}
           <View style={styles.section}>
