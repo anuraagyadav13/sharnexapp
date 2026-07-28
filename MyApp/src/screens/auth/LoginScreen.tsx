@@ -9,33 +9,23 @@ import {
   TextInput,
   StatusBar,
   ScrollView,
-  Alert,
+  SafeAreaView,
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Svg, { LinearGradient, Stop, Defs, Rect, Path, Circle } from 'react-native-svg';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import Svg, { Path, Circle } from 'react-native-svg';
 import FadeInView from '../../components/animations/FadeInView';
 import ScaleButton from '../../components/animations/ScaleButton';
+import ThemeToggle from '../../components/common/ThemeToggle';
 import { RootStackParamList } from '../../types/navigation';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../store/ToastContext';
+import { useTheme } from '../../store/ThemeContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useTheme } from '../../store/ThemeContext';
-import ThemeSelectionModal from '../../components/modals/ThemeSelectionModal';
 
-
-
-
-const ChevronBackIcon = ({ width = 18, height = 18 }) => (
-  <Svg width={width} height={height} viewBox="0 0 24 24" fill="none" stroke="#FFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M15.75 19.5L8.25 12l7.5-7.5" />
-  </Svg>
-);
-
-
-const EyeIcon = ({ show }: { show: boolean }) => (
-  <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+const EyeIcon = ({ show, color }: { show: boolean; color: string }) => (
+  <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <Path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
     <Circle cx="12" cy="12" r="3" />
     {!show && <Path d="M4 4l16 16" />}
@@ -49,8 +39,7 @@ interface Props {
 }
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
-  const { theme, themeMode } = useTheme();
-  const [isThemeModalOpen, setThemeModalOpen] = useState(false);
+  const { theme, isDarkMode } = useTheme();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -73,145 +62,121 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         password,
       });
 
-      // Handle standardized response format
       if (!response.data.success) {
         throw new Error(response.data.message || 'Login failed');
       }
 
-     // ======================================================
-// TEMP FIX (2026-06-26)
-// Backend now returns only the authenticated user.
-// JWTs are delivered via HttpOnly cookies instead of
-// response.data.tokens.
-// ======================================================
+      const payload = response.data.data;
+      if (!payload || !payload.user) {
+        throw new Error('Invalid login response from server');
+      }
 
-const payload = response.data.data;
-
-if (!payload || !payload.user) {
-    throw new Error("Invalid login response from server");
-}
-
-const user = payload.user;
-//changes made till here
+      const user = payload.user;
 
       let appRole: 'student' | 'teacher' | 'principal' = 'student';
       const backendRole = user.role;
       if (backendRole === 'TEACHER' || backendRole === 'STAFF') appRole = 'teacher';
-      else if (backendRole === 'INSTITUTION_ADMIN' || backendRole === 'CENTRAL_ADMIN' || backendRole === 'PRINCIPAL') appRole = 'principal';
+      else if (
+        backendRole === 'INSTITUTION_ADMIN' ||
+        backendRole === 'CENTRAL_ADMIN' ||
+        backendRole === 'PRINCIPAL'
+      )
+        appRole = 'principal';
 
-     // ======================================================
-// TEMP FIX (2026-06-26)
-// Backend migrated to cookie authentication.
-// Tokens are no longer returned in login response.
-// Passing empty strings temporarily until AuthContext
-// is updated.
-// ======================================================
+      showToast('Login successful! Welcome back.', 'success');
+      await apiClient.get('/auth/csrf');
 
-showToast('Login successful! Welcome back.', 'success');
-await apiClient.get('/auth/csrf');
-console.log(
-  '[Login Set-Cookie]',
-  response.headers['set-cookie']
-);
-console.log(
-  JSON.stringify(response.headers['set-cookie'], null, 2)
-);
-
-login('', '', appRole, user);
-//changes till here
+      login('', '', appRole, user);
     } catch (error: any) {
       console.error('Login Error:', error);
-      console.log("STATUS:", error.response?.status);
       let message = 'Something went wrong. Please try again.';
-      
+
       if (error.response?.data?.message) {
         message = error.response.data.message;
       } else if (error.message) {
         message = error.message;
       }
-      
-      // Only show first 100 chars to keep toast readable
-      const displayMessage = message.length > 100 ? message.substring(0, 97) + '...' : message;
+
+      const displayMessage =
+        message.length > 100 ? message.substring(0, 97) + '...' : message;
       showToast(displayMessage, 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent
+      />
 
-      {/* Absolute SVG Gradient Background matching target shade EXACTLY */}
-      <View style={StyleSheet.absoluteFill}>
-        <Svg height="100%" width="100%">
-          <Defs>
-            <LinearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <Stop offset="0" stopColor="#A855F7" />
-              <Stop offset="0.5" stopColor="#9333EA" />
-              <Stop offset="1" stopColor="#3B82F6" />
-            </LinearGradient>
-          </Defs>
-          <Rect x="0" y="0" width="100%" height="100%" fill="url(#grad)" />
-        </Svg>
-      </View>
-
-      <FadeInView delay={100} duration={400} translateYStart={-10} style={styles.backButtonContainer}>
-        <ScaleButton style={styles.backButton} onPress={() => navigation.navigate('Home' as never)} activeOpacity={0.7} scaleTo={0.92}>
-          <View style={styles.backIconSvg}>
-            <ChevronBackIcon width={20} height={20} />
+      <View style={styles.headerBar}>
+        <View style={styles.brandRow}>
+          <View style={styles.logoBadge}>
+            <Ionicons name="school" size={20} color="#FFFFFF" />
           </View>
-          <Text style={styles.backText}>Back</Text>
-        </ScaleButton>
-      </FadeInView>
+          <Text style={styles.wordmark}>Sharnex</Text>
+        </View>
 
-      <FadeInView delay={100} duration={400} translateYStart={-10} style={styles.themeButtonContainer}>
-        <ScaleButton style={styles.themeButton} onPress={() => setThemeModalOpen(true)} activeOpacity={0.7} scaleTo={0.92}>
-          <Ionicons 
-            name={
-              themeMode === 'light' 
-                ? 'sunny-outline' 
-                : themeMode === 'dark' 
-                ? 'moon-outline' 
-                : 'settings-outline'
-            } 
-            size={20} 
-            color="#FFF" 
-          />
-        </ScaleButton>
-      </FadeInView>
+        <ThemeToggle iconColor={theme.text} />
+      </View>
 
       <KeyboardAvoidingView
         style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.scrollContent} bounces={false} showsVerticalScrollIndicator={false}>
-
-          <FadeInView delay={200} duration={500}>
-            <Text style={styles.title}>Welcome, Glad to see you!</Text>
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          bounces={false}
+          showsVerticalScrollIndicator={false}
+        >
+          <FadeInView delay={100} duration={400}>
+            <View style={styles.welcomeContainer}>
+              <Text style={styles.title}>Welcome back</Text>
+              <Text style={styles.subtitle}>
+                Sign in to your account to access your dashboard
+              </Text>
+            </View>
           </FadeInView>
 
-          <FadeInView delay={300} duration={500} translateYStart={30}>
+          <FadeInView delay={200} duration={500} translateYStart={20}>
             <View style={styles.card}>
-              <FadeInView delay={400}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Email or Student ID</Text>
                 <View style={styles.inputContainer}>
+                  <Ionicons
+                    name="mail-outline"
+                    size={20}
+                    color={theme.subtext}
+                    style={styles.leadingIcon}
+                  />
                   <TextInput
                     style={styles.input}
-                    placeholder="Email or Student ID"
-                    placeholderTextColor="#A0AEC0"
+                    placeholder="Enter email or ID"
+                    placeholderTextColor={theme.placeholder}
                     autoCapitalize="none"
                     value={identifier}
                     onChangeText={setIdentifier}
                   />
                 </View>
-              </FadeInView>
+              </View>
 
-              <FadeInView delay={500}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Password</Text>
                 <View style={styles.inputContainer}>
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={20}
+                    color={theme.subtext}
+                    style={styles.leadingIcon}
+                  />
                   <TextInput
-                    style={styles.passwordInput}
-                    placeholder="Password"
-                    placeholderTextColor="#A0AEC0"
+                    style={styles.input}
+                    placeholder="Enter password"
+                    placeholderTextColor={theme.placeholder}
                     secureTextEntry={!showPassword}
                     value={password}
                     onChangeText={setPassword}
@@ -219,56 +184,111 @@ login('', '', appRole, user);
                   <TouchableOpacity
                     onPress={() => setShowPassword(!showPassword)}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    style={styles.eyeBtn}>
-                    <EyeIcon show={showPassword} />
+                    style={styles.eyeBtn}
+                  >
+                    <EyeIcon show={showPassword} color={theme.subtext} />
                   </TouchableOpacity>
                 </View>
-              </FadeInView>
+              </View>
 
-              <FadeInView delay={550}>
-                <TouchableOpacity 
-                  style={styles.forgotContainer}
-                  onPress={() => navigation.navigate('ForgotPassword' as never)}>
-                  <Text style={styles.forgotText}>Forgot Password?</Text>
-                </TouchableOpacity>
-              </FadeInView>
+              <TouchableOpacity
+                style={styles.forgotContainer}
+                onPress={() => navigation.navigate('ForgotPassword' as never)}
+              >
+                <Text style={styles.forgotText}>Forgot Password?</Text>
+              </TouchableOpacity>
 
-              <FadeInView delay={600}>
-                <ScaleButton 
-                  style={[styles.loginButton, isSubmitting && { opacity: 0.7 }]} 
-                  onPress={handleLogin} 
-                  disabled={isSubmitting}
-                  activeOpacity={0.85}>
-                  <Text style={styles.loginButtonText}>{isSubmitting ? 'Loading...' : 'Login'}</Text>
-                </ScaleButton>
-              </FadeInView>
-
-
-              {/* <FadeInView delay={900}>
-                <View style={styles.bottomRow}>
-                  <Text style={styles.bottomText}>Don't have an account? </Text>
-                  <TouchableOpacity onPress={() => navigation?.navigate('Register')}>
-                    <Text style={styles.signUpText}>Sign Up Now</Text>
-                  </TouchableOpacity>
+              <ScaleButton
+                style={styles.loginBtnWrapper}
+                onPress={handleLogin}
+                disabled={isSubmitting}
+                activeOpacity={0.88}
+              >
+                <View style={[styles.loginBtnBackground, isSubmitting && { opacity: 0.7 }]}>
+                  <Text style={styles.loginButtonText}>
+                    {isSubmitting ? 'Signing in...' : 'Login'}
+                  </Text>
                 </View>
-              </FadeInView> */}
+              </ScaleButton>
+
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OR</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <TouchableOpacity
+                style={styles.ssoButton}
+                activeOpacity={0.7}
+                onPress={() =>
+                  showToast('SSO sign-in is enabled for registered institution portals', 'info')
+                }
+              >
+                <Ionicons
+                  name="business-outline"
+                  size={18}
+                  color={theme.text}
+                  style={{ marginRight: 8 }}
+                />
+                <Text style={styles.ssoButtonText}>
+                  Continue with Institution SSO
+                </Text>
+              </TouchableOpacity>
+
+              <View style={styles.footerContainer}>
+                <Text style={styles.footerText}>
+                  New here?{' '}
+                  <Text
+                    style={styles.footerLink}
+                    onPress={() =>
+                      showToast('Please contact your school administrator to obtain access credentials', 'info')
+                    }
+                  >
+                    Contact your institution
+                  </Text>
+                </Text>
+              </View>
             </View>
           </FadeInView>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      <ThemeSelectionModal
-        visible={isThemeModalOpen}
-        onClose={() => setThemeModalOpen(false)}
-      />
-    </View>
+    </SafeAreaView>
   );
 };
 
 const getStyles = (theme: any) =>
   StyleSheet.create({
-    container: {
+    safeArea: {
       flex: 1,
+      backgroundColor: theme.background,
+    },
+    headerBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ? StatusBar.currentHeight + 8 : 28) : 12,
+      paddingBottom: 12,
+      backgroundColor: theme.background,
+    },
+    brandRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    logoBadge: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      backgroundColor: theme.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    wordmark: {
+      fontSize: 22,
+      fontWeight: '800',
+      color: theme.text,
+      letterSpacing: -0.5,
     },
     keyboardView: {
       flex: 1,
@@ -276,74 +296,59 @@ const getStyles = (theme: any) =>
     scrollContent: {
       flexGrow: 1,
       justifyContent: 'center',
-      paddingHorizontal: 24,
+      paddingHorizontal: 20,
+      paddingVertical: 24,
     },
-    backButtonContainer: {
-      position: 'absolute',
-      top: Platform.OS === 'android' ? (StatusBar.currentHeight ? StatusBar.currentHeight + 16 : 45) : 45,
-      left: 16,
-      zIndex: 10,
-    },
-    backButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-      borderRadius: 8,
-      paddingVertical: 7,
-      paddingHorizontal: 14,
-    },
-    backIconSvg: {
-      marginRight: 2,
-      marginLeft: -4,
-    },
-    backText: {
-      color: '#FFF',
-      fontSize: 15,
-      fontWeight: '600',
-    },
-    themeButtonContainer: {
-      position: 'absolute',
-      top: Platform.OS === 'android' ? (StatusBar.currentHeight ? StatusBar.currentHeight + 16 : 45) : 45,
-      right: 16,
-      zIndex: 10,
-    },
-    themeButton: {
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-      borderRadius: 8,
-      paddingVertical: 7,
-      paddingHorizontal: 14,
-      justifyContent: 'center',
-      alignItems: 'center',
+    welcomeContainer: {
+      marginBottom: 24,
+      alignItems: 'flex-start',
     },
     title: {
-      fontSize: 27,
+      fontSize: 28,
       fontWeight: '800',
-      color: '#FFFFFF',
-      textAlign: 'center',
-      marginBottom: 16,
-      letterSpacing: -0.3,
+      color: theme.text,
+      marginBottom: 6,
+      letterSpacing: -0.4,
+    },
+    subtitle: {
+      fontSize: 14,
+      color: theme.subtext,
+      lineHeight: 20,
     },
     card: {
       backgroundColor: theme.surface,
       borderRadius: 24,
-      padding: 32,
+      padding: 24,
       width: '100%',
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.05,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.08,
       shadowRadius: 16,
       elevation: 4,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    inputGroup: {
+      marginBottom: 16,
+    },
+    inputLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.text,
+      marginBottom: 6,
     },
     inputContainer: {
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: theme.background,
-      borderRadius: 12,
+      borderRadius: 14,
       borderWidth: 1,
       borderColor: theme.border,
-      marginBottom: 16,
-      height: 56,
-      paddingHorizontal: 16,
+      height: 52,
+      paddingHorizontal: 14,
+    },
+    leadingIcon: {
+      marginRight: 10,
     },
     input: {
       flex: 1,
@@ -351,52 +356,81 @@ const getStyles = (theme: any) =>
       color: theme.text,
       height: '100%',
     },
-    passwordInput: {
-      flex: 1,
-      fontSize: 15,
-      color: theme.text,
-      height: '100%',
-    },
     eyeBtn: {
-      paddingLeft: 10,
+      paddingLeft: 8,
     },
     forgotContainer: {
       alignSelf: 'flex-end',
-      marginBottom: 20,
-      marginTop: 0,
+      marginBottom: 24,
+      marginTop: 2,
     },
     forgotText: {
-      fontSize: 14,
+      fontSize: 13,
       color: theme.primary,
       fontWeight: '600',
     },
-    loginButton: {
+    loginBtnWrapper: {
       width: '100%',
-      height: 56,
+      borderRadius: 14,
+      overflow: 'hidden',
+      marginBottom: 20,
+    },
+    loginBtnBackground: {
+      height: 52,
       backgroundColor: theme.primary,
-      borderRadius: 12,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 24,
+      borderRadius: 14,
     },
     loginButtonText: {
       color: '#FFFFFF',
       fontSize: 16,
       fontWeight: '700',
+      letterSpacing: 0.2,
     },
-    bottomRow: {
+    dividerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    dividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: theme.border,
+    },
+    dividerText: {
+      marginHorizontal: 12,
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.subtext,
+    },
+    ssoButton: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
+      height: 48,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.background,
+      marginBottom: 20,
     },
-    bottomText: {
+    ssoButtonText: {
       fontSize: 14,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    footerContainer: {
+      alignItems: 'center',
+      marginTop: 4,
+    },
+    footerText: {
+      fontSize: 13,
       color: theme.subtext,
     },
-    signUpText: {
-      fontSize: 14,
+    footerLink: {
       color: theme.primary,
-      fontWeight: '700',
+      fontWeight: '600',
     },
   });
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
@@ -11,13 +11,13 @@ import {
   StatusBar,
   ActivityIndicator,
   RefreshControl,
-  Dimensions,
   Alert,
   Image,
+  FlatList,
+  Keyboard,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
@@ -27,7 +27,12 @@ import principalService from '../../services/principalService';
 import { ENDPOINTS } from '../../constants/api';
 import Skeleton from '../../components/common/Skeleton';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+let Share: any = null;
+try {
+  Share = require('react-native-share').default || require('react-native-share');
+} catch (error) {
+  console.warn('react-native-share not available');
+}
 
 const PageSkeleton = () => {
   const { theme } = useTheme();
@@ -63,7 +68,7 @@ const StatCard = ({ title, value, subtitle }: { title: string, value: string | n
   );
 };
 
-const StudentCard = ({ item, index, delay, onEdit, onView, onDelete }: any) => {
+const StudentCard = ({ item, index, delay, onEdit, onView, onDelete, isDeleting }: any) => {
   const { theme } = useTheme();
   const styles = getStyles(theme);
   return (
@@ -81,14 +86,18 @@ const StudentCard = ({ item, index, delay, onEdit, onView, onDelete }: any) => {
           <Text style={styles.studentRoll}>Roll No: {item.rollNo || 'N/A'}</Text>
         </View>
         <View style={styles.actionIconsRow}>
-          <TouchableOpacity style={styles.actionIconButton} onPress={onView} hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}>
+          <TouchableOpacity style={styles.actionIconButton} onPress={onView} accessibilityLabel="View student details" hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}>
             <Ionicons name="eye-outline" size={16} color={theme.primary} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionIconButton} onPress={onEdit} hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}>
+          <TouchableOpacity style={styles.actionIconButton} onPress={onEdit} accessibilityLabel="Edit student details" hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}>
             <Ionicons name="pencil-outline" size={16} color={theme.subtext} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionIconButton} onPress={onDelete} hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}>
-            <Ionicons name="trash-outline" size={16} color="#EF4444" />
+          <TouchableOpacity style={styles.actionIconButton} onPress={onDelete} disabled={isDeleting} accessibilityLabel="Delete student" hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}>
+            {isDeleting ? (
+              <ActivityIndicator size="small" color={theme.danger || '#EF4444'} />
+            ) : (
+              <Ionicons name="trash-outline" size={16} color={theme.danger || '#EF4444'} />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -128,12 +137,15 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deletingStudentId, setDeletingStudentId] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const [classes, setClasses] = useState<any[]>([]);
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [activeClassId, setActiveClassId] = useState<string | null>(null);
   const [attendanceSummary, setAttendanceSummary] = useState<any>(null);
 
-  const fetchAttendanceSummary = async () => {
+  const fetchAttendanceSummary = useCallback(async () => {
     try {
       const res = await apiClient.get(ENDPOINTS.PRINCIPAL.ATTENDANCE_SUMMARY);
       setAttendanceSummary(res.originalData || res.data || res);
@@ -141,33 +153,37 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
       console.error('Failed to fetch attendance summary:', error);
       setAttendanceSummary(null);
     }
-  };
+  }, []);
 
-  const fetchClasses = async () => {
+  const fetchClasses = useCallback(async (options?: { keepActive?: boolean }) => {
     try {
-      if (!isRefreshing) setIsLoading(true);
+      if (!isRefreshing && !options?.keepActive) setIsLoading(true);
       const classesRes = await principalService.getClasses();
       const rawClasses = classesRes.data?.classes || (classesRes.data as any)?.data || classesRes.data;
       const classList = Array.isArray(rawClasses) ? rawClasses : [];
 
       setClasses(classList);
 
-      if (classList.length > 0) {
-        const firstId = classList[0].id || classList[0].name;
-        setActiveClassId(firstId);
-      } else {
-        setIsLoading(false);
+      if (!options?.keepActive) {
+        if (classList.length > 0) {
+          const firstId = classList[0].id || classList[0].name;
+          setActiveClassId(firstId);
+        } else {
+          setIsLoading(false);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch classes:', error);
       setClasses([]);
     } finally {
-      setIsLoading(false);
+      if (!options?.keepActive) {
+        setIsLoading(false);
+      }
       setIsRefreshing(false);
     }
-  };
+  }, [isRefreshing]);
 
-  const fetchStudents = async (classId: string) => {
+  const fetchStudents = useCallback(async (classId: string) => {
     try {
       setIsLoading(true);
       const studentsRes = await principalService.getStudentsByClass(classId);
@@ -180,38 +196,43 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const handleDeleteStudent = (studentId: string) => {
+  const handleDeleteStudent = useCallback((studentId: string) => {
     Alert.alert('Delete Student', 'Are you sure you want to delete this student?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete', style: 'destructive', onPress: async () => {
+          setIsDeleting(true);
+          setDeletingStudentId(studentId);
           try {
-            setIsLoading(true);
             await principalService.deleteStudent(studentId);
             if (activeClassId) {
               await fetchStudents(activeClassId);
-              await fetchClasses(); // Update count
             }
+            await fetchClasses({ keepActive: true });
           } catch (error) {
             console.error('Failed to delete student:', error);
             Alert.alert('Error', 'Failed to delete student');
           } finally {
-            setIsLoading(false);
+            setIsDeleting(false);
+            setDeletingStudentId(null);
           }
         }
       }
     ]);
-  };
+  }, [activeClassId, fetchStudents, fetchClasses]);
 
-  const handleExport = async () => {
+  const currentClass = useMemo(() => classes.find(c => (c.id || c.name) === activeClassId), [classes, activeClassId]);
+  const currentClassStudents = allStudents;
+
+  const handleExport = useCallback(async () => {
     if (!currentClassStudents || currentClassStudents.length === 0) {
       Alert.alert('Export', 'No students to export.');
       return;
     }
     try {
-      setIsLoading(true);
+      setIsExporting(true);
       const XLSX = require('xlsx');
       const RNFS = require('react-native-fs');
 
@@ -234,42 +255,48 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
       const path = `${RNFS.DocumentDirectoryPath}/Students_${currentClass?.name || 'Class'}.xlsx`;
       await RNFS.writeFile(path, wbout, 'ascii');
 
-      Alert.alert('Success', `Students exported successfully to ${path}`);
-    } catch (error) {
-      console.error('Failed to export students:', error);
-      Alert.alert('Error', 'Failed to export students locally.');
+      if (Share) {
+        await Share.open({
+          url: `file://${path}`,
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          title: 'Export Students List',
+        });
+      } else {
+        Alert.alert('Export Successful', `Students exported successfully to ${path}`);
+      }
+    } catch (error: any) {
+      if (error?.message !== 'User did not share' && error?.name !== 'Error') {
+        console.error('Failed to export students:', error);
+        Alert.alert('Error', 'Failed to export students.');
+      }
     } finally {
-      setIsLoading(false);
+      setIsExporting(false);
     }
-  };
-
-  const handlePrint = () => {
-    Alert.alert('Print', 'Print functionality will be implemented with a proper printing module.');
-  };
+  }, [currentClassStudents, currentClass]);
 
   useFocusEffect(
     useCallback(() => {
       fetchClasses();
       fetchAttendanceSummary();
-    }, [])
+    }, [fetchClasses, fetchAttendanceSummary])
   );
 
   useEffect(() => {
     if (activeClassId) {
       fetchStudents(activeClassId);
     }
-  }, [activeClassId]);
+  }, [activeClassId, fetchStudents]);
 
-  const onRefresh = () => {
+  const onRefresh = useCallback(() => {
     setIsRefreshing(true);
-    const tasks: Promise<any>[] = [fetchClasses(), fetchAttendanceSummary()];
+    const tasks: Promise<any>[] = [fetchClasses({ keepActive: true }), fetchAttendanceSummary()];
     if (activeClassId) {
       tasks.push(fetchStudents(activeClassId));
     }
     Promise.all(tasks).finally(() => setIsRefreshing(false));
-  };
+  }, [fetchClasses, fetchAttendanceSummary, activeClassId, fetchStudents]);
 
-  const getAttendanceRateDisplay = () => {
+  const getAttendanceRateDisplay = useCallback(() => {
     if (!attendanceSummary) return 'N/A';
 
     const extractRate = (obj: any): string | null => {
@@ -380,9 +407,9 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
     };
 
     return extractRate(attendanceSummary) || 'N/A';
-  };
+  }, [attendanceSummary]);
 
-  const getAttendanceSubtitle = () => {
+  const getAttendanceSubtitle = useCallback(() => {
     if (!attendanceSummary) return 'Coming soon';
     const data = attendanceSummary.data || attendanceSummary;
     if (data.subtitle) return data.subtitle;
@@ -391,10 +418,144 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
       return `${data.presentCount}/${data.totalCount} present`;
     }
     return undefined;
-  };
+  }, [attendanceSummary]);
 
-  const currentClass = classes.find(c => (c.id || c.name) === activeClassId);
-  const currentClassStudents = allStudents; // We only fetch students for the active class now
+  const attendanceRateDisplay = useMemo(() => getAttendanceRateDisplay(), [getAttendanceRateDisplay]);
+  const attendanceSubtitle = useMemo(() => {
+    if (attendanceRateDisplay === 'N/A') return 'Coming soon';
+    return getAttendanceSubtitle();
+  }, [attendanceRateDisplay, getAttendanceSubtitle]);
+
+  const filteredStudents = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return currentClassStudents;
+    return currentClassStudents.filter(s => {
+      return (
+        (s.name || '').toLowerCase().includes(q) ||
+        (s.rollNo || '').toLowerCase().includes(q) ||
+        (s.email || '').toLowerCase().includes(q) ||
+        (s.phone || '').toLowerCase().includes(q) ||
+        (s.parentName || '').toLowerCase().includes(q)
+      );
+    });
+  }, [currentClassStudents, searchQuery]);
+
+  const renderHeader = useCallback(() => (
+    <View>
+      <View style={styles.pageHeader}>
+        <Text style={styles.screenTitle}>Students details</Text>
+        <Text style={styles.screenSubtitle}>Class-Wise students details</Text>
+      </View>
+
+      {/* Stats Grid (4 Cards) */}
+      <View style={styles.statsGrid}>
+        <StatCard title="Total Students" value={classes.reduce((sum, cls) => sum + (cls.studentCount || 0), 0)} />
+        <StatCard title="Attendance Rate" value={attendanceRateDisplay} subtitle={attendanceSubtitle} />
+        <StatCard title="Active Classes" value={classes.length} />
+      </View>
+
+      {/* Class Tabs */}
+      <View style={styles.tabsContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsScroll}>
+          {classes.map((cls) => {
+            const clsId = cls.id || cls.name;
+            const count = cls.studentCount || 0;
+            return (
+              <TouchableOpacity
+                key={clsId}
+                style={[styles.classTab, activeClassId === clsId && styles.classTabActive]}
+                onPress={() => setActiveClassId(clsId)}
+                accessibilityLabel={`Select class ${cls.name || cls.className}`}
+              >
+                <Text style={[styles.classTabText, activeClassId === clsId && styles.classTabTextActive]}>{cls.name || cls.className} ({count})</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* Class Hero Banner */}
+      <Animated.View entering={FadeInUp.duration(400)} style={styles.classHero}>
+        <View style={styles.heroMain}>
+          <Text style={styles.heroTitle}>{currentClass?.name || 'Loading...'}</Text>
+          <Text style={styles.heroTeacherName}>Class Teacher: {currentClass?.classTeacherName || currentClass?.teacher || 'TBA'}</Text>
+        </View>
+        <View style={styles.heroDivider} />
+        <View style={styles.heroStats}>
+          <View style={styles.heroStatItem}>
+            <Text style={styles.heroStatVal}>{currentClass?.studentCount || currentClassStudents.length}</Text>
+            <Text style={styles.heroStatLab}>Students</Text>
+          </View>
+          <View style={styles.heroStatItem}>
+            <Text style={styles.heroStatVal}>-</Text>
+            <Text style={styles.heroStatLab}>Avg Score</Text>
+          </View>
+          <View style={styles.heroStatItem}>
+            <Text style={styles.heroStatVal}>-</Text>
+            <Text style={styles.heroStatLab}>Attendance</Text>
+          </View>
+          <View style={styles.heroStatItem}>
+            <Text style={styles.heroStatVal}>-</Text>
+            <Text style={styles.heroStatLab}>Top performer</Text>
+          </View>
+        </View>
+      </Animated.View>
+
+      {/* Actions & Search */}
+      <View style={styles.actionsWrapper}>
+        <View style={styles.searchWrapper}>
+          <Ionicons name="search-outline" size={18} color="#94A3B8" />
+          <TextInput
+            placeholder={`Search students in ${currentClass?.name || 'Class'}...`}
+            placeholderTextColor="#94A3B8"
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+            onSubmitEditing={() => Keyboard.dismiss()}
+          />
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionButtonsScroll}>
+          <TouchableOpacity style={[styles.secondaryBtn, isExporting && { opacity: 0.7 }]} onPress={handleExport} disabled={isExporting} accessibilityLabel="Export student list">
+            {isExporting ? (
+              <ActivityIndicator size="small" color="#4B5563" />
+            ) : (
+              <>
+                <Ionicons name="download-outline" size={16} color="#4B5563" />
+                <Text style={styles.secondaryBtnText}>Export</Text>
+              </>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('PrincipalAddStudent')} accessibilityLabel="Add new student">
+            <Ionicons name="add" size={18} color="#FFF" />
+            <Text style={styles.primaryBtnText}>Add Students</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    </View>
+  ), [classes, activeClassId, attendanceRateDisplay, attendanceSubtitle, currentClass, currentClassStudents.length, searchQuery, isExporting, handleExport, navigation, styles]);
+
+  const renderEmptyState = useCallback(() => {
+    if (isLoading) return null;
+    const isSearchActive = searchQuery.trim().length > 0;
+    return (
+      <View style={styles.emptyContainer}>
+        <Ionicons
+          name={isSearchActive ? "search-outline" : "people-outline"}
+          size={48}
+          color={theme.subtext}
+        />
+        <Text style={styles.emptyTitle}>
+          {isSearchActive ? "No results match your search" : "No students found in this class"}
+        </Text>
+        <Text style={styles.emptySubtitle}>
+          {isSearchActive
+            ? "Try searching for a different name, roll number, email, or phone."
+            : "There are currently no registered students in this class."}
+        </Text>
+      </View>
+    );
+  }, [isLoading, searchQuery, styles, theme.subtext]);
 
   return (
     <View style={styles.mainContainer}>
@@ -402,16 +563,15 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
 
       {/* Global Header */}
       <View style={styles.globalHeader}>
-        <ScaleButton onPress={() => setDrawerOpen(true)}>
+        <ScaleButton onPress={() => setDrawerOpen(true)} accessibilityLabel="Open menu">
           <Ionicons name="menu" size={28} color={theme.text} />
         </ScaleButton>
         <Text style={styles.headerTitle} numberOfLines={1}>Student Directory</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconBtnHeader} onPress={() => navigation.navigate('PrincipalAddStudent')}>
+          <TouchableOpacity style={styles.iconBtnHeader} onPress={() => navigation.navigate('PrincipalAddStudent')} accessibilityLabel="Add Student">
             <Ionicons name="person-add-outline" size={24} color={theme.text} />
           </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}>
-
+          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')} accessibilityLabel="Account settings">
             {authState.user?.photoUrl ? (
               <Image source={{ uri: authState.user.photoUrl }} style={styles.avatarHeader} />
             ) : (
@@ -426,121 +586,31 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
       {isLoading && !isRefreshing ? (
         <PageSkeleton />
       ) : (
-        <ScrollView
+        <FlatList
           style={styles.container}
           contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
-        >
-          <View style={styles.pageHeader}>
-            <Text style={styles.screenTitle}>Students details</Text>
-            <Text style={styles.screenSubtitle}>Class-Wise students details</Text>
-          </View>
-
-          {/* Stats Grid (4 Cards) */}
-          <View style={styles.statsGrid}>
-            <StatCard title="Total Students" value={classes.reduce((sum, cls) => sum + (cls.studentCount || 0), 0)} />
-            {/* <StatCard title="Average Score" value="N/A" subtitle="Coming soon" /> */}
-            <StatCard title="Attendance Rate" value={getAttendanceRateDisplay()} subtitle={getAttendanceRateDisplay() === 'N/A' ? "Coming soon" : getAttendanceSubtitle()} />
-            <StatCard title="Active Classes" value={classes.length} />
-          </View>
-
-          {/* Class Tabs */}
-          <View style={styles.tabsContainer}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsScroll}>
-              {classes.map((cls) => {
-                const clsId = cls.id || cls.name;
-                const count = cls.studentCount || 0;
-                return (
-                  <TouchableOpacity
-                    key={clsId}
-                    style={[styles.classTab, activeClassId === clsId && styles.classTabActive]}
-                    onPress={() => setActiveClassId(clsId)}
-                  >
-                    <Text style={[styles.classTabText, activeClassId === clsId && styles.classTabTextActive]}>{cls.name || cls.className} ({count})</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-
-          {/* Class Hero Banner */}
-          <Animated.View entering={FadeInUp.duration(400)} style={styles.classHero}>
-            <View style={styles.heroMain}>
-              <Text style={styles.heroTitle}>{currentClass?.name || 'Loading...'}</Text>
-              <Text style={styles.heroTeacherName}>Class Teacher: {currentClass?.classTeacherName || currentClass?.teacher || 'TBA'}</Text>
-            </View>
-            <View style={styles.heroDivider} />
-            <View style={styles.heroStats}>
-              <View style={styles.heroStatItem}>
-                <Text style={styles.heroStatVal}>{currentClass?.studentCount || currentClassStudents.length}</Text>
-                <Text style={styles.heroStatLab}>Students</Text>
-              </View>
-              <View style={styles.heroStatItem}>
-                <Text style={styles.heroStatVal}>-</Text>
-                <Text style={styles.heroStatLab}>Avg Score</Text>
-              </View>
-              <View style={styles.heroStatItem}>
-                <Text style={styles.heroStatVal}>-</Text>
-                <Text style={styles.heroStatLab}>Attendance</Text>
-              </View>
-              <View style={styles.heroStatItem}>
-                <Text style={styles.heroStatVal}>-</Text>
-                <Text style={styles.heroStatLab}>Top performer</Text>
-              </View>
-            </View>
-          </Animated.View>
-
-          {/* Actions & Search */}
-          <View style={styles.actionsWrapper}>
-            <View style={styles.searchWrapper}>
-              <Ionicons name="search-outline" size={18} color="#94A3B8" />
-              <TextInput
-                placeholder={`Search students in ${currentClass?.name || 'Class'}...`}
-                placeholderTextColor="#94A3B8"
-                style={styles.searchInput}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
+          data={filteredStudents}
+          keyExtractor={(item, index) => item.id || item._id || String(index)}
+          renderItem={({ item, index }) => (
+            <View style={styles.listContainer}>
+              <StudentCard
+                item={item}
+                index={index}
+                delay={index * 50}
+                isDeleting={isDeleting && deletingStudentId === item.id}
+                onEdit={() => navigation.navigate('PrincipalEditStudent', { studentId: item.id })}
+                onView={() => navigation.navigate('PrincipalViewStudent', { studentId: item.id })}
+                onDelete={() => handleDeleteStudent(item.id)}
               />
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionButtonsScroll}>
-              <TouchableOpacity style={styles.secondaryBtn} onPress={handleExport}>
-                <Ionicons name="download-outline" size={16} color="#4B5563" />
-                <Text style={styles.secondaryBtnText}>Export</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.secondaryBtn} onPress={handlePrint}>
-                <Ionicons name="print-outline" size={16} color="#4B5563" />
-                <Text style={styles.secondaryBtnText}>Print</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('PrincipalAddStudent')}>
-                <Ionicons name="add" size={18} color="#FFF" />
-                <Text style={styles.primaryBtnText}>Add Students</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-
-          {/* Student List */}
-          <View style={styles.listContainer}>
-            {currentClassStudents
-              .filter(s => {
-                const name = s.name || '';
-                const rollNo = s.rollNo || '';
-                return name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  rollNo.toLowerCase().includes(searchQuery.toLowerCase());
-              })
-              .map((item, index) => (
-                <StudentCard
-                  key={item.id}
-                  item={item}
-                  index={index}
-                  delay={index * 50}
-                  onEdit={() => navigation.navigate('PrincipalEditStudent', { studentId: item.id })}
-                  onView={() => navigation.navigate('PrincipalViewStudent', { studentId: item.id })}
-                  onDelete={() => handleDeleteStudent(item.id)}
-                />
-              ))}
-          </View>
-        </ScrollView>
+          )}
+          ListHeaderComponent={renderHeader}
+          ListEmptyComponent={renderEmptyState}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          onScroll={() => Keyboard.dismiss()}
+        />
       )}
 
       <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
@@ -636,7 +706,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#9F7AEA', // Soft purple
+    backgroundColor: '#9F7AEA',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 4,
@@ -647,6 +717,26 @@ const getStyles = (theme: any) => StyleSheet.create({
     elevation: 6,
   },
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.text,
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 12,
+    color: theme.subtext,
+    marginTop: 4,
+    textAlign: 'center',
+  },
 });
 
 export default PrincipalStudentDetailsScreen;

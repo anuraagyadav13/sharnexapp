@@ -22,7 +22,7 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect, Circle, Path } from 'react-native-svg';
 import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
 import principalService from '../../services/principalService';
@@ -36,15 +36,20 @@ interface Props {
   navigation: DashboardNavigationProp;
 }
 
-
-
 const { width } = Dimensions.get('window');
+
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good Morning ☀️';
+  if (hour < 17) return 'Good Afternoon 🌤️';
+  return 'Good Evening 🌙';
+};
 
 // --- Main Screen ---
 const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
-  const { theme, themeMode, setThemeMode } = useTheme();
+  const { theme, themeMode, setThemeMode, isDarkMode } = useTheme();
   const [isThemeModalOpen, setThemeModalOpen] = useState(false);
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [dashboardData, setDashboardData] = useState<any>(null);
@@ -120,9 +125,6 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
       ]);
 
       // ── /institution/dashboard-metrics ────────────────────────────────────
-      // Confirmed shape:
-      //   { metrics: { totalStudents, teachingStaff, attendanceRate: "79.4%", ... },
-      //     pendingApprovals: [...], institution: {...}, principal: {...} }
       const metricsAny = metricsRes as any;
       const mRaw = metricsAny.data?.data ?? metricsAny.data ?? {};
       const metrics = mRaw.metrics ?? {};
@@ -137,7 +139,6 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
       const totalStaff = metrics.teachingStaff ?? metrics.totalTeachers ?? metrics.staff ?? 0;
 
       // ── ATTENDANCE ────────────────────────────────────────────────────────
-      // metrics.attendanceRate is a string "79.4%" — parse the number out
       let attendanceRate: number | null = null;
       const rawRate = metrics.attendanceRate ?? metrics.attendance ?? null;
       if (typeof rawRate === 'string') {
@@ -157,7 +158,6 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
       setStats({ students: totalStudents, staff: totalStaff, attendance: attendanceRate });
 
       // ── PENDING APPROVALS ─────────────────────────────────────────────────
-      // metrics endpoint returns pendingApprovals directly, already formatted
       const metricsApprovals = Array.isArray(mRaw.pendingApprovals) ? mRaw.pendingApprovals : [];
       setApprovals(metricsApprovals.map((e: any) => ({
         id: e.id || Math.random().toString(),
@@ -219,7 +219,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.background} />
 
       {toast.visible && (
         <Toast
@@ -296,23 +296,81 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
           <View style={styles.sectionPadding}>
             <Animated.View entering={FadeInUp.delay(50).springify()} style={styles.heroBanner}>
               <View style={StyleSheet.absoluteFill}>
-                <Svg height="100%" width="100%">
+                <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
                   <Defs>
-                    <SvgLinearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <Stop offset="0" stopColor="#4F46E5" stopOpacity="1" />
-                      <Stop offset="1" stopColor="#6366F1" stopOpacity="1" />
+                    <SvgLinearGradient id="heroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <Stop offset="0%" stopColor={isDarkMode ? '#312E81' : '#4338CA'} />
+                      <Stop offset="45%" stopColor={isDarkMode ? '#4338CA' : '#4F46E5'} />
+                      <Stop offset="80%" stopColor={isDarkMode ? '#581C87' : '#7C3AED'} />
+                      <Stop offset="100%" stopColor={isDarkMode ? '#6B21A8' : '#8B5CF6'} />
+                    </SvgLinearGradient>
+                    <SvgLinearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.25" />
+                      <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.0" />
                     </SvgLinearGradient>
                   </Defs>
-                  <Rect width="100%" height="100%" fill="url(#grad)" rx="16" ry="16" />
+                  <Rect width="100%" height="100%" fill="url(#heroGrad)" rx={24} ry={24} />
+                  {/* Layered decorative glowing shapes & wave lines */}
+                  <Circle cx="92%" cy="10%" r="110" fill="url(#glowGrad)" />
+                  <Circle cx="85%" cy="90%" r="70" fill="#FFFFFF" fillOpacity={0.06} />
+                  <Circle cx="10%" cy="85%" r="50" fill="#FFFFFF" fillOpacity={0.05} />
+                  <Path
+                    d="M-20 80 Q 80 20 180 100 T 380 40"
+                    stroke="rgba(255, 255, 255, 0.12)"
+                    strokeWidth="3"
+                    fill="none"
+                  />
+                  <Path
+                    d="M-10 120 Q 100 60 200 130 T 400 70"
+                    stroke="rgba(255, 255, 255, 0.08)"
+                    strokeWidth="2"
+                    fill="none"
+                  />
                 </Svg>
               </View>
+
               <View style={styles.heroContent}>
-                <View style={styles.heroBadge}>
-                  <Ionicons name="school-outline" size={14} color="rgba(255,255,255,0.9)" />
-                  <Text style={styles.heroBadgeText}>Institution Portal</Text>
+                <View style={styles.heroTopRow}>
+                  <View style={styles.heroBadge}>
+                    <Ionicons name="sparkles" size={13} color="#FBBF24" />
+                    <Text style={styles.heroBadgeText}>Institution Control Center</Text>
+                  </View>
+                  <View style={styles.heroTimePill}>
+                    <Ionicons name="time-outline" size={12} color="rgba(255,255,255,0.9)" />
+                    <Text style={styles.heroGreetingTag}>{getGreeting()}</Text>
+                  </View>
                 </View>
-                <Text style={styles.heroTitle}>Welcome to{'\n'}Your Dashboard</Text>
-                <Text style={styles.heroSubtitle}>Manage your institution, staff, and students efficiently</Text>
+
+                <View style={styles.heroMainRow}>
+                  <View style={styles.heroTextCol}>
+                    <Text style={styles.heroTitle}>Welcome back,{'\n'}{authState.user?.name?.split(' ')[0] || 'Principal'} 👋</Text>
+                    <Text style={styles.heroSubtitle}>Overview of your institution's daily metrics & operations.</Text>
+                  </View>
+
+                  <View style={styles.heroGraphicBox}>
+                    <View style={styles.heroGlassCircle}>
+                      <MaterialCommunityIcons name="shield-crown" size={30} color="#FFFFFF" />
+                    </View>
+                  </View>
+                </View>
+
+                {/* Hero Bottom Quick Stats Glass Bar */}
+                <View style={styles.heroStatsRow}>
+                  <View style={styles.heroStatChip}>
+                    <Ionicons name="school" size={13} color="#A5B4FC" />
+                    <Text style={styles.heroStatChipText}>{stats.students} Students</Text>
+                  </View>
+                  <View style={styles.heroStatDivider} />
+                  <View style={styles.heroStatChip}>
+                    <Ionicons name="people" size={13} color="#DDD6FE" />
+                    <Text style={styles.heroStatChipText}>{stats.staff} Staff</Text>
+                  </View>
+                  <View style={styles.heroStatDivider} />
+                  <View style={styles.heroStatChip}>
+                    <Ionicons name="checkmark-circle" size={13} color="#6EE7B7" />
+                    <Text style={styles.heroStatChipText}>{stats.attendance !== null ? `${stats.attendance}% Attendance` : 'Live Tracking'}</Text>
+                  </View>
+                </View>
               </View>
             </Animated.View>
           </View>
@@ -348,7 +406,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
           <View style={styles.sectionPadding}>
             <View style={styles.fullScreenBox}>
               <View style={styles.sectionHeaderRow}>
-                <View style={styles.sectionTitleDot} />
+                <View style={[styles.sectionTitleDot, { backgroundColor: theme.primary }]} />
                 <Text style={styles.sectionTitle}>Quick Actions</Text>
               </View>
               <View style={styles.quickActionsGrid}>
@@ -406,8 +464,11 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                 ))
               ) : (
                 <View style={styles.emptyStateContainer}>
-                  <Ionicons name="calendar-outline" size={32} color={theme.subtext} style={{ opacity: 0.5 }} />
-                  <Text style={styles.emptyText}>No upcoming events</Text>
+                  <View style={[styles.emptyIconCircle, { backgroundColor: '#6366F115' }]}>
+                    <Ionicons name="calendar-outline" size={24} color="#6366F1" />
+                  </View>
+                  <Text style={styles.emptyStateTitle}>No upcoming events</Text>
+                  <Text style={styles.emptyText}>Check back later for new scheduled events</Text>
                 </View>
               )}
             </View>
@@ -446,8 +507,11 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                   ))
                 ) : (
                   <View style={styles.emptyStateContainer}>
-                    <Ionicons name="people-outline" size={32} color={theme.subtext} style={{ opacity: 0.5 }} />
-                    <Text style={styles.emptyText}>No recent staff activity</Text>
+                    <View style={[styles.emptyIconCircle, { backgroundColor: '#10B98115' }]}>
+                      <Ionicons name="people-outline" size={24} color="#10B981" />
+                    </View>
+                    <Text style={styles.emptyStateTitle}>No recent activity</Text>
+                    <Text style={styles.emptyText}>Staff check-ins will appear here</Text>
                   </View>
                 )}
               </View>
@@ -476,6 +540,9 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                 {approvals.length > 0 ? (
                   approvals.map((app, idx) => (
                     <View key={app.id} style={[styles.approvalCard, idx === approvals.length - 1 && { borderBottomWidth: 0 }]}>
+                      <View style={[styles.approvalIconBox, { backgroundColor: '#F59E0B' + (isDarkMode ? '25' : '15') }]}>
+                        <Ionicons name="document-text-outline" size={20} color="#F59E0B" />
+                      </View>
                       <View style={styles.approvalInfo}>
                         <Text style={styles.approvalRequest} numberOfLines={1}>{app.request}</Text>
                         <Text style={styles.approvalBy}>By {app.submittedBy} • {app.date}</Text>
@@ -484,22 +551,28 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                         <TouchableOpacity
                           style={styles.approveBtn}
                           onPress={() => handleApprovalAction(app.id, 'APPROVED')}
+                          activeOpacity={0.7}
                         >
-                          <Ionicons name="checkmark" size={16} color="#10B981" />
+                          <Ionicons name="checkmark-sharp" size={14} color="#10B981" />
+                          <Text style={styles.approveBtnText}>Approve</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={styles.rejectBtn}
                           onPress={() => handleApprovalAction(app.id, 'REJECTED')}
+                          activeOpacity={0.7}
                         >
-                          <Ionicons name="close" size={16} color="#EF4444" />
+                          <Ionicons name="close-sharp" size={14} color="#EF4444" />
                         </TouchableOpacity>
                       </View>
                     </View>
                   ))
                 ) : (
                   <View style={styles.emptyStateContainer}>
-                    <Ionicons name="checkmark-circle-outline" size={32} color={theme.subtext} style={{ opacity: 0.5 }} />
-                    <Text style={styles.emptyText}>All requests are processed</Text>
+                    <View style={[styles.emptyIconCircle, { backgroundColor: '#10B98115' }]}>
+                      <Ionicons name="checkmark-circle-outline" size={28} color="#10B981" />
+                    </View>
+                    <Text style={styles.emptyStateTitle}>All caught up!</Text>
+                    <Text style={styles.emptyText}>All pending requests have been processed.</Text>
                   </View>
                 )}
               </View>
@@ -581,8 +654,8 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
 // --- Subcomponents ---
 
 const DashboardSkeleton = () => {
-  const { theme } = useTheme();
-  const styles = getStyles(theme);
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.globalHeader}>
@@ -591,19 +664,19 @@ const DashboardSkeleton = () => {
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <Skeleton width={24} height={24} borderRadius={12} />
           <Skeleton width={24} height={24} borderRadius={12} />
-          <Skeleton width={32} height={32} borderRadius={16} />
+          <Skeleton width={34} height={34} borderRadius={17} />
         </View>
       </View>
 
       <View style={styles.sectionPadding}>
-        <Skeleton width="100%" height={140} borderRadius={16} style={{ marginBottom: 16 }} />
+        <Skeleton width="100%" height={145} borderRadius={20} style={{ marginBottom: 16 }} />
       </View>
 
       <View style={styles.sectionPadding}>
         <View style={styles.metricRow}>
-          <Skeleton width="31%" height={110} borderRadius={20} />
-          <Skeleton width="31%" height={110} borderRadius={20} />
-          <Skeleton width="31%" height={110} borderRadius={20} />
+          <Skeleton width="31%" height={135} borderRadius={18} />
+          <Skeleton width="31%" height={135} borderRadius={18} />
+          <Skeleton width="31%" height={135} borderRadius={18} />
         </View>
       </View>
 
@@ -611,26 +684,31 @@ const DashboardSkeleton = () => {
         <View style={styles.fullScreenBox}>
           <Skeleton width={120} height={20} style={{ marginBottom: 16 }} />
           <View style={styles.quickActionsGrid}>
-            {[1, 2, 3, 4].map(i => <Skeleton key={i} width="48%" height={80} borderRadius={12} />)}
+            {[1, 2, 3, 4].map(i => <Skeleton key={i} width="48%" height={90} borderRadius={16} />)}
           </View>
         </View>
       </View>
 
       <View style={styles.sectionPadding}>
-        <Skeleton width="100%" height={180} borderRadius={16} />
+        <Skeleton width="100%" height={180} borderRadius={20} />
       </View>
     </ScrollView>
   );
 };
 
 const QuickActionCard = React.memo(({ title, desc, delay, color, icon = 'document-text', onPress }: { title: string, desc: string, delay: number, color: string, icon?: string, onPress?: () => void }) => {
-  const { theme } = useTheme();
-  const styles = getStyles(theme);
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   return (
-    <Animated.View entering={FadeInUp.delay(delay).springify()} style={[styles.quickActionCard]}>
+    <Animated.View entering={FadeInUp.delay(delay).springify()} style={styles.quickActionCard}>
       <TouchableOpacity style={styles.quickActionTouchable} activeOpacity={0.7} onPress={onPress}>
-        <View style={[styles.quickActionIconBox, { backgroundColor: color + '18' }]}>
-          <Ionicons name={icon} size={22} color={color} />
+        <View style={styles.quickActionHeader}>
+          <View style={[styles.quickActionIconBox, { backgroundColor: color + (isDarkMode ? '25' : '15') }]}>
+            <Ionicons name={icon} size={20} color={color} />
+          </View>
+          <View style={[styles.quickActionArrowBox, { backgroundColor: theme.background }]}>
+            <Ionicons name="arrow-forward" size={12} color={theme.subtext} />
+          </View>
         </View>
         <Text style={styles.quickActionTitle}>{title}</Text>
         <Text style={styles.quickActionDesc} numberOfLines={2}>{desc}</Text>
@@ -640,29 +718,52 @@ const QuickActionCard = React.memo(({ title, desc, delay, color, icon = 'documen
 });
 
 const ActivityItem = React.memo(({ initial, iconBgColor, name, action, time, isLast }: any) => {
-  const { theme } = useTheme();
-  const styles = getStyles(theme);
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
+  const isClockOut = action.toLowerCase().includes('out');
+
   return (
     <View style={[styles.activityItem, !isLast && styles.activityItemBorder]}>
-      <View style={[styles.activityAvatarBox, { backgroundColor: iconBgColor + '20' }]}>
-        <Text style={[styles.activityInitial, { color: iconBgColor }]}>{initial}</Text>
+      <View style={{ position: 'relative' }}>
+        <View style={[styles.activityAvatarBox, { backgroundColor: iconBgColor + (isDarkMode ? '30' : '15') }]}>
+          <Text style={[styles.activityInitial, { color: iconBgColor }]}>{initial}</Text>
+        </View>
+        <View style={[styles.activityStatusDot, { backgroundColor: isClockOut ? '#8B5CF6' : '#10B981' }]} />
       </View>
       <View style={styles.activityContent}>
         <Text style={styles.activityName}>{name}</Text>
-        <Text style={styles.activityAction}>{action}</Text>
+        <View style={styles.activityActionRow}>
+          <Ionicons name={isClockOut ? "exit-outline" : "enter-outline"} size={13} color={isClockOut ? '#8B5CF6' : '#10B981'} />
+          <Text style={styles.activityAction}>{action}</Text>
+        </View>
       </View>
-      <Text style={styles.activityTime}>{time}</Text>
+      <View style={styles.activityTimeBadge}>
+        <Ionicons name="time-outline" size={11} color={theme.subtext} />
+        <Text style={styles.activityTime}>{time}</Text>
+      </View>
     </View>
   );
 });
 
+const parseDateParts = (dateStr: string) => {
+  if (!dateStr) return { day: '--', month: '' };
+  const parts = dateStr.trim().split(' ');
+  if (parts.length >= 2) {
+    return { day: parts[0], month: parts[1].toUpperCase() };
+  }
+  return { day: dateStr, month: '' };
+};
+
 const EventCard = React.memo(({ title, date, color }: any) => {
-  const { theme } = useTheme();
-  const styles = getStyles(theme);
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
+  const dateParts = parseDateParts(date);
+
   return (
     <View style={[styles.eventCard, { borderLeftColor: color }]}>
-      <View style={[styles.eventAccent, { backgroundColor: color + '15' }]}>
-        <Ionicons name="calendar" size={16} color={color} />
+      <View style={[styles.eventDateChip, { backgroundColor: color + (isDarkMode ? '25' : '12') }]}>
+        <Text style={[styles.eventDateDay, { color }]}>{dateParts.day}</Text>
+        {dateParts.month ? <Text style={[styles.eventDateMonth, { color }]}>{dateParts.month}</Text> : null}
       </View>
       <View style={styles.eventCardContent}>
         <Text style={styles.eventTitle} numberOfLines={2}>{title}</Text>
@@ -671,19 +772,30 @@ const EventCard = React.memo(({ title, date, color }: any) => {
           <Text style={styles.eventDateText}>{date}</Text>
         </View>
       </View>
+      <View style={[styles.eventIconBadge, { backgroundColor: color + (isDarkMode ? '20' : '10') }]}>
+        <Ionicons name="chevron-forward-outline" size={14} color={color} />
+      </View>
     </View>
   );
 });
 
 // MetricCard: value=null → shows "—" with a "No data" label
 const MetricCard = React.memo(({ title, value, trend, icon, color }: any) => {
-  const { theme } = useTheme();
-  const styles = getStyles(theme);
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   const hasValue = value !== null && value !== undefined;
   return (
-    <View style={styles.metricCard}>
-      <View style={[styles.metricIconBox, { backgroundColor: color + '18' }]}>
-        <Ionicons name={icon} size={18} color={color} />
+    <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.metricCard}>
+      <View style={styles.metricHeaderRow}>
+        <View style={[styles.metricIconBox, { backgroundColor: color + (isDarkMode ? '25' : '15') }]}>
+          <Ionicons name={icon} size={18} color={color} />
+        </View>
+        {trend ? (
+          <View style={[styles.trendBadge, { backgroundColor: color + (isDarkMode ? '20' : '12') }]}>
+            <Ionicons name="trending-up" size={10} color={color} style={{ marginRight: 2 }} />
+            <Text style={[styles.trendText, { color }]}>{trend}</Text>
+          </View>
+        ) : null}
       </View>
 
       <View style={styles.metricContentCenter}>
@@ -694,43 +806,51 @@ const MetricCard = React.memo(({ title, value, trend, icon, color }: any) => {
         {!hasValue && <Text style={styles.metricNoData}>No data</Text>}
       </View>
 
-      {trend ? (
-        <View style={[styles.trendBadge, { backgroundColor: color + '12' }]}>
-          <Text style={[styles.trendText, { color }]}>{trend}</Text>
-        </View>
-      ) : <View style={{ height: 18 }} />}
-    </View>
+      <View style={styles.sparklineRow}>
+        <View style={[styles.sparkBar, { height: 6, backgroundColor: color, opacity: 0.3 }]} />
+        <View style={[styles.sparkBar, { height: 10, backgroundColor: color, opacity: 0.5 }]} />
+        <View style={[styles.sparkBar, { height: 8, backgroundColor: color, opacity: 0.4 }]} />
+        <View style={[styles.sparkBar, { height: 14, backgroundColor: color, opacity: 0.9 }]} />
+        <View style={[styles.sparkBar, { height: 11, backgroundColor: color, opacity: 0.7 }]} />
+      </View>
+    </Animated.View>
   );
 });
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   container: { flex: 1 },
   scrollContent: { paddingBottom: 40 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background },
   loadingText: { marginTop: 12, color: theme.primary, fontSize: 14, fontWeight: '500' },
-  emptyText: { textAlign: 'center', color: theme.subtext, fontSize: 13, paddingTop: 8 },
+  emptyText: { textAlign: 'center', color: theme.subtext, fontSize: 12, paddingTop: 4 },
+  emptyStateTitle: { fontSize: 14, fontWeight: '700', color: theme.text, marginTop: 8 },
+  emptyIconCircle: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
   emptyStateContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 24 },
   cardContainer: {
     backgroundColor: theme.surface,
-    borderRadius: 16,
-    padding: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+    borderRadius: 20,
+    padding: 6,
     borderWidth: 1,
     borderColor: theme.border,
+    ...(isDarkMode
+      ? {}
+      : {
+          shadowColor: '#0F172A',
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.05,
+          shadowRadius: 14,
+          elevation: 3,
+        }),
   },
 
-  // Used for edge-to-edge feeling but standard padding
+  // Used for standard section padding
   sectionPadding: {
     paddingHorizontal: 16,
     marginTop: 20,
   },
 
-  // Header (no background box for edge-to-edge light aesthetic)
+  // Header (DO NOT MODIFY structure/styles that break header layout)
   globalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -739,95 +859,173 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 8,
-    zIndex: 10
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+    zIndex: 10,
+    ...(isDarkMode
+      ? {}
+      : {
+          shadowColor: '#0F172A',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.05,
+          shadowRadius: 10,
+          elevation: 4,
+        }),
   },
   menuHandle: { paddingRight: 4, paddingVertical: 10 },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '500',
+    fontSize: 17,
+    fontWeight: '700',
     color: theme.primary,
     flex: 1,
     textAlign: 'center',
   },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 20 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   iconBtnTransparent: {
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#9F7AEA', // Soft purple
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#818CF8',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 4,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: '#FFF', fontWeight: '700', fontSize: 15 },
   headerAvatarImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     marginLeft: 4,
   },
 
-  // Hero Banner
+  // Hero Banner (Redesigned)
   heroBanner: {
-    borderRadius: 20,
-    paddingVertical: 32,
-    paddingHorizontal: 20,
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
-    elevation: 10,
+    borderRadius: 24,
+    paddingVertical: 20,
+    paddingHorizontal: 18,
     overflow: 'hidden',
+    minHeight: 185,
+    justifyContent: 'space-between',
+    ...(isDarkMode
+      ? { borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }
+      : {
+          shadowColor: '#4338CA',
+          shadowOffset: { width: 0, height: 12 },
+          shadowOpacity: 0.28,
+          shadowRadius: 22,
+          elevation: 10,
+        }),
+  },
+  heroContent: {
+    zIndex: 2,
+    gap: 14,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   heroBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderColor: 'rgba(255,255,255,0.28)',
+    borderWidth: 1,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
-    marginBottom: 14,
   },
   heroBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.95)',
-    letterSpacing: 0.5,
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  heroTimePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 16,
+  },
+  heroGreetingTag: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.9)',
+  },
+  heroMainRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  heroTextCol: {
+    flex: 1,
+    paddingRight: 10,
   },
   heroTitle: {
-    fontSize: 26,
+    fontSize: 23,
     fontWeight: '800',
-    color: '#fff',
-    marginBottom: 8,
-    zIndex: 2,
+    color: '#FFFFFF',
+    marginBottom: 6,
     letterSpacing: -0.5,
-    lineHeight: 32,
+    lineHeight: 29,
   },
   heroSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.75)',
-    lineHeight: 20,
-    zIndex: 2,
-    maxWidth: '85%',
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.82)',
+    lineHeight: 17,
   },
-  heroContent: {
-    zIndex: 2,
+  heroGraphicBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroGlassCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+  },
+  heroStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(255, 255, 255, 0.22)',
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginTop: 2,
+  },
+  heroStatChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  heroStatChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  heroStatDivider: {
+    width: 1,
+    height: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
   },
 
   // Metric Cards
@@ -839,32 +1037,38 @@ const getStyles = (theme: any) => StyleSheet.create({
   metricCard: {
     flex: 1,
     backgroundColor: theme.surface,
-    borderRadius: 20,
+    borderRadius: 18,
     padding: 12,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: '#64748B',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
     borderWidth: 1,
     borderColor: theme.border,
-    minHeight: 130,
-    paddingVertical: 14,
+    minHeight: 135,
+    justifyContent: 'space-between',
+    ...(isDarkMode
+      ? {}
+      : {
+          shadowColor: '#0F172A',
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.05,
+          shadowRadius: 10,
+          elevation: 3,
+        }),
+  },
+  metricHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   metricIconBox: {
-    width: 34,
-    height: 34,
-    borderRadius: 11,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 6,
   },
   metricContentCenter: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
-    flex: 1,
+    marginVertical: 6,
   },
   metricValue: {
     fontSize: 22,
@@ -874,7 +1078,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   metricValueEmpty: {
     color: theme.subtext,
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '300',
   },
   metricNoData: {
@@ -882,25 +1086,36 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.subtext,
     marginTop: 2,
     fontWeight: '500',
-    opacity: 0.7,
   },
   metricTitle: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: '800',
     color: theme.subtext,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginTop: 3,
+    marginTop: 2,
   },
   trendBadge: {
-    marginTop: 6,
-    paddingHorizontal: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
     paddingVertical: 3,
     borderRadius: 8,
   },
   trendText: {
     fontSize: 9,
     fontWeight: '700',
+  },
+  sparklineRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 3,
+    height: 14,
+    marginTop: 4,
+  },
+  sparkBar: {
+    width: 4,
+    borderRadius: 2,
   },
 
   // Section Headers
@@ -912,7 +1127,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   sectionTitleDot: {
     width: 4,
-    height: 18,
+    height: 16,
     borderRadius: 2,
     backgroundColor: theme.primary,
   },
@@ -925,53 +1140,70 @@ const getStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.surface,
     borderRadius: 20,
     padding: 16,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 8,
     borderWidth: 1,
     borderColor: theme.border,
+    ...(isDarkMode
+      ? {}
+      : {
+          shadowColor: '#0F172A',
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.05,
+          shadowRadius: 14,
+          elevation: 4,
+        }),
   },
   quickActionsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 },
   quickActionCard: {
     width: '48%',
     backgroundColor: theme.background,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: theme.border,
     paddingVertical: 14,
     paddingHorizontal: 12,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
   },
-  quickActionTouchable: { alignItems: 'flex-start' },
-  quickActionIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
+  quickActionTouchable: { flex: 1 },
+  quickActionHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 10,
   },
-  quickActionTitle: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 3 },
-  quickActionDesc: { fontSize: 10, color: theme.subtext, lineHeight: 14 },
+  quickActionIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quickActionArrowBox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  quickActionTitle: { fontSize: 14, fontWeight: '700', color: theme.text, marginBottom: 2 },
+  quickActionDesc: { fontSize: 11, color: theme.subtext, lineHeight: 15 },
 
   // Activity List
   activityBox: {
     backgroundColor: theme.surface,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: theme.border,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 6,
     overflow: 'hidden',
+    ...(isDarkMode
+      ? {}
+      : {
+          shadowColor: '#0F172A',
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.05,
+          shadowRadius: 14,
+          elevation: 4,
+        }),
   },
   activityItem: {
     flexDirection: 'row',
@@ -984,12 +1216,22 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderBottomColor: theme.border,
   },
   activityAvatarBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+  },
+  activityStatusDot: {
+    position: 'absolute',
+    bottom: 0,
+    right: 10,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: theme.surface,
   },
   activityInitial: {
     fontSize: 15,
@@ -997,59 +1239,114 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   activityContent: { flex: 1, justifyContent: 'center' },
   activityName: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 2 },
-  activityAction: { fontSize: 11, color: theme.subtext, lineHeight: 15 },
+  activityActionRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  activityAction: { fontSize: 11, color: theme.subtext },
+  activityTimeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: theme.background, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
   activityTime: { fontSize: 11, color: theme.subtext, fontWeight: '600' },
 
-  // Event Card
+  // Event Card (Timeline Style)
   eventCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.surface,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 12,
     marginBottom: 8,
     borderLeftWidth: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
     borderWidth: 1,
     borderColor: theme.border,
     gap: 12,
+    ...(isDarkMode
+      ? {}
+      : {
+          shadowColor: '#0F172A',
+          shadowOffset: { width: 0, height: 3 },
+          shadowOpacity: 0.04,
+          shadowRadius: 8,
+          elevation: 2,
+        }),
   },
-  eventAccent: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+  eventDateChip: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  eventDateDay: {
+    fontSize: 15,
+    fontWeight: '800',
+    lineHeight: 18,
+  },
+  eventDateMonth: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   eventCardContent: { flex: 1 },
   eventTitle: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 4 },
   eventDateContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   eventDateText: { fontSize: 11, color: theme.subtext },
+  eventIconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
   // Approvals
   approvalsContainer: {
     backgroundColor: theme.surface,
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: theme.border,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 6,
+    ...(isDarkMode
+      ? {}
+      : {
+          shadowColor: '#0F172A',
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.05,
+          shadowRadius: 14,
+          elevation: 4,
+        }),
   },
-  approvalCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: theme.border },
+  approvalCard: { flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: theme.border },
+  approvalIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
   approvalInfo: { flex: 1 },
-  approvalRequest: { fontSize: 14, fontWeight: '700', color: theme.text },
+  approvalRequest: { fontSize: 13, fontWeight: '700', color: theme.text },
   approvalBy: { fontSize: 11, color: theme.subtext, marginTop: 2, fontWeight: '500' },
-  approvalActions: { flexDirection: 'row', gap: 10 },
-  approveBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: '#DCFCE7', alignItems: 'center', justifyContent: 'center' },
-  rejectBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center' },
+  approvalActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  approveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: isDarkMode ? '#065F4640' : '#DCFCE7',
+  },
+  approveBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#10B981',
+  },
+  rejectBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: isDarkMode ? '#991B1B40' : '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   // Theme Modal Styles
   modalOverlay: {
@@ -1065,13 +1362,13 @@ const getStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.surface,
     borderRadius: 20,
     padding: 20,
+    borderWidth: 1,
+    borderColor: theme.border,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.15,
     shadowRadius: 24,
     elevation: 8,
-    borderWidth: 1,
-    borderColor: theme.border,
   },
   modalTitle: {
     fontSize: 16,
