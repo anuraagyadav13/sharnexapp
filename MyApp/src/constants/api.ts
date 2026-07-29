@@ -25,13 +25,37 @@ const expoExtra = getExpoExtra();
 // Override this value when using a physical device or custom backend host.
 // For Android emulator use 10.0.2.2, for iOS simulator use localhost.
 const API_HOST_OVERRIDE = '';
-const API_HOST =
-  expoExtra.API_HOST ||
-  API_HOST_OVERRIDE ||
-  (Platform.OS === 'android' ? '10.0.2.2' : 'localhost');
-const API_PORT = expoExtra.API_PORT ?? '3000';
 
-export const API_BASE_URL = 'https://sharnex.com/api';
+/**
+ * Dynamic API Base URL Resolution for Dev & Production Environments
+ * Priority:
+ * 1. process.env.EXPO_PUBLIC_API_URL or process.env.API_BASE_URL
+ * 2. process.env.EXPO_PUBLIC_API_HOST & EXPO_PUBLIC_API_PORT
+ * 3. Fallback Hosted Production URL (https://www.sharnex.com/api)
+ */
+const DEFAULT_PROD_URL = 'https://www.sharnex.com/api';
+
+const resolveBaseUrl = (): string => {
+  const envUrl = process.env.EXPO_PUBLIC_API_URL || process.env.API_BASE_URL;
+  if (envUrl && envUrl.trim().length > 0) {
+    return envUrl.trim();
+  }
+
+  const envHost = process.env.EXPO_PUBLIC_API_HOST || expoExtra.API_HOST || API_HOST_OVERRIDE;
+  const envPort = process.env.EXPO_PUBLIC_API_PORT || expoExtra.API_PORT || '3000';
+
+  if (envHost && envHost.trim().length > 0) {
+    const host = envHost.trim();
+    if (host.startsWith('http://') || host.startsWith('https://')) {
+      return host.endsWith('/api') ? host : `${host}/api`;
+    }
+    return `http://${host}:${envPort}/api`;
+  }
+
+  return DEFAULT_PROD_URL;
+};
+
+export const API_BASE_URL = resolveBaseUrl();
 export const ENDPOINTS = {
   AUTH: {
     LOGIN: '/auth/login',

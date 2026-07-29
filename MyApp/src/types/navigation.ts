@@ -106,4 +106,16 @@ export type RootStackParamList = {
   PrincipalEditClass: { classId: string; classData?: any };
   PrincipalEquipment: undefined;
   PrincipalLibrary: undefined;
+
+  // Principal Bus Tracking Module Screens
+  BusDashboard: undefined;
+  FleetTracking: undefined;
+  AddVehicle: undefined;
+  RouteManagement: undefined;
+  RouteConfiguration: { routeId?: string } | undefined;
+  Schedules: undefined;
+  AddSchedule: undefined;
+  DriverManagement: undefined;
+  AddDriver: undefined;
+  EnrollStudent: undefined;
 };

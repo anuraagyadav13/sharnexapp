@@ -13,6 +13,8 @@ import {
   Image,
   RefreshControl,
   Keyboard,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -28,9 +30,9 @@ import teacherService from '../../services/teacherService';
 import principalService from '../../services/principalService';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
-import { launchImageLibrary } from 'react-native-image-picker';
-import { ActivityIndicator, Alert } from 'react-native';
+import { Asset, launchImageLibrary } from 'react-native-image-picker';
 import axios from 'axios';
+import { ImagePickerModal } from '../../components/common/ImagePickerModal';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AccountSettings'>;
 
@@ -49,11 +51,11 @@ const InputField = ({
   secureTextEntry,
 }: any) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   return (
     <View style={styles.fieldContainer}>
       <View style={styles.labelRow}>
-        <Ionicons name={labelIcon} size={12} color={theme.primary} />
+        <Ionicons name={labelIcon} size={13} color={theme.primary} />
         <Text style={styles.labelText}>{label}</Text>
       </View>
       <View
@@ -62,12 +64,14 @@ const InputField = ({
         {prefixComponent ? (
           prefixComponent
         ) : (
-          <Ionicons
-            name={inputIcon}
-            size={16}
-            color={theme.subtext}
-            style={[styles.inputLeftIcon, multiline && { marginTop: 14 }]}
-          />
+          <View style={styles.iconBoxContainer}>
+            <Ionicons
+              name={inputIcon}
+              size={15}
+              color={theme.primary}
+              style={[styles.inputLeftIcon, multiline && { marginTop: 4 }]}
+            />
+          </View>
         )}
         <TextInput
           style={[styles.textInput, multiline && styles.textInputMultiline]}
@@ -103,8 +107,8 @@ const PreferenceToggle = ({
   value,
   onValueChange,
 }: any) => {
-  const { theme } = useTheme();
-  const styles = getStyles(theme);
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   return (
     <View style={styles.toggleCard}>
       <View style={{ flex: 1, paddingRight: 10 }}>
@@ -123,7 +127,7 @@ const PreferenceToggle = ({
 
 const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const { authState, updateUser } = useAuth();
   const role = authState.role?.toLowerCase() || '';
   const isTeacher = role === 'teacher';
@@ -147,10 +151,11 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
       : rollNo || 'Loading...';
 
   const [isDrawerOpen, setDrawerOpen] = useState(false);
-  const [showCalendar, setShowCalendar] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(
-    route.params?.targetTab || 'Personal Details',
+    route.params?.targetTab || 'Personal Details'
   );
+
+  // Profile data
   const [profileData, setProfileData] = useState({
     firstName: '',
     lastName: '',
@@ -162,40 +167,35 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
     biography: '',
   });
 
-  const [institutionData, setInstitutionData] = useState({
-    name: '',
-    schoolType: '',
-    affiliation: '',
-    phone: '',
-    email: '',
-    address: '',
-    plan: '',
-    totalStudents: 0,
-    totalStaff: 0,
-  });
-
-  const [sessions, setSessions] = useState<any[]>([]);
-
+  // professional info data
   const [profData, setProfData] = useState({
     employeeId: '',
     qualification: '',
     department: '',
     designation: '',
-    experience: '',
+    specialization: '',
     joiningDate: '',
-    bio: '',
   });
 
+  // institution data
+  const [institutionData, setInstitutionData] = useState({
+    name: '',
+    schoolType: '',
+    affiliation: '',
+    phone: '',
+    address: '',
+  });
+
+  // bank details data
   const [bankData, setBankData] = useState({
-    bankName: '',
     accountNumber: '',
-    accountHolderName: '',
-    accountType: '',
     ifscCode: '',
-    salaryPaymentMethod: '',
+    bankName: '',
+    branchName: '',
+    upiId: '',
   });
 
-  // parent data state
+  // parent data
   const [parentData, setParentData] = useState({
     name: '',
     relationship: '',
@@ -244,7 +244,6 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
       }
 
       if (isTeacher) {
-        // Run both fetches simultaneously
         const [personalResponse, profResponse] = await Promise.all([
           teacherService.getPersonalInfo(),
           teacherService.getProfile(),
@@ -278,131 +277,99 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
           qualification: profRaw.highestQualification || '',
           department: profRaw.department || '',
           designation: profRaw.designation || '',
-          experience: String(profRaw.yearsOfExperience ?? ''),
+          specialization: profRaw.specialization || '',
           joiningDate: profRaw.joiningDate ? new Date(profRaw.joiningDate).toLocaleDateString('en-GB') : '',
-          bio: profRaw.professionalBio || '',
         });
 
-        try {
-          const bankRes = await teacherService.getBankDetails();
-          const bData = bankRes.data?.data || bankRes.data || {};
+        const bankRes = await teacherService.getBankDetails().catch(() => null);
+        if (bankRes?.data?.data || bankRes?.data) {
+          const bank = bankRes.data.data || bankRes.data;
           setBankData({
-            bankName: bData.bankName || '',
-            accountNumber: bData.accountNumber || '',
-            accountHolderName: bData.accountHolderName || '',
-            accountType: bData.accountType || '',
-            ifscCode: bData.ifscCode || bData.ifsc || '',
-            salaryPaymentMethod: bData.salaryPaymentMethod || bData.paymentMethod || '',
+            accountNumber: bank.accountNumber || '',
+            ifscCode: bank.ifscCode || '',
+            bankName: bank.bankName || '',
+            branchName: bank.branchName || '',
+            upiId: bank.upiId || '',
           });
-        } catch (err) {
-          // ignore
         }
 
-        // Push to global context so header avatar updates immediately
-        updateUser({
-          name: personalRaw.name || authState.user?.name || '',
-          photoUrl: personalRaw.photoUrl || ''
-        });
       } else if (isInstitution) {
-        const [profileRes, institutionRes, sessionsRes] = await Promise.all([
-          principalService.getPersonalProfile(),
-          principalService.getInstitutionProfile(),
-          principalService.getSessions().catch(() => ({ data: { sessions: [] } })),
+        const [instProfileRes, sessionsRes] = await Promise.all([
+          principalService.getInstitutionProfile().catch(() => null),
+          principalService.getSessions().catch(() => null),
         ]);
 
-        const profileRaw = profileRes.data ?? {};
-        const institutionRaw = institutionRes.data ?? {};
+        const instRaw: any = (instProfileRes as any)?.data?.data || (instProfileRes as any)?.data || instProfileRes;
+        if (instRaw) {
+          setInstitutionData({
+            name: instRaw.name || '',
+            schoolType: instRaw.type || instRaw.schoolType || '',
+            affiliation: instRaw.board || instRaw.affiliation || '',
+            phone: instRaw.phone || '',
+            address: instRaw.address || '',
+          });
+          const adminName = instRaw.adminName || authState.user?.name || '';
+          const nameParts = adminName.trim().split(' ');
+          setProfileData(prev => ({
+            ...prev,
+            firstName: nameParts[0] || '',
+            lastName: nameParts.slice(1).join(' ') || '',
+            phone: instRaw.phone || prev.phone,
+            email: instRaw.email || authState.user?.email || prev.email,
+            address: instRaw.address || prev.address,
+          }));
+        }
 
-        const fullName = profileRaw.name || '';
-        const nameParts = fullName.trim().split(' ');
+        const sessList: any = (sessionsRes as any)?.data?.data || (sessionsRes as any)?.data || sessionsRes;
+        if (sessList && Array.isArray(sessList)) {
+          setSessions(sessList);
+        }
 
-        setProfileData({
-          firstName: nameParts[0] || '',
-          lastName: nameParts.slice(1).join(' ') || '',
-          phone: profileRaw.phone || '',
-          email: profileRaw.email || '',
-          dob: '',
-          address: profileRaw.address || '',
-          photo: profileRaw.photoUrl || '',
-          biography: profileRaw.biography || '',
-        });
-
-        setInstitutionData({
-          name: institutionRaw.name || '',
-          schoolType: institutionRaw.schoolType || '',
-          affiliation: institutionRaw.affiliation || '',
-          phone: institutionRaw.phone || '',
-          email: institutionRaw.email || '',
-          address: institutionRaw.address || '',
-          plan: institutionRaw.plan || '',
-          totalStudents: institutionRaw.totalStudents || 0,
-          totalStaff: institutionRaw.totalStaff || 0,
-        });
-
-        setSessions(sessionsRes.data?.sessions || []);
-
-        updateUser({
-          name: profileRaw.name || '',
-          photoUrl: profileRaw.photoUrl || '',
-        });
       } else {
-        const [profileRes, studentRes, parentRes, emergencyRes] = await Promise.all([
+        const [profileResponse, parentResponse] = await Promise.all([
           accountService.getProfile(),
-          accountService.getStudentInfo(),
-          accountService.getParentInfo(),
-          accountService.getEmergencyContact(),
+          accountService.getParentInfo().catch(() => null),
         ]);
 
-        const profileRaw = profileRes.data?.data ?? profileRes.data ?? {};
-        const studentRaw = studentRes.data?.data ?? studentRes.data ?? {};
-        const parentRaw = parentRes.data?.data ?? parentRes.data ?? {};
-        const emergencyRaw = emergencyRes.data?.data ?? emergencyRes.data ?? {};
-
-        const fullName = profileRaw.name || '';
+        const profileRaw = profileResponse.data?.data ?? profileResponse.data ?? {};
+        const fullName = profileRaw.name || authState.user?.name || '';
         const nameParts = fullName.trim().split(' ');
+
+        if (profileRaw.rollNumber) {
+          setRollNo(profileRaw.rollNumber);
+        }
+
+        let dobString = '';
+        if (profileRaw.dateOfBirth) {
+          dobString = new Date(profileRaw.dateOfBirth).toLocaleDateString('en-GB');
+        }
 
         setProfileData({
           firstName: nameParts[0] || '',
           lastName: nameParts.slice(1).join(' ') || '',
-          phone: profileRaw.phone || '',
-          email: profileRaw.email || '',
+          phone: profileRaw.phoneNumber || profileRaw.phone || '',
+          email: profileRaw.email || authState.user?.email || '',
+          dob: dobString,
           address: profileRaw.address || '',
-          photo: profileRaw.photoUrl || '',
-          dob: (() => {
-            const raw = studentRaw.dateOfBirth || '';
-            if (!raw) return '';
-            const parsed = new Date(raw);
-            return isNaN(parsed.getTime()) ? '' : parsed.toLocaleDateString('en-GB');
-          })(),
-          biography: '',
+          photo: profileRaw.avatarUrl || profileRaw.photo || '',
+          biography: profileRaw.bio || '',
         });
 
-        setRollNo(studentRaw.rollNo || '');
-
-        setParentData({
-          name: parentRaw.parentName || '',
-          relationship: parentRaw.parentRelationship || '',
-          email: parentRaw.parentEmail || '',
-          phone: parentRaw.parentPhone || '',
-          address: '',
-        });
-
-        setEmergencyData({
-          name: emergencyRaw.emergencyName || '',
-          relationship: emergencyRaw.emergencyRelationship || '',
-          email: emergencyRaw.emergencyEmail || '',
-          phone: emergencyRaw.emergencyPhone || '',
-        });
-
-        updateUser({
-          name: profileRaw.name || '',
-          photoUrl: profileRaw.photoUrl || '',
-        });
+        if (parentResponse?.data?.data || parentResponse?.data) {
+          const parentRaw = parentResponse.data.data || parentResponse.data;
+          setParentData({
+            name: parentRaw.parentName || parentRaw.name || '',
+            relationship: parentRaw.parentRelationship || parentRaw.relationship || '',
+            email: parentRaw.parentEmail || parentRaw.email || '',
+            phone: parentRaw.parentPhone || parentRaw.phone || '',
+            address: parentRaw.address || '',
+          });
+        }
       }
     } catch (error) {
-      console.error('[AccountSettings] Profile fetch failed', error);
+      console.error('[AccountSettings] Error fetching profile:', error);
     } finally {
-      if (!isRefresh) setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -410,23 +377,56 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
     Keyboard.dismiss();
     try {
       setIsLoading(true);
+      const fullName = `${profileData.firstName} ${profileData.lastName}`.trim();
 
-      if (isInstitution) {
-        await principalService.updatePersonalProfile({
-          name: `${profileData.firstName} ${profileData.lastName}`.trim(),
+      if (isTeacher) {
+        await teacherService.updatePersonalInfo({
+          name: fullName,
           phone: profileData.phone,
           address: profileData.address,
-          biography: profileData.biography,
         });
-      } else {
-        const payload = {
-          name: `${profileData.firstName} ${profileData.lastName}`.trim(),
+
+        updateUser({
+          name: fullName,
+          email: profileData.email,
+        });
+
+      } else if (isInstitution) {
+        await principalService.updateInstitutionProfile({
+          name: institutionData.name || fullName,
+          schoolType: institutionData.schoolType || '',
+          affiliation: institutionData.affiliation || '',
           phone: profileData.phone,
           address: profileData.address,
+        });
+
+        updateUser({
+          name: fullName,
+          email: profileData.email,
+        });
+
+      } else {
+        const payload: any = {
+          name: fullName,
+          phone: profileData.phone,
+          address: profileData.address,
+          bio: profileData.biography,
         };
 
-        if (isTeacher) {
-          await teacherService.updatePersonalInfo(payload);
+        if (profileData.dob) {
+          const parts = profileData.dob.split('/');
+          if (parts.length === 3) {
+            const isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}T00:00:00.000Z`;
+            payload.dateOfBirth = isoDate;
+          }
+        }
+
+        const isMockUser = authState.user?.id?.startsWith('usr_') || authState.user?.id === 'student123';
+        if (isMockUser) {
+          updateUser({
+            name: fullName,
+            email: profileData.email,
+          });
         } else {
           await accountService.updateProfile(payload);
         }
@@ -474,27 +474,28 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
     try {
       setIsLoading(true);
 
-      // Prepare payload to handle exactly what the backend expects
-      // Uneditable fields (employeeId, designation, joiningDate) are omitted to avoid "Unknown fields" validation errors!
       const payload: any = {
         department: profData.department,
-        yearsOfExperience: parseInt(profData.experience) || 0,
-        highestQualification: profData.qualification,
-        professionalBio: profData.bio,
+        qualification: profData.qualification,
+        specialization: profData.specialization,
       };
 
-      await apiClient.patch(ENDPOINTS.TEACHER.PROFILE, payload);
+      if (profData.joiningDate) {
+        const parts = profData.joiningDate.split('/');
+        if (parts.length === 3) {
+          payload.joiningDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+      }
 
+      await teacherService.updateProfile(payload);
       setTimeout(() => {
-        Alert.alert('Success', 'Professional Information updated successfully!', [
+        Alert.alert('Success', 'Professional details updated successfully.', [
           { text: 'OK', onPress: () => fetchProfile() }
         ]);
       }, 100);
-    } catch (e: any) {
-      console.error('[AccountSettings] Professional info update error:', e.response?.data || e.message || e);
-      const errData = e.response?.data?.message || e.response?.data || e.message;
-      const errMsg = Array.isArray(errData) ? errData.join(', ') : String(errData);
-      setTimeout(() => Alert.alert('Error', `Failed: ${errMsg}`), 100);
+    } catch (error) {
+      console.error('[AccountSettings] Professional details update error:', error);
+      setTimeout(() => Alert.alert('Error', 'Failed to update professional details.'), 100);
     } finally {
       setIsLoading(false);
     }
@@ -504,7 +505,16 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
     Keyboard.dismiss();
     try {
       setIsLoading(true);
-      await teacherService.updateBankDetails(bankData);
+
+      const payload = {
+        accountNumber: bankData.accountNumber,
+        ifscCode: bankData.ifscCode,
+        bankName: bankData.bankName,
+        branchName: bankData.branchName,
+        upiId: bankData.upiId,
+      };
+
+      await teacherService.updateBankDetails(payload);
       setTimeout(() => {
         Alert.alert('Success', 'Bank details updated successfully.', [
           { text: 'OK', onPress: () => fetchProfile() }
@@ -518,34 +528,46 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
     }
   };
 
-  const updatePreferences = async () => {
-    Keyboard.dismiss();
+  const updatePreferences = async (field: string, val: boolean) => {
     try {
-      setIsLoading(true);
+      let g = gradeNotif;
+      let a = assignNotif;
+      let c = classNotif;
+
+      if (field === 'grade') { setGradeNotif(val); g = val; }
+      if (field === 'assign') { setAssignNotif(val); a = val; }
+      if (field === 'class') { setClassNotif(val); c = val; }
+
       await accountService.updatePreferences({
-        gradeNotif,
-        assignNotif,
-        classNotif
+        gradeNotif: g,
+        assignNotif: a,
+        classNotif: c,
       });
-      setTimeout(() => Alert.alert('Success', 'Preferences updated successfully.'), 100);
     } catch (error) {
-      console.error('[AccountSettings] Preferences update error:', error);
-      setTimeout(() => Alert.alert('Error', 'Failed to update preferences.'), 100);
-    } finally {
-      setIsLoading(false);
+      console.error('[AccountSettings] Preferences error:', error);
     }
   };
 
   const changePassword = async () => {
     Keyboard.dismiss();
-    if (!passwordData.currentPassword || !passwordData.newPassword) {
-      Alert.alert('Error', 'Please enter your current and new password.');
+
+    if (!passwordData.currentPassword) {
+      Alert.alert('Validation Error', 'Please enter your current password.');
+      return;
+    }
+    if (!passwordData.newPassword) {
+      Alert.alert('Validation Error', 'Please enter a new password.');
+      return;
+    }
+    if (passwordData.newPassword.length < 8) {
+      Alert.alert('Validation Error', 'Password must be at least 8 characters long.');
       return;
     }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      Alert.alert('Error', 'New passwords do not match.');
+      Alert.alert('Validation Error', 'New password and confirm password do not match.');
       return;
     }
+
     try {
       setIsLoading(true);
       await accountService.changePassword({
@@ -562,6 +584,7 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
       setIsLoading(false);
     }
   };
+
   const saveParentInfo = async () => {
     Keyboard.dismiss();
     try {
@@ -574,12 +597,11 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
         parentPhone: parentData.phone,
       };
 
-      const response = await accountService.updateParentInfo(payload);
+      await accountService.updateParentInfo(payload);
       setTimeout(() => {
         Alert.alert('Success', 'Parent information updated successfully.');
       }, 100);
 
-      // Refresh the latest data from the backend
       fetchProfile();
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -598,30 +620,22 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
   const [assignNotif, setAssignNotif] = useState(true);
   const [classNotif, setClassNotif] = useState(true);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [isImagePickerModalOpen, setImagePickerModalOpen] = useState(false);
 
   const showPhotoOptions = () => {
     Keyboard.dismiss();
     setTimeout(() => {
       Alert.alert('Profile Photo', 'Choose an action', [
-        { text: 'Upload Photo', onPress: handlePhotoUpload },
+        { text: 'Upload Photo', onPress: () => setImagePickerModalOpen(true) },
         { text: 'Remove Photo', onPress: handlePhotoDelete, style: 'destructive' },
         { text: 'Cancel', style: 'cancel' }
       ]);
     }, 100);
   };
 
-  const handlePhotoUpload = async () => {
+  const handleSelectedAssetUpload = async (asset: Asset) => {
     try {
-      const result = await launchImageLibrary({
-        mediaType: 'photo',
-        quality: 0.8,
-      });
-
-      if (result.didCancel || !result.assets || result.assets.length === 0) {
-        return;
-      }
-
-      const asset = result.assets[0];
+      if (!asset || !asset.uri) return;
 
       const formData = new FormData();
       formData.append('photo', {
@@ -661,8 +675,12 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
       } else {
         await accountService.deletePhoto();
       }
+
+      updateUser({ photoUrl: '' });
+      setProfileData(prev => ({ ...prev, photo: '' }));
+
       setTimeout(() => {
-        Alert.alert('Success', 'Profile photo removed.', [
+        Alert.alert('Success', 'Profile photo removed successfully.', [
           { text: 'OK', onPress: () => fetchProfile() }
         ]);
       }, 100);
@@ -674,11 +692,23 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
     }
   };
 
+  // Calendar State
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(15);
+  const daysInMonth = Array.from({ length: 31 }, (_, i) => i + 1);
+
+  // Sessions State (Institution role)
+  const [sessions, setSessions] = useState<any[]>([]);
+
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor={theme.surface}
+        translucent={false}
+      />
 
-      {/* Header — role-conditional */}
+      {/* Untouched Student Header */}
       {role === 'student' ? (
         <StudentHeader
           title="Account Settings"
@@ -686,16 +716,14 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
           onMenuPress={() => setDrawerOpen(true)}
         />
       ) : (
+        /* Untouched Global Header */
         <View style={styles.globalHeader}>
-          <ScaleButton
+          <TouchableOpacity
             style={styles.menuHandle}
             onPress={() => setDrawerOpen(true)}
-            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-            activeOpacity={0.7}
-            scaleTo={0.85}
           >
-            <Ionicons name="menu" size={28} color={theme.text} />
-          </ScaleButton>
+            <Ionicons name="menu" size={28} color={theme.primary} />
+          </TouchableOpacity>
           <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>
             Account Settings
           </Text>
@@ -723,7 +751,7 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#6366F1']} />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.primary]} />}
       >
         {/* Page Title */}
         <Animated.View
@@ -757,17 +785,19 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
               )}
             </View>
             <View style={styles.cameraIconBadge}>
-              <Ionicons name="camera-outline" size={12} color="#4F46E5" />
+              <Ionicons name="camera" size={12} color="#FFFFFF" />
             </View>
           </ScaleButton>
+
           <View style={styles.heroInfo}>
             <Text style={styles.heroName}>
               {authState.user?.name || 'User Name'}
             </Text>
             <Text style={styles.heroDetails}>
-              {authState.user?.email || 'Email.com'} | ID: {idLabel}
+              {authState.user?.email || 'Email.com'} · ID: {idLabel}
             </Text>
             <View style={styles.heroStatusPill}>
+              <View style={styles.heroStatusDot} />
               <Text style={styles.heroStatusText}>Active {roleTitle}</Text>
             </View>
           </View>
@@ -778,9 +808,10 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
           entering={FadeInUp.delay(200).springify()}
           style={styles.formContainerCard}
         >
-          {/* Navigation Tabs */}
-          <View style={styles.tabsRow}>
+          {/* Navigation Tabs (Segmented Control Feel) */}
+          <View style={styles.tabsRowContainer}>
             <TouchableOpacity
+              activeOpacity={0.8}
               style={[
                 styles.tabBtn,
                 activeTab === 'Personal Details' && styles.tabActive,
@@ -789,8 +820,8 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
             >
               <Ionicons
                 name="person"
-                size={12}
-                color={activeTab === 'Personal Details' ? '#3B82F6' : '#9CA3AF'}
+                size={14}
+                color={activeTab === 'Personal Details' ? theme.primary : theme.subtext}
               />
               <Text
                 style={[
@@ -801,7 +832,9 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
                 Personal Details
               </Text>
             </TouchableOpacity>
+
             <TouchableOpacity
+              activeOpacity={0.8}
               style={[
                 styles.tabBtn,
                 activeTab === secondaryTabTitle && styles.tabActive,
@@ -810,8 +843,8 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
             >
               <Ionicons
                 name={isTeacher ? "briefcase" : "people"}
-                size={12}
-                color={activeTab === secondaryTabTitle ? '#3B82F6' : '#9CA3AF'}
+                size={14}
+                color={activeTab === secondaryTabTitle ? theme.primary : theme.subtext}
               />
               <Text
                 style={[
@@ -822,8 +855,10 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
                 {secondaryTabTitle}
               </Text>
             </TouchableOpacity>
+
             {isTeacher && (
               <TouchableOpacity
+                activeOpacity={0.8}
                 style={[
                   styles.tabBtn,
                   activeTab === 'Bank Details' && styles.tabActive,
@@ -832,8 +867,8 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
               >
                 <Ionicons
                   name="card"
-                  size={12}
-                  color={activeTab === 'Bank Details' ? '#3B82F6' : '#9CA3AF'}
+                  size={14}
+                  color={activeTab === 'Bank Details' ? theme.primary : theme.subtext}
                 />
                 <Text
                   style={[
@@ -845,7 +880,9 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
                 </Text>
               </TouchableOpacity>
             )}
+
             <TouchableOpacity
+              activeOpacity={0.8}
               style={[
                 styles.tabBtn,
                 activeTab === 'Preferences' && styles.tabActive,
@@ -854,8 +891,8 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
             >
               <Ionicons
                 name="options"
-                size={12}
-                color={activeTab === 'Preferences' ? '#3B82F6' : '#9CA3AF'}
+                size={14}
+                color={activeTab === 'Preferences' ? theme.primary : theme.subtext}
               />
               <Text
                 style={[
@@ -872,7 +909,9 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
             <>
               {/* Section Header */}
               <View style={styles.sectionHeader}>
-                <Ionicons name="school-outline" size={16} color="#3B82F6" />
+                <View style={styles.sectionIconBadge}>
+                  <Ionicons name="school-outline" size={16} color={theme.primary} />
+                </View>
                 <Text style={styles.sectionTitle}>{roleTitle} Information</Text>
               </View>
 
@@ -890,7 +929,7 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
                 }
               />
               <InputField
-                label="Last name"
+                label="Last Name"
                 labelIcon="person-outline"
                 inputIcon="person"
                 placeholder="Enter Last Name"
@@ -900,17 +939,21 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
                 }
               />
 
-              {/* Static Student ID Block */}
+              {/* Static Read-only Student ID Block */}
               <View style={styles.fieldContainer}>
                 <View style={styles.labelRow}>
-                  <Ionicons name="id-card-outline" size={12} color="#3B82F6" />
+                  <Ionicons name="id-card-outline" size={13} color={theme.primary} />
                   <Text style={styles.labelText}>{roleTitle} ID</Text>
+                  <View style={styles.lockedBadge}>
+                    <Ionicons name="lock-closed" size={10} color={theme.subtext} />
+                    <Text style={styles.lockedText}>Locked</Text>
+                  </View>
                 </View>
                 <View style={styles.staticFieldWrapper}>
                   <Ionicons
                     name="business"
                     size={16}
-                    color="#6B7280"
+                    color={theme.subtext}
                     style={{ marginRight: 10 }}
                   />
                   <Text style={styles.staticFieldText}>{idLabel}</Text>
@@ -918,7 +961,7 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
               </View>
 
               <InputField
-                label="Phone number"
+                label="Phone Number"
                 labelIcon="call-outline"
                 inputIcon="call"
                 placeholder="Enter Phone Number"
@@ -938,11 +981,12 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
                   setProfileData({ ...profileData, email: text })
                 }
               />
+
               <InputField
                 label="Date of Birth"
                 labelIcon="calendar-outline"
                 inputIcon="calendar"
-                placeholder="MM/DD/YYYY"
+                placeholder="DD/MM/YYYY"
                 value={profileData.dob}
                 rightIcon="calendar"
                 onRightIconPress={() => setShowCalendar(true)}
@@ -955,739 +999,579 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
                 label="Current Address"
                 labelIcon="location-outline"
                 inputIcon="home"
-                placeholder="Enter Full Address"
-                multiline
+                placeholder="Enter your full home address"
+                multiline={true}
                 value={profileData.address}
                 onChangeText={(text: string) =>
                   setProfileData({ ...profileData, address: text })
                 }
               />
 
-              {isInstitution && (
-                <InputField
-                  label="Biography"
-                  labelIcon="document-text-outline"
-                  inputIcon="document-text"
-                  placeholder="Enter professional biography"
-                  multiline
-                  value={profileData.biography}
-                  onChangeText={(text: string) =>
-                    setProfileData({ ...profileData, biography: text })
-                  }
-                />
-              )}
-
-              <View style={styles.divider} />
-
               {/* Action Buttons */}
               <View style={styles.buttonsRow}>
-                <ScaleButton
-                  activeOpacity={0.8}
-                  scaleTo={0.96}
-                  style={styles.cancelBtn}
-                  onPress={() => fetchProfile()}
-                >
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => fetchProfile()}>
                   <Text style={styles.cancelBtnText}>Cancel</Text>
-                </ScaleButton>
+                </TouchableOpacity>
+
                 <ScaleButton
-                  activeOpacity={0.9}
-                  scaleTo={0.96}
                   style={styles.saveBtn}
                   onPress={saveProfile}
                 >
-                  <Ionicons
-                    name="save"
-                    size={14}
-                    color="#FFFFFF"
-                    style={{ marginRight: 6 }}
-                  />
-                  <Text style={styles.saveBtnText} >Save Personal Details</Text>
+                  {isLoading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                      <Text style={styles.saveBtnText}>Save Profile</Text>
+                    </>
+                  )}
                 </ScaleButton>
               </View>
             </>
           ) : activeTab === secondaryTabTitle ? (
-            <>
-              {/* Parent/Professional Section Header */}
-              <View style={styles.sectionHeader}>
-                <Ionicons name={isTeacher ? "briefcase-outline" : "school-outline"} size={16} color="#3B82F6" />
-                <Text style={styles.sectionTitle}>{secondaryTabTitle}</Text>
-              </View>
-
-              <View style={styles.divider} />
-
-              {isInstitution ? (
-                <>
-                  <InputField
-                    label="Institution Name"
-                    labelIcon="business-outline"
-                    inputIcon="business"
-                    placeholder="Enter Institution Name"
-                    value={institutionData.name}
-                    onChangeText={(text: string) =>
-                      setInstitutionData({ ...institutionData, name: text })
-                    }
-                  />
-                  <InputField
-                    label="School Type"
-                    labelIcon="school-outline"
-                    inputIcon="school"
-                    placeholder="Enter School Type"
-                    value={institutionData.schoolType}
-                    onChangeText={(text: string) =>
-                      setInstitutionData({ ...institutionData, schoolType: text })
-                    }
-                  />
-                  <InputField
-                    label="Affiliation"
-                    labelIcon="ribbon-outline"
-                    inputIcon="ribbon"
-                    placeholder="Enter Affiliation (e.g. CBSE, ICSE)"
-                    value={institutionData.affiliation}
-                    onChangeText={(text: string) =>
-                      setInstitutionData({ ...institutionData, affiliation: text })
-                    }
-                  />
-                  <InputField
-                    label="Phone"
-                    labelIcon="call-outline"
-                    inputIcon="call"
-                    placeholder="Enter Phone Number"
-                    value={institutionData.phone}
-                    onChangeText={(text: string) =>
-                      setInstitutionData({ ...institutionData, phone: text })
-                    }
-                  />
-
-                  {/* Email */}
-                  <View style={styles.fieldContainer}>
-                    <View style={styles.labelRow}>
-                      <Ionicons name="mail-outline" size={12} color="#3B82F6" />
-                      <Text style={styles.labelText}>Email (Read Only)</Text>
-                    </View>
-                    <View style={styles.staticFieldWrapper}>
-                      <Ionicons name="mail" size={16} color="#6B7280" style={{ marginRight: 10 }} />
-                      <Text style={styles.staticFieldText}>{institutionData.email}</Text>
-                    </View>
+            isInstitution ? (
+              <>
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionIconBadge}>
+                    <Ionicons name="business-outline" size={16} color={theme.primary} />
                   </View>
+                  <Text style={styles.sectionTitle}>Institution Details</Text>
+                </View>
 
-                  <InputField
-                    label="Address"
-                    labelIcon="location-outline"
-                    inputIcon="home"
-                    placeholder="Enter Address"
-                    multiline
-                    value={institutionData.address}
-                    onChangeText={(text: string) =>
-                      setInstitutionData({ ...institutionData, address: text })
-                    }
-                  />
+                <View style={styles.divider} />
 
-                  {/* Plan */}
-                  <View style={styles.fieldContainer}>
-                    <View style={styles.labelRow}>
-                      <Ionicons name="card-outline" size={12} color="#3B82F6" />
-                      <Text style={styles.labelText}>Plan (Read Only)</Text>
-                    </View>
-                    <View style={styles.staticFieldWrapper}>
-                      <Ionicons name="card" size={16} color="#6B7280" style={{ marginRight: 10 }} />
-                      <Text style={styles.staticFieldText}>{institutionData.plan}</Text>
-                    </View>
-                  </View>
+                <InputField
+                  label="Institution Name"
+                  labelIcon="business-outline"
+                  inputIcon="business"
+                  placeholder="School / College Name"
+                  value={institutionData.name}
+                  onChangeText={(text: string) =>
+                    setInstitutionData({ ...institutionData, name: text })
+                  }
+                />
 
-                  {/* Total Students */}
-                  <View style={styles.fieldContainer}>
-                    <View style={styles.labelRow}>
-                      <Ionicons name="people-outline" size={12} color="#3B82F6" />
-                      <Text style={styles.labelText}>Total Students (Read Only)</Text>
-                    </View>
-                    <View style={styles.staticFieldWrapper}>
-                      <Ionicons name="people" size={16} color="#6B7280" style={{ marginRight: 10 }} />
-                      <Text style={styles.staticFieldText}>{String(institutionData.totalStudents)}</Text>
-                    </View>
-                  </View>
+                <InputField
+                  label="School Type"
+                  labelIcon="school-outline"
+                  inputIcon="school"
+                  placeholder="e.g. Higher Secondary, K-12"
+                  value={institutionData.schoolType}
+                  onChangeText={(text: string) =>
+                    setInstitutionData({ ...institutionData, schoolType: text })
+                  }
+                />
 
-                  {/* Total Staff */}
-                  <View style={styles.fieldContainer}>
-                    <View style={styles.labelRow}>
-                      <Ionicons name="people-outline" size={12} color="#3B82F6" />
-                      <Text style={styles.labelText}>Total Staff (Read Only)</Text>
-                    </View>
-                    <View style={styles.staticFieldWrapper}>
-                      <Ionicons name="people" size={16} color="#6B7280" style={{ marginRight: 10 }} />
-                      <Text style={styles.staticFieldText}>{String(institutionData.totalStaff)}</Text>
-                    </View>
-                  </View>
+                <InputField
+                  label="Affiliation / Board"
+                  labelIcon="ribbon-outline"
+                  inputIcon="ribbon"
+                  placeholder="e.g. CBSE, ICSE, State Board"
+                  value={institutionData.affiliation}
+                  onChangeText={(text: string) =>
+                    setInstitutionData({ ...institutionData, affiliation: text })
+                  }
+                />
 
-                  <View style={styles.divider} />
+                <InputField
+                  label="Contact Phone"
+                  labelIcon="call-outline"
+                  inputIcon="call"
+                  placeholder="Institution Contact Number"
+                  value={institutionData.phone}
+                  onChangeText={(text: string) =>
+                    setInstitutionData({ ...institutionData, phone: text })
+                  }
+                />
 
-                  <View style={styles.buttonsRow}>
-                    <ScaleButton
-                      activeOpacity={0.8}
-                      scaleTo={0.96}
-                      style={styles.cancelBtn}
-                      onPress={() => fetchProfile()}
-                    >
-                      <Text style={styles.cancelBtnText}>Cancel</Text>
-                    </ScaleButton>
-                    <ScaleButton
-                      activeOpacity={0.9}
-                      scaleTo={0.96}
-                      style={styles.saveBtn}
-                      onPress={saveInstitutionInfo}
-                    >
-                      <Ionicons name="save" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
-                      <Text style={styles.saveBtnText}>Save Institution Info</Text>
-                    </ScaleButton>
-                  </View>
-                </>
-              ) : isTeacher ? (
-                <>
-                  <InputField
-                    label="Employee ID (Read Only)"
-                    labelIcon="id-card-outline"
-                    inputIcon="barcode-outline"
-                    placeholder="Enter Employee ID"
-                    value={profData.employeeId}
-                    editable={false}
-                    onChangeText={(text: string) =>
-                      setProfData({ ...profData, employeeId: text })
-                    }
-                  />
-                  <InputField
-                    label="Department"
-                    labelIcon="business-outline"
-                    inputIcon="body"
-                    placeholder="Enter Department"
-                    value={profData.department}
-                    onChangeText={(text: string) =>
-                      setProfData({ ...profData, department: text })
-                    }
-                  />
-                  <InputField
-                    label="Highest Qualification"
-                    labelIcon="school-outline"
-                    inputIcon="document-text"
-                    placeholder="Enter Qualification"
-                    value={profData.qualification}
-                    onChangeText={(text: string) =>
-                      setProfData({ ...profData, qualification: text })
-                    }
-                  />
-                  <InputField
-                    label="Designation (Read Only)"
-                    labelIcon="star-outline"
-                    inputIcon="person"
-                    placeholder="Enter Designation"
-                    value={profData.designation}
-                    editable={false}
-                    onChangeText={(text: string) =>
-                      setProfData({ ...profData, designation: text })
-                    }
-                  />
-                  <InputField
-                    label="Years of Experience"
-                    labelIcon="time-outline"
-                    inputIcon="briefcase-outline"
-                    placeholder="Enter Years of Experience"
-                    value={profData.experience}
-                    onChangeText={(text: string) =>
-                      setProfData({ ...profData, experience: text })
-                    }
-                  />
-                  <InputField
-                    label="Joining Date (Read Only)"
-                    labelIcon="calendar-outline"
-                    inputIcon="today-outline"
-                    placeholder="Enter Joining Date"
-                    value={profData.joiningDate}
-                    editable={false}
-                    onChangeText={(text: string) =>
-                      setProfData({ ...profData, joiningDate: text })
-                    }
-                  />
-                  <InputField
-                    label="Professional Bio"
-                    labelIcon="information-circle-outline"
-                    inputIcon="document-text-outline"
-                    placeholder="Enter Professional Bio"
-                    multiline
-                    value={profData.bio}
-                    onChangeText={(text: string) =>
-                      setProfData({ ...profData, bio: text })
-                    }
-                  />
+                <InputField
+                  label="Campus Address"
+                  labelIcon="location-outline"
+                  inputIcon="home"
+                  placeholder="Full Campus Address"
+                  multiline={true}
+                  value={institutionData.address}
+                  onChangeText={(text: string) =>
+                    setInstitutionData({ ...institutionData, address: text })
+                  }
+                />
 
-                  <View style={styles.divider} />
-
-                  <View style={styles.buttonsRow}>
-                    <ScaleButton
-                      activeOpacity={0.8}
-                      scaleTo={0.96}
-                      style={styles.cancelBtn}
-                      onPress={() => fetchProfile()}
-                    >
-                      <Text style={styles.cancelBtnText}>Cancel</Text>
-                    </ScaleButton>
-                    <ScaleButton
-                      activeOpacity={0.9}
-                      scaleTo={0.96}
-                      style={styles.saveBtn}
-                      onPress={saveProfDetails}
-                    >
-                      <Ionicons
-                        name="save"
-                        size={14}
-                        color="#FFFFFF"
-                        style={{ marginRight: 6 }}
-                      />
-                      <Text style={styles.saveBtnText}>Save Info</Text>
-                    </ScaleButton>
-                  </View>
-                </>
-              ) : (
-                <>
-
-                  <InputField
-                    label="Parent/Guardian Name"
-                    labelIcon="person-outline"
-                    inputIcon="person"
-                    placeholder="Enter Full Name"
-                    value={parentData.name}
-                    onChangeText={(text: string) =>
-                      setParentData({ ...parentData, name: text })
-                    }
-                  />
-                  <InputField
-                    label="Relationship"
-                    labelIcon="people-outline"
-                    inputIcon="person"
-                    placeholder="Enter Relationship"
-                    value={parentData.relationship}
-                    onChangeText={(text: string) =>
-                      setParentData({ ...parentData, relationship: text })
-                    }
-                  />
-                  <InputField
-                    label="Email Address"
-                    labelIcon="mail-outline"
-                    inputIcon="mail"
-                    placeholder="Enter Email Address"
-                    value={parentData.email}
-                    onChangeText={(text: string) =>
-                      setParentData({ ...parentData, email: text })
-                    }
-                  />
-                  <InputField
-                    label="Phone number"
-                    labelIcon="call-outline"
-                    inputIcon="call"
-                    placeholder="Enter Phone Number"
-                    value={parentData.phone}
-                    onChangeText={(text: string) =>
-                      setParentData({ ...parentData, phone: text })
-                    }
-                  />
-                  <InputField
-                    label="Current Address"
-                    labelIcon="location-outline"
-                    inputIcon="home"
-                    placeholder="Enter Address"
-                    multiline
-                    value={parentData.address}
-                    onChangeText={(text: string) =>
-                      setParentData({ ...parentData, address: text })
-                    }
-                  />
-
-                  {/* Emergency Section Header */}
-                  <View style={[styles.sectionHeader, { paddingTop: 8 }]}>
-                    <Ionicons name="call-outline" size={16} color="#3B82F6" />
-                    <Text style={styles.sectionTitle}>
-                      Emergency Contact Information
-                    </Text>
-                  </View>
-
-                  <View style={styles.divider} />
-
-                  <InputField
-                    label="Emergency Contact Name"
-                    labelIcon="person-outline"
-                    inputIcon="person"
-                    placeholder="Enter Name"
-                    value={emergencyData.name}
-                    onChangeText={(text: string) =>
-                      setEmergencyData({ ...emergencyData, name: text })
-                    }
-                  />
-                  <InputField
-                    label="Relationship"
-                    labelIcon="people-outline"
-                    inputIcon="person"
-                    placeholder="Enter Relationship"
-                    value={emergencyData.relationship}
-                    onChangeText={(text: string) =>
-                      setEmergencyData({ ...emergencyData, relationship: text })
-                    }
-                  />
-                  <InputField
-                    label="Email Address"
-                    labelIcon="mail-outline"
-                    inputIcon="mail"
-                    placeholder="Enter Email Address"
-                    value={emergencyData.email}
-                    onChangeText={(text: string) =>
-                      setEmergencyData({ ...emergencyData, email: text })
-                    }
-                  />
-                  <InputField
-                    label="Phone number"
-                    labelIcon="call-outline"
-                    inputIcon="call"
-                    placeholder="Enter Phone Number"
-                    value={emergencyData.phone}
-                    onChangeText={(text: string) =>
-                      setEmergencyData({ ...emergencyData, phone: text })
-                    }
-                  />
-                </>
-              )}
-
-              <View style={styles.divider} />
-
-              {/* Action Buttons */}
-              {!isTeacher && !isInstitution && (
                 <View style={styles.buttonsRow}>
-                  <ScaleButton
-                    activeOpacity={0.8}
-                    scaleTo={0.96}
-                    style={styles.cancelBtn}
-                    onPress={() => fetchProfile()}
-                  >
+                  <TouchableOpacity style={styles.cancelBtn} onPress={() => fetchProfile()}>
                     <Text style={styles.cancelBtnText}>Cancel</Text>
-                  </ScaleButton>
-                  <ScaleButton
-                    activeOpacity={0.9}
-                    scaleTo={0.96}
-                    style={styles.saveBtn}
-                    onPress={saveParentInfo}
-                  >
-                    <Ionicons
-                      name="save"
-                      size={14}
-                      color="#FFFFFF"
-                      style={{ marginRight: 6 }}
-                    />
-                    <Text style={styles.saveBtnText}>
-                      Save {secondaryTabTitle}
-                    </Text>
+                  </TouchableOpacity>
+
+                  <ScaleButton style={styles.saveBtn} onPress={saveInstitutionInfo}>
+                    {isLoading ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                        <Text style={styles.saveBtnText}>Save Institution</Text>
+                      </>
+                    )}
                   </ScaleButton>
                 </View>
-              )}
-            </>
+
+                {/* Active Login Sessions */}
+                <View style={[styles.sectionHeader, { marginTop: 24 }]}>
+                  <View style={styles.sectionIconBadge}>
+                    <Ionicons name="desktop-outline" size={16} color={theme.primary} />
+                  </View>
+                  <Text style={styles.sectionTitle}>Active Login Sessions</Text>
+                </View>
+
+                <View style={styles.divider} />
+
+                {sessions.length > 0 ? (
+                  sessions.map((sess: any, idx: number) => {
+                    const isCurrent = sess.isCurrent || idx === 0;
+                    return (
+                      <View
+                        key={sess.id || idx}
+                        style={[
+                          styles.sessionCard,
+                          isCurrent && styles.currentSessionCard,
+                        ]}
+                      >
+                        <View style={styles.sessionHeaderRow}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Ionicons
+                              name={sess.device?.toLowerCase().includes('mobile') ? 'hardware-chip-outline' : 'desktop-outline'}
+                              size={18}
+                              color={isCurrent ? '#10B981' : theme.text}
+                            />
+                            <Text style={styles.sessionDeviceText}>
+                              {sess.device || sess.userAgent || 'Unknown Device'}
+                            </Text>
+                          </View>
+                          {isCurrent && (
+                            <View style={styles.currentBadge}>
+                              <Text style={styles.currentBadgeText}>Current Session</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={styles.sessionIpText}>
+                          IP: {sess.ipAddress || sess.ip || 'N/A'}
+                        </Text>
+                        <Text style={styles.sessionActiveText}>
+                          Last active: {sess.lastActive ? new Date(sess.lastActive).toLocaleString('en-GB') : 'Just now'}
+                        </Text>
+                      </View>
+                    );
+                  })
+                ) : (
+                  <Text style={styles.noSessionsText}>No active sessions found.</Text>
+                )}
+              </>
+            ) : isTeacher ? (
+              <>
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionIconBadge}>
+                    <Ionicons name="briefcase-outline" size={16} color={theme.primary} />
+                  </View>
+                  <Text style={styles.sectionTitle}>Professional Information</Text>
+                </View>
+
+                <View style={styles.divider} />
+
+                {/* Read-only Employee ID */}
+                <View style={styles.fieldContainer}>
+                  <View style={styles.labelRow}>
+                    <Ionicons name="card-outline" size={13} color={theme.primary} />
+                    <Text style={styles.labelText}>Employee ID</Text>
+                    <View style={styles.lockedBadge}>
+                      <Ionicons name="lock-closed" size={10} color={theme.subtext} />
+                      <Text style={styles.lockedText}>Locked</Text>
+                    </View>
+                  </View>
+                  <View style={styles.staticFieldWrapper}>
+                    <Ionicons name="barcode" size={16} color={theme.subtext} style={{ marginRight: 10 }} />
+                    <Text style={styles.staticFieldText}>{profData.employeeId || 'EMP2023-12A'}</Text>
+                  </View>
+                </View>
+
+                <InputField
+                  label="Highest Qualification"
+                  labelIcon="school-outline"
+                  inputIcon="school"
+                  placeholder="e.g. M.Sc, Ph.D, B.Ed"
+                  value={profData.qualification}
+                  onChangeText={(text: string) =>
+                    setProfData({ ...profData, qualification: text })
+                  }
+                />
+
+                <InputField
+                  label="Department"
+                  labelIcon="business-outline"
+                  inputIcon="business"
+                  placeholder="e.g. Science, Mathematics"
+                  value={profData.department}
+                  onChangeText={(text: string) =>
+                    setProfData({ ...profData, department: text })
+                  }
+                />
+
+                {/* Read-only Designation */}
+                <View style={styles.fieldContainer}>
+                  <View style={styles.labelRow}>
+                    <Ionicons name="ribbon-outline" size={13} color={theme.primary} />
+                    <Text style={styles.labelText}>Designation</Text>
+                    <View style={styles.lockedBadge}>
+                      <Ionicons name="lock-closed" size={10} color={theme.subtext} />
+                      <Text style={styles.lockedText}>Locked</Text>
+                    </View>
+                  </View>
+                  <View style={styles.staticFieldWrapper}>
+                    <Ionicons name="ribbon" size={16} color={theme.subtext} style={{ marginRight: 10 }} />
+                    <Text style={styles.staticFieldText}>{profData.designation || 'Senior Teacher'}</Text>
+                  </View>
+                </View>
+
+                <InputField
+                  label="Specialization"
+                  labelIcon="star-outline"
+                  inputIcon="star"
+                  placeholder="e.g. Organic Chemistry, Physics"
+                  value={profData.specialization}
+                  onChangeText={(text: string) =>
+                    setProfData({ ...profData, specialization: text })
+                  }
+                />
+
+                <InputField
+                  label="Date of Joining"
+                  labelIcon="calendar-outline"
+                  inputIcon="calendar"
+                  placeholder="DD/MM/YYYY"
+                  value={profData.joiningDate}
+                  rightIcon="calendar"
+                  onRightIconPress={() => setShowCalendar(true)}
+                  onChangeText={(text: string) =>
+                    setProfData({ ...profData, joiningDate: text })
+                  }
+                />
+
+                <View style={styles.buttonsRow}>
+                  <TouchableOpacity style={styles.cancelBtn} onPress={() => fetchProfile()}>
+                    <Text style={styles.cancelBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+
+                  <ScaleButton style={styles.saveBtn} onPress={saveProfDetails}>
+                    {isLoading ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                        <Text style={styles.saveBtnText}>Save Professional Info</Text>
+                      </>
+                    )}
+                  </ScaleButton>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionIconBadge}>
+                    <Ionicons name="people-outline" size={16} color={theme.primary} />
+                  </View>
+                  <Text style={styles.sectionTitle}>Parent / Guardian Details</Text>
+                </View>
+
+                <View style={styles.divider} />
+
+                <InputField
+                  label="Parent / Guardian Name"
+                  labelIcon="person-outline"
+                  inputIcon="person"
+                  placeholder="Enter Parent Name"
+                  value={parentData.name}
+                  onChangeText={(text: string) =>
+                    setParentData({ ...parentData, name: text })
+                  }
+                />
+
+                <InputField
+                  label="Relationship"
+                  labelIcon="heart-outline"
+                  inputIcon="heart"
+                  placeholder="Father / Mother / Guardian"
+                  value={parentData.relationship}
+                  onChangeText={(text: string) =>
+                    setParentData({ ...parentData, relationship: text })
+                  }
+                />
+
+                <InputField
+                  label="Parent Email Address"
+                  labelIcon="mail-outline"
+                  inputIcon="mail"
+                  placeholder="Enter Parent Email"
+                  value={parentData.email}
+                  onChangeText={(text: string) =>
+                    setParentData({ ...parentData, email: text })
+                  }
+                />
+
+                <InputField
+                  label="Parent Phone Number"
+                  labelIcon="call-outline"
+                  inputIcon="call"
+                  placeholder="Enter Parent Phone"
+                  value={parentData.phone}
+                  onChangeText={(text: string) =>
+                    setParentData({ ...parentData, phone: text })
+                  }
+                />
+
+                <View style={styles.buttonsRow}>
+                  <TouchableOpacity style={styles.cancelBtn} onPress={() => fetchProfile()}>
+                    <Text style={styles.cancelBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+
+                  <ScaleButton style={styles.saveBtn} onPress={saveParentInfo}>
+                    {isLoading ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                        <Text style={styles.saveBtnText}>Save Parent Info</Text>
+                      </>
+                    )}
+                  </ScaleButton>
+                </View>
+              </>
+            )
           ) : activeTab === 'Bank Details' && isTeacher ? (
             <>
               <View style={styles.sectionHeader}>
-                <Ionicons name="card" size={16} color="#3B82F6" />
+                <View style={styles.sectionIconBadge}>
+                  <Ionicons name="card-outline" size={16} color={theme.primary} />
+                </View>
                 <Text style={styles.sectionTitle}>Bank Account Details</Text>
               </View>
 
               <View style={styles.divider} />
 
               <InputField
-                label="Bank Name"
-                labelIcon="business-outline"
-                inputIcon="business"
-                placeholder="Enter Bank Name"
-                value={bankData.bankName}
-                onChangeText={(text: string) =>
-                  setBankData({ ...bankData, bankName: text })
-                }
-              />
-              <InputField
-                label="Account Holder Name"
-                labelIcon="person-outline"
-                inputIcon="person"
-                placeholder="Enter Account Holder Name"
-                value={bankData.accountHolderName}
-                onChangeText={(text: string) =>
-                  setBankData({ ...bankData, accountHolderName: text })
-                }
-              />
-              <InputField
                 label="Account Number"
-                labelIcon="keypad-outline"
-                inputIcon="list"
-                placeholder="Enter Account Number"
+                labelIcon="card-outline"
+                inputIcon="card"
+                placeholder="Enter Bank Account Number"
                 value={bankData.accountNumber}
                 onChangeText={(text: string) =>
                   setBankData({ ...bankData, accountNumber: text })
                 }
               />
+
               <InputField
                 label="IFSC Code"
                 labelIcon="barcode-outline"
-                inputIcon="code"
-                placeholder="Enter IFSC Code"
+                inputIcon="barcode"
+                placeholder="e.g. SBIN0001234"
                 value={bankData.ifscCode}
                 onChangeText={(text: string) =>
                   setBankData({ ...bankData, ifscCode: text })
                 }
               />
+
               <InputField
-                label="Account Type"
+                label="Bank Name"
+                labelIcon="business-outline"
+                inputIcon="business"
+                placeholder="e.g. State Bank of India"
+                value={bankData.bankName}
+                onChangeText={(text: string) =>
+                  setBankData({ ...bankData, bankName: text })
+                }
+              />
+
+              <InputField
+                label="Branch Name"
+                labelIcon="location-outline"
+                inputIcon="location"
+                placeholder="Enter Branch Name"
+                value={bankData.branchName}
+                onChangeText={(text: string) =>
+                  setBankData({ ...bankData, branchName: text })
+                }
+              />
+
+              <InputField
+                label="UPI ID (Optional)"
                 labelIcon="wallet-outline"
                 inputIcon="wallet"
-                placeholder="E.g. Savings, Current"
-                value={bankData.accountType}
+                placeholder="e.g. username@upi"
+                value={bankData.upiId}
                 onChangeText={(text: string) =>
-                  setBankData({ ...bankData, accountType: text })
+                  setBankData({ ...bankData, upiId: text })
                 }
               />
-              <InputField
-                label="Salary Payment Method"
-                labelIcon="cash-outline"
-                inputIcon="cash"
-                placeholder="E.g. Bank Transfer"
-                value={bankData.salaryPaymentMethod}
-                onChangeText={(text: string) =>
-                  setBankData({ ...bankData, salaryPaymentMethod: text })
-                }
-              />
-
-              <View style={styles.divider} />
 
               <View style={styles.buttonsRow}>
-                <ScaleButton
-                  activeOpacity={0.8}
-                  scaleTo={0.96}
-                  style={styles.cancelBtn}
-                  onPress={() => fetchProfile()}
-                >
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => fetchProfile()}>
                   <Text style={styles.cancelBtnText}>Cancel</Text>
-                </ScaleButton>
-                <ScaleButton
-                  activeOpacity={0.9}
-                  scaleTo={0.96}
-                  style={styles.saveBtn}
-                  onPress={saveBankDetails}
-                >
-                  <Ionicons
-                    name="save"
-                    size={14}
-                    color="#FFFFFF"
-                    style={{ marginRight: 6 }}
-                  />
-                  <Text style={styles.saveBtnText}>Save Bank Details</Text>
-                </ScaleButton>
-              </View>
-            </>
-          ) : activeTab === 'Preferences' ? (
-            <>
-              {/* Section Header */}
-              <View style={styles.sectionHeader}>
-                <Ionicons name="options" size={16} color="#3B82F6" />
-                <Text style={styles.sectionTitle}>
-                  Account Preference & Security
-                </Text>
-              </View>
+                </TouchableOpacity>
 
-              <View style={styles.divider} />
-
-              {/* Toggles */}
-              <PreferenceToggle
-                title="Grade Notifications"
-                description="Get notified when new grades are posted"
-                value={gradeNotif}
-                onValueChange={setGradeNotif}
-              />
-              <PreferenceToggle
-                title="Assignment Reminders"
-                description="Receive reminders for upcoming assignments"
-                value={assignNotif}
-                onValueChange={setAssignNotif}
-              />
-              <PreferenceToggle
-                title="Class Announcements"
-                description="Get notifications for class announcements"
-                value={classNotif}
-                onValueChange={setClassNotif}
-              />
-
-              <View style={{ height: 12 }} />
-
-              {/* Dropdowns */}
-              <InputField
-                label="Language Preference"
-                labelIcon="language"
-                inputIcon="language"
-                value="English"
-                rightIcon="chevron-down"
-              />
-              <InputField
-                label="Communication Preference"
-                labelIcon="chatbubbles-outline"
-                inputIcon="chatbubbles-outline"
-                value="Email Only"
-                rightIcon="chevron-down"
-              />
-
-              <View style={styles.divider} />
-
-              {/* Action Buttons */}
-              <View style={styles.buttonsRow}>
-                <ScaleButton
-                  activeOpacity={0.8}
-                  scaleTo={0.96}
-                  style={[
-                    styles.cancelBtn,
-                    { flex: 1.2, flexDirection: 'row', gap: 6 },
-                  ]}
-                  onPress={() => setShowPasswordModal(true)}
-                >
-                  <Ionicons name="key-outline" size={14} color="#111827" />
-                  <Text style={[styles.cancelBtnText, { color: '#111827' }]}>
-                    Change Password
-                  </Text>
-                </ScaleButton>
-                <ScaleButton
-                  activeOpacity={0.9}
-                  scaleTo={0.96}
-                  style={styles.saveBtn}
-                  onPress={updatePreferences}
-                >
-                  <Ionicons
-                    name="save"
-                    size={14}
-                    color="#FFFFFF"
-                    style={{ marginRight: 6 }}
-                  />
-                  <Text style={styles.saveBtnText}>Save Preferences</Text>
-                </ScaleButton>
-              </View>
-
-              {isInstitution && (
-                <>
-                  <View style={[styles.sectionHeader, { marginTop: 24 }]}>
-                    <Ionicons name="desktop-outline" size={16} color="#3B82F6" />
-                    <Text style={styles.sectionTitle}>Active Sessions</Text>
-                  </View>
-                  <View style={styles.divider} />
-                  {sessions.length > 0 ? (
-                    sessions.map((session) => (
-                      <View
-                        key={session.id}
-                        style={[
-                          styles.sessionCard,
-                          session.isCurrent && styles.currentSessionCard,
-                        ]}
-                      >
-                        <View style={styles.sessionHeaderRow}>
-                          <Text style={styles.sessionDeviceText}>
-                            {session.browser || 'Unknown Browser'} on {session.os || 'Unknown OS'}
-                          </Text>
-                          {session.isCurrent && (
-                            <View style={styles.currentBadge}>
-                              <Text style={styles.currentBadgeText}>Current Session</Text>
-                            </View>
-                          )}
-                        </View>
-                        <Text style={styles.sessionIpText}>IP: {session.ipAddress}</Text>
-                        <Text style={styles.sessionActiveText}>
-                          Last Active: {new Date(session.lastActiveAt).toLocaleString('en-GB')}
-                        </Text>
-                      </View>
-                    ))
+                <ScaleButton style={styles.saveBtn} onPress={saveBankDetails}>
+                  {isLoading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
-                    <Text style={styles.noSessionsText}>No active sessions found.</Text>
+                    <>
+                      <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                      <Text style={styles.saveBtnText}>Save Bank Details</Text>
+                    </>
                   )}
-                </>
-              )}
+                </ScaleButton>
+              </View>
             </>
-          ) : null}
+          ) : (
+            <>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionIconBadge}>
+                  <Ionicons name="options-outline" size={16} color={theme.primary} />
+                </View>
+                <Text style={styles.sectionTitle}>Notification Preferences</Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              <PreferenceToggle
+                title="Grade & Assessment Notifications"
+                description="Receive instant push notifications when new grades or marks are published"
+                value={gradeNotif}
+                onValueChange={(val: boolean) => updatePreferences('grade', val)}
+              />
+
+              <PreferenceToggle
+                title="Assignment & Homework Reminders"
+                description="Get alerts for upcoming assignment due dates and pending submissions"
+                value={assignNotif}
+                onValueChange={(val: boolean) => updatePreferences('assign', val)}
+              />
+
+              <PreferenceToggle
+                title="Class Announcements & Schedule Changes"
+                description="Stay updated with official institution notices and timetable revisions"
+                value={classNotif}
+                onValueChange={(val: boolean) => updatePreferences('class', val)}
+              />
+
+              <View style={[styles.sectionHeader, { marginTop: 24 }]}>
+                <View style={styles.sectionIconBadge}>
+                  <Ionicons name="shield-checkmark-outline" size={16} color={theme.primary} />
+                </View>
+                <Text style={styles.sectionTitle}>Security & Credentials</Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              <TouchableOpacity
+                style={styles.changePasswordCard}
+                activeOpacity={0.8}
+                onPress={() => setShowPasswordModal(true)}
+              >
+                <View style={styles.pwdCardLeft}>
+                  <View style={styles.pwdIconBadge}>
+                    <Ionicons name="lock-closed" size={18} color={theme.primary} />
+                  </View>
+                  <View>
+                    <Text style={styles.pwdCardTitle}>Change Password</Text>
+                    <Text style={styles.pwdCardSub}>Update your account security password</Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={theme.subtext} />
+              </TouchableOpacity>
+            </>
+          )}
         </Animated.View>
       </ScrollView>
 
-      {/* Calendar Overlay Modal */}
+      {/* Calendar Selection Modal */}
       <Modal
         visible={showCalendar}
-        transparent
+        transparent={true}
         animationType="fade"
         onRequestClose={() => setShowCalendar(false)}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowCalendar(false)}
-        >
-          <TouchableOpacity
-            activeOpacity={1}
-            style={styles.calendarModalContent}
-          >
+        <View style={styles.modalOverlay}>
+          <View style={styles.calendarModalContent}>
             <View style={styles.calendarHeader}>
-              <TouchableOpacity>
-                <Ionicons name="chevron-back" size={20} color="#111827" />
+              <TouchableOpacity onPress={() => {}}>
+                <Ionicons name="chevron-back" size={20} color={theme.text} />
               </TouchableOpacity>
-              <Text style={styles.calendarMonth}>October 2023</Text>
-              <TouchableOpacity>
-                <Ionicons name="chevron-forward" size={20} color="#111827" />
+              <Text style={styles.calendarMonth}>December 2024</Text>
+              <TouchableOpacity onPress={() => {}}>
+                <Ionicons name="chevron-forward" size={20} color={theme.text} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.calendarDaysRow}>
-              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                <Text key={i} style={styles.calDayName}>
-                  {d}
-                </Text>
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, idx) => (
+                <Text key={idx} style={styles.calDayName}>{day}</Text>
               ))}
             </View>
 
             <View style={styles.calendarGrid}>
-              {Array.from({ length: 31 }).map((_, i) => {
-                const day = i + 1;
-                const isActive = day === 15;
-                return (
-                  <TouchableOpacity
-                    key={i}
-                    style={[styles.calDayBox, isActive && styles.calDayActive]}
-                    onPress={() => {
-                      const selected = `10/${day.toString().padStart(2, '0')}/2023`;
-                      setProfileData(prev => ({ ...prev, dob: selected }));
-                      setShowCalendar(false);
-                    }}
+              {daysInMonth.map((day) => (
+                <TouchableOpacity
+                  key={day}
+                  style={[
+                    styles.calDayBox,
+                    selectedDate === day && styles.calDayActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedDate(day);
+                    const formatted = `${String(day).padStart(2, '0')}/12/2024`;
+                    if (activeTab === 'Personal Details') {
+                      setProfileData(prev => ({ ...prev, dob: formatted }));
+                    } else if (activeTab === secondaryTabTitle && isTeacher) {
+                      setProfData(prev => ({ ...prev, joiningDate: formatted }));
+                    }
+                    setShowCalendar(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.calDayText,
+                      selectedDate === day && styles.calDayTextActive,
+                    ]}
                   >
-                    <Text
-                      style={[
-                        styles.calDayText,
-                        isActive && styles.calDayTextActive,
-                      ]}
-                    >
-                      {day}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+                    {day}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.closeModalBtn}
+              onPress={() => setShowCalendar(false)}
+            >
+              <Text style={styles.closeModalBtnText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
 
-      {/* Update Password Modal */}
+      {/* Change Password Modal */}
       <Modal
         visible={showPasswordModal}
-        transparent
-        animationType="fade"
+        transparent={true}
+        animationType="slide"
         onRequestClose={() => setShowPasswordModal(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.passwordModalContent}>
+            {/* Header */}
             <View style={styles.pwdHeader}>
               <View style={styles.pwdHeaderIcon}>
-                <Ionicons name="key" size={20} color="#FFFFFF" />
+                <Ionicons name="key" size={24} color="#FFFFFF" />
               </View>
               <View style={styles.pwdHeaderTextContainer}>
-                <Text style={styles.pwdHeaderTitle}>Update Password</Text>
+                <Text style={styles.pwdHeaderTitle}>Change Password</Text>
                 <Text style={styles.pwdHeaderSubtitle}>
-                  Last changed: 45 days ago
+                  Enter your current and new password
                 </Text>
               </View>
               <TouchableOpacity
@@ -1699,13 +1583,13 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
             </View>
 
             <View style={styles.pwdBody}>
-              {/* Requirements overlapping box */}
+              {/* Requirements Box */}
               <View style={styles.pwdReqBox}>
                 <View style={styles.pwdReqHeaderRow}>
                   <Ionicons
-                    name="document-text-outline"
+                    name="shield-checkmark"
                     size={14}
-                    color="#3B82F6"
+                    color={theme.primary}
                     style={{ marginRight: 6 }}
                   />
                   <Text style={styles.pwdReqTitle}>Password Requirements</Text>
@@ -1713,40 +1597,30 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
                 <View style={styles.pwdReqColumns}>
                   <View style={styles.pwdReqCol}>
                     <View style={styles.pwdReqRow}>
-                      <View style={styles.pwdReqDot} />
-                      <Text style={styles.pwdReqText}>
-                        At least 8 characters
-                      </Text>
+                      <Ionicons name="checkmark-circle" size={12} color={theme.primary} style={{ marginRight: 6 }} />
+                      <Text style={styles.pwdReqText}>At least 8 characters</Text>
                     </View>
                     <View style={styles.pwdReqRow}>
-                      <View style={styles.pwdReqDot} />
-                      <Text style={styles.pwdReqText}>
-                        One lowercase letter
-                      </Text>
+                      <Ionicons name="checkmark-circle" size={12} color={theme.primary} style={{ marginRight: 6 }} />
+                      <Text style={styles.pwdReqText}>One lowercase letter</Text>
                     </View>
                     <View style={styles.pwdReqRow}>
-                      <View style={styles.pwdReqDot} />
-                      <Text style={styles.pwdReqText}>
-                        One special character
-                      </Text>
+                      <Ionicons name="checkmark-circle" size={12} color={theme.primary} style={{ marginRight: 6 }} />
+                      <Text style={styles.pwdReqText}>One special character</Text>
                     </View>
                   </View>
                   <View style={styles.pwdReqCol}>
                     <View style={styles.pwdReqRow}>
-                      <View style={styles.pwdReqDot} />
-                      <Text style={styles.pwdReqText}>
-                        One uppercase letter
-                      </Text>
+                      <Ionicons name="checkmark-circle" size={12} color={theme.primary} style={{ marginRight: 6 }} />
+                      <Text style={styles.pwdReqText}>One uppercase letter</Text>
                     </View>
                     <View style={styles.pwdReqRow}>
-                      <View style={styles.pwdReqDot} />
+                      <Ionicons name="checkmark-circle" size={12} color={theme.primary} style={{ marginRight: 6 }} />
                       <Text style={styles.pwdReqText}>One number</Text>
                     </View>
                     <View style={styles.pwdReqRow}>
-                      <View style={styles.pwdReqDot} />
-                      <Text style={styles.pwdReqText}>
-                        Passwords must match
-                      </Text>
+                      <Ionicons name="checkmark-circle" size={12} color={theme.primary} style={{ marginRight: 6 }} />
+                      <Text style={styles.pwdReqText}>Passwords must match</Text>
                     </View>
                   </View>
                 </View>
@@ -1755,63 +1629,69 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
               {/* Inputs */}
               <InputField
                 label="Current Password"
-                labelIcon="lock-closed"
+                labelIcon="lock-closed-outline"
                 inputIcon="key"
-                placeholder="Enter your current password"
+                placeholder="Enter current password"
                 secureTextEntry={true}
                 value={passwordData.currentPassword}
-                onChangeText={(text: string) => setPasswordData(prev => ({ ...prev, currentPassword: text }))}
+                onChangeText={(text: string) =>
+                  setPasswordData(prev => ({ ...prev, currentPassword: text }))
+                }
               />
               <InputField
                 label="New Password"
-                labelIcon="lock-closed"
+                labelIcon="lock-closed-outline"
                 inputIcon="lock-closed"
-                placeholder="Create a strong new password"
+                placeholder="Enter new password"
                 secureTextEntry={true}
                 value={passwordData.newPassword}
-                onChangeText={(text: string) => setPasswordData(prev => ({ ...prev, newPassword: text }))}
+                onChangeText={(text: string) =>
+                  setPasswordData(prev => ({ ...prev, newPassword: text }))
+                }
               />
               <InputField
                 label="Confirm New Password"
-                labelIcon="lock-closed"
+                labelIcon="lock-closed-outline"
                 inputIcon="lock-closed"
-                placeholder="Re-enter your new password"
+                placeholder="Re-enter new password"
                 secureTextEntry={true}
                 value={passwordData.confirmPassword}
-                onChangeText={(text: string) => setPasswordData(prev => ({ ...prev, confirmPassword: text }))}
+                onChangeText={(text: string) =>
+                  setPasswordData(prev => ({ ...prev, confirmPassword: text }))
+                }
               />
 
-              <View style={styles.divider} />
-
-              {/* Buttons */}
-              <View style={[styles.buttonsRow, { paddingBottom: 20 }]}>
-                <ScaleButton
-                  activeOpacity={0.8}
-                  scaleTo={0.96}
+              <View style={[styles.buttonsRow, { marginTop: 12, marginBottom: 20 }]}>
+                <TouchableOpacity
                   style={styles.cancelBtn}
                   onPress={() => setShowPasswordModal(false)}
                 >
                   <Text style={styles.cancelBtnText}>Cancel</Text>
-                </ScaleButton>
-                <ScaleButton
-                  activeOpacity={0.9}
-                  scaleTo={0.96}
-                  style={styles.saveBtn}
-                  onPress={changePassword}
-                >
-                  <Ionicons
-                    name="save"
-                    size={14}
-                    color="#FFFFFF"
-                    style={{ marginRight: 6 }}
-                  />
-                  <Text style={styles.saveBtnText}>Update Password</Text>
+                </TouchableOpacity>
+
+                <ScaleButton style={styles.saveBtn} onPress={changePassword}>
+                  {isLoading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                      <Text style={styles.saveBtnText}>Update Password</Text>
+                    </>
+                  )}
                 </ScaleButton>
               </View>
             </View>
           </View>
         </View>
       </Modal>
+
+      {/* Image Picker Modal Gated Behind Permissions */}
+      <ImagePickerModal
+        visible={isImagePickerModalOpen}
+        onClose={() => setImagePickerModalOpen(false)}
+        onImageSelected={handleSelectedAssetUpload}
+        title="Update Profile Photo"
+      />
 
       {/* Navigation Drawer */}
       <NavigationDrawer
@@ -1823,10 +1703,11 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 
+  /* Untouched Global Header */
   globalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1874,27 +1755,30 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 17,
   },
 
-  pageTitleWrapper: { marginBottom: 16, paddingHorizontal: 20, marginTop: 10 },
+  /* Page Header Title */
+  pageTitleWrapper: { marginBottom: 16, paddingHorizontal: 20, marginTop: 14 },
   pageTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: theme.primary,
+    color: theme.text,
     marginBottom: 4,
   },
   pageSubtitle: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
 
-  /* Hero ID Card */
+  /* Modernized Hero ID Card */
   heroCard: {
-    backgroundColor: theme.primary,
-    borderRadius: 14,
+    backgroundColor: isDarkMode ? '#1E1B4B' : '#F5F3FF',
+    borderRadius: 20,
     padding: 20,
     marginHorizontal: 20,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: isDarkMode ? 'rgba(99, 102, 241, 0.35)' : '#DDD6FE',
     shadowColor: theme.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: isDarkMode ? 0.3 : 0.08,
+    shadowRadius: 10,
+    elevation: 4,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -1903,116 +1787,152 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginRight: 16,
   },
   heroAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'transparent',
+    backgroundColor: theme.surface,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   heroAvatarText: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '700',
+    color: theme.primary,
+    fontSize: 22,
+    fontWeight: '800',
   },
   heroAvatarImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 28,
+    borderRadius: 30,
   },
   cameraIconBadge: {
     position: 'absolute',
-    bottom: -4,
-    right: -4,
-    backgroundColor: '#FFFFFF',
+    bottom: -2,
+    right: -2,
+    backgroundColor: theme.primary,
     borderRadius: 12,
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.primary,
+    borderWidth: 2,
+    borderColor: isDarkMode ? '#1E1B4B' : '#F5F3FF',
   },
   heroInfo: {
     flex: 1,
   },
   heroName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 2,
+    color: theme.text,
+    marginBottom: 4,
   },
   heroDetails: {
-    fontSize: 10,
-    color: '#E0E7FF',
+    fontSize: 12,
+    color: theme.subtext,
     marginBottom: 8,
+    fontWeight: '500',
   },
   heroStatusPill: {
-    backgroundColor: '#E0E7FF',
-    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.25)' : 'rgba(99, 102, 241, 0.12)',
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 14,
+    borderRadius: 12,
     alignSelf: 'flex-start',
+  },
+  heroStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: theme.primary,
+    marginRight: 6,
   },
   heroStatusText: {
     color: theme.primary,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
   },
 
-  /* Form Container */
+  /* Form Container Card */
   formContainerCard: {
     backgroundColor: theme.surface,
-    borderRadius: 14,
+    borderRadius: 20,
     marginHorizontal: 20,
-    shadowColor: '#1E293B',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
+    shadowOpacity: isDarkMode ? 0.25 : 0.05,
     shadowRadius: 8,
     elevation: 3,
     borderWidth: 1,
     borderColor: theme.border,
     paddingBottom: 24,
   },
-  tabsRow: {
+
+  /* Segmented Navigation Tabs */
+  tabsRowContainer: {
     flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
+    backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9',
+    borderRadius: 16,
+    margin: 12,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   tabBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    gap: 6,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    paddingVertical: 10,
+    gap: 5,
+    borderRadius: 13,
   },
   tabActive: {
-    borderBottomColor: theme.primary,
+    backgroundColor: theme.surface,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: isDarkMode ? 0.3 : 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
   tabText: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '600',
     color: theme.subtext,
   },
   tabTextActive: {
     color: theme.primary,
+    fontWeight: '700',
   },
+
+  /* Section Header */
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 20,
-    gap: 8,
+    paddingTop: 16,
+    gap: 10,
+  },
+  sectionIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: theme.primary,
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.text,
   },
   divider: {
     height: 1,
@@ -2021,7 +1941,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginHorizontal: 20,
   },
 
-  /* Form Fields */
+  /* Input Fields */
   fieldContainer: {
     paddingHorizontal: 20,
     marginBottom: 16,
@@ -2033,64 +1953,106 @@ const getStyles = (theme: any) => StyleSheet.create({
     gap: 6,
   },
   labelText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.text,
+  },
+  lockedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 6,
+    gap: 3,
+  },
+  lockedText: {
+    fontSize: 10,
+    color: theme.subtext,
+    fontWeight: '600',
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.border,
-    borderRadius: 8,
-    backgroundColor: theme.background,
+    borderRadius: 12,
+    backgroundColor: isDarkMode ? '#1E293B' : '#FAFAFA',
     paddingHorizontal: 12,
   },
   inputWrapperMultiline: {
     alignItems: 'flex-start',
+    paddingVertical: 8,
+  },
+  iconBoxContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
   },
   inputLeftIcon: {
-    marginRight: 10,
+    marginRight: 0,
   },
   textInput: {
     flex: 1,
-    height: 44,
+    height: 46,
     color: theme.text,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '500',
   },
   textInputMultiline: {
     height: 80,
-    paddingTop: 12,
+    paddingTop: 8,
     textAlignVertical: 'top',
   },
   inputRightIcon: {
     marginLeft: 10,
   },
-  prefixSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 10,
-    paddingRight: 10,
-    borderRightWidth: 1,
-    borderRightColor: theme.border,
-  },
-  prefixSelectText: {
-    fontSize: 12,
-    color: theme.text,
-    fontWeight: '600',
-  },
 
+  /* Static Read-only Field */
   staticFieldWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 4,
-    paddingVertical: 2,
+    backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   staticFieldText: {
+    fontSize: 13,
+    color: theme.subtext,
+    fontWeight: '600',
+  },
+
+  /* Preference Toggle Cards */
+  toggleCard: {
+    backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC',
+    borderRadius: 14,
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  toggleTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.text,
+    marginBottom: 4,
+  },
+  toggleDesc: {
     fontSize: 12,
     color: theme.subtext,
-    fontWeight: '500',
+    lineHeight: 16,
   },
 
   /* Buttons */
@@ -2098,53 +2060,95 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 20,
     gap: 12,
+    marginTop: 8,
   },
   cancelBtn: {
     flex: 1,
     borderWidth: 1,
     borderColor: theme.border,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: 13,
     backgroundColor: theme.surface,
   },
   cancelBtnText: {
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '700',
     color: theme.text,
   },
   saveBtn: {
     flex: 1.5,
     flexDirection: 'row',
     backgroundColor: theme.primary,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: 13,
+    shadowColor: theme.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
   },
   saveBtnText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+
+  /* Change Password Security Card */
+  changePasswordCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC',
+    borderRadius: 14,
+    padding: 16,
+    marginHorizontal: 20,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  pwdCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  pwdIconBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pwdCardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.text,
+  },
+  pwdCardSub: {
+    fontSize: 11,
+    color: theme.subtext,
+    marginTop: 2,
   },
 
   /* Calendar Modal */
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
   },
   calendarModalContent: {
     backgroundColor: theme.surface,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 24,
     width: '100%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 15,
     elevation: 10,
     borderWidth: 1,
@@ -2167,7 +2171,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginBottom: 10,
   },
   calDayName: {
-    width: 32,
+    width: 36,
     textAlign: 'center',
     fontSize: 12,
     fontWeight: '700',
@@ -2203,41 +2207,28 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '800',
   },
-
-  /* Preferences Settings */
-  toggleCard: {
-    backgroundColor: theme.background,
+  closeModalBtn: {
+    marginTop: 20,
+    paddingVertical: 12,
     borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    flexDirection: 'row',
+    backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: theme.border,
   },
-  toggleTitle: {
+  closeModalBtnText: {
     fontSize: 13,
     fontWeight: '700',
     color: theme.text,
-    marginBottom: 4,
-  },
-  toggleDesc: {
-    fontSize: 11,
-    color: theme.subtext,
-    fontWeight: '500',
   },
 
   /* Password Modal */
   passwordModalContent: {
     backgroundColor: theme.surface,
-    borderRadius: 16,
+    borderRadius: 24,
     width: '100%',
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 15,
     elevation: 10,
     borderWidth: 1,
@@ -2253,7 +2244,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   pwdHeaderIcon: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.25)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -2281,19 +2272,19 @@ const getStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.surface,
   },
   pwdReqBox: {
-    backgroundColor: theme.background,
-    borderRadius: 12,
+    backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC',
+    borderRadius: 16,
     marginHorizontal: 20,
     marginTop: -32,
-    marginBottom: 24,
+    marginBottom: 20,
     padding: 16,
     borderLeftWidth: 4,
     borderLeftColor: theme.primary,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
+    shadowOpacity: isDarkMode ? 0.2 : 0.05,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 3,
     borderWidth: 1,
     borderColor: theme.border,
   },
@@ -2318,26 +2309,20 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  pwdReqDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: theme.subtext,
-    marginRight: 8,
-  },
   pwdReqText: {
-    fontSize: 10,
+    fontSize: 11,
     color: theme.text,
     fontWeight: '600',
   },
 
   /* Sessions Styles */
   sessionCard: {
-    backgroundColor: theme.surface,
+    backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC',
     borderWidth: 1,
     borderColor: theme.border,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
+    marginHorizontal: 20,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -2348,7 +2333,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   currentSessionCard: {
     borderColor: '#10B981',
     borderWidth: 1.5,
-    backgroundColor: theme.isDarkMode ? '#10B98120' : '#F0FDF4',
+    backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.15)' : '#ECFDF5',
   },
   sessionHeaderRow: {
     flexDirection: 'row',
@@ -2363,9 +2348,9 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   currentBadge: {
     backgroundColor: '#10B981',
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    borderRadius: 6,
+    paddingVertical: 3,
+    paddingHorizontal: 9,
+    borderRadius: 8,
   },
   currentBadgeText: {
     fontSize: 10,

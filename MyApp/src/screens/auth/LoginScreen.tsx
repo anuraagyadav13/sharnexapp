@@ -93,6 +93,8 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
       if (error.response?.data?.message) {
         message = error.response.data.message;
+      } else if (error.message === 'Network Error') {
+        message = 'Network Error: Could not connect to server. Please check your internet connection.';
       } else if (error.message) {
         message = error.message;
       }

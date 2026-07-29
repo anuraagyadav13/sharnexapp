@@ -75,6 +75,7 @@ const PRINCIPAL_MENU: MenuItem[] = [
   { id: '10', label: 'Fees & Payments', icon: 'card-outline' },
   { id: 'equip', label: 'Equipment Requests', icon: 'construct-outline' },
   { id: 'library', label: 'Library', icon: 'book-outline' },
+  // { id: 'Bus Tracking', label: 'Bus Tracking', icon: 'bus-sharp' },
   { id: 'div1', label: '', icon: '', isDivider: true },
   { id: '12', label: 'Account Settings', icon: 'settings-outline' },
   { id: '13', label: 'Logout', icon: 'log-out-outline' },
@@ -201,6 +202,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
         case 'Equipment': return currentRouteName === 'TeacherEquipment' || currentRouteName === 'TeacherAddEquipmentRequest' || currentRouteName === 'TeacherEquipmentDetail';
         case 'Equipment Requests': return currentRouteName === 'PrincipalEquipment';
         case 'Library': return currentRouteName === 'PrincipalLibrary';
+        case 'Bus Tracking': return currentRouteName === 'BusDashboard' || currentRouteName === 'FleetTracking' || currentRouteName === 'AddVehicle' || currentRouteName === 'RouteManagement' || currentRouteName === 'RouteConfiguration' || currentRouteName === 'Schedules' || currentRouteName === 'AddSchedule' || currentRouteName === 'DriverManagement' || currentRouteName === 'AddDriver' || currentRouteName === 'EnrollStudent';
         case 'Result Management': return currentRouteName === 'PrincipalRSM' || currentRouteName === 'PrincipalRMS' || currentRouteName === 'ResultManagement' || currentRouteName === 'TeacherResultManagement';
         case 'Account Settings': return currentRouteName === 'AccountSettings';
         case 'Attendance': return currentRouteName === 'Attendance';
@@ -262,6 +264,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
         else if (label === 'Equipment') navigation.navigate('TeacherEquipment');
         else if (label === 'Equipment Requests') navigation.navigate('PrincipalEquipment');
         else if (label === 'Library') navigation.navigate('PrincipalLibrary');
+        else if (label === 'Bus Tracking') navigation.navigate('BusDashboard');
         else if (label === 'Result Management') {
           if (role === 'principal') navigation.navigate('PrincipalRMS');
           else if (role === 'teacher') navigation.navigate('TeacherResultManagement');

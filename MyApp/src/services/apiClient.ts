@@ -149,7 +149,7 @@ export const getApiErrorMessage = (error: any): string => {
  */
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json, text/plain, */*'
@@ -385,6 +385,8 @@ apiClient.interceptors.response.use(
       }
     } else if (error.request) {
       console.log('[apiClient] API No Response (Network Error):', {
+        url: originalRequest?.url,
+        baseURL: originalRequest?.baseURL,
         message: normalizedError.message || 'No response received',
       });
     } else {
@@ -405,6 +407,22 @@ export const setAuthToken = (token: string | null) => {
     apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   } else {
     delete apiClient.defaults.headers.common['Authorization'];
+  }
+};
+
+/**
+ * Health check utility to test connectivity to API_BASE_URL
+ */
+export const checkHealth = async (): Promise<{ isReachable: boolean; url: string; error?: string }> => {
+  try {
+    const res = await apiClient.get('/auth/csrf', { timeout: 5000 });
+    return { isReachable: res.status >= 200 && res.status < 400, url: API_BASE_URL };
+  } catch (err: any) {
+    return {
+      isReachable: false,
+      url: API_BASE_URL,
+      error: err?.message || 'Backend server unreachable',
+    };
   }
 };
 

@@ -19,6 +19,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { usePermissions } from '../../hooks/usePermissions';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -201,9 +202,15 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
     }
   };
 
+  const { requestNotifications } = usePermissions();
+
   useEffect(() => {
     fetchDashboard();
-  }, []);
+    // Contextual Notification Permission Request on first meaningful dashboard load
+    requestNotifications().catch((err) => {
+      console.log('[Dashboard] Notification permission request error:', err);
+    });
+  }, [requestNotifications]);
 
   const onRefresh = () => {
     setIsRefreshing(true);

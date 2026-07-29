@@ -102,6 +102,18 @@ import LibraryScreen from './src/screens/library/LibraryScreen';
 import StudentMessagesScreen from './src/screens/student/Messages';
 import TeacherMessagesScreen from './src/screens/teacher/Messages';
 
+// Bus Tracking Module Screens
+import { BusDashboardScreen } from './src/screens/principal/bus/BusDashboardScreen';
+import { FleetTrackingScreen } from './src/screens/principal/bus/FleetTrackingScreen';
+import { AddVehicleScreen } from './src/screens/principal/bus/AddVehicleScreen';
+import { RouteManagementScreen } from './src/screens/principal/bus/RouteManagementScreen';
+import { RouteConfigurationScreen } from './src/screens/principal/bus/RouteConfigurationScreen';
+import { SchedulesScreen } from './src/screens/principal/bus/SchedulesScreen';
+import { AddScheduleScreen } from './src/screens/principal/bus/AddScheduleScreen';
+import { DriverManagementScreen } from './src/screens/principal/bus/DriverManagementScreen';
+import { AddDriverScreen } from './src/screens/principal/bus/AddDriverScreen';
+import { EnrollStudentScreen } from './src/screens/principal/bus/EnrollStudentScreen';
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function RootNavigator() {
@@ -395,6 +407,18 @@ function RootNavigator() {
                 name="PrincipalEditClass"
                 component={PrincipalEditClass}
               />
+
+              {/* Bus Tracking Module Screens */}
+              <Stack.Screen name="BusDashboard" component={BusDashboardScreen} />
+              <Stack.Screen name="FleetTracking" component={FleetTrackingScreen} />
+              <Stack.Screen name="AddVehicle" component={AddVehicleScreen} />
+              <Stack.Screen name="RouteManagement" component={RouteManagementScreen} />
+              <Stack.Screen name="RouteConfiguration" component={RouteConfigurationScreen} />
+              <Stack.Screen name="Schedules" component={SchedulesScreen} />
+              <Stack.Screen name="AddSchedule" component={AddScheduleScreen} />
+              <Stack.Screen name="DriverManagement" component={DriverManagementScreen} />
+              <Stack.Screen name="AddDriver" component={AddDriverScreen} />
+              <Stack.Screen name="EnrollStudent" component={EnrollStudentScreen} />
             </>
           )}
 
