@@ -205,7 +205,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
 
     launchCamera(options, async (response: ImagePickerResponse) => {
       if (response.didCancel) {
-        console.log('User cancelled camera');
+        // user cancelled
       } else if (response.errorCode) {
         if (response.errorCode === 'camera_unavailable') {
           setCameraAvailable(false);

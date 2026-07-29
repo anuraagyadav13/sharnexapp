@@ -209,9 +209,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
   useEffect(() => {
     fetchDashboard();
     // Contextual Notification Permission Request on first meaningful dashboard load
-    requestNotifications().catch((err) => {
-      console.log('[Dashboard] Notification permission request error:', err);
-    });
+    requestNotifications().catch(() => {});
   }, [requestNotifications]);
 
   const onRefresh = () => {

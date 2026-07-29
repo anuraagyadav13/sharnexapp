@@ -31,6 +31,7 @@ try {
 }
 
 import { useAuth } from '../../store/AuthContext';
+import { useTheme } from '../../store/ThemeContext';
 import apiClient, { getApiErrorMessage } from '../../services/apiClient';
 import principalService from '../../services/principalService';
 import { ENDPOINTS } from '../../constants/api';
@@ -59,6 +60,9 @@ const TABS = [
 
 const PrincipalAddStaffScreen = ({ navigation }: any) => {
   const { authState } = useAuth();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
+
   const [activeTab, setActiveTab] = useState('personal');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<{
@@ -151,7 +155,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
 
     launchCamera(options, (response: ImagePickerResponse) => {
       if (response.didCancel) {
-        console.log('User cancelled image picker');
+        // user cancelled
       } else if (response.errorCode) {
         showToast('Camera error: ' + response.errorMessage, 'error');
       } else if (response.assets && response.assets.length > 0) {
@@ -162,7 +166,6 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
   };
 
   const handleOpenDatePicker = (field: 'dob' | 'joiningDate') => {
-    console.log('Opening date picker for:', field);
     setDateField(field);
     setShowDatePicker(true);
   };
@@ -272,8 +275,8 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
   return (
     <View style={styles.mainContainer}>
       <StatusBar
-        barStyle="dark-content"
-        backgroundColor="#FAFAFF"
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor={theme.background}
         translucent
       />
 
@@ -291,7 +294,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
           style={styles.backBtn}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color="#4F46E5" />
+          <Ionicons name="arrow-back" size={24} color={theme.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
           Add New Staff
@@ -314,7 +317,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
               <MaterialCommunityIcons
                 name={tab.icon as any}
                 size={22}
-                color={activeTab === tab.id ? '#4F46E5' : '#94A3B8'}
+                color={activeTab === tab.id ? theme.primary : theme.subtext}
               />
               <Text
                 style={[
@@ -335,7 +338,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleRow}>
                   <View
-                    style={[styles.sectionIcon, { backgroundColor: '#EEF2FF' }]}
+                    style={[styles.sectionIcon, { backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.15)' : '#EEF2FF' }]}
                   >
                     <MaterialCommunityIcons
                       name="account-outline"
@@ -353,6 +356,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
                   <TextInput
                     style={styles.premiumInput}
                     placeholder="John"
+                    placeholderTextColor={theme.subtext}
                     value={formData.firstName}
                     onChangeText={v => updateFormData('firstName', v)}
                   />
@@ -362,6 +366,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
                   <TextInput
                     style={styles.premiumInput}
                     placeholder="Doe"
+                    placeholderTextColor={theme.subtext}
                     value={formData.lastName}
                     onChangeText={v => updateFormData('lastName', v)}
                   />
@@ -373,6 +378,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
                 <TextInput
                   style={styles.premiumInput}
                   placeholder="john.doe@example.com"
+                  placeholderTextColor={theme.subtext}
                   value={formData.email}
                   onChangeText={v => updateFormData('email', v)}
                   keyboardType="email-address"
@@ -396,11 +402,12 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
                     <Text style={styles.countryCodeText}>
                       {formData.countryCode}
                     </Text>
-                    <Ionicons name="chevron-down" size={14} color="#64748B" />
+                    <Ionicons name="chevron-down" size={14} color={theme.subtext} />
                   </TouchableOpacity>
                   <TextInput
                     style={styles.phoneInput}
                     placeholder="9876543210"
+                    placeholderTextColor={theme.subtext}
                     value={formData.phone}
                     onChangeText={v => updateFormData('phone', v)}
                     keyboardType="numeric"
@@ -417,12 +424,12 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
                   <Text
                     style={[
                       styles.selectVal,
-                      !formData.dob && { color: '#94A3B8' },
+                      !formData.dob && { color: theme.subtext },
                     ]}
                   >
                     {formData.dob || 'mm/dd/yyyy'}
                   </Text>
-                  <Ionicons name="calendar-outline" size={18} color="#94A3B8" />
+                  <Ionicons name="calendar-outline" size={18} color={theme.subtext} />
                 </TouchableOpacity>
               </View>
 
@@ -434,6 +441,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
                     { height: 80, textAlignVertical: 'top', paddingTop: 12 },
                   ]}
                   placeholder="Enter complete address..."
+                  placeholderTextColor={theme.subtext}
                   multiline
                   value={formData.address}
                   onChangeText={v => updateFormData('address', v)}
@@ -458,7 +466,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleRow}>
                   <View
-                    style={[styles.sectionIcon, { backgroundColor: '#F0FDF4' }]}
+                    style={[styles.sectionIcon, { backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.15)' : '#F0FDF4' }]}
                   >
                     <MaterialCommunityIcons
                       name="bank-outline"
@@ -478,6 +486,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
                   <TextInput
                     style={styles.premiumInput}
                     placeholder="e.g. HDFC Bank"
+                    placeholderTextColor={theme.subtext}
                     value={formData.bankName}
                     onChangeText={v => updateFormData('bankName', v)}
                   />
@@ -487,6 +496,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
                   <TextInput
                     style={styles.premiumInput}
                     placeholder="1234567890"
+                    placeholderTextColor={theme.subtext}
                     value={formData.accountNumber}
                     onChangeText={v => updateFormData('accountNumber', v)}
                     keyboardType="numeric"
@@ -499,6 +509,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
                 <TextInput
                   style={styles.premiumInput}
                   placeholder="As per bank records"
+                  placeholderTextColor={theme.subtext}
                   value={formData.accountHolderName}
                   onChangeText={v => updateFormData('accountHolderName', v)}
                 />
@@ -520,7 +531,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
                     <Text style={styles.selectVal}>
                       {formData.accountType || 'Saving'}
                     </Text>
-                    <Ionicons name="chevron-down" size={16} color="#94A3B8" />
+                    <Ionicons name="chevron-down" size={16} color={theme.subtext} />
                   </TouchableOpacity>
                 </View>
                 <View style={[styles.field, { flex: 1 }]}>
@@ -528,6 +539,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
                   <TextInput
                     style={styles.premiumInput}
                     placeholder="e.g. HDFC0001267"
+                    placeholderTextColor={theme.subtext}
                     value={formData.ifscCode}
                     onChangeText={v => updateFormData('ifscCode', v)}
                   />
@@ -549,7 +561,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
                   <Text style={styles.selectVal}>
                     {formData.paymentMethod || 'Bank Transfer'}
                   </Text>
-                  <Ionicons name="chevron-down" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-down" size={16} color={theme.subtext} />
                 </TouchableOpacity>
               </View>
 
@@ -575,7 +587,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleRow}>
                   <View
-                    style={[styles.sectionIcon, { backgroundColor: '#EEF2FF' }]}
+                    style={[styles.sectionIcon, { backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.15)' : '#EEF2FF' }]}
                   >
                     <MaterialCommunityIcons
                       name="face-recognition"
@@ -621,7 +633,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
                 <Ionicons
                   name="shield-checkmark-outline"
                   size={16}
-                  color="#94A3B8"
+                  color={theme.subtext}
                 />
                 <Text style={styles.legalText}>
                   Biometric data is encrypted and stored locally in
@@ -693,260 +705,261 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#FAFAFF' },
-  container: { flex: 1 },
-  scrollContent: { paddingBottom: 40 },
+const getStyles = (theme: any, isDarkMode: boolean) =>
+  StyleSheet.create({
+    mainContainer: { flex: 1, backgroundColor: theme.background },
+    container: { flex: 1 },
+    scrollContent: { paddingBottom: 40 },
 
-  globalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop:
-      Platform.OS === 'ios'
-        ? 60
-        : (StatusBar.currentHeight ?? 0),
-    paddingBottom: 24,
-    backgroundColor: '#FAFAFF',
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#FFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#1E293B',
-    flex: 1,
-    textAlign: 'center',
-  },
-  headerRight: { width: 40 },
+    globalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingTop:
+        Platform.OS === 'ios'
+          ? 60
+          : (StatusBar.currentHeight ?? 0),
+      paddingBottom: 24,
+      backgroundColor: theme.background,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: theme.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: isDarkMode ? 0.3 : 0.05,
+      shadowRadius: 5,
+      elevation: 2,
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: theme.text,
+      flex: 1,
+      textAlign: 'center',
+    },
+    headerRight: { width: 40 },
 
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#FFF',
-    marginHorizontal: 20,
-    borderRadius: 16,
-    padding: 4,
-    marginBottom: 20,
-    position: 'relative',
-  },
-  tabItem: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    gap: 5,
-    zIndex: 1,
-  },
-  tabLabel: { fontSize: 10, fontWeight: '700', color: '#94A3B8' },
-  activeTabLabel: { color: '#4F46E5' },
-  tabIndicator: {
-    position: 'absolute',
-    height: '100%',
-    width: SCREEN_WIDTH / 3 - 16,
-    backgroundColor: '#EEF2FF',
-    borderRadius: 12,
-    top: 4,
-    left: 4,
-  },
+    tabContainer: {
+      flexDirection: 'row',
+      backgroundColor: theme.surface,
+      marginHorizontal: 20,
+      borderRadius: 16,
+      padding: 4,
+      marginBottom: 20,
+      position: 'relative',
+    },
+    tabItem: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 10,
+      gap: 5,
+      zIndex: 1,
+    },
+    tabLabel: { fontSize: 10, fontWeight: '700', color: theme.subtext },
+    activeTabLabel: { color: theme.primary },
+    tabIndicator: {
+      position: 'absolute',
+      height: '100%',
+      width: SCREEN_WIDTH / 3 - 16,
+      backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.2)' : '#EEF2FF',
+      borderRadius: 12,
+      top: 4,
+      left: 4,
+    },
 
-  contentArea: { paddingHorizontal: 20 },
-  sectionHeader: { marginBottom: 20 },
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  sectionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B' },
-  sectionDesc: {
-    fontSize: 13,
-    color: '#64748B',
-    marginTop: 4,
-    fontWeight: '500',
-  },
+    contentArea: { paddingHorizontal: 20 },
+    sectionHeader: { marginBottom: 20 },
+    sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    sectionIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sectionTitle: { fontSize: 18, fontWeight: '800', color: theme.text },
+    sectionDesc: {
+      fontSize: 13,
+      color: theme.subtext,
+      marginTop: 4,
+      fontWeight: '500',
+    },
 
-  inputRow: { flexDirection: 'row', gap: 10 },
-  field: { marginBottom: 15 },
-  label: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#94A3B8',
-    marginBottom: 6,
-    marginLeft: 4,
-  },
-  premiumInput: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    height: 46,
-    paddingHorizontal: 14,
-    fontSize: 14,
-    color: '#1E293B',
-    fontWeight: '600',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  selectVal: { fontSize: 13, color: '#1E293B', fontWeight: '600' },
+    inputRow: { flexDirection: 'row', gap: 10 },
+    field: { marginBottom: 15 },
+    label: {
+      fontSize: 10,
+      fontWeight: '800',
+      color: theme.subtext,
+      marginBottom: 6,
+      marginLeft: 4,
+    },
+    premiumInput: {
+      backgroundColor: theme.surface,
+      borderRadius: 12,
+      height: 46,
+      paddingHorizontal: 14,
+      fontSize: 14,
+      color: theme.text,
+      fontWeight: '600',
+      borderWidth: 1,
+      borderColor: theme.border,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    selectVal: { fontSize: 13, color: theme.text, fontWeight: '600' },
 
-  phoneInputRow: { flexDirection: 'row', gap: 10 },
-  countryPicker: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    height: 46,
-    width: 75,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 4,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
-  countryCodeText: { fontSize: 13, fontWeight: '700', color: '#1E293B' },
-  phoneInput: {
-    flex: 1,
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    height: 46,
-    paddingHorizontal: 14,
-    fontSize: 14,
-    color: '#1E293B',
-    fontWeight: '600',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
+    phoneInputRow: { flexDirection: 'row', gap: 10 },
+    countryPicker: {
+      backgroundColor: theme.surface,
+      borderRadius: 12,
+      height: 46,
+      width: 75,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+      gap: 4,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    countryCodeText: { fontSize: 13, fontWeight: '700', color: theme.text },
+    phoneInput: {
+      flex: 1,
+      backgroundColor: theme.surface,
+      borderRadius: 12,
+      height: 46,
+      paddingHorizontal: 14,
+      fontSize: 14,
+      color: theme.text,
+      fontWeight: '600',
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
 
-  selectInput: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    height: 46,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
+    selectInput: {
+      backgroundColor: theme.surface,
+      borderRadius: 12,
+      height: 46,
+      paddingHorizontal: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
 
-  footerRow: { flexDirection: 'row', gap: 10, marginTop: 15 },
-  primaryNextBtn: {
-    flex: 1,
-    backgroundColor: '#4F46E5',
-    borderRadius: 12,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  primaryNextBtnText: { color: '#FFF', fontSize: 14, fontWeight: '800' },
-  outlineBackBtn: {
-    width: 90,
-    borderRadius: 12,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFF',
-  },
-  outlineBackText: { color: '#64748B', fontSize: 13, fontWeight: '700' },
+    footerRow: { flexDirection: 'row', gap: 10, marginTop: 15 },
+    primaryNextBtn: {
+      flex: 1,
+      backgroundColor: '#4F46E5',
+      borderRadius: 12,
+      height: 48,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#4F46E5',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 6,
+      elevation: 4,
+    },
+    primaryNextBtnText: { color: '#FFF', fontSize: 14, fontWeight: '800' },
+    outlineBackBtn: {
+      width: 90,
+      borderRadius: 12,
+      height: 48,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.surface,
+    },
+    outlineBackText: { color: theme.subtext, fontSize: 13, fontWeight: '700' },
 
-  faceEnrollCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 24,
-    padding: 24,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    marginBottom: 20,
-  },
-  faceGraphic: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: '#FAFBFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-    borderStyle: 'dashed',
-    borderWidth: 2,
-    borderColor: '#6366F1',
-    overflow: 'hidden',
-  },
-  capturedPhoto: { width: '100%', height: '100%' },
-  enrollHint: {
-    textAlign: 'center',
-    fontSize: 13,
-    color: '#64748B',
-    lineHeight: 20,
-    marginBottom: 20,
-    paddingHorizontal: 10,
-    fontWeight: '500',
-  },
-  enrollBtn: {
-    backgroundColor: '#6366F1',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-  },
-  enrollBtnText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+    faceEnrollCard: {
+      backgroundColor: theme.surface,
+      borderRadius: 24,
+      padding: 24,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.border,
+      marginBottom: 20,
+    },
+    faceGraphic: {
+      width: 140,
+      height: 140,
+      borderRadius: 70,
+      backgroundColor: isDarkMode ? '#1E1B4B' : '#FAFBFF',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 20,
+      borderStyle: 'dashed',
+      borderWidth: 2,
+      borderColor: '#6366F1',
+      overflow: 'hidden',
+    },
+    capturedPhoto: { width: '100%', height: '100%' },
+    enrollHint: {
+      textAlign: 'center',
+      fontSize: 13,
+      color: theme.subtext,
+      lineHeight: 20,
+      marginBottom: 20,
+      paddingHorizontal: 10,
+      fontWeight: '500',
+    },
+    enrollBtn: {
+      backgroundColor: '#6366F1',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingVertical: 14,
+      paddingHorizontal: 24,
+      borderRadius: 12,
+    },
+    enrollBtnText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
 
-  legalNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: '#F8FAFC',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 20,
-  },
-  legalText: {
-    flex: 1,
-    fontSize: 11,
-    color: '#94A3B8',
-    fontWeight: '500',
-    lineHeight: 16,
-  },
+    legalNotice: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC',
+      padding: 12,
+      borderRadius: 12,
+      marginBottom: 20,
+    },
+    legalText: {
+      flex: 1,
+      fontSize: 11,
+      color: theme.subtext,
+      fontWeight: '500',
+      lineHeight: 16,
+    },
 
-  primarySubmitBtn: {
-    flex: 1,
-    backgroundColor: '#4F46E5',
-    borderRadius: 12,
-    height: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  primarySubmitBtnText: { color: '#FFF', fontSize: 14, fontWeight: '800' },
-});
+    primarySubmitBtn: {
+      flex: 1,
+      backgroundColor: '#4F46E5',
+      borderRadius: 12,
+      height: 48,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      shadowColor: '#4F46E5',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 6,
+      elevation: 4,
+    },
+    primarySubmitBtnText: { color: '#FFF', fontSize: 14, fontWeight: '800' },
+  });
 
 export default PrincipalAddStaffScreen;

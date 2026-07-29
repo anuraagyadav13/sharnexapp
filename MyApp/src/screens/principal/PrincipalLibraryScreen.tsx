@@ -199,10 +199,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
     try {
       const res = await principalService.getClasses();
       const resAny = res as any;
-      // Diagnostic log — matches PrincipalClassesScreen pattern; remove once classes populate correctly
-      console.log('[PrincipalLibrary] getClasses raw res.data:', JSON.stringify(resAny.data));
       const data = resAny.data?.classes ?? (Array.isArray(resAny.data) ? resAny.data : (resAny.data?.data ?? []));
-      console.log('[PrincipalLibrary] classesList resolved:', JSON.stringify(data));
       setClassesList(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('[PrincipalLibrary] Failed to load classes:', err);
@@ -376,7 +373,6 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
       const response = await apiClient.get('/library/analytics');
       setAnalyticsData(response.data?.data || response.data || null);
     } catch (error) {
-      console.log('[PrincipalLibrary] Analytics fetch error:', error);
       setAnalyticsData(null);
       setAnalyticsError(true);
     } finally {

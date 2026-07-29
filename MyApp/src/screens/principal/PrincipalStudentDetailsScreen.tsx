@@ -42,30 +42,60 @@ const PageSkeleton = () => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.pageHeader}>
-        <Skeleton width="40%" height={24} style={{ marginBottom: 8 }} />
-        <Skeleton width="60%" height={16} />
+        <Skeleton width="45%" height={24} style={{ marginBottom: 6 }} />
+        <Skeleton width="65%" height={14} />
       </View>
       <View style={styles.statsGrid}>
-        <Skeleton width="48%" height={90} borderRadius={12} />
-        <Skeleton width="48%" height={90} borderRadius={12} />
-        <Skeleton width="48%" height={90} borderRadius={12} style={{ marginTop: 12 }} />
-        <Skeleton width="48%" height={90} borderRadius={12} style={{ marginTop: 12 }} />
+        <Skeleton width="31%" height={80} borderRadius={14} />
+        <Skeleton width="31%" height={80} borderRadius={14} />
+        <Skeleton width="31%" height={80} borderRadius={14} />
       </View>
-      <View style={{ marginTop: 30, paddingHorizontal: 20 }}>
-        <Skeleton width="100%" height={160} borderRadius={20} />
+      <View style={{ paddingHorizontal: 20, marginVertical: 12, flexDirection: 'row', gap: 8 }}>
+        <Skeleton width={90} height={34} borderRadius={20} />
+        <Skeleton width={90} height={34} borderRadius={20} />
+        <Skeleton width={90} height={34} borderRadius={20} />
+      </View>
+      <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+        <Skeleton width="100%" height={120} borderRadius={16} />
+      </View>
+      <View style={{ paddingHorizontal: 20, marginBottom: 16, gap: 10 }}>
+        <Skeleton width="100%" height={44} borderRadius={12} />
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <Skeleton width={100} height={36} borderRadius={10} />
+          <Skeleton width={130} height={36} borderRadius={10} />
+        </View>
+      </View>
+      <View style={{ paddingHorizontal: 20, gap: 12 }}>
+        <Skeleton width="100%" height={110} borderRadius={14} />
+        <Skeleton width="100%" height={110} borderRadius={14} />
       </View>
     </ScrollView>
   );
 };
 
-const StatCard = ({ title, value, subtitle }: { title: string, value: string | number, subtitle?: string }) => {
+const StatCard = ({
+  title,
+  value,
+  subtitle,
+  icon,
+}: {
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  icon: string;
+}) => {
   const { theme } = useTheme();
   const styles = getStyles(theme);
   return (
     <View style={styles.statCard}>
-      <Text style={styles.statTitle}>{title}</Text>
+      <View style={styles.statCardTop}>
+        <View style={styles.statIconWrapper}>
+          <Ionicons name={icon} size={14} color={theme.primary} />
+        </View>
+        <Text style={styles.statTitle} numberOfLines={1}>{title}</Text>
+      </View>
       <Text style={styles.statValue}>{value}</Text>
-      {subtitle && <Text style={styles.statSubtitle}>{subtitle}</Text>}
+      {subtitle ? <Text style={styles.statSubtitle} numberOfLines={1}>{subtitle}</Text> : null}
     </View>
   );
 };
@@ -73,28 +103,49 @@ const StatCard = ({ title, value, subtitle }: { title: string, value: string | n
 const StudentCard = ({ item, index, delay, onEdit, onView, onDelete, isDeleting }: any) => {
   const { theme } = useTheme();
   const styles = getStyles(theme);
+  const photoUri = item.photoUrl || item.profilePhoto;
+
   return (
     <Animated.View entering={FadeInUp.delay(delay).springify()} style={styles.studentCard}>
       <View style={styles.studentHeader}>
         <View style={styles.avatarWrapper}>
-          {item.photoUrl || item.profilePhoto ? (
-            <Image source={{ uri: item.photoUrl || item.profilePhoto }} style={{ width: 40, height: 40, borderRadius: 20 }} />
+          {photoUri ? (
+            <Image source={{ uri: photoUri }} style={styles.avatarImage} />
           ) : (
             <Text style={styles.avatarTextMain}>{item.name ? item.name.charAt(0).toUpperCase() : '?'}</Text>
           )}
         </View>
         <View style={styles.studentMainInfo}>
-          <Text style={styles.studentName}>{item.name}</Text>
-          <Text style={styles.studentRoll}>Roll No: {item.rollNo || 'N/A'}</Text>
+          <Text style={styles.studentName} numberOfLines={1}>{item.name}</Text>
+          <View style={styles.rollBadge}>
+            <Ionicons name="id-card-outline" size={12} color={theme.subtext} style={{ marginRight: 4 }} />
+            <Text style={styles.studentRoll}>Roll: {item.rollNo || 'N/A'}</Text>
+          </View>
         </View>
         <View style={styles.actionIconsRow}>
-          <TouchableOpacity style={styles.actionIconButton} onPress={onView} accessibilityLabel="View student details" hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}>
+          <TouchableOpacity
+            style={[styles.actionIconButton, { backgroundColor: theme.primary + '15' }]}
+            onPress={onView}
+            accessibilityLabel="View student details"
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+          >
             <Ionicons name="eye-outline" size={16} color={theme.primary} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionIconButton} onPress={onEdit} accessibilityLabel="Edit student details" hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}>
+          <TouchableOpacity
+            style={[styles.actionIconButton, { backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border }]}
+            onPress={onEdit}
+            accessibilityLabel="Edit student details"
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+          >
             <Ionicons name="pencil-outline" size={16} color={theme.subtext} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionIconButton} onPress={onDelete} disabled={isDeleting} accessibilityLabel="Delete student" hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}>
+          <TouchableOpacity
+            style={[styles.actionIconButton, { backgroundColor: '#EF444415' }]}
+            onPress={onDelete}
+            disabled={isDeleting}
+            accessibilityLabel="Delete student"
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+          >
             {isDeleting ? (
               <ActivityIndicator size="small" color={theme.danger || '#EF4444'} />
             ) : (
@@ -109,13 +160,15 @@ const StudentCard = ({ item, index, delay, onEdit, onView, onDelete, isDeleting 
       <View style={styles.metricsGrid}>
         <View style={styles.metricItem}>
           <Text style={styles.metricLabel}>AVERAGE GRADE</Text>
-          <Text style={styles.metricVal}>{item.grade || '-'}</Text>
-          {!item.grade && <Text style={styles.metricSub}>Grade data coming soon</Text>}
+          <Text style={[styles.metricVal, !item.grade && { color: theme.subtext }]}>{item.grade || '-'}</Text>
+          {!item.grade && <Text style={styles.metricSub}>Grade TBD</Text>}
         </View>
         <View style={styles.metricDivider} />
         <View style={styles.metricItem}>
           <Text style={styles.metricLabel}>ATTENDANCE</Text>
-          <Text style={[styles.metricVal, { color: item.attendanceRate ? '#10B981' : theme.text }]}>{item.attendanceRate ? `${item.attendanceRate}%` : '-'}</Text>
+          <Text style={[styles.metricVal, { color: item.attendanceRate ? '#10B981' : theme.text }]}>
+            {item.attendanceRate ? `${item.attendanceRate}%` : '-'}
+          </Text>
         </View>
         <View style={styles.metricDivider} />
         <View style={styles.metricItem}>
@@ -445,15 +498,28 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
   const renderHeader = useCallback(() => (
     <View>
       <View style={styles.pageHeader}>
-        <Text style={styles.screenTitle}>Students details</Text>
-        <Text style={styles.screenSubtitle}>Class-Wise students details</Text>
+        <Text style={styles.screenTitle}>Student Directory</Text>
+        <Text style={styles.screenSubtitle}>Class-wise student roster & metrics</Text>
       </View>
 
-      {/* Stats Grid (4 Cards) */}
+      {/* Stats Summary Grid (3 Cards) */}
       <View style={styles.statsGrid}>
-        <StatCard title="Total Students" value={classes.reduce((sum, cls) => sum + (cls.studentCount || 0), 0)} />
-        <StatCard title="Attendance Rate" value={attendanceRateDisplay} subtitle={attendanceSubtitle} />
-        <StatCard title="Active Classes" value={classes.length} />
+        <StatCard
+          title="Total Students"
+          value={classes.reduce((sum, cls) => sum + (cls.studentCount || 0), 0)}
+          icon="people-outline"
+        />
+        <StatCard
+          title="Attendance Rate"
+          value={attendanceRateDisplay}
+          subtitle={attendanceSubtitle}
+          icon="stats-chart-outline"
+        />
+        <StatCard
+          title="Active Classes"
+          value={classes.length}
+          icon="grid-outline"
+        />
       </View>
 
       {/* Class Tabs */}
@@ -462,14 +528,17 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
           {classes.map((cls) => {
             const clsId = cls.id || cls.name;
             const count = cls.studentCount || 0;
+            const isActive = activeClassId === clsId;
             return (
               <TouchableOpacity
                 key={clsId}
-                style={[styles.classTab, activeClassId === clsId && styles.classTabActive]}
+                style={[styles.classTab, isActive && styles.classTabActive]}
                 onPress={() => setActiveClassId(clsId)}
                 accessibilityLabel={`Select class ${cls.name || cls.className}`}
               >
-                <Text style={[styles.classTabText, activeClassId === clsId && styles.classTabTextActive]}>{cls.name || cls.className} ({count})</Text>
+                <Text style={[styles.classTabText, isActive && styles.classTabTextActive]}>
+                  {cls.name || cls.className} ({count})
+                </Text>
               </TouchableOpacity>
             );
           })}
@@ -479,8 +548,17 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
       {/* Class Hero Banner */}
       <Animated.View entering={FadeInUp.duration(400)} style={styles.classHero}>
         <View style={styles.heroMain}>
-          <Text style={styles.heroTitle}>{currentClass?.name || 'Loading...'}</Text>
-          <Text style={styles.heroTeacherName}>Class Teacher: {currentClass?.classTeacherName || currentClass?.teacher || 'TBA'}</Text>
+          <View style={styles.heroHeaderRow}>
+            <View style={styles.heroIconBox}>
+              <Ionicons name="school-outline" size={20} color="#FFF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.heroTitle} numberOfLines={1}>{currentClass?.name || 'Loading...'}</Text>
+              <Text style={styles.heroTeacherName}>
+                Class Teacher: {currentClass?.classTeacherName || currentClass?.teacher || 'TBA'}
+              </Text>
+            </View>
+          </View>
         </View>
         <View style={styles.heroDivider} />
         <View style={styles.heroStats}>
@@ -498,7 +576,7 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
           </View>
           <View style={styles.heroStatItem}>
             <Text style={styles.heroStatVal}>-</Text>
-            <Text style={styles.heroStatLab}>Top performer</Text>
+            <Text style={styles.heroStatLab}>Top Performer</Text>
           </View>
         </View>
       </Animated.View>
@@ -518,24 +596,33 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
           />
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionButtonsScroll}>
-          <TouchableOpacity style={[styles.secondaryBtn, isExporting && { opacity: 0.7 }]} onPress={handleExport} disabled={isExporting} accessibilityLabel="Export student list">
+          <TouchableOpacity
+            style={[styles.secondaryBtn, isExporting && { opacity: 0.7 }]}
+            onPress={handleExport}
+            disabled={isExporting}
+            accessibilityLabel="Export student list"
+          >
             {isExporting ? (
-              <ActivityIndicator size="small" color="#4B5563" />
+              <ActivityIndicator size="small" color={theme.text} />
             ) : (
               <>
-                <Ionicons name="download-outline" size={16} color="#4B5563" />
+                <Ionicons name="download-outline" size={16} color={theme.text} />
                 <Text style={styles.secondaryBtnText}>Export</Text>
               </>
             )}
           </TouchableOpacity>
-          <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('PrincipalAddStudent')} accessibilityLabel="Add new student">
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={() => navigation.navigate('PrincipalAddStudent')}
+            accessibilityLabel="Add new student"
+          >
             <Ionicons name="add" size={18} color="#FFF" />
             <Text style={styles.primaryBtnText}>Add Students</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
     </View>
-  ), [classes, activeClassId, attendanceRateDisplay, attendanceSubtitle, currentClass, currentClassStudents.length, searchQuery, isExporting, handleExport, navigation, styles]);
+  ), [classes, activeClassId, attendanceRateDisplay, attendanceSubtitle, currentClass, currentClassStudents.length, searchQuery, isExporting, handleExport, navigation, styles, theme.text]);
 
   const renderEmptyState = useCallback(() => {
     if (isLoading) return null;
@@ -571,7 +658,7 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
         <Text style={styles.headerTitle} numberOfLines={1}>Student Directory</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.iconBtnHeader} onPress={() => navigation.navigate('PrincipalAddStudent')} accessibilityLabel="Add Student">
-            <Ionicons name="person-add-outline" size={24} color={theme.text} />
+            <Ionicons name="person-add-outline" size={20} color={theme.text} />
           </TouchableOpacity>
           <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')} accessibilityLabel="Account settings">
             {authState.user?.photoUrl ? (
@@ -626,119 +713,254 @@ const getStyles = (theme: any) => StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingBottom: 40 },
 
-  // Header
+  // Global Header
   globalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop:
-      Platform.OS === 'ios'
-        ? 60
-        : (StatusBar.currentHeight ?? 0),
-    paddingBottom: 24,
+    paddingTop: Platform.OS === 'ios' ? 60 : (StatusBar.currentHeight ?? 0) + 8,
+    paddingBottom: 16,
     backgroundColor: theme.background,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
   },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: theme.text, flex: 1, textAlign: 'center', marginHorizontal: 10 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconBtnHeader: { padding: 4 },
-  avatarHeader: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center', shadowColor: '#8B5CF6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
-  avatarTextHeader: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
-
-  pageHeader: { marginBottom: 12, paddingHorizontal: 20, marginTop: 0 },
-  screenTitle: { fontSize: 20, fontWeight: '800', color: theme.text, marginBottom: 2, letterSpacing: -0.5 },
-  screenSubtitle: { fontSize: 11, color: theme.subtext, fontWeight: '400', lineHeight: 16 },
-
-  // Stats
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 12, rowGap: 8 },
-  statCard: { width: '48%', backgroundColor: theme.surface, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.02, shadowRadius: 4, elevation: 1, borderWidth: 1, borderColor: theme.border },
-  statTitle: { fontSize: 10, fontWeight: '600', color: theme.subtext, marginBottom: 4 },
-  statValue: { fontSize: 18, fontWeight: '800', color: theme.text },
-  statSubtitle: { fontSize: 9, color: theme.subtext, marginTop: 2 },
-
-  // Tabs
-  tabsContainer: { marginBottom: 12 },
-  tabsScroll: { paddingHorizontal: 20, gap: 8 },
-  classTab: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surface, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: theme.border, gap: 6 },
-  classTabActive: { backgroundColor: theme.primary, borderColor: theme.primary },
-  classTabText: { fontSize: 12, fontWeight: '600', color: theme.text },
-  classTabTextActive: { color: '#FFF' },
-
-  // Hero
-  classHero: { minHeight: 90, borderRadius: 12, marginHorizontal: 20, padding: 14, backgroundColor: theme.primary, shadowColor: theme.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 10, elevation: 4 },
-  heroMain: {},
-  heroTitle: { fontSize: 16, fontWeight: '700', color: '#FFF', letterSpacing: -0.2 },
-  heroTeacherName: { fontSize: 10, color: 'rgba(255,255,255,0.9)', fontWeight: '400', marginTop: 2 },
-  heroDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.2)', marginVertical: 10 },
-  heroStats: { flexDirection: 'row', justifyContent: 'space-between' },
-  heroStatItem: { alignItems: 'center', flex: 1 },
-  heroStatVal: { fontSize: 14, fontWeight: '700', color: '#FFF', marginBottom: 2 },
-  heroStatLab: { fontSize: 8, fontWeight: '500', color: 'rgba(255,255,255,0.8)', textTransform: 'capitalize' },
-
-  // Actions & Search
-  actionsWrapper: { marginHorizontal: 20, marginTop: 16, marginBottom: 20 },
-  searchWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surface, paddingHorizontal: 14, height: 44, borderRadius: 10, borderWidth: 1, borderColor: theme.border, marginBottom: 12 },
-  searchInput: { flex: 1, marginLeft: 10, fontSize: 13, color: theme.text },
-  actionButtonsScroll: { gap: 8 },
-  secondaryBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surface, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: theme.border, gap: 6 },
-  secondaryBtnText: { fontSize: 12, fontWeight: '600', color: theme.text },
-  primaryBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, gap: 4 },
-  primaryBtnText: { fontSize: 12, fontWeight: '600', color: '#FFF' },
-
-  // List
-  listContainer: { paddingHorizontal: 20 },
-  studentCard: { backgroundColor: theme.surface, borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: theme.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.02, shadowRadius: 6, elevation: 1 },
-  studentHeader: { flexDirection: 'row', alignItems: 'center' },
-  avatarWrapper: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center' },
-  avatarTextMain: { fontSize: 14, fontWeight: '700', color: '#FFF' },
-  studentMainInfo: { flex: 1, marginLeft: 12 },
-  studentName: { fontSize: 14, fontWeight: '600', color: theme.text },
-  studentRoll: { fontSize: 11, color: theme.subtext, marginTop: 2 },
-  actionIconsRow: { flexDirection: 'row', gap: 12 },
-  actionIconButton: { padding: 4 },
-  divider: { height: 1, backgroundColor: theme.border, marginVertical: 14 },
-  metricsGrid: { flexDirection: 'row', justifyContent: 'space-between' },
-  metricItem: { flex: 1 },
-  metricDivider: { width: 1, height: '100%', backgroundColor: theme.border, marginHorizontal: 10 },
-  metricLabel: { fontSize: 9, fontWeight: '600', color: theme.subtext, marginBottom: 4, textTransform: 'uppercase' },
-  metricVal: { fontSize: 13, fontWeight: '600', color: theme.text },
-  metricSub: { fontSize: 9, color: theme.subtext, marginTop: 2 },
-  perfPill: { backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' },
-  perfText: { fontSize: 9, fontWeight: '600', color: '#10B981' },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: theme.text, flex: 1, textAlign: 'center', marginHorizontal: 10 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  iconBtnHeader: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.surface,
+    borderWidth: 1,
+    borderColor: theme.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarHeader: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#9F7AEA',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#8B5CF6',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 4,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
+  // Page Header
+  pageHeader: { marginBottom: 14, paddingHorizontal: 20, marginTop: 16 },
+  screenTitle: { fontSize: 22, fontWeight: '800', color: theme.text, marginBottom: 4, letterSpacing: -0.5 },
+  screenSubtitle: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
+
+  // Stats Summary Grid (3-column layout)
+  statsGrid: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 16, gap: 8 },
+  statCard: {
+    flex: 1,
+    backgroundColor: theme.surface,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: theme.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  statCardTop: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  statIconWrapper: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    backgroundColor: theme.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  statTitle: { fontSize: 10, fontWeight: '700', color: theme.subtext, flex: 1 },
+  statValue: { fontSize: 18, fontWeight: '900', color: theme.text },
+  statSubtitle: { fontSize: 9, color: theme.subtext, marginTop: 2, fontWeight: '500' },
+
+  // Class Tabs
+  tabsContainer: { marginBottom: 16 },
+  tabsScroll: { paddingHorizontal: 20, gap: 8 },
+  classTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.border,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  classTabActive: {
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
+    shadowColor: theme.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  classTabText: { fontSize: 12, fontWeight: '700', color: theme.text },
+  classTabTextActive: { color: '#FFF' },
+
+  // Class Hero Banner
+  classHero: {
+    borderRadius: 16,
+    marginHorizontal: 20,
+    padding: 16,
+    backgroundColor: theme.primary,
+    shadowColor: theme.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  heroMain: {},
+  heroHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  heroIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroTitle: { fontSize: 18, fontWeight: '800', color: '#FFF', letterSpacing: -0.3 },
+  heroTeacherName: { fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: '500', marginTop: 2 },
+  heroDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.2)', marginVertical: 12 },
+  heroStats: { flexDirection: 'row', justifyContent: 'space-between' },
+  heroStatItem: { alignItems: 'center', flex: 1 },
+  heroStatVal: { fontSize: 15, fontWeight: '800', color: '#FFF', marginBottom: 2 },
+  heroStatLab: { fontSize: 9, fontWeight: '600', color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  // Actions & Search
+  actionsWrapper: { marginHorizontal: 20, marginTop: 16, marginBottom: 16 },
+  searchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.surface,
+    paddingHorizontal: 14,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.border,
+    marginBottom: 12,
+  },
+  searchInput: { flex: 1, marginLeft: 10, fontSize: 13, color: theme.text },
+  actionButtonsScroll: { gap: 8 },
+  secondaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.border,
+    gap: 6,
+  },
+  secondaryBtnText: { fontSize: 12, fontWeight: '700', color: theme.text },
+  primaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 6,
+  },
+  primaryBtnText: { fontSize: 12, fontWeight: '700', color: '#FFF' },
+
+  // Student Card List
+  listContainer: { paddingHorizontal: 20 },
+  studentCard: {
+    backgroundColor: theme.surface,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: theme.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  studentHeader: { flexDirection: 'row', alignItems: 'center' },
+  avatarWrapper: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#8B5CF6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: { width: 42, height: 42, borderRadius: 21 },
+  avatarTextMain: { fontSize: 16, fontWeight: '800', color: '#FFF' },
+  studentMainInfo: { flex: 1, marginLeft: 12 },
+  studentName: { fontSize: 15, fontWeight: '700', color: theme.text, marginBottom: 2 },
+  rollBadge: { flexDirection: 'row', alignItems: 'center' },
+  studentRoll: { fontSize: 12, color: theme.subtext, fontWeight: '500' },
+  actionIconsRow: { flexDirection: 'row', gap: 8 },
+  actionIconButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  divider: { height: 1, backgroundColor: theme.border, marginVertical: 12 },
+  metricsGrid: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  metricItem: { flex: 1, alignItems: 'center' },
+  metricDivider: { width: 1, height: 28, backgroundColor: theme.border },
+  metricLabel: { fontSize: 9, fontWeight: '800', color: theme.subtext, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  metricVal: { fontSize: 14, fontWeight: '800', color: theme.text },
+  metricSub: { fontSize: 9, color: theme.subtext, marginTop: 2, fontStyle: 'italic' },
+  perfPill: { backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  perfText: { fontSize: 10, fontWeight: '800', color: '#10B981' },
+
+  // Empty State
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
+    paddingVertical: 50,
+    paddingHorizontal: 24,
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
     color: theme.text,
-    marginTop: 12,
+    marginTop: 14,
     textAlign: 'center',
   },
   emptySubtitle: {
-    fontSize: 12,
+    fontSize: 13,
     color: theme.subtext,
-    marginTop: 4,
+    marginTop: 6,
     textAlign: 'center',
+    lineHeight: 18,
   },
 });
 
