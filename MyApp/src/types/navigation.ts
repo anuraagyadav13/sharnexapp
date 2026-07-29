@@ -95,6 +95,7 @@ export type RootStackParamList = {
   PrincipalTimetable: undefined;
   PrincipalAnnouncements: undefined;
   PrincipalFees: undefined;
+  PrincipalCreateInvoice: undefined;
   PrincipalRSM: undefined;
   PrincipalRMS: undefined;
   PrincipalReviewExam: { examId: string };

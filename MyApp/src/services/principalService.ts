@@ -193,6 +193,7 @@ export interface InvoiceItem {
   institutionName: string;
   studentId: string;
   studentName: string;
+  studentGrade?: string;
   grade: string | null;
   baseAmount: number;
   totalAmount: number;
@@ -204,6 +205,31 @@ export interface InvoiceItem {
   academicYear: string;
   month: string;
   createdAt: string;
+  feeItems?: { description: string; amount: number }[];
+}
+
+export interface ReconciliationPayment {
+  id: string;
+  payment_mode: string;
+  base_amount: number;
+  gross_amount: number;
+  gateway_fee: number;
+  gst_on_fee: number;
+  settled_amount: number;
+  razorpay_payment_id: string | null;
+  created_at: string;
+  status: string;
+}
+
+export interface ReconciliationData {
+  totalPayments: number;
+  totalBase: number;
+  totalGross: number;
+  totalSettled: number;
+  totalGatewayCost: number;
+  totalPpiInterchange: number;
+  payments: ReconciliationPayment[];
+  discrepancies: any[];
 }
 
 export interface EquipmentRequestItem {
@@ -410,6 +436,31 @@ const principalService = {
 
   getInvoices(limit: number = 50) {
     return apiClient.get<{ data: { invoices: InvoiceItem[] } }>(`${ENDPOINTS.PRINCIPAL.INVOICES}?limit=${limit}`);
+  },
+
+  getReconciliation(startDate: string, endDate: string) {
+    return apiClient.get<{ success: boolean; data: ReconciliationData }>(
+      `${ENDPOINTS.PRINCIPAL.RECONCILIATION}?startDate=${startDate}&endDate=${endDate}`
+    );
+  },
+
+  createInvoice(payload: {
+    studentId: string;
+    baseAmount: number;
+    description: string;
+    dueDate: string;
+    month: string;
+    academicYear: string;
+    feeItems: { description: string; amount: number }[];
+  }) {
+    return apiClient.post<any>(ENDPOINTS.PRINCIPAL.CREATE_INVOICE, payload);
+  },
+
+  updateInvoiceStatus(invoiceId: string, status: string, paymentDetails?: any) {
+    return apiClient.patch<any>(ENDPOINTS.PRINCIPAL.INVOICE_STATUS(invoiceId), {
+      status,
+      ...paymentDetails,
+    });
   },
 
   getPendingEquipmentRequests(status: string = 'SUBMITTED', limit: number = 50, offset: number = 0) {
