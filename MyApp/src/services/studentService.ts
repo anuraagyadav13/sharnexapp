@@ -141,6 +141,10 @@ const studentService = {
     return apiClient.get(ENDPOINTS.STUDENT.DASHBOARD(studentId));
   },
 
+  getLeaderboard(limit?: number) {
+    return apiClient.get(ENDPOINTS.STUDENT.LEADERBOARD(limit));
+  },
+
   // Profile - uses /auth/me (HAR-confirmed working endpoint)
   getMe() {
     return apiClient.get(ENDPOINTS.AUTH.ME);
@@ -175,6 +179,19 @@ const studentService = {
     return apiClient.get(
       `${ENDPOINTS.STUDENT.CLASS_SCHEDULE(classId)}?week=${weekStart}`,
     );
+  },
+
+  // Calendar Events
+  getCalendarEvents() {
+    return apiClient.get(ENDPOINTS.STUDENT.CALENDAR_EVENTS);
+  },
+
+  getCalendarHolidays() {
+    return apiClient.get(ENDPOINTS.STUDENT.CALENDAR_HOLIDAYS);
+  },
+
+  getCalendarExams() {
+    return apiClient.get(ENDPOINTS.STUDENT.CALENDAR_EXAMS);
   },
 
   // Assignments

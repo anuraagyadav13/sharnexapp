@@ -360,72 +360,178 @@ const getStyles = (theme: any) =>
     assignmentItemTitle: { fontSize: 14, fontWeight: '700', color: theme.text },
     assignmentItemSubtext: { fontSize: 11, color: theme.subtext, marginTop: 2 },
 
-    // TOP 5 STUDENTS
-    top5HeadingTitle: {
-      fontSize: 18,
-      fontWeight: '800',
-      color: theme.text,
-      textAlign: 'center',
-      marginBottom: 16,
-    },
-    topRankingContainer: {
-      backgroundColor: theme.topRankingBg,
-      borderColor: theme.topRankingBorder,
-      borderWidth: 1,
-      borderRadius: 20,
-      padding: 16,
-    },
-    topRankingGrid: {
+    // TOP PERFORMERS NEW UI
+    podiumContainer: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'space-between',
+      justifyContent: 'center',
+      alignItems: 'flex-end',
+      paddingTop: 40,
+      marginBottom: 32,
+      gap: 16,
     },
-    topRankCardWrapper: { width: '48%', marginBottom: 12 },
-    topRankCard: {
+    podiumCard: {
       backgroundColor: theme.cardSurface,
+      borderRadius: 16,
+      alignItems: 'center',
+      paddingHorizontal: 8,
+      paddingBottom: 16,
+      paddingTop: 36,
+      width: '28%',
       borderColor: theme.cardNestedBorder,
       borderWidth: 1,
-      borderRadius: 16,
-      padding: 14,
+    },
+    podiumCard1: {
+      height: 140,
+      borderColor: '#10B981',
+      borderWidth: 2,
+      shadowColor: '#10B981',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 10,
+      elevation: 6,
+      zIndex: 10,
+    },
+    podiumCard2: { height: 120 },
+    podiumCard3: { height: 110 },
+    podiumAvatarWrapper: {
+      position: 'absolute',
+      top: -32,
       alignItems: 'center',
     },
-    topRankCircle: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: BRAND.accentPurpleDark,
+    podiumAvatarWrapper1: { top: -40 },
+    podiumAvatar: {
+      width: 54,
+      height: 54,
+      borderRadius: 27,
+      borderWidth: 2,
+      backgroundColor: theme.cardSurface,
+    },
+    podiumAvatar1: {
+      width: 68,
+      height: 68,
+      borderRadius: 34,
+      borderColor: '#10B981',
+      borderWidth: 3,
+    },
+    podiumAvatar2: { borderColor: '#3B82F6' },
+    podiumAvatar3: { borderColor: '#F97316' },
+    podiumRankBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+      borderRadius: 12,
+      marginTop: -12,
+      flexDirection: 'row',
+      alignItems: 'center',
       justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 8,
+      gap: 2,
     },
-    topRankCircleText: {
-      fontSize: 18,
-      fontWeight: '900',
-      color: BRAND.onAccent,
+    podiumRankBadge1: { backgroundColor: '#10B981' },
+    podiumRankBadge2: { backgroundColor: '#3B82F6' },
+    podiumRankBadge3: { backgroundColor: '#F97316' },
+    podiumRankText: {
+      color: '#FFF',
+      fontSize: 10,
+      fontWeight: '800',
     },
-    topRankName: {
-      fontSize: 13,
+    podiumName: {
+      fontSize: 12,
       fontWeight: '700',
       color: theme.text,
-      marginBottom: 2,
       textAlign: 'center',
+      marginBottom: 4,
     },
-    topRankPercent: {
-      fontSize: 13,
+    podiumPercent: {
+      fontSize: 18,
       fontWeight: '800',
-      color: BRAND.accentPurple,
       marginBottom: 6,
     },
-    topRankBadge: {
-      backgroundColor: BRAND.accentPurpleDark,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 10,
+    podiumPercent1: { color: '#10B981', fontSize: 22 },
+    podiumPercent2: { color: '#3B82F6' },
+    podiumPercent3: { color: '#F97316' },
+    podiumTopPill: {
+      backgroundColor: BRAND.accentPurple,
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+      borderRadius: 12,
     },
-    topRankBadgeText: {
+    podiumTopPill2: { backgroundColor: '#DBEAFE' },
+    podiumTopPillText: {
       fontSize: 9,
       fontWeight: '900',
-      color: BRAND.onAccent,
+      color: '#FFF',
+    },
+    podiumTopPillText2: { color: '#2563EB' },
+
+    topPerformersHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+      paddingHorizontal: 4,
+    },
+    topPerformersTitle: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: theme.text,
+    },
+    viewAllText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: BRAND.accentPurple,
+    },
+    performerListContainer: { gap: 12 },
+    performerListCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 14,
+      borderRadius: 16,
+    },
+    performerListCard4: { backgroundColor: '#E0F2FE' },
+    performerListCard5: { backgroundColor: '#F3E8FF' },
+    performerRank: {
+      fontSize: 15,
+      fontWeight: '800',
+      color: '#94A3B8',
+      width: 24,
+      textAlign: 'center',
+    },
+    performerAvatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      marginHorizontal: 12,
+    },
+    performerInfo: { flex: 1 },
+    performerName: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: theme.text,
+      marginBottom: 4,
+    },
+    performerDeptPill: {
+      backgroundColor: 'rgba(255,255,255,0.7)',
+      alignSelf: 'flex-start',
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+      borderRadius: 12,
+    },
+    performerDeptText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: '#64748B',
+    },
+    performerRightInfo: { alignItems: 'flex-end' },
+    performerPercent: {
+      fontSize: 17,
+      fontWeight: '800',
+      color: BRAND.accentPurple,
+    },
+    performerPercent4: { color: '#0284C7' },
+    performerStatusText: {
+      fontSize: 9,
+      fontWeight: '800',
+      color: '#94A3B8',
+      marginTop: 2,
     },
 
     // FAQ
@@ -703,6 +809,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
   const [scheduleData, setScheduleData] = useState<any[]>([]);
   const [assignmentsData, setAssignmentsData] = useState<any[]>([]);
   const [quizzesData, setQuizzesData] = useState<any[]>([]);
+  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [expandedFaqId, setExpandedFaqId] = useState<number | null>(null);
@@ -728,12 +835,13 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
         }
 
         if (resolvedId) {
-          const [dashRes, scheduleRes, assignRes, quizRes] =
+          const [dashRes, scheduleRes, assignRes, quizRes, leaderboardRes] =
             await Promise.allSettled([
               studentService.getDashboard(resolvedId),
               studentService.getSchedule(resolvedId),
               studentService.getAssignments(resolvedId),
               studentService.getQuizzes(),
+              studentService.getLeaderboard(5),
             ]);
 
           if (dashRes.status === 'fulfilled' && dashRes.value) {
@@ -763,30 +871,21 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
               (Array.isArray(quizRes.value?.data) ? quizRes.value.data : []);
             setQuizzesData(Array.isArray(p) ? p : []);
           }
+          if (leaderboardRes.status === 'fulfilled' && leaderboardRes.value) {
+            const p =
+              leaderboardRes.value?.normalized?.data ||
+              leaderboardRes.value?.data ||
+              [];
+            setLeaderboardData(Array.isArray(p) ? p : (Array.isArray(p.leaderboard) ? p.leaderboard : []));
+          }
         }
       } catch (error) {
         console.error('Fetch failed:', error);
-        setDashboardData({
-          attendance: { percentage: 90 },
-          stats: { avgScore: 38, quizScore: 0, testScore: 0, perfScore: 0 },
-          topStudents: [
-            { rank: 1, name: 'Atharv Ragdwal', percentage: '90%' },
-            { rank: 2, name: 'Shubham Mangal', percentage: '38%' },
-            { rank: 3, name: 'Atharv12 Ragdwal-sharnex', percentage: '0%' },
-            { rank: 4, name: 'Raju Rastogi', percentage: '0%' },
-            { rank: 5, name: 'sumit agnihotri', percentage: '0%' },
-          ],
-        });
-        setScheduleData([
-          { time: '09:00', endTime: '09:45', subject: 'Maths', teacher: 'Nidhi Yadav', room: 'Classroom', status: 'Completed' },
-          { time: '09:45', endTime: '10:30', subject: 'Science', teacher: 'manish chotia', room: 'Classroom', status: 'Ongoing' },
-          { time: '12:00', endTime: '12:45', subject: 'Social Studies', teacher: 'Anurag Yadav', room: 'Classroom', status: 'Upcoming' },
-        ]);
-        setAssignmentsData([
-          { id: '1', title: 'Maths', subject_name: 'English', due_date: '2026-07-11T08:49:00Z', is_submitted: false },
-          { id: '2', title: 'mATHS', subject_name: 'English', due_date: '2026-07-11T08:51:00Z', is_submitted: false },
-        ]);
+        setDashboardData({});
+        setScheduleData([]);
+        setAssignmentsData([]);
         setQuizzesData([]);
+        setLeaderboardData([]);
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
@@ -821,11 +920,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
 
   const processedSchedule = useMemo(() => {
     if (!scheduleData || !Array.isArray(scheduleData) || scheduleData.length === 0) {
-      return [
-        { time: '09:00', endTime: '09:45', subject: 'Maths', teacher: 'Nidhi Yadav', room: 'Classroom', status: 'Completed' },
-        { time: '09:45', endTime: '10:30', subject: 'Science', teacher: 'manish chotia', room: 'Classroom', status: 'Ongoing' },
-        { time: '12:00', endTime: '12:45', subject: 'Social Studies', teacher: 'Anurag Yadav', room: 'Classroom', status: 'Upcoming' },
-      ];
+      return [];
     }
     const dayKey = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][new Date().getDay()];
     return scheduleData
@@ -857,39 +952,34 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
       });
   }, [scheduleData, calculateStatus, normalizeTime]);
 
-  const statsValues = useMemo(() => {
-    return [
-      { value: `${dashboardData?.attendance?.percentage ?? 90}%`, isTop: true },
-      { value: `${dashboardData?.stats?.avgScore ?? 38}%`, isTop: true },
-      { value: `${dashboardData?.stats?.quizScore ?? 0}%`, isTop: true },
-      { value: `${dashboardData?.stats?.testScore ?? 0}%`, isTop: false },
-      { value: `${dashboardData?.stats?.perfScore ?? 0}%`, isTop: false },
-    ];
-  }, [dashboardData]);
 
   const top5Students = useMemo(() => {
     if (
-      dashboardData?.topStudents &&
-      Array.isArray(dashboardData.topStudents) &&
-      dashboardData.topStudents.length > 0
+      leaderboardData &&
+      Array.isArray(leaderboardData) &&
+      leaderboardData.length > 0
     ) {
-      return dashboardData.topStudents.slice(0, 5);
+      return leaderboardData.slice(0, 5).map((student: any) => {
+        // Map backend fields to the UI design requirements.
+        // We look for common profile picture fields, class names for department, etc.
+        const realImg = student.profile_picture_url || student.avatar || student.image_url || student.photo_url || student.img;
+        const fallbackImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name || 'Student')}&background=random&color=fff`;
+
+        return {
+          ...student,
+          img: realImg || fallbackImg,
+          dept: student.class_name || student.department || student.dept || 'Class',
+          statusText: student.trend || student.status || student.statusText || 'STABLE',
+          percentage: student.score || (typeof student.percentage === 'number' ? `${student.percentage}%` : student.percentage) || '0%',
+        };
+      });
     }
-    return [
-      { rank: 1, name: 'Atharv Ragdwal', percentage: '90%' },
-      { rank: 2, name: 'Shubham Mangal', percentage: '38%' },
-      { rank: 3, name: 'Atharv12 Ragdwal-sharnex', percentage: '0%' },
-      { rank: 4, name: 'Raju Rastogi', percentage: '0%' },
-      { rank: 5, name: 'sumit agnihotri', percentage: '0%' },
-    ];
-  }, [dashboardData]);
+    return [];
+  }, [leaderboardData]);
 
   const filteredAssignments = useMemo(() => {
     if (!assignmentsData || !Array.isArray(assignmentsData) || assignmentsData.length === 0) {
-      return [
-        { id: '1', title: 'Maths', subject_name: 'English', due_date: '2026-07-11T08:49:00Z' },
-        { id: '2', title: 'mATHS', subject_name: 'English', due_date: '2026-07-11T08:51:00Z' },
-      ];
+      return [];
     }
     return assignmentsData
       .filter(
@@ -921,7 +1011,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
   const faqData = useMemo(
     () => [
       { question: 'How do I submit an assignment?', answer: 'Go to Assignments page, select the assignment, and click Submit button.' },
-      { question: 'Where can I check my grades?', answer: 'Navigate to Grades & Reports section from the sidebar menu.' },
+      { question: 'Where can I check my grades?', answer: 'Navigate to Result  section from the sidebar menu.' },
       { question: 'How do I view my attendance?', answer: 'Click on Attendance in the sidebar to view your detailed attendance calendar.' },
       { question: 'Where are the quiz results?', answer: 'Quiz results are available in the Quizzes & Tests section after completion.' },
     ],
@@ -995,19 +1085,6 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
             </View> */}
           </View>
 
-          {/* 2. Stats Row */}
-          <View style={s.statsRow}>
-            {statsValues.map((item, index) => (
-              <View key={index} style={s.statCard}>
-                <Text style={s.statValue}>{item.value}</Text>
-                {item.isTop && (
-                  <View style={s.statTopBadge}>
-                    <Text style={s.statTopBadgeText}>TOP</Text>
-                  </View>
-                )}
-              </View>
-            ))}
-          </View>
 
           {/* 3. Today's Schedule */}
           <View style={s.section}>
@@ -1164,32 +1241,80 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
             </View>
           </View>
 
-          {/* 6. Top 5 Students */}
+          {/* 6. Top Performers */}
           <View style={s.section}>
-            <Text style={s.top5HeadingTitle}>🏆 Top 5 Students this year</Text>
-            <View style={s.topRankingContainer}>
-              <View style={s.topRankingGrid}>
-                {top5Students.map((student: any, index: number) => (
-                  <View key={index} style={s.topRankCardWrapper}>
-                    <View style={s.topRankCard}>
-                      <View style={s.topRankCircle}>
-                        <Text style={s.topRankCircleText}>
-                          {student?.name ? student.name.charAt(0).toUpperCase() : 'S'}
-                        </Text>
-                      </View>
-                      <Text style={s.topRankName} numberOfLines={1}>
-                        {student?.name || 'Student'}
-                      </Text>
-                      <Text style={s.topRankPercent}>{student?.percentage || '0%'}</Text>
-                      {index < 3 && (
-                        <View style={s.topRankBadge}>
-                          <Text style={s.topRankBadgeText}>TOP</Text>
-                        </View>
-                      )}
+            <View style={s.topPerformersHeaderRow}>
+              <Text style={s.topPerformersTitle}>Top Performers</Text>
+            </View>
+
+            {top5Students.length >= 3 && (
+              <View style={s.podiumContainer}>
+                {/* 2nd Place */}
+                <View style={[s.podiumCard, s.podiumCard2]}>
+                  <View style={[s.podiumAvatarWrapper, s.podiumAvatarWrapper2]}>
+                    <Image source={{ uri: top5Students[1].img || 'https://i.pravatar.cc/150' }} style={[s.podiumAvatar, s.podiumAvatar2]} />
+                    <View style={[s.podiumRankBadge, s.podiumRankBadge2]}>
+                      <Text style={s.podiumRankText}>2nd</Text>
                     </View>
                   </View>
-                ))}
+                  <Text style={s.podiumName} numberOfLines={1}>{top5Students[1].name || 'Student'}</Text>
+                  <Text style={[s.podiumPercent, s.podiumPercent2]}>{top5Students[1].percentage}</Text>
+                  <View style={[s.podiumTopPill, s.podiumTopPill2]}>
+                    <Text style={[s.podiumTopPillText, s.podiumTopPillText2]}>TOP</Text>
+                  </View>
+                </View>
+
+                {/* 1st Place */}
+                <View style={[s.podiumCard, s.podiumCard1]}>
+                  <View style={[s.podiumAvatarWrapper, s.podiumAvatarWrapper1]}>
+                    <Image source={{ uri: top5Students[0].img || 'https://i.pravatar.cc/150' }} style={[s.podiumAvatar, s.podiumAvatar1]} />
+                    <View style={[s.podiumRankBadge, s.podiumRankBadge1]}>
+                      <Ionicons name="ribbon" size={10} color="#FFF" />
+                      <Text style={s.podiumRankText}>1st</Text>
+                    </View>
+                  </View>
+                  <Text style={s.podiumName} numberOfLines={1}>{top5Students[0].name || 'Student'}</Text>
+                  <Text style={[s.podiumPercent, s.podiumPercent1]}>{top5Students[0].percentage}</Text>
+                  <View style={s.podiumTopPill}>
+                    <Text style={s.podiumTopPillText}>TOP</Text>
+                  </View>
+                </View>
+
+                {/* 3rd Place */}
+                <View style={[s.podiumCard, s.podiumCard3]}>
+                  <View style={[s.podiumAvatarWrapper, s.podiumAvatarWrapper3]}>
+                    <Image source={{ uri: top5Students[2].img || 'https://i.pravatar.cc/150' }} style={[s.podiumAvatar, s.podiumAvatar3]} />
+                    <View style={[s.podiumRankBadge, s.podiumRankBadge3]}>
+                      <Text style={s.podiumRankText}>3rd</Text>
+                    </View>
+                  </View>
+                  <Text style={s.podiumName} numberOfLines={1}>{top5Students[2].name || 'Student'}</Text>
+                  <Text style={[s.podiumPercent, s.podiumPercent3]}>{top5Students[2].percentage}</Text>
+                </View>
               </View>
+            )}
+
+            <View style={s.performerListContainer}>
+              {top5Students.slice(3).map((student: any, index: number) => {
+                const rank = index + 4;
+                const isRank4 = rank === 4;
+                return (
+                  <View key={index} style={[s.performerListCard, isRank4 ? s.performerListCard4 : s.performerListCard5]}>
+                    <Text style={s.performerRank}>{rank}</Text>
+                    <Image source={{ uri: student.img || 'https://i.pravatar.cc/150' }} style={s.performerAvatar} />
+                    <View style={s.performerInfo}>
+                      <Text style={s.performerName}>{student.name || 'Student'}</Text>
+                      <View style={s.performerDeptPill}>
+                        <Text style={s.performerDeptText}>{student.dept || 'Department'}</Text>
+                      </View>
+                    </View>
+                    <View style={s.performerRightInfo}>
+                      <Text style={[s.performerPercent, isRank4 ? s.performerPercent4 : null]}>{student.percentage || '0%'}</Text>
+                      <Text style={s.performerStatusText}>{student.statusText || 'STABLE'}</Text>
+                    </View>
+                  </View>
+                );
+              })}
             </View>
           </View>
 

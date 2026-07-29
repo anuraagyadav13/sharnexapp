@@ -497,11 +497,11 @@ const HELP_CENTER_DATA = [
 ];
 
 const FAQ_DATA = [
-  { question: 'How do I add a new student to the system?', answer: 'Navigate to the Students section, click "Add New Student", fill in the required information, and submit the form.' },
+  { question: 'How do I add a new student to the system?', answer: 'Contact your institution admin to add a student.' },
   { question: 'How can I generate attendance reports?', answer: 'Go to the Attendance page, select the date range and class, then click "Generate Report" to download the attendance data.' },
   { question: 'How do I schedule parent-teacher meetings?', answer: 'Use the Calendar feature to create events, select "Parent-Teacher Meeting" as the event type, and invite parents through the system.' },
   { question: 'Can I customize the grading system?', answer: 'Yes, you can customize grading scales and weightings in the Settings section under "Grading Preferences".' },
-  { question: 'How do I submit an assignment online?', answer: 'Go to the Assignments page, select the assignment, upload your files, and click "Submit". Make sure to submit before the deadline.' },
+  { question: 'How do I create a new assignment for my class?', answer: 'Navigate to the Assignments section, click "Create Assignment", fill in the details and deadline, and select the target class.' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -603,7 +603,9 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
         });
       }
       const nowMinutes = today.getHours() * 60 + today.getMinutes();
-      const processedSchedule = finalSchedule.map((item: any) => {
+      const processedSchedule = finalSchedule
+        .filter((item: any) => item.type === 'CLASS')
+        .map((item: any) => {
         if (item.is_break || item.type === 'BREAK') return { ...item, status: 'Break' };
         if (item.type !== 'CLASS' || !item.start_time || !item.end_time) return item;
         try {

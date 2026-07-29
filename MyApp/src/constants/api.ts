@@ -80,6 +80,7 @@ export const ENDPOINTS = {
   STUDENT: {
     DASHBOARD: (id: string) => `/students/${id}/dashboard`,
     PROFILE: '/student/profile',
+    LEADERBOARD: (limit?: number) => `/students/leaderboard${limit ? `?limit=${limit}` : ''}`,
     SCHEDULE: (id: string) => `/students/${id}/schedule`,
     ATTENDANCE: (id: string) => `/students/${id}/attendance`,
     ASSIGNMENTS: (id: string) => `/students/${id}/assignments`,
@@ -103,6 +104,9 @@ export const ENDPOINTS = {
     ANNOUNCEMENTS: '/announcements',
     TIMETABLE: '/timetable',
     CLASS_SCHEDULE: (classId: string) => `/classes/${classId}/schedule`,
+    CALENDAR_EVENTS: '/calendar/events',
+    CALENDAR_HOLIDAYS: '/calendar/holidays',
+    CALENDAR_EXAMS: '/calendar/exams',
     OFFICIAL_RESULT: (id: string) => `/rms/results/${id}`,
     OFFICIAL_RESULT_LIST: '/rms/results/student',
     START_QUIZ: (quizId: string) => `/quizzes/${quizId}/start`,
