@@ -33,6 +33,8 @@ import { ENDPOINTS } from '../../constants/api';
 import { Asset, launchImageLibrary } from 'react-native-image-picker';
 import axios from 'axios';
 import { ImagePickerModal } from '../../components/common/ImagePickerModal';
+import { getCacheBustedUri } from '../../utils/image';
+import { invalidateCacheKey, CACHE_KEYS } from '../../utils/cache';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AccountSettings'>;
 
@@ -261,6 +263,7 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
           dobString = new Date(rawDob).toLocaleDateString('en-GB');
         }
 
+        const teacherPhoto = personalRaw.photoUrl || personalRaw.photo || profRaw.photoUrl || '';
         setProfileData({
           firstName: nameParts[0] || '',
           lastName: nameParts.slice(1).join(' ') || '',
@@ -268,9 +271,12 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
           email: personalRaw.email || authState.user?.email || '',
           dob: dobString,
           address: personalRaw.address || '',
-          photo: personalRaw.photoUrl || '',
+          photo: teacherPhoto,
           biography: '',
         });
+        if (teacherPhoto) {
+          updateUser({ photoUrl: teacherPhoto, photoUpdatedAt: Date.now() });
+        }
 
         setProfData({
           employeeId: profRaw.userId || '',
@@ -301,6 +307,7 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
 
         const instRaw: any = (instProfileRes as any)?.data?.data || (instProfileRes as any)?.data || instProfileRes;
         if (instRaw) {
+          const instPhoto = instRaw.photoUrl || instRaw.logo || instRaw.photo || '';
           setInstitutionData({
             name: instRaw.name || '',
             schoolType: instRaw.type || instRaw.schoolType || '',
@@ -317,7 +324,11 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
             phone: instRaw.phone || prev.phone,
             email: instRaw.email || authState.user?.email || prev.email,
             address: instRaw.address || prev.address,
+            photo: instPhoto || prev.photo,
           }));
+          if (instPhoto) {
+            updateUser({ photoUrl: instPhoto, photoUpdatedAt: Date.now() });
+          }
         }
 
         const sessList: any = (sessionsRes as any)?.data?.data || (sessionsRes as any)?.data || sessionsRes;
@@ -344,6 +355,7 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
           dobString = new Date(profileRaw.dateOfBirth).toLocaleDateString('en-GB');
         }
 
+        const studentPhoto = profileRaw.avatarUrl || profileRaw.photo || profileRaw.photoUrl || '';
         setProfileData({
           firstName: nameParts[0] || '',
           lastName: nameParts.slice(1).join(' ') || '',
@@ -351,9 +363,12 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
           email: profileRaw.email || authState.user?.email || '',
           dob: dobString,
           address: profileRaw.address || '',
-          photo: profileRaw.avatarUrl || profileRaw.photo || '',
+          photo: studentPhoto,
           biography: profileRaw.bio || '',
         });
+        if (studentPhoto) {
+          updateUser({ photoUrl: studentPhoto, photoUpdatedAt: Date.now() });
+        }
 
         if (parentResponse?.data?.data || parentResponse?.data) {
           const parentRaw = parentResponse.data.data || parentResponse.data;
@@ -645,17 +660,36 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
       } as any);
 
       setIsLoading(true);
+      let uploadRes: any;
       if (isTeacher) {
-        await teacherService.uploadPhoto(formData);
+        uploadRes = await teacherService.uploadPhoto(formData);
       } else if (isInstitution) {
-        await principalService.uploadPhoto(formData);
+        uploadRes = await principalService.uploadPhoto(formData);
       } else {
-        await accountService.uploadPhoto(formData);
+        uploadRes = await accountService.uploadPhoto(formData);
       }
+
+      console.log('[AccountSettings] Photo upload response body:', uploadRes?.data);
+
+      const uploadedUrl =
+        uploadRes?.data?.photoUrl ||
+        uploadRes?.data?.data?.photoUrl ||
+        uploadRes?.data?.avatarUrl ||
+        uploadRes?.data?.data?.avatarUrl ||
+        uploadRes?.data?.url ||
+        uploadRes?.data?.data?.url;
+
+      if (uploadedUrl) {
+        updateUser({ photoUrl: uploadedUrl, photoUpdatedAt: Date.now() });
+        setProfileData(prev => ({ ...prev, photo: uploadedUrl }));
+      }
+
+      invalidateCacheKey(CACHE_KEYS.TEACHER_PROFILE);
+
+      await fetchProfile(true);
+
       setTimeout(() => {
-        Alert.alert('Success', 'Profile photo updated successfully.', [
-          { text: 'OK', onPress: () => fetchProfile() }
-        ]);
+        Alert.alert('Success', 'Profile photo updated successfully.');
       }, 100);
     } catch (error) {
       console.error('[AccountSettings] Error uploading photo:', error);
@@ -676,12 +710,13 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
         await accountService.deletePhoto();
       }
 
-      updateUser({ photoUrl: '' });
+      invalidateCacheKey(CACHE_KEYS.TEACHER_PROFILE);
+      updateUser({ photoUrl: '', photoUpdatedAt: Date.now() });
       setProfileData(prev => ({ ...prev, photo: '' }));
 
       setTimeout(() => {
         Alert.alert('Success', 'Profile photo removed successfully.', [
-          { text: 'OK', onPress: () => fetchProfile() }
+          { text: 'OK', onPress: () => fetchProfile(true) }
         ]);
       }, 100);
     } catch (error) {
@@ -735,10 +770,11 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
             >
               {authState.user?.photoUrl ? (
                 <Image
-                  source={{ uri: authState.user.photoUrl }}
+                  source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }}
                   style={{ width: 34, height: 34, borderRadius: 17 }}
                 />
               ) : (
+
                 <Text style={styles.avatarText}>
                   {authState.user?.name?.charAt(0) || 'U'}
                 </Text>
@@ -777,8 +813,12 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
           >
             <View style={styles.heroAvatar}>
               {authState.user?.photoUrl ? (
-                <Image source={{ uri: authState.user.photoUrl }} style={styles.heroAvatarImage} />
+                <Image
+                  source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }}
+                  style={styles.heroAvatarImage}
+                />
               ) : (
+
                 <Text style={styles.heroAvatarText}>
                   {authState.user?.name?.charAt(0) || 'U'}
                 </Text>

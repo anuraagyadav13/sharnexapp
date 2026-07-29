@@ -20,6 +20,8 @@ import { RootStackParamList } from '../../types/navigation';
 import principalService, { RmsExamItem } from '../../services/principalService';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
+import { getCacheBustedUri } from '../../utils/image';
+
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 
 type PrincipalRMSNavigationProp = NativeStackNavigationProp<
@@ -189,8 +191,9 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
         >
           {authState.user?.photoUrl ? (
-            <Image source={{ uri: authState.user.photoUrl }} style={styles.headerAvatarImage} />
+            <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.headerAvatarImage} />
           ) : (
+
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
             </View>

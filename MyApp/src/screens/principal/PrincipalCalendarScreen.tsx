@@ -23,6 +23,8 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
+import { getCacheBustedUri } from '../../utils/image';
+
 import Skeleton from '../../components/common/Skeleton';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { useTheme } from '../../store/ThemeContext';
@@ -167,8 +169,9 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
         <View style={styles.headerRight}>
           <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}>
             {authState.user?.photoUrl ? (
-              <Image source={{ uri: authState.user.photoUrl }} style={styles.avatarHeader} />
+              <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.avatarHeader} />
             ) : (
+
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
               </View>

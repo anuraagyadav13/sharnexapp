@@ -22,6 +22,8 @@ import { useAuth } from '../../store/AuthContext';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import principalService, { AnnouncementItem } from '../../services/principalService';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { getCacheBustedUri } from '../../utils/image';
+
 
 type PrincipalAnnouncementsNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -376,8 +378,9 @@ const PrincipalAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
         >
           {authState.user?.photoUrl ? (
-            <Image source={{ uri: authState.user.photoUrl }} style={styles.headerAvatarImage} />
+            <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.headerAvatarImage} />
           ) : (
+
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
             </View>

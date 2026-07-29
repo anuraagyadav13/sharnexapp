@@ -30,6 +30,8 @@ import principalService from '../../services/principalService';
 import { ENDPOINTS } from '../../constants/api';
 import Skeleton from '../../components/common/Skeleton';
 import Toast, { ToastType } from '../../components/Toast';
+import { getCacheBustedUri } from '../../utils/image';
+
 
 type DashboardNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PrincipalDashboard'>;
 
@@ -289,8 +291,9 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                 onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
               >
                 {authState.user?.photoUrl ? (
-                  <Image source={{ uri: authState.user.photoUrl }} style={styles.headerAvatarImage} />
+                  <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.headerAvatarImage} />
                 ) : (
+
                   <View style={styles.avatar}>
                     <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
                   </View>

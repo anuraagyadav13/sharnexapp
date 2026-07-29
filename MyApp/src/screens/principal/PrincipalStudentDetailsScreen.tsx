@@ -22,6 +22,8 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
+import { getCacheBustedUri } from '../../utils/image';
+
 import apiClient from '../../services/apiClient';
 import principalService from '../../services/principalService';
 import { ENDPOINTS } from '../../constants/api';
@@ -573,8 +575,9 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
           </TouchableOpacity>
           <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')} accessibilityLabel="Account settings">
             {authState.user?.photoUrl ? (
-              <Image source={{ uri: authState.user.photoUrl }} style={styles.avatarHeader} />
+              <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.avatarHeader} />
             ) : (
+
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
               </View>

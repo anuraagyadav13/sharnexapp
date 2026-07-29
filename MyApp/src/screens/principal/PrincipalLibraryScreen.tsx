@@ -21,6 +21,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
+import { getCacheBustedUri } from '../../utils/image';
+
 import apiClient from '../../services/apiClient';
 import principalService, {
   LibraryDashboardStats,
@@ -1223,8 +1225,9 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
             onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
           >
             {authState.user?.photoUrl ? (
-              <Image source={{ uri: authState.user.photoUrl }} style={styles.headerAvatarImage} />
+              <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.headerAvatarImage} />
             ) : (
+
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
               </View>

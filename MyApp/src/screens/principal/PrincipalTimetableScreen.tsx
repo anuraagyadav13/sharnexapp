@@ -16,6 +16,8 @@ import { useTheme } from '../../store/ThemeContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useAuth } from '../../store/AuthContext';
+import { getCacheBustedUri } from '../../utils/image';
+
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import principalService, {
   ClassItem,
@@ -271,7 +273,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
     });
 
     if (match.length > 0) return match;
-    return [{ date: selectedDay, slots: [] }];
+    return [{ type: 'day', date: selectedDay, slots: [] }];
   }, [scheduleData, viewMode, selectedDay]);
 
   const renderPeriodCard = useCallback(
@@ -459,8 +461,9 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
         <Text style={styles.appHeaderTitle}>Timetable</Text>
         <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })} accessibilityLabel="Account settings">
           {authState.user?.photoUrl ? (
-            <Image source={{ uri: authState.user.photoUrl }} style={styles.headerAvatarImage} />
+            <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.headerAvatarImage} />
           ) : (
+
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
             </View>

@@ -3,6 +3,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setAuthToken, storeTokens, clearStoredTokens, getStoredTokens } from '../services/apiClient';
 import { clearCache } from '../utils/cache';
 
+import accountService from '../services/accountService';
+import teacherService from '../services/teacherService';
+import principalService from '../services/principalService';
+
 type Role = 'student' | 'teacher' | 'principal' | null;
 
 interface AuthState {
@@ -33,6 +37,77 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isLoading: true, // Start as true during initial recovery
   });
 
+  const extractPhotoUrl = (obj: any): string | undefined => {
+    if (!obj || typeof obj !== 'object') return undefined;
+    const candidate =
+      obj.photoUrl ||
+      obj.avatarUrl ||
+      obj.photo ||
+      obj.avatar ||
+      obj.logo ||
+      obj.logoUrl ||
+      obj.profilePhoto ||
+      obj.profileImage ||
+      obj.image ||
+      obj.url;
+
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      const trimmed = candidate.trim();
+      if (
+        trimmed.startsWith('http://') ||
+        trimmed.startsWith('https://') ||
+        trimmed.startsWith('file://') ||
+        trimmed.startsWith('data:')
+      ) {
+        return trimmed;
+      }
+      const baseDomain = 'https://www.sharnex.com';
+      return trimmed.startsWith('/') ? `${baseDomain}${trimmed}` : `${baseDomain}/${trimmed}`;
+    }
+    return undefined;
+  };
+
+  const hydrateUserPhoto = async (userRole: Role, currentUser: any) => {
+    try {
+      if (!userRole) return;
+      const normalizedRole = String(userRole || currentUser?.role || '').toLowerCase();
+      let rawPhoto: string | undefined;
+
+      if (normalizedRole === 'teacher' || normalizedRole === 'staff') {
+        const [personalRes, profRes] = await Promise.all([
+          teacherService.getPersonalInfo().catch(() => null),
+          teacherService.getProfile().catch(() => null),
+        ]);
+        const pRaw = personalRes?.data?.data ?? personalRes?.data ?? {};
+        const prRaw = profRes?.data?.data ?? profRes?.data ?? {};
+        rawPhoto = extractPhotoUrl(pRaw) || extractPhotoUrl(prRaw);
+      } else if (
+        normalizedRole === 'institution' ||
+        normalizedRole === 'principal' ||
+        normalizedRole === 'institution_admin' ||
+        normalizedRole === 'central_admin'
+      ) {
+        const [instRes, accRes] = await Promise.all([
+          principalService.getInstitutionProfile().catch(() => null),
+          accountService.getProfile().catch(() => null),
+        ]);
+        const instRaw = (instRes as any)?.data?.data ?? (instRes as any)?.data ?? instRes;
+        const accRaw = accRes?.data?.data ?? accRes?.data ?? {};
+        rawPhoto = extractPhotoUrl(instRaw) || extractPhotoUrl(accRaw);
+      } else {
+        const res = await accountService.getProfile().catch(() => null);
+        const raw = res?.data?.data ?? res?.data ?? {};
+        rawPhoto = extractPhotoUrl(raw);
+      }
+
+      if (rawPhoto) {
+        updateUser({ photoUrl: rawPhoto, photoUpdatedAt: Date.now() });
+      }
+    } catch (err) {
+      console.warn('[AuthContext] Photo hydration failed:', err);
+    }
+  };
+
   useEffect(() => {
     const loadStoredState = async () => {
       try {
@@ -41,94 +116,73 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           const parsed = JSON.parse(storedStr);
           if (parsed.token) {
             setAuthToken(parsed.token);
+            const photoFromUser = extractPhotoUrl(parsed.user);
+            const initialUser = photoFromUser && !parsed.user?.photoUrl
+              ? { ...parsed.user, photoUrl: photoFromUser }
+              : parsed.user;
+
             setAuthState({
               token: parsed.token,
               refreshToken: parsed.refreshToken || null,
               role: parsed.role,
-              user: parsed.user,
-              isLoading: false
+              user: initialUser,
+              isLoading: false,
             });
+
+            hydrateUserPhoto(parsed.role, initialUser).catch(err =>
+              console.warn('[AuthContext] Session-restore photo hydration failed:', err)
+            );
             return;
           }
         }
+        setAuthState(prev => ({ ...prev, isLoading: false }));
       } catch (e) {
         console.error('Failed to load auth state', e);
-      } finally {
         setAuthState(prev => ({ ...prev, isLoading: false }));
       }
     };
     loadStoredState();
   }, []);
 
-  // const login = async (accessToken: string, refreshToken: string, role: Role, user: any) => {
-  //   try {
-  //     // Store tokens separately for apiClient
-  //     await storeTokens(accessToken, refreshToken);
+  const login = async (accessToken: string, refreshToken: string, role: Role, user: any) => {
+    try {
+      const effectiveAccessToken = accessToken || "COOKIE_AUTH";
+      const effectiveRefreshToken = refreshToken || "COOKIE_AUTH";
 
-  //     // Store auth state
-  //     const stateToStore = {
-  //       token: accessToken,
-  //       refreshToken,
-  //       role,
-  //       user,
-  //     };
-  //     await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(stateToStore));
+      await storeTokens(effectiveAccessToken, effectiveRefreshToken);
 
-  //     // Update context state
-  //     setAuthState({
-  //       token: accessToken,
-  //       refreshToken,
-  //       role,
-  //       user,
-  //       isLoading: false,
-  //     });
+      const userPhoto = extractPhotoUrl(user);
+      const initialUser = userPhoto && !user?.photoUrl ? { ...user, photoUrl: userPhoto } : user;
 
-  //     // Set token in axios defaults
-  //     setAuthToken(accessToken);
-  //   } catch (error) {
-  //     console.error('Error during login:', error);
-  //   }
-  // };
-const login = async (accessToken: string, refreshToken: string, role: Role, user: any) => {
-  try {
-    // ======================================================
-    // TEMP FIX (2026-06-26)
-    // Backend now authenticates using HttpOnly cookies.
-    // It does not return JWT tokens in the response body.
-    // Use a placeholder token so the app treats the user as
-    // authenticated until the auth flow is fully migrated.
-    // ======================================================
+      const stateToStore = {
+        token: effectiveAccessToken,
+        refreshToken: effectiveRefreshToken,
+        role,
+        user: initialUser,
+      };
 
-    const effectiveAccessToken = accessToken || "COOKIE_AUTH";
-    const effectiveRefreshToken = refreshToken || "COOKIE_AUTH";
+      await AsyncStorage.setItem(
+        AUTH_STORAGE_KEY,
+        JSON.stringify(stateToStore)
+      );
 
-    await storeTokens(effectiveAccessToken, effectiveRefreshToken);
+      setAuthState({
+        token: effectiveAccessToken,
+        refreshToken: effectiveRefreshToken,
+        role,
+        user: initialUser,
+        isLoading: false,
+      });
 
-    const stateToStore = {
-      token: effectiveAccessToken,
-      refreshToken: effectiveRefreshToken,
-      role,
-      user,
-    };
+      setAuthToken(effectiveAccessToken);
 
-    await AsyncStorage.setItem(
-      AUTH_STORAGE_KEY,
-      JSON.stringify(stateToStore)
-    );
-
-    setAuthState({
-      token: effectiveAccessToken,
-      refreshToken: effectiveRefreshToken,
-      role,
-      user,
-      isLoading: false,
-    });
-
-    setAuthToken(effectiveAccessToken);
-  } catch (error) {
-    console.error("Error during login:", error);
-  }
-};
+      hydrateUserPhoto(role, initialUser).catch(err =>
+        console.warn('[AuthContext] Login photo hydration failed:', err)
+      );
+    } catch (error) {
+      console.error("Error during login:", error);
+    }
+  };
 //changes till here
   const logout = async () => {
     try {

@@ -13,6 +13,8 @@ import { useTheme } from '../../store/ThemeContext';
 import { useAuth } from '../../store/AuthContext';
 import ThemeSelectionModal from '../modals/ThemeSelectionModal';
 import ScaleButton from '../animations/ScaleButton';
+import { getCacheBustedUri } from '../../utils/image';
+
 
 export type BusTabType = 'Dashboard' | 'Fleet Tracking' | 'Routes' | 'Schedules' | 'Driver Management';
 
@@ -101,8 +103,9 @@ export const BusSubHeader: React.FC<BusSubHeaderProps> = ({
             onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
           >
             {authState.user?.photoUrl ? (
-              <Image source={{ uri: authState.user.photoUrl }} style={styles.headerAvatarImage} />
+              <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.headerAvatarImage} />
             ) : (
+
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
               </View>

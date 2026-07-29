@@ -1251,7 +1251,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
               <View style={s.podiumContainer}>
                 {/* 2nd Place */}
                 <View style={[s.podiumCard, s.podiumCard2]}>
-                  <View style={[s.podiumAvatarWrapper, s.podiumAvatarWrapper2]}>
+                  <View style={s.podiumAvatarWrapper}>
                     <Image source={{ uri: top5Students[1].img || 'https://i.pravatar.cc/150' }} style={[s.podiumAvatar, s.podiumAvatar2]} />
                     <View style={[s.podiumRankBadge, s.podiumRankBadge2]}>
                       <Text style={s.podiumRankText}>2nd</Text>
@@ -1266,7 +1266,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
 
                 {/* 1st Place */}
                 <View style={[s.podiumCard, s.podiumCard1]}>
-                  <View style={[s.podiumAvatarWrapper, s.podiumAvatarWrapper1]}>
+                  <View style={s.podiumAvatarWrapper}>
                     <Image source={{ uri: top5Students[0].img || 'https://i.pravatar.cc/150' }} style={[s.podiumAvatar, s.podiumAvatar1]} />
                     <View style={[s.podiumRankBadge, s.podiumRankBadge1]}>
                       <Ionicons name="ribbon" size={10} color="#FFF" />
@@ -1282,7 +1282,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
 
                 {/* 3rd Place */}
                 <View style={[s.podiumCard, s.podiumCard3]}>
-                  <View style={[s.podiumAvatarWrapper, s.podiumAvatarWrapper3]}>
+                  <View style={s.podiumAvatarWrapper}>
                     <Image source={{ uri: top5Students[2].img || 'https://i.pravatar.cc/150' }} style={[s.podiumAvatar, s.podiumAvatar3]} />
                     <View style={[s.podiumRankBadge, s.podiumRankBadge3]}>
                       <Text style={s.podiumRankText}>3rd</Text>
