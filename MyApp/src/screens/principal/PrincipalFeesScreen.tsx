@@ -11,18 +11,19 @@ import {
   Dimensions,
   Platform,
   Image,
+  ScrollView,
+  Modal,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
-import principalService, { InvoiceStats, InvoiceItem } from '../../services/principalService';
+import principalService, { InvoiceStats, InvoiceItem, ReconciliationData, ReconciliationPayment } from '../../services/principalService';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
-import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
 import { getCacheBustedUri } from '../../utils/image';
-
 
 const { width } = Dimensions.get('window');
 
@@ -35,43 +36,93 @@ interface Props {
   navigation: PrincipalFeesNavigationProp;
 }
 
-type TabType = 'All' | 'PENDING' | 'PAID' | 'OVERDUE';
+type MainTab = 'invoices' | 'settlements' | 'refunds';
+type InvoiceFilter = 'All' | 'PENDING' | 'PAID' | 'OVERDUE';
+type PaymentModeFilter = 'ALL' | 'UPI' | 'CARD' | 'CASH' | 'CHEQUE';
 
 const formatRupee = (amount: number) => {
   if (amount === undefined || amount === null) return '₹0';
+  if (amount >= 100000) return '₹' + (amount / 100000).toFixed(2) + 'L';
   return '₹' + amount.toLocaleString('en-IN');
+};
+
+const formatFullRupee = (amount: number) => {
+  if (amount === undefined || amount === null) return '₹0';
+  return '₹' + amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+};
+
+const formatDate = (dateStr: string) => {
+  try {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return 'N/A';
+    return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch { return 'N/A'; }
+};
+
+const formatDateTime = (dateStr: string) => {
+  try {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '-';
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) + ', ' +
+      d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+  } catch { return '-'; }
+};
+
+const getInitials = (name: string) => {
+  if (!name) return '?';
+  const parts = name.trim().split(' ');
+  return parts.length > 1 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : parts[0][0].toUpperCase();
+};
+
+const avatarColors = ['#8B5CF6', '#EC4899', '#EF4444', '#F97316', '#10B981', '#3B82F6', '#6366F1', '#14B8A6'];
+const getAvatarColor = (name: string) => {
+  let hash = 0;
+  for (let i = 0; i < (name || '').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return avatarColors[Math.abs(hash) % avatarColors.length];
 };
 
 const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme, isDarkMode);
+  const s = getStyles(theme, isDarkMode);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const { authState } = useAuth();
+
+  // Data states
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isError, setIsError] = useState(false);
-  const { authState } = useAuth();
   const [stats, setStats] = useState<InvoiceStats | null>(null);
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
-  const [selectedTab, setSelectedTab] = useState<TabType>('All');
+  const [reconciliation, setReconciliation] = useState<ReconciliationData | null>(null);
+  const [isReconLoading, setIsReconLoading] = useState(false);
 
-  const loadData = useCallback(async (showRefreshIndicator = false) => {
-    if (showRefreshIndicator) {
-      setIsRefreshing(true);
-    } else {
-      setIsLoading(true);
-    }
+  // UI states
+  const [mainTab, setMainTab] = useState<MainTab>('invoices');
+  const [invoiceFilter, setInvoiceFilter] = useState<InvoiceFilter>('All');
+  const [paymentModeFilter, setPaymentModeFilter] = useState<PaymentModeFilter>('ALL');
+  const [actionMenuId, setActionMenuId] = useState<string | null>(null);
+
+  // Refund modal
+  const [refundInvoice, setRefundInvoice] = useState<InvoiceItem | null>(null);
+  const [refundReason, setRefundReason] = useState('Duplicate or incorrect fee payment');
+  const [refundConfirmText, setRefundConfirmText] = useState('');
+  const [refundAgreed, setRefundAgreed] = useState(false);
+
+  const loadData = useCallback(async (showRefresh = false) => {
+    if (showRefresh) setIsRefreshing(true);
+    else setIsLoading(true);
     setIsError(false);
 
     try {
       const [statsRes, invoicesRes] = await Promise.all([
         principalService.getInvoiceStats(),
-        principalService.getInvoices(50),
+        principalService.getInvoices(500),
       ]);
-
       setStats(statsRes.data?.data || null);
       setInvoices(invoicesRes.data?.data?.invoices || []);
-    } catch (error) {
-      console.error('[PrincipalFees] Failed to fetch fees/invoice data:', error);
+    } catch {
       setIsError(true);
     } finally {
       setIsLoading(false);
@@ -79,869 +130,1079 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
     }
   }, []);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  // Derived filter
-  const filteredInvoices = useMemo(() => {
-    return invoices.filter((inv) => {
-      if (selectedTab === 'All') return true;
-      return inv.status === selectedTab;
-    });
-  }, [invoices, selectedTab]);
-
-  // Tab counts for modern live count badges
-  const tabCounts = useMemo(() => {
-    return {
-      All: invoices.length,
-      PENDING: invoices.filter((i) => i.status === 'PENDING').length,
-      PAID: stats?.paidCount ?? invoices.filter((i) => i.status === 'PAID').length,
-      OVERDUE: stats?.overdueCount ?? invoices.filter((i) => i.status === 'OVERDUE').length,
-    };
-  }, [invoices, stats]);
-
-  const formatDate = useCallback((dateStr: string) => {
+  const loadReconciliation = useCallback(async () => {
+    setIsReconLoading(true);
     try {
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return 'N/A';
-      return date.toLocaleDateString('en-GB'); // DD/MM/YYYY
+      const now = new Date();
+      // Expand range to see past paid invoices and payouts that occurred in previous months
+      const startDate = `${now.getFullYear() - 1}-01-01`;
+      const endDate = `${now.getFullYear() + 1}-12-31`;
+      const res = await principalService.getReconciliation(startDate, endDate);
+      if (res.data?.data) setReconciliation(res.data.data);
     } catch {
-      return 'N/A';
+      // Silently fail
+    } finally {
+      setIsReconLoading(false);
     }
   }, []);
 
-  const getStatusStyles = useCallback((status: string) => {
-    const s = status?.toUpperCase();
-    if (isDarkMode) {
-      switch (s) {
-        case 'PAID':
-          return { bg: 'rgba(16, 185, 129, 0.16)', text: '#34D399', dot: '#10B981' };
-        case 'PENDING':
-          return { bg: 'rgba(245, 158, 11, 0.16)', text: '#FBBF24', dot: '#F59E0B' };
-        case 'OVERDUE':
-          return { bg: 'rgba(239, 68, 68, 0.16)', text: '#F87171', dot: '#EF4444' };
-        default:
-          return { bg: 'rgba(148, 163, 184, 0.16)', text: '#94A3B8', dot: '#64748B' };
-      }
-    } else {
-      switch (s) {
-        case 'PAID':
-          return { bg: '#ECFDF5', text: '#047857', dot: '#10B981' };
-        case 'PENDING':
-          return { bg: '#FFF7ED', text: '#C2410C', dot: '#F59E0B' };
-        case 'OVERDUE':
-          return { bg: '#FEF2F2', text: '#B91C1C', dot: '#EF4444' };
-        default:
-          return { bg: '#F1F5F9', text: '#475569', dot: '#64748B' };
-      }
-    }
-  }, [isDarkMode]);
+  useEffect(() => { loadData(); }, [loadData]);
 
-  const getLeftBorderColor = useCallback((status: string) => {
-    const s = status?.toUpperCase();
-    switch (s) {
-      case 'PAID':
-        return '#10B981';
-      case 'PENDING':
-        return '#F59E0B';
-      case 'OVERDUE':
-        return '#EF4444';
-      default:
-        return '#94A3B8';
-    }
-  }, []);
+  useEffect(() => {
+    if (mainTab === 'settlements' && !reconciliation) loadReconciliation();
+  }, [mainTab]);
 
-  const renderInvoiceCard = useCallback(
-    ({ item, index }: { item: InvoiceItem; index: number }) => {
-      const statusStyles = getStatusStyles(item.status);
-      const topAccentColor = getLeftBorderColor(item.status);
-
-      return (
-        <Animated.View entering={FadeInUp.delay(100 + (index % 8) * 50).duration(350)}>
-          <TouchableOpacity activeOpacity={0.88} style={styles.invoiceCard}>
-            {/* Top Status Accent Bar */}
-            <View style={[styles.topAccentBar, { backgroundColor: topAccentColor }]} />
-
-            {/* Header: Student Name & Status Badge */}
-            <View style={styles.cardHeaderRow}>
-              <View style={styles.studentInfoGroup}>
-                <Text style={styles.studentNameText} numberOfLines={1}>
-                  {item.studentName}
-                </Text>
-                <View style={styles.invoiceNumberChip}>
-                  <Ionicons name="receipt-outline" size={13} color={theme.primary} style={{ marginRight: 4 }} />
-                  <Text style={styles.invoiceNumberText}>{item.invoiceNumber}</Text>
-                </View>
-              </View>
-
-              <View style={[styles.statusBadge, { backgroundColor: statusStyles.bg }]}>
-                <View style={[styles.statusDot, { backgroundColor: statusStyles.dot }]} />
-                <Text style={[styles.statusText, { color: statusStyles.text }]}>
-                  {item.status || 'PENDING'}
-                </Text>
-              </View>
-            </View>
-
-            {/* Body: Hero Amount & Fee Metadata */}
-            <View style={styles.cardBodySection}>
-              <View style={styles.amountRow}>
-                <Text style={styles.amountText}>{formatRupee(item.totalAmount)}</Text>
-                <View style={styles.feeMonthTag}>
-                  <Text style={styles.feeMonthText}>
-                    {item.month || 'December'} · {item.academicYear || '2024-25'}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.descriptionText}>{item.description || 'Tuition Fee'}</Text>
-            </View>
-
-            <View style={styles.cardDivider} />
-
-            {/* Footer: Date Info & Paid Timestamp */}
-            <View style={styles.cardFooterRow}>
-              <View style={styles.dateInfoGroup}>
-                <Ionicons name="calendar-outline" size={14} color={theme.subtext} style={{ marginRight: 5 }} />
-                <Text style={styles.dateLabel}>Due Date:</Text>
-                <Text style={styles.dateValue}>{formatDate(item.dueDate)}</Text>
-              </View>
-
-              {item.status === 'PAID' && item.paidAt ? (
-                <View style={styles.paidInfoBadge}>
-                  <Ionicons name="checkmark-circle" size={14} color="#10B981" style={{ marginRight: 4 }} />
-                  <Text style={styles.paidText}>Paid {formatDate(item.paidAt)}</Text>
-                </View>
-              ) : null}
-            </View>
-          </TouchableOpacity>
-        </Animated.View>
-      );
-    },
-    [getStatusStyles, getLeftBorderColor, formatDate, theme, styles]
+  // Derived
+  const filteredInvoices = useMemo(() =>
+    invoices.filter(inv => invoiceFilter === 'All' || (inv.status || '').toUpperCase() === invoiceFilter),
+    [invoices, invoiceFilter]
   );
 
-  const listHeader = useMemo(() => {
-    if (!stats) return null;
+  const filteredPayouts = useMemo(() => {
+    const payments = reconciliation?.payments || [];
+    if (paymentModeFilter === 'ALL') return payments;
+    return payments.filter(p => (p.payment_mode || '').toUpperCase() === paymentModeFilter);
+  }, [reconciliation, paymentModeFilter]);
 
-    const rate = Math.min(100, Math.max(0, stats.collectionRate || 0));
+  // Computed metrics
+  const grossCollected = stats?.totalPaid || 0;
+  const netSettled = reconciliation?.totalSettled ?? grossCollected;
+  const gatewayDeductions = reconciliation?.totalGatewayCost ?? 0;
+  const settlementEfficiency = grossCollected > 0 ? Math.round((netSettled / grossCollected) * 1000) / 10 : 100;
+  const totalBilled = stats?.totalFees || 0;
+  const pendingAmount = stats?.pendingPayments ?? (totalBilled - grossCollected);
+  const collectionRate = stats?.collectionRate || 0;
+  const paidCount = stats?.paidCount || 0;
+  const totalCount = stats?.count || 0;
 
-    // Circular Progress Constants (74x74 SVG Hero)
-    const size = 74;
-    const strokeWidth = 7;
-    const center = size / 2;
-    const radius = (size - strokeWidth) / 2;
-    const circumference = 2 * Math.PI * radius;
-    const strokeDashoffset = circumference - (circumference * rate) / 100;
-
-    const tabLabels: Record<TabType, string> = {
-      All: 'All',
-      PENDING: 'Pending',
-      PAID: 'Paid',
-      OVERDUE: 'Overdue',
-    };
-
-    const isHealthy = rate >= 75;
-
+  // Status Badge
+  const StatusBadge = ({ status }: { status: string }) => {
+    const normalized = (status || 'PENDING').toUpperCase();
+    let bg = '#FFF7ED'; let text = '#EA580C'; let icon = 'time-outline'; let label = 'Pending';
+    if (normalized === 'PAID' || normalized === 'SUCCESS') { bg = '#ECFDF5'; text = '#059669'; icon = 'checkmark-circle'; label = 'Paid'; }
+    else if (normalized === 'OVERDUE') { bg = '#FEF2F2'; text = '#EF4444'; icon = 'alert-circle'; label = 'Overdue'; }
+    else if (normalized === 'CANCELLED') { bg = '#F3F4F6'; text = '#6B7280'; icon = 'close-circle'; label = 'Cancelled'; }
     return (
-      <View style={styles.headerContainer}>
-        {/* Editorial Stats Grid */}
-        <Animated.View entering={FadeInUp.delay(50).duration(400)}>
-          {/* Dominant Hero Card: Total Fees */}
-          <View style={styles.heroStatCard}>
-            <View style={styles.heroCardHeaderRow}>
-              <View style={styles.heroIconBox}>
-                <Ionicons name="wallet" size={22} color="#FFFFFF" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.heroStatLabel}>Total Expected Fees</Text>
-                <Text style={styles.heroStatSub}>Academic Session Summary</Text>
-              </View>
-            </View>
-            <Text style={styles.heroStatValueText}>{formatRupee(stats.totalFees)}</Text>
-          </View>
-
-          {/* Secondary 3-Card Grid Row */}
-          <View style={styles.secondaryStatsRow}>
-            {/* Collected */}
-            <View style={[styles.secondaryCard, { borderColor: isDarkMode ? 'rgba(16, 185, 129, 0.3)' : '#D1FAE5' }]}>
-              <View style={[styles.miniIconCircle, { backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : '#ECFDF5' }]}>
-                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-              </View>
-              <Text style={styles.secondaryLabel}>Collected</Text>
-              <Text style={[styles.secondaryValueText, { color: isDarkMode ? '#34D399' : '#059669' }]}>
-                {stats.paidCount} inv
-              </Text>
-            </View>
-
-            {/* Pending */}
-            <View style={[styles.secondaryCard, { borderColor: isDarkMode ? 'rgba(245, 158, 11, 0.3)' : '#FEF3C7' }]}>
-              <View style={[styles.miniIconCircle, { backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : '#FFFBEB' }]}>
-                <Ionicons name="time" size={16} color="#F59E0B" />
-              </View>
-              <Text style={styles.secondaryLabel}>Pending</Text>
-              <Text style={[styles.secondaryValueText, { color: isDarkMode ? '#FBBF24' : '#D97706' }]}>
-                {formatRupee(stats.pendingPayments)}
-              </Text>
-            </View>
-
-            {/* Overdue */}
-            <View style={[styles.secondaryCard, { borderColor: isDarkMode ? 'rgba(239, 68, 68, 0.3)' : '#FEE2E2' }]}>
-              <View style={[styles.miniIconCircle, { backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : '#FEF2F2' }]}>
-                <Ionicons name="alert-circle" size={16} color="#EF4444" />
-              </View>
-              <Text style={styles.secondaryLabel}>Overdue</Text>
-              <Text style={[styles.secondaryValueText, { color: isDarkMode ? '#F87171' : '#DC2626' }]}>
-                {stats.overdueCount} inv
-              </Text>
-            </View>
-          </View>
-        </Animated.View>
-
-        {/* Collection Rate Hero Moment */}
-        <Animated.View entering={FadeInUp.delay(180).duration(400)}>
-          <View style={styles.collectionHeroSection}>
-            <View style={styles.progressRow}>
-              <View style={styles.circularWrapper}>
-                <Svg width={size} height={size}>
-                  <Defs>
-                    <SvgLinearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <Stop offset="0%" stopColor={theme.primary} />
-                      <Stop offset="100%" stopColor={isHealthy ? '#10B981' : '#F59E0B'} />
-                    </SvgLinearGradient>
-                  </Defs>
-                  <Circle
-                    cx={center}
-                    cy={center}
-                    r={radius}
-                    stroke={isDarkMode ? '#334155' : '#E2E8F0'}
-                    strokeWidth={strokeWidth}
-                    fill="transparent"
-                  />
-                  <Circle
-                    cx={center}
-                    cy={center}
-                    r={radius}
-                    stroke="url(#ringGradient)"
-                    strokeWidth={strokeWidth}
-                    strokeDasharray={circumference}
-                    strokeDashoffset={strokeDashoffset}
-                    strokeLinecap="round"
-                    fill="transparent"
-                    transform={`rotate(-90 ${center} ${center})`}
-                  />
-                </Svg>
-                <View style={styles.circularCenterText}>
-                  <Text style={styles.progressPercentage}>{rate}%</Text>
-                </View>
-              </View>
-
-              <View style={styles.progressTextContainer}>
-                <View style={styles.healthStatusHeaderRow}>
-                  <Text style={styles.progressTitle}>Fee Collection Rate</Text>
-                  <View style={[styles.healthIndicatorDot, { backgroundColor: isHealthy ? '#10B981' : '#F59E0B' }]} />
-                </View>
-                <Text style={styles.progressSubtitle}>
-                  {isHealthy
-                    ? 'Healthy overall collection performance across classes'
-                    : 'Follow-up recommended for high overdue balance'}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </Animated.View>
-
-        {/* Filter Segmented Control Tabs */}
-        <Animated.View entering={FadeInUp.delay(260).duration(400)}>
-          <View style={styles.segmentedControlBar}>
-            {(['All', 'PENDING', 'PAID', 'OVERDUE'] as TabType[]).map((tab) => {
-              const isActive = selectedTab === tab;
-              const count = tabCounts[tab];
-              return (
-                <TouchableOpacity
-                  key={tab}
-                  style={[styles.segmentBtn, isActive && styles.segmentBtnActive]}
-                  onPress={() => setSelectedTab(tab)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>
-                    {tabLabels[tab]}
-                  </Text>
-                  <View style={[styles.badgeChip, isActive && styles.badgeChipActive]}>
-                    <Text style={[styles.badgeChipText, isActive && styles.badgeChipTextActive]}>
-                      {count}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </Animated.View>
+      <View style={[s.statusBadge, { backgroundColor: bg }]}>
+        <Ionicons name={icon} size={12} color={text} />
+        <Text style={[s.statusBadgeText, { color: text }]}>{label}</Text>
       </View>
     );
-  }, [stats, selectedTab, tabCounts, theme, isDarkMode, styles]);
+  };
 
+  const PaymentModeBadge = ({ mode }: { mode: string }) => {
+    const m = (mode || '').toUpperCase();
+    let bg = '#EEF2FF'; let text = '#4F46E5'; let icon = 'card-outline';
+    if (m === 'UPI') { bg = '#F0FDF4'; text = '#16A34A'; icon = 'phone-portrait-outline'; }
+    else if (m === 'CASH') { bg = '#FEF3C7'; text = '#D97706'; icon = 'cash-outline'; }
+    else if (m === 'CHEQUE') { bg = '#FDF4FF'; text = '#C026D3'; icon = 'document-text-outline'; }
+    else if (m === 'NETBANKING') { bg = '#E0F2FE'; text = '#0369A1'; icon = 'globe-outline'; }
+    return (
+      <View style={[s.paymentModeBadge, { backgroundColor: bg }]}>
+        <Ionicons name={icon} size={12} color={text} />
+        <Text style={[s.paymentModeBadgeText, { color: text }]}>{m || 'N/A'}</Text>
+      </View>
+    );
+  };
+
+  // HEADER
+  const renderHeader = () => (
+    <View style={s.headerSection}>
+      {/* Title */}
+      <View style={s.titleRow}>
+        <View style={s.titleIcon}>
+          <Ionicons name="receipt" size={22} color="#FFFFFF" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <View style={s.titleTextRow}>
+            <Text style={s.titleText}>Fee Management</Text>
+            <View style={s.badge}>
+              <Text style={s.badgeText}>Double-Entry</Text>
+            </View>
+          </View>
+          <Text style={s.subtitleText}>Manage receivables, invoices & settlements</Text>
+        </View>
+      </View>
+
+      {/* Create Invoice Button */}
+      <TouchableOpacity
+        style={s.createBtn}
+        onPress={() => navigation.navigate('PrincipalCreateInvoice' as any)}
+      >
+        <Ionicons name="add" size={18} color="#FFFFFF" />
+        <Text style={s.createBtnText}>Create Invoice</Text>
+      </TouchableOpacity>
+
+      {/* Ledger Banner */}
+      <View style={s.ledgerBanner}>
+        <View style={s.ledgerBannerRow}>
+          <View style={s.ledgerIconBox}>
+            <Ionicons name="shield-checkmark" size={14} color="#7C3AED" />
+          </View>
+          <Text style={s.ledgerBannerLabel}>Double-Entry Ledger </Text>
+          <Text style={s.ledgerBannerDesc}>Row-level locking • 0% UPI • 2% Card absorbed</Text>
+        </View>
+        <View style={s.syncBadge}>
+          <View style={s.syncDot} />
+          <Text style={s.syncBadgeText}>Real-Time Sync</Text>
+        </View>
+      </View>
+
+      {/* KPI Cards - Horizontal Scroll */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: 16 }}>
+        {/* Card 1: Gross Collected */}
+        <View style={s.kpiCard}>
+          <View style={s.kpiTop}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.kpiLabel}>GROSS COLLECTED</Text>
+              <Text style={s.kpiValue}>{formatRupee(grossCollected)}</Text>
+            </View>
+            <View style={[s.kpiIcon, { backgroundColor: '#F5F3FF' }]}>
+              <Ionicons name="wallet" size={20} color="#7C3AED" />
+            </View>
+          </View>
+          <View style={s.kpiDivider} />
+          <View style={s.kpiBottom}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="trending-up" size={12} color="#059669" />
+              <Text style={[s.kpiBottomText, { color: '#059669', fontWeight: '700' }]}>Real-Time Volume</Text>
+            </View>
+            <Text style={s.kpiBottomText}>{paidCount} payments</Text>
+          </View>
+        </View>
+
+        {/* Card 2: Net Settled Revenue (Dark) */}
+        <View style={s.kpiCardDark}>
+          <View style={s.kpiTop}>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={[s.kpiLabel, { color: '#A5B4FC' }]}>NET SETTLED REVENUE</Text>
+                <Ionicons name="sparkles" size={12} color="#FCD34D" />
+              </View>
+              <Text style={[s.kpiValue, { color: '#FFFFFF' }]}>{formatRupee(netSettled)}</Text>
+            </View>
+            <View style={[s.kpiIcon, { backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }]}>
+              <Ionicons name="business" size={20} color="#C7D2FE" />
+            </View>
+          </View>
+          <View style={[s.kpiDivider, { backgroundColor: 'rgba(99,102,241,0.3)' }]} />
+          <View style={s.kpiBottom}>
+            <Text style={[s.kpiBottomText, { color: '#C7D2FE' }]}>{formatRupee(gatewayDeductions)} absorbed</Text>
+            <View style={s.netBadge}>
+              <Text style={s.netBadgeText}>{settlementEfficiency}% Net</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Card 3: Total Billed */}
+        <View style={s.kpiCard}>
+          <View style={s.kpiTop}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.kpiLabel}>TOTAL BILLED</Text>
+              <Text style={s.kpiValue}>{formatRupee(totalBilled)}</Text>
+            </View>
+            <View style={[s.kpiIcon, { backgroundColor: '#EFF6FF' }]}>
+              <Ionicons name="trending-up" size={20} color="#3B82F6" />
+            </View>
+          </View>
+          <View style={s.kpiDivider} />
+          <View style={s.kpiBottom}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="trending-up" size={12} color="#3B82F6" />
+              <Text style={[s.kpiBottomText, { color: '#3B82F6', fontWeight: '700' }]}>Live Ledger Sync</Text>
+            </View>
+            <Text style={s.kpiBottomText}>{totalCount} total records</Text>
+          </View>
+        </View>
+
+        {/* Card 4: Collection Velocity */}
+        <View style={s.kpiCard}>
+          <View style={s.kpiTop}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.kpiLabel}>COLLECTION VELOCITY</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
+                <Text style={s.kpiValue}>{collectionRate}%</Text>
+                <View style={s.pendingTag}>
+                  <Text style={s.pendingTagText}>{formatRupee(pendingAmount)} Pending</Text>
+                </View>
+              </View>
+            </View>
+            <View style={[s.kpiIcon, { backgroundColor: '#ECFDF5' }]}>
+              <Ionicons name="speedometer" size={20} color="#059669" />
+            </View>
+          </View>
+          <View style={s.kpiDivider} />
+          <View style={s.kpiBottom}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="trending-up" size={12} color="#059669" />
+              <Text style={[s.kpiBottomText, { color: '#059669', fontWeight: '700' }]}>Real-Time Rate</Text>
+            </View>
+            <Text style={s.kpiBottomText}>Automated</Text>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Main Tab Switcher */}
+      <View style={s.mainTabRow}>
+        <TouchableOpacity
+          style={[s.mainTabBtn, mainTab === 'invoices' && s.mainTabActive]}
+          onPress={() => setMainTab('invoices')}
+        >
+          <Ionicons name="receipt-outline" size={14} color={mainTab === 'invoices' ? '#7C3AED' : '#94A3B8'} />
+          <Text style={[s.mainTabText, mainTab === 'invoices' && s.mainTabTextActive]}>Invoices</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[s.mainTabBtn, mainTab === 'settlements' && s.mainTabActive]}
+          onPress={() => setMainTab('settlements')}
+        >
+          <Ionicons name="business-outline" size={14} color={mainTab === 'settlements' ? '#7C3AED' : '#94A3B8'} />
+          <Text style={[s.mainTabText, mainTab === 'settlements' && s.mainTabTextActive]}>Settlement</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[s.mainTabBtn, mainTab === 'refunds' && s.mainTabActive]}
+          onPress={() => setMainTab('refunds')}
+        >
+          <Ionicons name="return-down-back" size={14} color={mainTab === 'refunds' ? '#7C3AED' : '#94A3B8'} />
+          <Text style={[s.mainTabText, mainTab === 'refunds' && s.mainTabTextActive]}>Refunds</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  // INVOICES TAB HEADER
+  const renderInvoicesSubHeader = () => (
+    <View style={s.subHeaderSection}>
+      <View style={s.subHeaderRow}>
+        <View style={s.subHeaderIcon}>
+          <Ionicons name="document-text" size={16} color="#64748B" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={s.subHeaderTitle}>Ledger Invoices & Receivables</Text>
+          <Text style={s.subHeaderDesc}>Double-entry protected ledger items</Text>
+        </View>
+      </View>
+
+      {/* Filter Tabs */}
+      <View style={s.filterRow}>
+        {(['All', 'PENDING', 'PAID', 'OVERDUE'] as InvoiceFilter[]).map(tab => (
+          <TouchableOpacity
+            key={tab}
+            style={[s.filterBtn, invoiceFilter === tab && s.filterBtnActive]}
+            onPress={() => setInvoiceFilter(tab)}
+          >
+            <Text style={[s.filterText, invoiceFilter === tab && s.filterTextActive]}>
+              {tab === 'All' ? 'All Invoices' : tab.charAt(0) + tab.slice(1).toLowerCase()}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+  // REFUNDS TAB HEADER
+  const renderRefundsSubHeader = () => (
+    <View style={s.subHeaderSection}>
+      <View style={s.subHeaderRow}>
+        <View style={[s.subHeaderIcon, { backgroundColor: '#FEE2E2' }]}>
+          <Ionicons name="return-down-back" size={16} color="#EF4444" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={s.subHeaderTitle}>Refunds Processing</Text>
+          <Text style={s.subHeaderDesc}>Initiate refunds for paid invoices</Text>
+        </View>
+      </View>
+    </View>
+  );
+
+
+  // INVOICE CARD
+  const renderInvoiceCard = ({ item }: { item: InvoiceItem }) => {
+    const color = getAvatarColor(item.studentName);
+    return (
+      <View style={s.invoiceCard}>
+        <View style={s.cardTop}>
+          {/* Invoice Number */}
+          <View style={s.invNumRow}>
+            <Text style={s.invNumText}>{item.invoiceNumber}</Text>
+          </View>
+
+          {/* Student Row */}
+          <View style={s.studentRow}>
+            <View style={[s.studentAvatar, { backgroundColor: color }]}>
+              <Text style={s.studentAvatarText}>{getInitials(item.studentName)}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.studentName}>{item.studentName}</Text>
+              <Text style={s.studentGrade}>General Student</Text>
+            </View>
+          </View>
+
+          {/* Fee Description */}
+          <Text style={s.feeDesc} numberOfLines={1}>{item.description || 'Tuition Fee'}</Text>
+
+          {/* Amount & Status Row */}
+          <View style={s.amountStatusRow}>
+            <Text style={s.amountVal}>{formatRupee(item.totalAmount || item.baseAmount)}</Text>
+            <StatusBadge status={item.status} />
+          </View>
+
+          {/* Dates */}
+          <View style={s.datesRow}>
+            <View style={s.dateBlock}>
+              <Text style={s.dateLbl}>Issue Date</Text>
+              <Text style={s.dateVal}>{formatDate(item.createdAt)}</Text>
+            </View>
+            <View style={s.dateBlock}>
+              <Text style={s.dateLbl}>Due Date</Text>
+              <Text style={s.dateVal}>{formatDate(item.dueDate)}</Text>
+            </View>
+            {(item.status || '').toUpperCase() === 'PAID' && item.paidAt && (
+              <View style={s.dateBlock}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                  <Ionicons name="checkmark-circle" size={12} color="#059669" />
+                  <Text style={[s.dateVal, { color: '#059669' }]}>Paid {formatDate(item.paidAt)}</Text>
+                </View>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Actions */}
+        <View style={s.cardActions}>
+          <TouchableOpacity
+            style={s.actionDotBtn}
+            onPress={() => setActionMenuId(actionMenuId === item.id ? null : item.id)}
+          >
+            <Ionicons name="ellipsis-vertical" size={18} color="#94A3B8" />
+          </TouchableOpacity>
+          {actionMenuId === item.id && (
+            <View style={s.actionMenu}>
+              <TouchableOpacity style={s.actionMenuItem} onPress={() => { setActionMenuId(null); }}>
+                <Ionicons name="download-outline" size={16} color="#334155" />
+                <Text style={s.actionMenuText}>Download Receipt</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.actionMenuItem} onPress={() => { setActionMenuId(null); }}>
+                <Ionicons name="book-outline" size={16} color="#334155" />
+                <Text style={s.actionMenuText}>View Ledger Entries</Text>
+              </TouchableOpacity>
+              {(item.status || '').toUpperCase() === 'PAID' && mainTab === 'refunds' && (
+                <TouchableOpacity
+                  style={s.actionMenuItem}
+                  onPress={() => { setActionMenuId(null); setRefundInvoice(item); }}
+                >
+                  <Ionicons name="return-down-back" size={16} color="#EF4444" />
+                  <Text style={[s.actionMenuText, { color: '#EF4444' }]}>Initiate Refund</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  };
+
+  // SETTLEMENTS TAB
+  const renderSettlementsHeader = () => (
+    <View style={s.subHeaderSection}>
+      {/* Bank Settlements Header */}
+      <View style={s.settlementsTopCard}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <View style={[s.subHeaderIcon, { backgroundColor: 'rgba(16,185,129,0.1)' }]}>
+            <Ionicons name="business" size={16} color="#059669" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.subHeaderTitle}>Bank Settlements & Ledger Reconciliation</Text>
+            <Text style={s.subHeaderDesc}>Automated audit comparing expected ledger vs actual deposits</Text>
+          </View>
+        </View>
+        <TouchableOpacity style={s.auditBtn} onPress={loadReconciliation}>
+          <Ionicons name="refresh" size={14} color="#FFFFFF" />
+          <Text style={s.auditBtnText}>Run Audit</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Settlement Summary Cards */}
+      {isReconLoading ? (
+        <ActivityIndicator size="small" color="#7C3AED" style={{ marginVertical: 20 }} />
+      ) : reconciliation ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, marginTop: 16 }}>
+          {/* Base Invoice Volume */}
+          <View style={s.reconCard}>
+            <Text style={s.reconLabel}>BASE INVOICE VOLUME</Text>
+            <Text style={s.reconValue}>{formatRupee(reconciliation.totalBase)}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}>
+              <Ionicons name="checkmark" size={12} color="#059669" />
+              <Text style={s.reconMeta}>{reconciliation.totalPayments} verified transactions</Text>
+            </View>
+          </View>
+
+          {/* Gateway Deductions */}
+          <View style={s.reconCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={s.reconLabel}>GATEWAY DEDUCTIONS</Text>
+              <View style={s.gstBadge}>
+                <Text style={s.gstBadgeText}>GST + Fee</Text>
+              </View>
+            </View>
+            <Text style={[s.reconValue, { color: '#4F46E5' }]}>{formatRupee(reconciliation.totalGatewayCost)}</Text>
+            <Text style={s.reconMeta}>0% fee on UPI • 2% on Cards</Text>
+          </View>
+
+          {/* Net Settled - Dark */}
+          <View style={s.reconCardDark}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={[s.reconLabel, { color: '#6EE7B7' }]}>NET SETTLED TO BANK</Text>
+              <Ionicons name="shield-checkmark" size={16} color="#34D399" />
+            </View>
+            <Text style={[s.reconValue, { color: '#FFFFFF' }]}>{formatRupee(reconciliation.totalSettled)}</Text>
+            <Text style={[s.reconMeta, { color: 'rgba(110,231,183,0.8)' }]}>Verified Bank Account • Reconciled</Text>
+          </View>
+        </ScrollView>
+      ) : null}
+
+      {/* Payout Table Header */}
+      <View style={s.payoutHeaderSection}>
+        <View>
+          <Text style={[s.subHeaderTitle, { marginBottom: 2 }]}>Verified Bank Payout Schedule</Text>
+          <Text style={s.subHeaderDesc}>Base Amount vs Deductions vs Net Settled</Text>
+        </View>
+        <View style={s.paymentFilterRow}>
+          {(['ALL', 'UPI', 'CARD', 'CASH', 'CHEQUE'] as PaymentModeFilter[]).map(m => (
+            <TouchableOpacity
+              key={m}
+              style={[s.paymentFilterBtn, paymentModeFilter === m && s.paymentFilterBtnActive]}
+              onPress={() => setPaymentModeFilter(m)}
+            >
+              <Text style={[s.paymentFilterText, paymentModeFilter === m && s.paymentFilterTextActive]}>{m}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+
+  // PAYOUT CARD
+  const renderPayoutCard = ({ item }: { item: ReconciliationPayment }) => (
+    <View style={[s.payoutCard, { zIndex: actionMenuId === item.id ? 100 : 1 }]}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+        <View>
+          <Text style={s.payoutRef}>{item.razorpay_payment_id || item.id?.substring(0, 24) || 'pay_offline'}</Text>
+          <Text style={s.payoutDate}>{formatDateTime(item.created_at)}</Text>
+        </View>
+        <PaymentModeBadge mode={item.payment_mode} />
+      </View>
+
+      <View style={s.payoutGrid}>
+        <View style={s.payoutGridItem}>
+          <Text style={s.payoutGridLabel}>Base Amount</Text>
+          <Text style={s.payoutGridValue}>{formatFullRupee(item.base_amount || 0)}</Text>
+        </View>
+        <View style={s.payoutGridItem}>
+          <Text style={[s.payoutGridLabel, { color: '#059669' }]}>Deductions</Text>
+          <Text style={[s.payoutGridValue, { color: '#059669' }]}>{formatFullRupee((item.gateway_fee || 0) + (item.gst_on_fee || 0))} ({(item.payment_mode || '').toUpperCase() === 'UPI' ? '0%' : '2%'} Fee)</Text>
+        </View>
+        <View style={s.payoutGridItem}>
+          <Text style={s.payoutGridLabel}>Net Settled</Text>
+          <Text style={[s.payoutGridValue, { fontWeight: '800' }]}>{formatFullRupee(item.settled_amount || 0)}</Text>
+        </View>
+      </View>
+
+      <View style={[s.reconStatusRow, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+        <View style={s.reconStatusBadge}>
+          <Ionicons name="shield-checkmark" size={12} color="#059669" />
+          <Text style={s.reconStatusText}>Matched & Reconciled</Text>
+        </View>
+        
+        <View style={{ position: 'relative' }}>
+          <TouchableOpacity
+            style={s.actionDotBtn}
+            onPress={() => setActionMenuId(actionMenuId === item.id ? null : item.id)}
+          >
+            <Ionicons name="ellipsis-vertical" size={18} color="#94A3B8" />
+          </TouchableOpacity>
+          {actionMenuId === item.id && (
+            <View style={[s.actionMenu, { right: 0, top: 30, width: 180 }]}>
+              <TouchableOpacity style={s.actionMenuItem} onPress={() => { setActionMenuId(null); }}>
+                <Ionicons name="download-outline" size={16} color="#334155" />
+                <Text style={s.actionMenuText}>Download Receipt</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.actionMenuItem} onPress={() => { setActionMenuId(null); }}>
+                <Ionicons name="book-outline" size={16} color="#334155" />
+                <Text style={s.actionMenuText}>View Ledger Entries</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+
+  // REFUND MODAL
+  const renderRefundModal = () => {
+    if (!refundInvoice) return null;
+    const canSubmit = refundAgreed && refundConfirmText === 'REFUND';
+    return (
+      <Modal visible={!!refundInvoice} transparent animationType="fade" onRequestClose={() => setRefundInvoice(null)}>
+        <View style={s.modalOverlay}>
+          <View style={s.refundModal}>
+            {/* Header */}
+            <View style={s.refundHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                <View style={s.refundIcon}>
+                  <Ionicons name="return-down-back" size={20} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={s.refundTitle}>Initiate Fee Refund</Text>
+                    <View style={s.adminBadge}>
+                      <Text style={s.adminBadgeText}>ADMIN ACTION</Text>
+                    </View>
+                  </View>
+                  <Text style={s.refundTxId}>Transaction ID: {refundInvoice.invoiceNumber}</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => { setRefundInvoice(null); setRefundConfirmText(''); setRefundAgreed(false); }}>
+                <Ionicons name="close" size={24} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+              {/* Policy Warning */}
+              <View style={s.policyWarning}>
+                <Ionicons name="alert-circle" size={18} color="#D97706" />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.policyTitle}>STRICT BASE AMOUNT REFUND POLICY</Text>
+                  <Text style={s.policyDesc}>Gateway convenience fees and GST are <Text style={{ fontWeight: '800', textDecorationLine: 'underline' }}>non-refundable</Text> by the payment gateway.</Text>
+                </View>
+              </View>
+
+              {/* Ledger Breakdown */}
+              <View style={s.ledgerBreakdown}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="document-text" size={14} color="#334155" />
+                    <Text style={s.ledgerTitle}>LEDGER BREAKDOWN</Text>
+                  </View>
+                  <Text style={s.ledgerMode}>Mode: CASH</Text>
+                </View>
+
+                <View style={s.ledgerRow}>
+                  <Text style={s.ledgerLabel}>Gross Paid by Parent:</Text>
+                  <Text style={s.ledgerVal}>{formatFullRupee(refundInvoice.totalAmount || refundInvoice.baseAmount)}</Text>
+                </View>
+                <View style={[s.ledgerRow, { opacity: 0.6 }]}>
+                  <Text style={s.ledgerLabel}>Net Settled to Bank Account:</Text>
+                  <Text style={[s.ledgerVal, { fontSize: 13 }]}>{formatFullRupee(refundInvoice.totalAmount || refundInvoice.baseAmount)}</Text>
+                </View>
+                <View style={[s.ledgerRow, { borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 12, marginTop: 8 }]}>
+                  <Text style={[s.ledgerLabel, { fontWeight: '800' }]}>Base Amount to Refund:</Text>
+                  <Text style={[s.ledgerVal, { color: '#059669', fontWeight: '800', fontSize: 16 }]}>{formatFullRupee(refundInvoice.totalAmount || refundInvoice.baseAmount)}</Text>
+                </View>
+              </View>
+
+              {/* Reason */}
+              <Text style={s.sectionLabel}>REASON FOR REFUND *</Text>
+              <View style={s.reasonPicker}>
+                <Text style={s.reasonText}>{refundReason}</Text>
+                <Ionicons name="chevron-down" size={16} color="#94A3B8" />
+              </View>
+
+              {/* Confirmation */}
+              <View style={s.confirmSection}>
+                <TouchableOpacity style={s.checkboxRow} onPress={() => setRefundAgreed(!refundAgreed)}>
+                  <View style={[s.checkbox, refundAgreed && s.checkboxChecked]}>
+                    {refundAgreed && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
+                  </View>
+                  <Text style={s.checkboxLabel}>I confirm that initiating this refund will debit the school's settlement balance.</Text>
+                </TouchableOpacity>
+
+                <Text style={s.confirmPrompt}>TYPE <Text style={{ color: '#EF4444', fontWeight: '800' }}>REFUND</Text> BELOW TO AUTHORIZE THIS IRREVERSIBLE TRANSACTION:</Text>
+                <View style={s.confirmInput}>
+                  <TextInput
+                    style={s.confirmInputField}
+                    placeholder="Type REFUND here"
+                    placeholderTextColor="#94A3B8"
+                    value={refundConfirmText}
+                    onChangeText={setRefundConfirmText}
+                    autoCapitalize="characters"
+                  />
+                  <Ionicons name="lock-closed" size={16} color="#94A3B8" />
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Footer */}
+            <View style={s.refundFooter}>
+              <TouchableOpacity style={s.refundCancelBtn} onPress={() => { setRefundInvoice(null); setRefundConfirmText(''); setRefundAgreed(false); }}>
+                <Text style={s.refundCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.refundSubmitBtn, !canSubmit && { opacity: 0.4 }]}
+                disabled={!canSubmit}
+                onPress={() => {
+                  Alert.alert('Refund Initiated', 'The refund has been queued for processing.');
+                  setRefundInvoice(null);
+                  setRefundConfirmText('');
+                  setRefundAgreed(false);
+                }}
+              >
+                <Ionicons name="return-down-back" size={16} color="#FFFFFF" />
+                <Text style={s.refundSubmitText}>Authorize Refund</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  // LOADING
   if (isLoading) {
     return (
-      <View style={styles.loaderContainer}>
+      <View style={s.loaderContainer}>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.background} />
-        <ActivityIndicator size="large" color={theme.primary} />
+        <ActivityIndicator size="large" color="#7C3AED" />
+        <Text style={s.loaderText}>Loading Fee Management...</Text>
       </View>
     );
   }
 
+  // ERROR
   if (isError) {
     return (
-      <View style={styles.errorContainer}>
+      <View style={s.loaderContainer}>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.background} />
-        <View style={styles.errorIconWrapper}>
-          <Ionicons name="alert-circle" size={48} color={theme.danger} />
-        </View>
-        <Text style={styles.errorTitle}>Failed to load fees stats</Text>
-        <Text style={styles.errorSubtitle}>
-          An error occurred while fetching fee statistics and invoices. Please try again.
-        </Text>
-        <TouchableOpacity style={styles.retryBtn} activeOpacity={0.85} onPress={() => loadData()}>
-          <Ionicons name="refresh" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-          <Text style={styles.retryBtnText}>Retry Connection</Text>
+        <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+        <Text style={[s.loaderText, { color: theme.text, fontSize: 18, fontWeight: '700', marginTop: 16 }]}>Failed to load fees</Text>
+        <TouchableOpacity style={s.retryBtn} onPress={() => loadData()}>
+          <Text style={s.retryBtnText}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View style={styles.safeContainer}>
+    <View style={s.container}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.background} />
 
-      {/* Header — Strictly Preserved Untouched */}
-      <View style={styles.appHeader}>
-        <TouchableOpacity style={styles.headerBtn} onPress={() => setDrawerOpen(true)}>
-          <Ionicons name="menu" size={28} color={theme.text} />
+      {/* App Bar */}
+      <View style={s.appBar}>
+        <TouchableOpacity style={s.appBarBtn} onPress={() => setDrawerOpen(true)}>
+          <Ionicons name="menu" size={26} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.appHeaderTitle}>Fees Portal</Text>
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
-        >
+        <Text style={s.appBarTitle}>Fee Management & Accounting</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}>
           {authState.user?.photoUrl ? (
-            <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.headerAvatarImage} />
+            <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={s.appBarAvatar} />
           ) : (
-
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
+            <View style={s.appBarAvatarFallback}>
+              <Text style={s.appBarAvatarText}>{authState.user?.name?.charAt(0) || 'P'}</Text>
             </View>
           )}
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={filteredInvoices}
-        keyExtractor={(item) => item.id}
-        renderItem={renderInvoiceCard}
-        ListHeaderComponent={listHeader}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={() => loadData(true)}
-            colors={[theme.primary]}
-          />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <View style={styles.emptyIconCircle}>
-              <Ionicons name="receipt-outline" size={44} color={theme.subtext} />
+      {mainTab === 'invoices' ? (
+        <FlatList
+          data={filteredInvoices}
+          keyExtractor={(item) => item.id}
+          renderItem={renderInvoiceCard}
+          ListHeaderComponent={<>{renderHeader()}{renderInvoicesSubHeader()}</>}
+          contentContainerStyle={{ paddingBottom: 30 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={isRefreshing} onRefresh={() => loadData(true)} colors={['#7C3AED']} />
+          }
+          ListEmptyComponent={
+            <View style={s.emptyState}>
+              <Ionicons name="receipt-outline" size={48} color="#CBD5E1" />
+              <Text style={s.emptyTitle}>No {invoiceFilter.toLowerCase()} invoices</Text>
+              <Text style={s.emptyDesc}>No invoices match the selected filter.</Text>
             </View>
-            <Text style={styles.emptyTitle}>No {selectedTab.toLowerCase()} invoices</Text>
-            <Text style={styles.emptySubtitle}>
-              There are no invoices found for the selected filter.
-            </Text>
-          </View>
-        }
-      />
+          }
+        />
+      ) : mainTab === 'settlements' ? (
+        <FlatList
+          data={filteredPayouts}
+          keyExtractor={(item, idx) => item.id || `payout-${idx}`}
+          renderItem={renderPayoutCard}
+          ListHeaderComponent={<>{renderHeader()}{renderSettlementsHeader()}</>}
+          contentContainerStyle={{ paddingBottom: 30 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={isRefreshing} onRefresh={() => { loadData(true); loadReconciliation(); }} colors={['#7C3AED']} />
+          }
+          ListEmptyComponent={
+            isReconLoading ? (
+              <ActivityIndicator size="large" color="#7C3AED" style={{ marginTop: 40 }} />
+            ) : (
+              <View style={s.emptyState}>
+                <Ionicons name="document-text-outline" size={48} color="#CBD5E1" />
+                <Text style={s.emptyTitle}>No settled payouts</Text>
+                <Text style={s.emptyDesc}>{paymentModeFilter !== 'ALL' ? `No ${paymentModeFilter} payouts found.` : 'No bank payouts recorded yet.'}</Text>
+              </View>
+            )
+          }
+        />
+      ) : (
+        <FlatList
+          data={invoices.filter(inv => (inv.status || '').toUpperCase() === 'PAID')}
+          keyExtractor={(item) => item.id}
+          renderItem={renderInvoiceCard}
+          ListHeaderComponent={<>{renderHeader()}{renderRefundsSubHeader()}</>}
+          contentContainerStyle={{ paddingBottom: 30 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={isRefreshing} onRefresh={() => loadData(true)} colors={['#7C3AED']} />
+          }
+          ListEmptyComponent={
+            <View style={s.emptyState}>
+              <Ionicons name="return-down-back" size={48} color="#CBD5E1" />
+              <Text style={s.emptyTitle}>No refundable invoices</Text>
+              <Text style={s.emptyDesc}>There are no paid invoices available for refund.</Text>
+            </View>
+          }
+        />
+      )}
 
+      {renderRefundModal()}
       <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
     </View>
   );
 };
 
+// ─── STYLES ──────────────────────────────────────────────────────────────────
 const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
-  safeContainer: {
+  container: {
     flex: 1,
-    backgroundColor: theme.background,
+    backgroundColor: '#F8FAFC',
     paddingTop: Platform.OS === 'ios' ? 50 : 30,
   },
   loaderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.background,
+    flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC',
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 28,
-    backgroundColor: theme.background,
-  },
-  errorIconWrapper: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.15)' : '#FEF2F2',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  errorTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: theme.text,
-    marginBottom: 8,
-  },
-  errorSubtitle: {
-    fontSize: 14,
-    color: theme.subtext,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 24,
+  loaderText: {
+    marginTop: 12, fontSize: 14, color: '#64748B', fontWeight: '500',
   },
   retryBtn: {
-    backgroundColor: theme.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 13,
-    paddingHorizontal: 24,
-    borderRadius: 24,
-    shadowColor: theme.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    marginTop: 16, backgroundColor: '#7C3AED', paddingVertical: 12, paddingHorizontal: 28, borderRadius: 12,
   },
   retryBtnText: {
-    color: '#FFF',
-    fontSize: 15,
-    fontWeight: '700',
+    color: '#FFFFFF', fontSize: 14, fontWeight: '700',
   },
 
-  /* Untouched App Header */
-  appHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: theme.background,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
+  // App Bar
+  appBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1, borderBottomColor: '#F1F5F9',
   },
-  headerBtn: {
-    padding: 4,
+  appBarBtn: { padding: 4 },
+  appBarTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A', flex: 1, marginLeft: 12 },
+  appBarAvatar: { width: 32, height: 32, borderRadius: 16 },
+  appBarAvatarFallback: {
+    width: 32, height: 32, borderRadius: 16, backgroundColor: '#7C3AED',
+    justifyContent: 'center', alignItems: 'center',
   },
-  appHeaderTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: theme.text,
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#9F7AEA',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 4,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-  },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
-  headerAvatarImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginLeft: 4,
-  },
+  appBarAvatarText: { color: '#FFF', fontWeight: '800', fontSize: 14 },
 
-  /* FlatList & Containers */
-  listContent: {
-    paddingBottom: 32,
+  // Header Section
+  headerSection: { padding: 16, paddingBottom: 0 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
+  titleIcon: {
+    width: 44, height: 44, borderRadius: 14,
+    backgroundColor: '#7C3AED', justifyContent: 'center', alignItems: 'center',
+    shadowColor: '#7C3AED', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
   },
-  headerContainer: {
-    padding: 16,
+  titleTextRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  titleText: { fontSize: 20, fontWeight: '800', color: '#0F172A' },
+  badge: {
+    backgroundColor: '#F3E8FF', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10,
+    borderWidth: 1, borderColor: '#E9D5FF',
   },
+  badgeText: { fontSize: 10, fontWeight: '800', color: '#7C3AED' },
+  subtitleText: { fontSize: 12, color: '#64748B', marginTop: 2 },
 
-  /* Dominant Hero Card (Total Fees) */
-  heroStatCard: {
-    backgroundColor: isDarkMode ? '#1E1B4B' : '#F5F3FF',
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: isDarkMode ? 'rgba(99, 102, 241, 0.35)' : '#DDD6FE',
-    shadowColor: theme.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: isDarkMode ? 0.3 : 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+  // Create Button
+  createBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: '#7C3AED', paddingVertical: 12, borderRadius: 14, marginBottom: 16,
+    shadowColor: '#7C3AED', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
   },
-  heroCardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  heroIconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: theme.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-    shadowColor: theme.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  heroStatLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: theme.text,
-  },
-  heroStatSub: {
-    fontSize: 11,
-    color: theme.subtext,
-    marginTop: 2,
-  },
-  heroStatValueText: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: theme.primary,
-    letterSpacing: -0.5,
-  },
+  createBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
 
-  /* Secondary Stats 3-Column Row */
-  secondaryStatsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+  // Ledger Banner
+  ledgerBanner: {
+    backgroundColor: 'rgba(124,58,237,0.06)', borderWidth: 1, borderColor: 'rgba(124,58,237,0.15)',
+    borderRadius: 16, padding: 12, marginBottom: 16,
   },
-  secondaryCard: {
-    flex: 1,
-    backgroundColor: theme.surface,
-    borderRadius: 16,
-    padding: 12,
-    marginHorizontal: 3,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: isDarkMode ? 0.2 : 0.04,
-    shadowRadius: 4,
-    elevation: 2,
+  ledgerBannerRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
+  ledgerIconBox: {
+    width: 28, height: 28, borderRadius: 8, backgroundColor: 'rgba(124,58,237,0.1)',
+    justifyContent: 'center', alignItems: 'center',
   },
-  miniIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
+  ledgerBannerLabel: { fontSize: 10, fontWeight: '800', color: '#7C3AED', textTransform: 'uppercase', letterSpacing: 0.5 },
+  ledgerBannerDesc: { fontSize: 11, color: '#475569', fontWeight: '500' },
+  syncBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#ECFDF5', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
+    borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)', alignSelf: 'flex-start',
   },
-  secondaryLabel: {
-    fontSize: 11,
-    color: theme.subtext,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  secondaryValueText: {
-    fontSize: 14,
-    fontWeight: '800',
-  },
+  syncDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981' },
+  syncBadgeText: { fontSize: 10, fontWeight: '700', color: '#059669' },
 
-  /* Collection Rate Hero Section */
-  collectionHeroSection: {
-    backgroundColor: theme.surface,
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 18,
-    borderWidth: 1,
-    borderColor: theme.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: isDarkMode ? 0.25 : 0.05,
-    shadowRadius: 6,
-    elevation: 3,
+  // KPI Cards
+  kpiCard: {
+    width: width * 0.72, backgroundColor: '#FFFFFF', borderRadius: 20,
+    padding: 16, borderWidth: 1, borderColor: '#F1F5F9',
+    shadowColor: '#64748B', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
-  progressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  kpiCardDark: {
+    width: width * 0.72, borderRadius: 20, padding: 16,
+    backgroundColor: '#1E1B4B',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 4,
   },
-  circularWrapper: {
-    width: 74,
-    height: 74,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  circularCenterText: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressPercentage: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: theme.text,
-  },
-  progressTextContainer: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  healthStatusHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  progressTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: theme.text,
-  },
-  healthIndicatorDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginLeft: 6,
-  },
-  progressSubtitle: {
-    fontSize: 12,
-    color: theme.subtext,
-    lineHeight: 17,
-  },
+  kpiTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  kpiLabel: { fontSize: 10, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5, textTransform: 'uppercase' },
+  kpiValue: { fontSize: 26, fontWeight: '800', color: '#0F172A', marginTop: 6, letterSpacing: -0.5 },
+  kpiIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  kpiDivider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 12 },
+  kpiBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  kpiBottomText: { fontSize: 11, color: '#94A3B8', fontWeight: '500' },
+  netBadge: { backgroundColor: 'rgba(99,102,241,0.2)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
+  netBadgeText: { fontSize: 10, fontWeight: '700', color: '#C7D2FE' },
+  pendingTag: { backgroundColor: '#FFF1F2', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  pendingTagText: { fontSize: 10, fontWeight: '700', color: '#F43F5E' },
 
-  /* Segmented Control Bar */
-  segmentedControlBar: {
-    flexDirection: 'row',
-    backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9',
-    borderRadius: 24,
-    padding: 4,
-    marginBottom: 4,
-    borderWidth: 1,
-    borderColor: theme.border,
+  // Main Tabs
+  mainTabRow: { flexDirection: 'row', gap: 0, marginTop: 20, marginBottom: 4, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
+  mainTabBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: 'transparent',
   },
-  segmentBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    paddingVertical: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
+  mainTabActive: { borderBottomColor: '#7C3AED' },
+  mainTabText: { fontSize: 11, fontWeight: '700', color: '#94A3B8' },
+  mainTabTextActive: { color: '#7C3AED' },
+  mainTabCount: {
+    backgroundColor: '#F1F5F9', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8,
   },
-  segmentBtnActive: {
-    backgroundColor: theme.surface,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: isDarkMode ? 0.3 : 0.08,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  segmentText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.subtext,
-    opacity: 0.8,
-  },
-  segmentTextActive: {
-    color: theme.primary,
-    fontWeight: '700',
-    opacity: 1,
-  },
-  badgeChip: {
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 10,
-    backgroundColor: isDarkMode ? '#334155' : '#E2E8F0',
-    marginLeft: 5,
-  },
-  badgeChipActive: {
-    backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.25)' : 'rgba(99, 102, 241, 0.12)',
-  },
-  badgeChipText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: theme.subtext,
-  },
-  badgeChipTextActive: {
-    color: theme.primary,
-  },
+  mainTabCountText: { fontSize: 9, fontWeight: '800', color: '#64748B' },
 
-  /* Modernized Invoice Cards */
+  // Sub Header
+  subHeaderSection: { paddingHorizontal: 16, paddingTop: 16 },
+  subHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  subHeaderIcon: {
+    width: 36, height: 36, borderRadius: 12, backgroundColor: '#F1F5F9',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  subHeaderTitle: { fontSize: 15, fontWeight: '800', color: '#0F172A' },
+  subHeaderDesc: { fontSize: 11, color: '#94A3B8', marginTop: 1 },
+
+  // Filter Row
+  filterRow: {
+    flexDirection: 'row', backgroundColor: '#F1F5F9', borderRadius: 12, padding: 3, marginBottom: 12,
+  },
+  filterBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 10 },
+  filterBtnActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2, elevation: 2,
+  },
+  filterText: { fontSize: 11, fontWeight: '700', color: '#94A3B8' },
+  filterTextActive: { color: '#0F172A' },
+
+  // Invoice Cards
   invoiceCard: {
-    backgroundColor: theme.surface,
-    marginHorizontal: 16,
-    marginBottom: 14,
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: theme.border,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: isDarkMode ? 0.25 : 0.05,
-    shadowRadius: 6,
-    elevation: 3,
+    backgroundColor: '#FFFFFF', marginHorizontal: 16, marginBottom: 12,
+    borderRadius: 16, borderWidth: 1, borderColor: '#F1F5F9', overflow: 'hidden',
+    shadowColor: '#64748B', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
   },
-  topAccentBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
+  cardTop: { padding: 16 },
+  invNumRow: { marginBottom: 12 },
+  invNumText: { fontSize: 11, fontWeight: '700', color: '#7C3AED', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  studentRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  studentAvatar: {
+    width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center',
   },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginTop: 4,
-    marginBottom: 12,
+  studentAvatarText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+  studentName: { fontSize: 14, fontWeight: '800', color: '#0F172A' },
+  studentGrade: { fontSize: 11, color: '#94A3B8', fontWeight: '500' },
+  feeDesc: { fontSize: 12, color: '#64748B', marginBottom: 10 },
+  amountStatusRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12,
   },
-  studentInfoGroup: {
-    flex: 1,
-    marginRight: 10,
-  },
-  studentNameText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: theme.text,
-    marginBottom: 4,
-  },
-  invoiceNumberChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  invoiceNumberText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.subtext,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 5,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  cardBodySection: {
-    marginBottom: 12,
-  },
-  amountRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginBottom: 4,
-  },
-  amountText: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: theme.text,
-    letterSpacing: -0.4,
-  },
-  feeMonthTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9',
-  },
-  feeMonthText: {
-    fontSize: 11,
-    color: theme.subtext,
-    fontWeight: '600',
-  },
-  descriptionText: {
-    fontSize: 13,
-    color: theme.subtext,
-  },
-  cardDivider: {
-    height: 1,
-    backgroundColor: theme.border,
-    marginBottom: 12,
-  },
-  cardFooterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  dateInfoGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dateLabel: {
-    fontSize: 12,
-    color: theme.subtext,
-    marginRight: 4,
-  },
-  dateValue: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.text,
-  },
-  paidInfoBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.15)' : '#ECFDF5',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-  },
-  paidText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#10B981',
-  },
+  amountVal: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
 
-  /* Empty State */
-  emptyContainer: {
-    paddingVertical: 80,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
+  // Status Badge
+  statusBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20,
   },
-  emptyIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
+  statusBadgeText: { fontSize: 11, fontWeight: '700' },
+
+  // Dates
+  datesRow: { flexDirection: 'row', gap: 16 },
+  dateBlock: {},
+  dateLbl: { fontSize: 10, color: '#94A3B8', fontWeight: '600', marginBottom: 2, textTransform: 'uppercase' },
+  dateVal: { fontSize: 12, fontWeight: '600', color: '#334155' },
+
+  // Card Actions
+  cardActions: { borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingHorizontal: 16, paddingVertical: 8, alignItems: 'flex-end' },
+  actionDotBtn: { padding: 6, borderRadius: 20, backgroundColor: '#F8FAFC' },
+  actionMenu: {
+    position: 'absolute', right: 16, top: 40, backgroundColor: '#FFFFFF',
+    borderRadius: 14, borderWidth: 1, borderColor: '#F1F5F9', width: 200, zIndex: 100,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 8,
+    paddingVertical: 4,
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: theme.text,
-    marginBottom: 6,
+  actionMenuItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 10 },
+  actionMenuText: { fontSize: 13, fontWeight: '600', color: '#334155' },
+
+  // Payment Mode Badge
+  paymentModeBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
   },
-  emptySubtitle: {
-    fontSize: 14,
-    color: theme.subtext,
-    textAlign: 'center',
+  paymentModeBadgeText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
+
+  // Settlements
+  settlementsTopCard: {
+    backgroundColor: '#FFFFFF', borderRadius: 20, padding: 16,
+    borderWidth: 1, borderColor: '#F1F5F9', marginBottom: 4,
+    shadowColor: '#64748B', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
   },
+  auditBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: '#0F172A', paddingVertical: 10, borderRadius: 12,
+  },
+  auditBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
+
+  // Reconciliation Cards
+  reconCard: {
+    width: width * 0.6, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16,
+    borderWidth: 1, borderColor: '#F1F5F9',
+  },
+  reconCardDark: {
+    width: width * 0.6, borderRadius: 16, padding: 16,
+    backgroundColor: '#064E3B', borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)',
+  },
+  reconLabel: { fontSize: 10, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5, textTransform: 'uppercase' },
+  reconValue: { fontSize: 22, fontWeight: '800', color: '#0F172A', marginTop: 6 },
+  reconMeta: { fontSize: 11, color: '#94A3B8', marginTop: 8 },
+  gstBadge: { backgroundColor: '#EEF2FF', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 },
+  gstBadgeText: { fontSize: 8, fontWeight: '800', color: '#4F46E5' },
+
+  // Payout Header
+  payoutHeaderSection: { marginTop: 20, marginBottom: 8 },
+  paymentFilterRow: { flexDirection: 'row', backgroundColor: '#F1F5F9', borderRadius: 12, padding: 3, marginTop: 12 },
+  paymentFilterBtn: { flex: 1, paddingVertical: 7, alignItems: 'center', borderRadius: 9 },
+  paymentFilterBtnActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2, elevation: 2,
+  },
+  paymentFilterText: { fontSize: 10, fontWeight: '700', color: '#94A3B8' },
+  paymentFilterTextActive: { color: '#0F172A' },
+
+  // Payout Cards
+  payoutCard: {
+    backgroundColor: '#FFFFFF', marginHorizontal: 16, marginBottom: 12,
+    borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#F1F5F9',
+    shadowColor: '#64748B', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+  },
+  payoutRef: { fontSize: 12, fontWeight: '700', color: '#0F172A', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  payoutDate: { fontSize: 11, color: '#94A3B8', marginTop: 2 },
+  payoutGrid: { flexDirection: 'row', gap: 12 },
+  payoutGridItem: { flex: 1 },
+  payoutGridLabel: { fontSize: 10, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', marginBottom: 4 },
+  payoutGridValue: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
+  reconStatusRow: { marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
+  reconStatusBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#ECFDF5', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
+    borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)', alignSelf: 'flex-start',
+  },
+  reconStatusText: { fontSize: 11, fontWeight: '700', color: '#059669' },
+
+  // Empty State
+  emptyState: { paddingVertical: 60, alignItems: 'center', paddingHorizontal: 32 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A', marginTop: 12 },
+  emptyDesc: { fontSize: 13, color: '#94A3B8', textAlign: 'center', marginTop: 4 },
+
+  // Refund Modal
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 16,
+  },
+  refundModal: {
+    backgroundColor: '#FFFFFF', borderRadius: 20, width: '100%', maxHeight: '90%',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.2, shadowRadius: 32, elevation: 12,
+  },
+  refundHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: 16, borderBottomWidth: 1, borderBottomColor: '#FEE2E2',
+    backgroundColor: '#FFF5F5', borderTopLeftRadius: 20, borderTopRightRadius: 20,
+  },
+  refundIcon: {
+    width: 40, height: 40, borderRadius: 20, backgroundColor: '#EF4444',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  refundTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
+  refundTxId: { fontSize: 11, color: '#64748B', marginTop: 2, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  adminBadge: { backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  adminBadgeText: { fontSize: 8, fontWeight: '800', color: '#D97706' },
+
+  policyWarning: {
+    flexDirection: 'row', gap: 10, margin: 16, padding: 14,
+    backgroundColor: '#FFFBEB', borderWidth: 1, borderColor: '#FDE68A', borderRadius: 12,
+  },
+  policyTitle: { fontSize: 12, fontWeight: '800', color: '#92400E', marginBottom: 4 },
+  policyDesc: { fontSize: 11, color: '#92400E', lineHeight: 16 },
+
+  ledgerBreakdown: {
+    marginHorizontal: 16, padding: 16, backgroundColor: '#FFFFFF',
+    borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12,
+  },
+  ledgerTitle: { fontSize: 11, fontWeight: '800', color: '#334155', letterSpacing: 0.5 },
+  ledgerMode: { fontSize: 11, fontWeight: '700', color: '#64748B', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  ledgerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  ledgerLabel: { fontSize: 13, color: '#334155', fontWeight: '500' },
+  ledgerVal: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
+
+  sectionLabel: { fontSize: 11, fontWeight: '800', color: '#64748B', marginHorizontal: 16, marginTop: 16, marginBottom: 8, letterSpacing: 0.5 },
+  reasonPicker: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginHorizontal: 16, padding: 14, backgroundColor: '#FFFFFF',
+    borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12,
+  },
+  reasonText: { fontSize: 13, color: '#334155', flex: 1 },
+
+  confirmSection: { margin: 16, padding: 14, backgroundColor: '#FFFBEB', borderRadius: 12, borderWidth: 1, borderColor: '#FDE68A' },
+  checkboxRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 16 },
+  checkbox: {
+    width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: '#CBD5E1',
+    justifyContent: 'center', alignItems: 'center', marginTop: 2,
+  },
+  checkboxChecked: { backgroundColor: '#7C3AED', borderColor: '#7C3AED' },
+  checkboxLabel: { fontSize: 12, color: '#334155', flex: 1, lineHeight: 18 },
+  confirmPrompt: { fontSize: 10, fontWeight: '800', color: '#64748B', marginBottom: 8, letterSpacing: 0.3 },
+  confirmInput: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF',
+    borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10,
+  },
+  confirmInputField: { flex: 1, fontSize: 14, color: '#0F172A', fontWeight: '600' },
+
+  refundFooter: {
+    flexDirection: 'row', gap: 12, padding: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9',
+  },
+  refundCancelBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0',
+    alignItems: 'center', backgroundColor: '#FFFFFF',
+  },
+  refundCancelText: { fontSize: 13, fontWeight: '700', color: '#64748B' },
+  refundSubmitBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 12, borderRadius: 12, backgroundColor: '#EF4444',
+  },
+  refundSubmitText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF' },
 });
 
 export default PrincipalFeesScreen;

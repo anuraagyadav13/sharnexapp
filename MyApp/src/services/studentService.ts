@@ -294,6 +294,20 @@ const studentService = {
     );
   },
 
+  initiatePayment(data: { invoiceId: string; idempotencyKey: string; paymentMode?: string }) {
+    return apiClient.post(
+      ENDPOINTS.STUDENT.INITIATE_PAYMENT,
+      data,
+    );
+  },
+
+  verifyPayment(data: { paymentId?: string; razorpayPaymentId: string; razorpayOrderId: string; razorpaySignature: string; invoiceId?: string; metadata?: any }) {
+    return apiClient.post(
+      ENDPOINTS.STUDENT.VERIFY_PAYMENT,
+      data,
+    );
+  },
+
   getReceipt(id: string) {
     return apiClient.get(
       ENDPOINTS.STUDENT.PAYMENT_RECEIPT(id),
