@@ -108,6 +108,15 @@ export type RootStackParamList = {
   PrincipalEquipment: undefined;
   PrincipalLibrary: undefined;
 
+  // Library Admin Module Screens
+  LibraryDashboard: undefined;
+  LibraryBookCatalog: undefined;
+  LibraryCirculation: undefined;
+  LibraryCategories: undefined;
+  LibraryAnnouncements: undefined;
+  LibraryEquipment: undefined;
+  LibraryNewSupply: undefined;
+
   // Principal Bus Tracking Module Screens
   BusDashboard: undefined;
   FleetTracking: undefined;

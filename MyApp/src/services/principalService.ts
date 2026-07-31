@@ -232,6 +232,25 @@ export interface ReconciliationData {
   discrepancies: any[];
 }
 
+export interface EquipmentLineItem {
+  id: string;
+  item_name?: string;
+  itemName?: string;
+  requested_quantity?: number | string;
+  requestedQuantity?: number | string;
+  approved_quantity?: number | string | null;
+  approvedQuantity?: number | string | null;
+  unit?: string;
+  item_note?: string;
+  itemNote?: string;
+}
+
+export interface EquipmentRequestApprovalItemPayload {
+  id: string;
+  approvedQuantity: number;
+  approvalNote: string;
+}
+
 export interface EquipmentRequestItem {
   id: string;
   request_number: string;
@@ -247,6 +266,7 @@ export interface EquipmentRequestItem {
   reviewed_at: string | null;
   teacher_name: string;
   item_count: string;
+  items?: EquipmentLineItem[];
 }
 
 export interface EquipmentPagination {
@@ -257,11 +277,13 @@ export interface EquipmentPagination {
 
 export interface LibraryDashboardStats {
   totalBooks: number;
-  totalCopies: number;
-  activeIssues: number;
-  overdueCount: number;
-  totalCategories: number;
-  staffCount: number;
+  totalCopies?: number;
+  activeIssues?: number;
+  issuedBooks?: number;
+  overdueCount?: number;
+  overdueBooks?: number;
+  totalCategories?: number;
+  staffCount?: number;
 }
 
 export interface LibraryCategoryItem {
@@ -469,11 +491,38 @@ const principalService = {
     );
   },
 
-  actionEquipmentRequest(id: string, action: 'APPROVED' | 'REJECTED', remarks?: string, items?: any[]) {
+  getEquipmentRequestDetail(id: string) {
+    return apiClient.get<{ data: EquipmentRequestItem }>(`/equipment/requests/${id}`);
+  },
+
+  async actionEquipmentRequest(
+    id: string,
+    action: 'APPROVED' | 'REJECTED',
+    remarks?: string,
+    items?: EquipmentRequestApprovalItemPayload[]
+  ) {
+    let payloadItems = items;
+
+    if (action === 'APPROVED' && (!payloadItems || payloadItems.length === 0)) {
+      try {
+        const detailRes = await this.getEquipmentRequestDetail(id);
+        const detailData = (detailRes.data as any)?.data || detailRes.data;
+        if (detailData?.items && Array.isArray(detailData.items)) {
+          payloadItems = detailData.items.map((i: any) => ({
+            id: i.id,
+            approvedQuantity: Number(i.requested_quantity ?? i.requestedQuantity ?? i.quantity ?? 1),
+            approvalNote: i.approval_note ?? i.approvalNote ?? '',
+          }));
+        }
+      } catch (e) {
+        console.warn('[principalService] Could not auto-fetch line items for approval:', e);
+      }
+    }
+
     return apiClient.post(ENDPOINTS.PRINCIPAL.EQUIPMENT_ACTION(id), {
       action,
       remarks: remarks ?? '',
-      items: items ?? [],
+      items: payloadItems ?? [],
     }).catch(async (err) => {
       // Fallback to legacy endpoints if /action is not found
       if (err?.response?.status === 404) {
@@ -484,11 +533,11 @@ const principalService = {
     });
   },
 
-  approveEquipmentRequest(id: string, remark?: string, items?: any[]) {
+  approveEquipmentRequest(id: string, remark?: string, items?: EquipmentRequestApprovalItemPayload[]) {
     return this.actionEquipmentRequest(id, 'APPROVED', remark, items);
   },
 
-  rejectEquipmentRequest(id: string, remark: string, items?: any[]) {
+  rejectEquipmentRequest(id: string, remark: string, items?: EquipmentRequestApprovalItemPayload[]) {
     return this.actionEquipmentRequest(id, 'REJECTED', remark, items);
   },
 

@@ -100,6 +100,13 @@ import PrincipalAddClass from './src/screens/principal/PrincipalAddClassScreen';
 import PrincipalManageClass from './src/screens/principal/PrincipalManageClassScreen';
 import PrincipalEditClass from './src/screens/principal/PrincipalEditClassScreen';
 import LibraryScreen from './src/screens/library/LibraryScreen';
+import LibraryDashboardScreen from './src/screens/library/LibraryDashboardScreen';
+import LibraryBookCatalogScreen from './src/screens/library/LibraryBookCatalogScreen';
+import LibraryCirculationScreen from './src/screens/library/LibraryCirculationScreen';
+import LibraryCategoriesScreen from './src/screens/library/LibraryCategoriesScreen';
+import LibraryAnnouncementsScreen from './src/screens/library/LibraryAnnouncementsScreen';
+import LibraryEquipmentScreen from './src/screens/library/LibraryEquipmentScreen';
+import LibraryNewSupplyScreen from './src/screens/library/LibraryNewSupplyScreen';
 import StudentMessagesScreen from './src/screens/student/Messages';
 import TeacherMessagesScreen from './src/screens/teacher/Messages';
 
@@ -129,11 +136,13 @@ function RootNavigator() {
     if (authState.role === 'student') return 'StudentDashboard';
     if (authState.role === 'teacher') return 'TeacherDashboard';
     if (authState.role === 'principal') return 'PrincipalDashboard';
+    if (authState.role === 'library') return 'LibraryDashboard';
     return 'Login';
   };
 
   const effectiveToken = authState.token;
   const effectiveRole = authState.role;
+  console.log('[DEBUG_NAVIGATOR] Effective Role:', effectiveRole, '| Initial Route:', getInitialRoute());
 
   return (
     <Stack.Navigator
@@ -421,6 +430,19 @@ function RootNavigator() {
               <Stack.Screen name="DriverManagement" component={DriverManagementScreen} />
               <Stack.Screen name="AddDriver" component={AddDriverScreen} />
               <Stack.Screen name="EnrollStudent" component={EnrollStudentScreen} />
+            </>
+          )}
+
+          {/* Library Case */}
+          {effectiveRole === 'library' && (
+            <>
+              <Stack.Screen name="LibraryDashboard" component={LibraryDashboardScreen} />
+              <Stack.Screen name="LibraryBookCatalog" component={LibraryBookCatalogScreen} />
+              <Stack.Screen name="LibraryCirculation" component={LibraryCirculationScreen} />
+              <Stack.Screen name="LibraryCategories" component={LibraryCategoriesScreen} />
+              <Stack.Screen name="LibraryAnnouncements" component={LibraryAnnouncementsScreen} />
+              <Stack.Screen name="LibraryEquipment" component={LibraryEquipmentScreen} />
+              <Stack.Screen name="LibraryNewSupply" component={LibraryNewSupplyScreen} />
             </>
           )}
 

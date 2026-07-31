@@ -72,8 +72,10 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       }
 
       const user = payload.user;
+      console.log('[DEBUG_LOGIN] FULL USER OBJECT:', JSON.stringify(user));
+      console.log('[DEBUG_LOGIN] BACKEND USER ROLE:', user?.role);
 
-      let appRole: 'student' | 'teacher' | 'principal' = 'student';
+      let appRole: 'student' | 'teacher' | 'principal' | 'library' = 'student';
       const backendRole = user.role;
       if (backendRole === 'TEACHER' || backendRole === 'STAFF') appRole = 'teacher';
       else if (
@@ -82,11 +84,17 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         backendRole === 'PRINCIPAL'
       )
         appRole = 'principal';
+      else if (backendRole === 'LIBRARY_ADMIN' || backendRole === 'LIBRARIAN')
+        appRole = 'library';
+
+      console.log('[DEBUG_LOGIN] COMPUTED APP ROLE:', appRole);
 
       showToast('Login successful! Welcome back.', 'success');
       await apiClient.get('/auth/csrf');
 
-      login('', '', appRole, user);
+      const realToken = payload.token || payload.accessToken || payload.jwt || payload.tokens?.accessToken || '';
+      const realRefreshToken = payload.refreshToken || payload.tokens?.refreshToken || '';
+      login(realToken, realRefreshToken, appRole, user);
     } catch (error: any) {
       console.error('Login Error:', error);
       let message = 'Something went wrong. Please try again.';

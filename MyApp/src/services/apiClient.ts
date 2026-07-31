@@ -140,7 +140,13 @@ const createNormalizedResponseData = (rawData: any): any => {
 
 export const getApiErrorMessage = (error: any): string => {
   if (!error) return 'Something went wrong';
-  return error?.response?.normalized?.message || error?.response?.data?.message || error?.message || 'Something went wrong';
+  return (
+    error?.response?.data?.error ||
+    error?.response?.normalized?.message ||
+    error?.response?.data?.message ||
+    error?.message ||
+    'Something went wrong'
+  );
 };
 
 /**
@@ -258,14 +264,11 @@ apiClient.interceptors.request.use(
       const { accessToken, csrfToken } = await getStoredTokens();
       
       // Safe modification of AxiosHeaders (supporting both Axios v0.x and v1.x)
+      const isValidBearerToken = accessToken && accessToken !== 'COOKIE_AUTH' && accessToken !== 'null' && accessToken !== 'undefined';
+      
       if (config.headers && typeof config.headers.set === 'function') {
-        if (accessToken) {
-          if (accessToken === 'COOKIE_AUTH') {
-            const realJwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InRlYWNoZXItMTc2NzcyNjc3MzEzOCIsInJvbGUiOiJURUFDSEVSIiwiaW5zdGl0dXRpb25JZCI6Imluc3RpdHV0aW9uLTE3Njc2Mzk1MDMwODkteXJmMHExcnB3IiwiZW1haWwiOiJhbnVyYWcuMjJiMDMxMTA4MEBhYmVzLmFjLmluIiwibmFtZSI6IkFOVVJBRyBZQURBViIsImlzQWN0aXZlIjp0cnVlLCJpc1ZlcmlmaWVkIjpmYWxzZSwiaWF0IjoxNzgyODE0MDM4LCJleHAiOjE3ODI4MTQ5Mzh9.2PzgHp774mX6C_2mKAP0M5hJnnAoARHatFMpFEmpqt4';
-            config.headers.set('Authorization', `Bearer ${realJwt}`);
-          } else {
-            config.headers.set('Authorization', `Bearer ${accessToken}`);
-          }
+        if (isValidBearerToken) {
+          config.headers.set('Authorization', `Bearer ${accessToken}`);
         }
         if (csrfToken) {
           config.headers.set('X-CSRF-Token', csrfToken);
@@ -275,13 +278,8 @@ apiClient.interceptors.request.use(
       } else {
         // Fallback for plain objects
         config.headers = config.headers || {};
-        if (accessToken) {
-          if (accessToken === 'COOKIE_AUTH') {
-            const realJwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InRlYWNoZXItMTc2NzcyNjc3MzEzOCIsInJvbGUiOiJURUFDSEVSIiwiaW5zdGl0dXRpb25JZCI6Imluc3RpdHV0aW9uLTE3Njc2Mzk1MDMwODkteXJmMHExcnB3IiwiZW1haWwiOiJhbnVyYWcuMjJiMDMxMTA4MEBhYmVzLmFjLmluIiwibmFtZSI6IkFOVVJBRyBZQURBViIsImlzQWN0aXZlIjp0cnVlLCJpc1ZlcmlmaWVkIjpmYWxzZSwiaWF0IjoxNzgyODE0MDM4LCJleHAiOjE3ODI4MTQ5Mzh9.2PzgHp774mX6C_2mKAP0M5hJnnAoARHatFMpFEmpqt4';
-            config.headers.Authorization = `Bearer ${realJwt}`;
-          } else {
-            config.headers.Authorization = `Bearer ${accessToken}`;
-          }
+        if (isValidBearerToken) {
+          config.headers.Authorization = `Bearer ${accessToken}`;
         }
         if (csrfToken) {
           config.headers['X-CSRF-Token'] = csrfToken;
@@ -293,7 +291,6 @@ apiClient.interceptors.request.use(
       console.warn('[apiClient] Warning fetching auth token from storage:', {
         message: storageError instanceof Error ? storageError.message : String(storageError),
       });
-      // Continue without token rather than failing the request
     }
     return config;
   },
@@ -305,12 +302,9 @@ apiClient.interceptors.request.use(
   }
 );
 
-/**
- * Response Interceptor - Handles errors and implements auth logic
- */
+// Response Interceptor - Handles errors, captures tokens & CSRF
 apiClient.interceptors.response.use(
   (response) => {
-    // Check for CSRF token in Set-Cookie headers
     try {
       const setCookieHeader = response.headers['set-cookie'];
       if (setCookieHeader) {
@@ -320,10 +314,22 @@ apiClient.interceptors.response.use(
           if (match && match[1]) {
             storeCsrfToken(match[1]);
           }
+          const tokenMatch = cookieStr.match(/(?:auth_token|access_token|jwt|token)=([^;]+)/i);
+          if (tokenMatch && tokenMatch[1] && tokenMatch[1].startsWith('eyJ')) {
+            storeTokens(tokenMatch[1], tokenMatch[1]);
+          }
         }
       }
+
+      // Automatically store token if returned in response body
+      const resData = response.data;
+      const bodyToken = resData?.token || resData?.accessToken || resData?.jwt || resData?.data?.token || resData?.data?.accessToken || resData?.data?.jwt || resData?.data?.tokens?.accessToken;
+      if (bodyToken && typeof bodyToken === 'string' && bodyToken.startsWith('eyJ')) {
+        const bodyRefresh = resData?.refreshToken || resData?.data?.refreshToken || bodyToken;
+        storeTokens(bodyToken, bodyRefresh);
+      }
     } catch (e) {
-      console.warn('Failed to parse CSRF token from Set-Cookie header', e);
+      console.warn('[apiClient] Failed to parse token/CSRF from response', e);
     }
 
     // Normalize response and attach normalized wrapper for compatibility

@@ -7,7 +7,7 @@ import accountService from '../services/accountService';
 import teacherService from '../services/teacherService';
 import principalService from '../services/principalService';
 
-type Role = 'student' | 'teacher' | 'principal' | null;
+type Role = 'student' | 'teacher' | 'principal' | 'library' | null;
 
 interface AuthState {
   token: string | null;

@@ -134,23 +134,34 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
   const role = authState.role?.toLowerCase() || '';
   const isTeacher = role === 'teacher';
   const isInstitution = role === 'institution' || role === 'principal';
+  const isLibrary = role === 'library' || role === 'librarian' || role === 'library_admin';
+  const isStudent = role === 'student';
+
   const roleTitle = isInstitution
     ? 'Institution'
     : isTeacher
       ? 'Teacher'
-      : 'Student';
+      : isLibrary
+        ? 'Library Admin'
+        : 'Student';
+
   const secondaryTabTitle = isInstitution
     ? 'Institution Info'
     : isTeacher
       ? 'Professional Info'
-      : 'Parent Information';
+      : isStudent
+        ? 'Parent Information'
+        : null;
+
   const [rollNo, setRollNo] = useState('');
 
   const idLabel = isInstitution
     ? 'PRN2023-01X'
     : isTeacher
       ? 'EMP2023-12A'
-      : rollNo || 'Loading...';
+      : isLibrary
+        ? 'LIB2023-01A'
+        : rollNo || 'Student';
 
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(
@@ -337,10 +348,8 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
         }
 
       } else {
-        const [profileResponse, parentResponse] = await Promise.all([
-          accountService.getProfile(),
-          accountService.getParentInfo().catch(() => null),
-        ]);
+        const profileResponse = await accountService.getProfile();
+        const parentResponse = isStudent ? await accountService.getParentInfo().catch(() => null) : null;
 
         const profileRaw = profileResponse.data?.data ?? profileResponse.data ?? {};
         const fullName = profileRaw.name || authState.user?.name || '';
@@ -665,6 +674,10 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
         uploadRes = await teacherService.uploadPhoto(formData);
       } else if (isInstitution) {
         uploadRes = await principalService.uploadPhoto(formData);
+      } else if (isLibrary) {
+        uploadRes = await apiClient.post('/account/photo', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
       } else {
         uploadRes = await accountService.uploadPhoto(formData);
       }
@@ -706,6 +719,8 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
         await teacherService.deletePhoto();
       } else if (isInstitution) {
         await principalService.deletePhoto();
+      } else if (isLibrary) {
+        await apiClient.delete('/account/photo');
       } else {
         await accountService.deletePhoto();
       }
@@ -873,28 +888,30 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              activeOpacity={0.8}
-              style={[
-                styles.tabBtn,
-                activeTab === secondaryTabTitle && styles.tabActive,
-              ]}
-              onPress={() => setActiveTab(secondaryTabTitle)}
-            >
-              <Ionicons
-                name={isTeacher ? "briefcase" : "people"}
-                size={14}
-                color={activeTab === secondaryTabTitle ? theme.primary : theme.subtext}
-              />
-              <Text
+            {secondaryTabTitle && (
+              <TouchableOpacity
+                activeOpacity={0.8}
                 style={[
-                  styles.tabText,
-                  activeTab === secondaryTabTitle && styles.tabTextActive,
+                  styles.tabBtn,
+                  activeTab === secondaryTabTitle && styles.tabActive,
                 ]}
+                onPress={() => setActiveTab(secondaryTabTitle)}
               >
-                {secondaryTabTitle}
-              </Text>
-            </TouchableOpacity>
+                <Ionicons
+                  name={isTeacher ? "briefcase" : "people"}
+                  size={14}
+                  color={activeTab === secondaryTabTitle ? theme.primary : theme.subtext}
+                />
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeTab === secondaryTabTitle && styles.tabTextActive,
+                  ]}
+                >
+                  {secondaryTabTitle}
+                </Text>
+              </TouchableOpacity>
+            )}
 
             {isTeacher && (
               <TouchableOpacity

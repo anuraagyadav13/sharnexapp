@@ -800,6 +800,7 @@ const formatDueDate = (dateStr: string) => {
 // StudentDashboard
 // ---------------------------------------------------------------------------
 const StudentDashboard: React.FC<Props> = ({ navigation }) => {
+  console.log('[DEBUG_MOUNT] StudentDashboard mounted!');
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const { theme, isDarkMode } = useTheme();

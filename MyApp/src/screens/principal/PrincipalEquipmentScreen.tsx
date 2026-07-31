@@ -144,7 +144,28 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
       closeModal();
 
       if (action === 'approve') {
-        await principalService.approveEquipmentRequest(requestId, remarkInput);
+        const targetRequest = requests.find((r) => r.id === requestId);
+        let lineItems = targetRequest?.items || [];
+
+        if (!lineItems.length) {
+          try {
+            const detailRes = await principalService.getEquipmentRequestDetail(requestId);
+            const detailData = (detailRes.data as any)?.data || detailRes.data;
+            if (detailData?.items && Array.isArray(detailData.items)) {
+              lineItems = detailData.items;
+            }
+          } catch (e) {
+            console.warn('[PrincipalEquipment] Failed to fetch request details for items:', e);
+          }
+        }
+
+        const itemsPayload = lineItems.map((item: any) => ({
+          id: item.id,
+          approvedQuantity: Number(item.requested_quantity ?? item.requestedQuantity ?? item.quantity ?? 1),
+          approvalNote: item.approval_note ?? item.approvalNote ?? '',
+        }));
+
+        await principalService.approveEquipmentRequest(requestId, remarkInput, itemsPayload);
         Alert.alert('Success', 'Request approved successfully.');
       } else {
         await principalService.rejectEquipmentRequest(requestId, remarkInput);
@@ -155,7 +176,7 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
       Alert.alert('Error', `Failed to ${action} request. Please reload and try again.`);
       loadData(); // Reload to sync state
     }
-  }, [modalState, remarkInput, closeModal, loadData]);
+  }, [modalState, remarkInput, closeModal, loadData, requests]);
 
   const renderRequestCard = useCallback(
     ({ item }: { item: EquipmentRequestItem }) => {
