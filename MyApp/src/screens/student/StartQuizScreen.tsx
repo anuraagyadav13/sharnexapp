@@ -5,10 +5,8 @@ import {
   Text,
   StyleSheet,
   StatusBar,
-  Platform,
   ActivityIndicator,
   Alert,
-  Image,
   TouchableOpacity,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -18,7 +16,6 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
 import { StudentHeader } from '../../components/StudentHeader';
 import studentService from '../../services/studentService';
@@ -32,31 +29,32 @@ interface Props {
 }
 
 const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { theme, isDarkMode, toggleDarkMode } = useTheme();
+  const { theme, isDarkMode } = useTheme();
   const styles = getStyles(theme);
-  const { authState } = useAuth();
+
   const [quizData, setQuizData] = useState<any>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<{[key: number]: number}>({});
-  const [timeRemaining, setTimeRemaining] = useState(0);
+  const [selectedAnswers, setSelectedAnswers] = useState<{ [questionIndex: number]: string }>({});
+  const [markedForReview, setMarkedForReview] = useState<{ [questionIndex: number]: boolean }>({});
+  const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch quiz data on mount
   useEffect(() => {
-    fetchQuizData();
+    initQuiz();
   }, []);
 
-  // Timer effect
+  // Timer countdown effect with client auto-submit at 00:00
   useEffect(() => {
-    if (timeRemaining > 0 && !isLoading) {
+    if (timeRemaining > 0 && !isLoading && !isSubmitting) {
       timerRef.current = setInterval(() => {
         setTimeRemaining(prev => {
           if (prev <= 1) {
-            // Auto-submit when time runs out
+            if (timerRef.current) clearInterval(timerRef.current);
+            // Auto-submit when timer reaches zero
             handleSubmitQuiz(true);
             return 0;
           }
@@ -70,9 +68,9 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
         clearInterval(timerRef.current);
       }
     };
-  }, [timeRemaining, isLoading]);
+  }, [timeRemaining, isLoading, isSubmitting]);
 
-  const fetchQuizData = async () => {
+  const initQuiz = async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -82,32 +80,57 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
         throw new Error('Quiz ID is required');
       }
 
-      // 1. Validate and start attempt on server to get verified timestamp
-      const startRes = await studentService.startQuiz(quizId);
-      const startData = startRes.normalized?.data || startRes.data;
-      const verifiedStart = startData?.startedAt;
-      setStartedAt(verifiedStart);
+      // Step 1: Validate quiz start eligibility on server (POST /api/quizzes/[id]/start)
+      let verifiedStartAt: string | null = null;
+      try {
+        const startRes = await studentService.startQuiz(quizId);
+        const startData = startRes.normalized?.data || startRes.data;
+        verifiedStartAt = startData?.startedAt || new Date().toISOString();
+        setStartedAt(verifiedStartAt);
+      } catch (startErr: any) {
+        const message = startErr.response?.data?.message || startErr.message || 'Unable to start quiz';
+        const maxAttempts = startErr.response?.data?.maxAttempts;
+        const currentAttempts = startErr.response?.data?.currentAttempts;
 
-      // 2. Fetch quiz questions and content
-      const response = await studentService.getStartQuiz(quizId);
-      const data = response.normalized?.data || response.data;
-      
+        if (currentAttempts !== undefined && maxAttempts !== undefined) {
+          throw new Error(`Maximum attempts reached (${currentAttempts}/${maxAttempts}). You cannot attempt this quiz again.`);
+        }
+        throw new Error(message);
+      }
+
+      // Step 2: Fetch quiz content and sanitized questions (GET /api/quizzes/[id])
+      const detailsRes = await studentService.getQuizDetails(quizId);
+      const data = detailsRes.normalized?.data || detailsRes.data;
+
+      if (!data) {
+        throw new Error('Quiz content not available');
+      }
+
       setQuizData(data);
-      // Ensure we have a valid duration (default to 60 mins if missing or invalid)
-      const duration = Number(data.duration) || Number(data.timeLimit) || 60;
-      setTimeRemaining(duration * 60); 
+
+      // Set time limit in seconds
+      const durationMinutes = Number(data.timeLimit) || Number(data.duration) || 15;
+      setTimeRemaining(durationMinutes * 60);
+
     } catch (err: any) {
-      console.error('Error fetching quiz:', err);
+      console.error('[StartQuiz] error:', err);
       setError(err.message || 'Failed to load quiz');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleAnswerSelect = (questionId: number, optionId: number | string) => {
+  const handleOptionSelect = (questionIndex: number, optionValue: string) => {
     setSelectedAnswers(prev => ({
       ...prev,
-      [questionId]: optionId as any
+      [questionIndex]: optionValue,
+    }));
+  };
+
+  const toggleMarkForReview = (questionIndex: number) => {
+    setMarkedForReview(prev => ({
+      ...prev,
+      [questionIndex]: !prev[questionIndex],
     }));
   };
 
@@ -127,48 +150,65 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
     if (isSubmitting) return;
 
     const questions = quizData?.questions || [];
-    const answers = Object.entries(selectedAnswers).map(([questionId, optionId]) => {
-      const qIndex = questions.findIndex((q: any) => q.id?.toString() === questionId.toString());
-      return {
-        questionIndex: qIndex !== -1 ? qIndex : 0,
-        selectedOption: optionId
-      };
-    }).filter(a => a.questionIndex !== -1);
+    const formattedAnswers = Object.entries(selectedAnswers).map(([indexStr, optionValue]) => ({
+      questionIndex: Number(indexStr),
+      selectedOption: optionValue,
+    }));
 
-    // If it's a manual submit, we require at least one answer.
-    // If it's an auto-submit (timer out), we submit whatever they have (even if empty).
-    if (!isAutoSubmit && answers.length === 0) {
-      Alert.alert('Info', 'Please answer at least one question before submitting');
+    if (!isAutoSubmit && formattedAnswers.length === 0) {
+      Alert.alert('No Answers Selected', 'Please answer at least one question before submitting your quiz.');
       return;
     }
 
+    if (!isAutoSubmit) {
+      Alert.alert(
+        'Submit Quiz',
+        `Are you sure you want to submit your quiz? You have answered ${formattedAnswers.length} of ${questions.length} questions.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Submit', style: 'default', onPress: () => processSubmission(formattedAnswers, isAutoSubmit) },
+        ]
+      );
+    } else {
+      processSubmission(formattedAnswers, isAutoSubmit);
+    }
+  };
+
+  const processSubmission = async (answersPayload: Array<{ questionIndex: number; selectedOption: string }>, isAutoSubmit: boolean) => {
     try {
       setIsSubmitting(true);
+      if (timerRef.current) clearInterval(timerRef.current);
 
       const quizId = route?.params?.quizId;
-      
-      await studentService.submitQuiz(quizId, {
-        answers,
-        startedAt,
-        timeSpent: ((Number(quizData?.duration) || 60) * 60) - timeRemaining,
-        isAutoSubmitted: isAutoSubmit
-      });
+      const submitPayload = {
+        answers: answersPayload,
+        startedAt: startedAt || new Date().toISOString(),
+      };
 
-      // Clear timer
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+      await studentService.submitQuiz(quizId, submitPayload);
 
-      navigation.navigate('QuizResult', { quizId: route?.params?.quizId, timestamp: Date.now() });
+      // On success navigate to results screen
+      navigation.navigate('QuizResult', { quizId, timestamp: Date.now() });
+
     } catch (err: any) {
-      console.error('Error submitting quiz:', err);
-      // For auto-submit, we might want to retry or at least show a specific error
-      Alert.alert('Error', isAutoSubmit ? 'Time is up but submission failed. Retrying...' : 'Failed to submit quiz. Please try again.');
-      
-      if (isAutoSubmit) {
-        // Simple retry logic for auto-submit
-        setTimeout(() => handleSubmitQuiz(true), 3000);
-      }
+      console.error('[StartQuiz] submission error:', err);
+      const serverMsg = err.response?.data?.message || err.message || 'Submission failed. Please try again.';
+
+      Alert.alert(
+        isAutoSubmit ? 'Auto-Submission Error' : 'Submission Error',
+        serverMsg,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              if (isAutoSubmit) {
+                // Retry auto submission once after brief delay
+                setTimeout(() => processSubmission(answersPayload, true), 3000);
+              }
+            },
+          },
+        ]
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -180,16 +220,11 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getProgressPercentage = () => {
-    if (!quizData?.questions?.length) return 0;
-    return ((currentQuestionIndex + 1) / quizData.questions.length) * 100;
-  };
-
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={styles.loadingText}>Loading quiz...</Text>
+        <Text style={styles.loadingText}>Validating quiz session...</Text>
       </View>
     );
   }
@@ -197,29 +232,28 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
   if (error) {
     return (
       <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+        <Ionicons name="alert-circle-outline" size={56} color={theme.danger} />
         <Text style={styles.errorText}>{error}</Text>
-        <ScaleButton
-          style={styles.retryButton}
-          activeOpacity={0.8}
-          scaleTo={0.95}
-          onPress={fetchQuizData}
-        >
+        <ScaleButton style={styles.retryButton} activeOpacity={0.8} scaleTo={0.95} onPress={initQuiz}>
           <Text style={styles.retryButtonText}>Retry</Text>
         </ScaleButton>
       </View>
     );
   }
 
-  const currentQuestion = quizData?.questions?.[currentQuestionIndex];
-  const selectedOption = selectedAnswers[currentQuestion?.id];
+  const questions = quizData?.questions || [];
+  const currentQuestion = questions[currentQuestionIndex];
+  const answeredCount = Object.keys(selectedAnswers).length;
+  const reviewCount = Object.values(markedForReview).filter(Boolean).length;
+  const questionsLeft = Math.max(0, questions.length - answeredCount);
+  const currentSelectedOption = selectedAnswers[currentQuestionIndex];
+  const isCurrentMarked = Boolean(markedForReview[currentQuestionIndex]);
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.surface} />
 
-      {/* Global Header */}
-      <StudentHeader 
+      <StudentHeader
         title="Quiz"
         navigation={navigation}
         isStackScreen={true}
@@ -227,138 +261,200 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
         
-        {/* Blue Hero Header Container */}
+        {/* Screen Header Hero Banner */}
         <Animated.View entering={FadeInUp.duration(400)} style={styles.heroContainer}>
-          <ScaleButton 
-            style={styles.backButton} 
-            activeOpacity={0.7} 
-            scaleTo={0.9} 
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
-          </ScaleButton>
+          <View style={styles.heroTopRow}>
+            <ScaleButton
+              style={styles.backButton}
+              activeOpacity={0.7}
+              scaleTo={0.9}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+            </ScaleButton>
 
-          <Text style={styles.heroTitle}>{quizData?.title || 'Quiz'}</Text>
+            <View style={styles.timerChip}>
+              <Ionicons name="time-outline" size={16} color={theme.warning} style={{ marginRight: 4 }} />
+              <Text style={styles.timerText}>{formatTime(timeRemaining)}</Text>
+            </View>
+          </View>
+
+          <Text style={styles.heroTitle}>{quizData?.title || 'Quiz Session'}</Text>
           <Text style={styles.heroSubtitle}>
-            Question {currentQuestionIndex + 1} of {quizData?.questions?.length || 0} • {quizData?.totalPoints || 0} Points Total
+            Subject: {quizData?.subject || 'General'} • Question {currentQuestionIndex + 1} of {questions.length}
           </Text>
         </Animated.View>
 
-        {/* Global Wrapper for everything below hero */}
         <View style={styles.contentWrapper}>
           
-          {/* Top Timer Info Card */}
-          <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.timerCard}>
-             {/* Timer Box */}
-             <View style={styles.timerBox}>
-                <MaterialCommunityIcons name="clock" size={16} color="#F59E0B" style={{marginRight: 6}} />
-                <View>
-                  <Text style={styles.timerTextMain}>{formatTime(timeRemaining)}</Text>
-                  <Text style={styles.timerTextSub}>Time Remaining</Text>
-                </View>
-             </View>
-
-             {/* Progress Number */}
-             <View style={styles.questionCounterBlock}>
-               <Text style={styles.counterCurrent}>{currentQuestionIndex + 1}</Text>
-               <Text style={styles.counterTotal}>of {quizData?.questions?.length || 0}</Text>
-             </View>
-          </Animated.View>
-
-          {/* Progress Bar (Outside Card) */}
-          <Animated.View entering={FadeInUp.delay(150).springify()} style={styles.progressContainer}>
-             <View style={styles.progressLabelRow}>
-               <Text style={styles.progressLabel}>Quiz Progress</Text>
-               <Text style={styles.progressLabel}>{Math.round(getProgressPercentage())}%</Text>
-             </View>
-             <View style={styles.progressBarTrack}>
-                <View style={[styles.progressBarFill, { width: `${getProgressPercentage()}%` }]} />
-             </View>
-          </Animated.View>
-
-          {/* Actual Question Card */}
-          <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.questionCard}>
-            <View style={styles.questionHeader}>
-              <View style={styles.questionNumberCircle}>
-                <Text style={styles.questionNumberText}>{currentQuestionIndex + 1}</Text>
+          {/* Quick Statistics Panel */}
+          <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.statsCard}>
+            <Text style={styles.statsTitle}>Quick Statistics</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statCol}>
+                <Text style={[styles.statVal, { color: theme.success }]}>{answeredCount}</Text>
+                <Text style={styles.statLbl}>Answered</Text>
               </View>
-              <Text style={styles.questionMainText}>
-                {currentQuestion?.question || 'Question not available'}
-              </Text>
-              <View style={styles.pointsBadge}>
-                <Text style={styles.pointsBadgeText}>{currentQuestion?.points || 0} Points</Text>
+              <View style={styles.statCol}>
+                <Text style={[styles.statVal, { color: theme.warning }]}>{reviewCount}</Text>
+                <Text style={styles.statLbl}>Review</Text>
+              </View>
+              <View style={styles.statCol}>
+                <Text style={[styles.statVal, { color: theme.primary }]}>{questionsLeft}</Text>
+                <Text style={styles.statLbl}>Questions Left</Text>
               </View>
             </View>
+          </Animated.View>
 
+          {/* Interactive Question Jump Grid */}
+          <Animated.View entering={FadeInUp.delay(150).springify()} style={styles.gridContainer}>
+            <Text style={styles.gridTitle}>Question Navigation</Text>
+            <View style={styles.jumpGrid}>
+              {questions.map((_: any, idx: number) => {
+                const isCurrent = idx === currentQuestionIndex;
+                const isAnswered = selectedAnswers[idx] !== undefined;
+                const isFlagged = Boolean(markedForReview[idx]);
+
+                let itemBg = theme.surface;
+                let itemBorder = theme.border;
+                let itemTextColor = theme.text;
+
+                if (isCurrent) {
+                  itemBg = theme.primary;
+                  itemBorder = theme.primary;
+                  itemTextColor = '#FFFFFF';
+                } else if (isFlagged) {
+                  itemBg = isDarkMode ? '#78350F40' : '#FEF3C7';
+                  itemBorder = theme.warning;
+                  itemTextColor = theme.warning;
+                } else if (isAnswered) {
+                  itemBg = isDarkMode ? '#065F4640' : '#ECFDF5';
+                  itemBorder = theme.success;
+                  itemTextColor = theme.success;
+                }
+
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    activeOpacity={0.7}
+                    onPress={() => setCurrentQuestionIndex(idx)}
+                    style={[styles.gridCell, { backgroundColor: itemBg, borderColor: itemBorder }]}
+                  >
+                    <Text style={[styles.gridCellText, { color: itemTextColor }]}>{idx + 1}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </Animated.View>
+
+          {/* Question Display Card */}
+          <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.questionCard}>
+            <View style={styles.questionHeader}>
+              <View style={styles.questionBadge}>
+                <Text style={styles.questionBadgeText}>Q{currentQuestionIndex + 1}</Text>
+              </View>
+              <Text style={styles.questionTextMain}>
+                {currentQuestion?.text || currentQuestion?.question || 'Question content'}
+              </Text>
+            </View>
+
+            {/* Options List */}
             <View style={styles.optionsList}>
-              {(currentQuestion?.options || []).map((option: any, index: number) => {
-                const optionId = option.id || index + 1;
-                const isSelected = selectedOption === optionId;
-                const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+              {(currentQuestion?.options || []).map((option: any, optIdx: number) => {
+                const optionValue = typeof option === 'string' ? option : option.text || option.id;
+                const isSelected = currentSelectedOption === optionValue;
+                const letter = String.fromCharCode(65 + optIdx);
+
                 return (
                   <ScaleButton
-                    key={optionId}
+                    key={optIdx}
                     activeOpacity={0.8}
                     scaleTo={0.98}
-                    onPress={() => handleAnswerSelect(currentQuestion.id, optionId)}
-                    style={[styles.optionItem, isSelected && styles.optionItemSelected]}
+                    onPress={() => handleOptionSelect(currentQuestionIndex, optionValue)}
+                    style={[
+                      styles.optionItem,
+                      isSelected && {
+                        borderColor: theme.primary,
+                        backgroundColor: isDarkMode ? '#1E1B4B' : '#EEF2FF',
+                      },
+                    ]}
                   >
-                     <View style={[styles.optionLetterBox, isSelected && styles.optionLetterBoxSelected]}>
-                       <Text style={[styles.optionLetterText, isSelected && styles.optionLetterTextSelected]}>
-                         {letters[index] || String.fromCharCode(65 + index)}
-                       </Text>
-                     </View>
-                     <Text style={[styles.optionTextMain, isSelected && styles.optionTextMainSelected]}>
-                       {option.text || option.option}
-                     </Text>
+                    <View style={[styles.optionLetterBox, isSelected && { backgroundColor: theme.primary }]}>
+                      <Text style={[styles.optionLetterText, isSelected && { color: '#FFFFFF' }]}>
+                        {letter}
+                      </Text>
+                    </View>
+                    <Text style={[styles.optionTextMain, isSelected && { color: theme.primary, fontWeight: '700' }]}>
+                      {optionValue}
+                    </Text>
                   </ScaleButton>
                 );
               })}
             </View>
 
-            <ScaleButton style={styles.flagButton} activeOpacity={0.8} scaleTo={0.97}>
-              <Ionicons name="flag" size={14} color="#F59E0B" style={{marginRight: 6}} />
-              <Text style={styles.flagButtonText}>Flag for Review</Text>
+            {/* Flag for Review Button */}
+            <ScaleButton
+              style={[
+                styles.flagButton,
+                isCurrentMarked && { backgroundColor: isDarkMode ? '#78350F30' : '#FEF3C7', borderColor: theme.warning },
+              ]}
+              activeOpacity={0.8}
+              scaleTo={0.97}
+              onPress={() => toggleMarkForReview(currentQuestionIndex)}
+            >
+              <Ionicons
+                name={isCurrentMarked ? 'flag' : 'flag-outline'}
+                size={16}
+                color={theme.warning}
+                style={{ marginRight: 6 }}
+              />
+              <Text style={[styles.flagButtonText, { color: theme.warning }]}>
+                {isCurrentMarked ? 'Marked for Review' : 'Mark for Review'}
+              </Text>
             </ScaleButton>
           </Animated.View>
 
-          {/* Bottom Action Footer */}
-          <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.actionFooter}>
+          {/* Footer Controls */}
+          <Animated.View entering={FadeInUp.delay(250).springify()} style={styles.actionFooter}>
             <View style={styles.navigationRow}>
-               <ScaleButton
-                 style={[styles.prevBtn, currentQuestionIndex === 0 && styles.disabledBtn]}
-                 activeOpacity={0.8}
-                 scaleTo={0.95}
-                 onPress={handlePrevQuestion}
-                 disabled={currentQuestionIndex === 0}
-               >
-                 <Ionicons name="arrow-back" size={16} color={currentQuestionIndex === 0 ? theme.subtext : theme.primary} style={{marginRight: 6}} />
-                 <Text style={[styles.prevBtnText, currentQuestionIndex === 0 && styles.disabledBtnText]}>Previous</Text>
-               </ScaleButton>
+              <ScaleButton
+                style={[styles.navBtn, currentQuestionIndex === 0 && styles.disabledBtn]}
+                activeOpacity={0.8}
+                scaleTo={0.95}
+                onPress={handlePrevQuestion}
+                disabled={currentQuestionIndex === 0}
+              >
+                <Ionicons name="arrow-back" size={16} color={currentQuestionIndex === 0 ? theme.subtext : theme.primary} style={{ marginRight: 6 }} />
+                <Text style={[styles.navBtnText, { color: currentQuestionIndex === 0 ? theme.subtext : theme.primary }]}>Previous</Text>
+              </ScaleButton>
 
-               <ScaleButton
-                 style={[styles.nextBtn, currentQuestionIndex === (quizData?.questions?.length || 0) - 1 && styles.disabledBtn]}
-                 activeOpacity={0.8}
-                 scaleTo={0.95}
-                 onPress={handleNextQuestion}
-                 disabled={currentQuestionIndex === (quizData?.questions?.length || 0) - 1}
-               >
-                 <Text style={[styles.nextBtnText, currentQuestionIndex === (quizData?.questions?.length || 0) - 1 && styles.disabledBtnText]}>Next</Text>
-                 <Ionicons name="arrow-forward" size={16} color={currentQuestionIndex === (quizData?.questions?.length || 0) - 1 ? "#9CA3AF" : "#FFFFFF"} style={{marginLeft: 6}} />
-               </ScaleButton>
+              <ScaleButton
+                style={[styles.navBtn, { backgroundColor: theme.primary, borderColor: theme.primary }, currentQuestionIndex === questions.length - 1 && styles.disabledBtn]}
+                activeOpacity={0.8}
+                scaleTo={0.95}
+                onPress={handleNextQuestion}
+                disabled={currentQuestionIndex === questions.length - 1}
+              >
+                <Text style={[styles.navBtnText, { color: '#FFFFFF' }]}>Next</Text>
+                <Ionicons name="arrow-forward" size={16} color="#FFFFFF" style={{ marginLeft: 6 }} />
+              </ScaleButton>
             </View>
 
             <ScaleButton
               style={[styles.submitBtn, isSubmitting && styles.disabledBtn]}
               activeOpacity={0.8}
               scaleTo={0.95}
-              onPress={() => handleSubmitQuiz()}
+              onPress={() => handleSubmitQuiz(false)}
               disabled={isSubmitting}
             >
-              <Ionicons name="paper-plane" size={18} color="#FFFFFF" style={{marginRight: 8}} />
-              <Text style={styles.submitBtnText}>
-                {isSubmitting ? 'Submitting...' : 'Submit Quiz'}
-              </Text>
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Ionicons name="paper-plane-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                  <Text style={styles.submitBtnText}>Submit Quiz</Text>
+                </>
+              )}
             </ScaleButton>
           </Animated.View>
 
@@ -370,123 +466,257 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
 };
 
 const getStyles = (theme: any) => StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: theme.background }, 
+  mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 
-  globalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40, 
-    paddingBottom: 12,
-    backgroundColor: theme.surface, 
-  },
-  menuHandle: { paddingRight: 10, paddingVertical: 10 },
-  headerTitle: { fontSize: 14, fontWeight: '500', color: theme.primary, flex: 1, textAlign: 'center' },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center', marginLeft: 4 },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
-
   heroContainer: {
-    backgroundColor: theme.primary, 
+    backgroundColor: theme.primary,
     paddingHorizontal: 20,
-    paddingTop: 24, 
-    paddingBottom: 36, 
+    paddingTop: 16,
+    paddingBottom: 24,
     borderBottomLeftRadius: 16,
     borderBottomRightRadius: 16,
   },
-  backButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255, 255, 255, 0.25)', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  heroTitle: { fontSize: 24, fontWeight: '800', color: '#FFFFFF', marginBottom: 8, letterSpacing: -0.5 },
-  heroSubtitle: { fontSize: 12, color: '#E0E7FF', fontWeight: '500' },
-
-  contentWrapper: { paddingHorizontal: 16, marginTop: 16 }, 
-
-  timerCard: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: theme.surface, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16,
-    shadowColor: '#1E293B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4,
-    borderWidth: 1, borderColor: theme.border
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  
-  timerBox: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: theme.isDarkMode ? '#7F1D1D30' : '#FFFBEB', 
-    borderWidth: 1, borderColor: theme.isDarkMode ? '#EF444450' : '#FDE68A', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8,
+  backButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  timerTextMain: { fontSize: 13, fontWeight: '800', color: theme.text, marginBottom: 2 },
-  timerTextSub: { fontSize: 9, color: theme.subtext, fontWeight: '500' },
-  
-  questionCounterBlock: { flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginRight: 4 },
-  counterCurrent: { fontSize: 26, fontWeight: '400', color: theme.primary, lineHeight: 30 },
-  counterTotal: { fontSize: 12, color: theme.subtext, fontWeight: '500' },
+  timerChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  timerText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: theme.text,
+  },
+  heroTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  heroSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontWeight: '500',
+  },
 
-  progressContainer: { marginTop: 24, marginBottom: 20, paddingHorizontal: 2 },
-  progressLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  progressLabel: { fontSize: 11, fontWeight: '700', color: theme.text },
-  progressBarTrack: { height: 6, backgroundColor: theme.isDarkMode ? '#334155' : '#E5E7EB', borderRadius: 3, width: '100%', overflow: 'hidden' },
-  progressBarFill: { width: '0%', height: '100%', backgroundColor: theme.primary, borderRadius: 3 },
+  contentWrapper: {
+    paddingHorizontal: 16,
+    marginTop: 16,
+    gap: 16,
+  },
+
+  statsCard: {
+    backgroundColor: theme.surface,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.border,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+  },
+  statsTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.text,
+    marginBottom: 12,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statCol: {
+    alignItems: 'center',
+  },
+  statVal: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  statLbl: {
+    fontSize: 11,
+    color: theme.subtext,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+
+  gridContainer: {
+    backgroundColor: theme.surface,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.border,
+    elevation: 2,
+  },
+  gridTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.text,
+    marginBottom: 12,
+  },
+  jumpGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  gridCell: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gridCellText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
 
   questionCard: {
-    backgroundColor: theme.surface, borderRadius: 12, padding: 16,
-    shadowColor: '#1E293B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4,
-    marginBottom: 20, borderWidth: 1, borderColor: theme.border
+    backgroundColor: theme.surface,
+    borderRadius: 12,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: theme.border,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
   },
-  questionHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 20 },
-  questionNumberCircle: {
-    width: 26, height: 26, borderRadius: 13, backgroundColor: theme.primary,
-    justifyContent: 'center', alignItems: 'center', marginRight: 12, marginTop: 2,
+  questionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
   },
-  questionNumberText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
-  questionMainText: { flex: 1, fontSize: 13, fontWeight: '700', color: theme.text, lineHeight: 18, marginRight: 8 },
-  pointsBadge: { backgroundColor: theme.isDarkMode ? '#065F4630' : '#DCFCE7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' },
-  pointsBadgeText: { color: '#10B981', fontSize: 9, fontWeight: '800' },
+  questionBadge: {
+    backgroundColor: theme.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 10,
+    marginTop: 2,
+  },
+  questionBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  questionTextMain: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.text,
+    lineHeight: 22,
+  },
 
-  optionsList: { gap: 10, marginBottom: 20 },
+  optionsList: {
+    gap: 10,
+    marginBottom: 16,
+  },
   optionItem: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10,
-    borderRadius: 8, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
   },
-  optionItemSelected: { borderColor: theme.isDarkMode ? '#312E81' : theme.primary, backgroundColor: theme.isDarkMode ? '#1E1B4B' : '#EEF2FF' }, 
-  
   optionLetterBox: {
-    width: 24, height: 24, borderRadius: 12, backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
-    justifyContent: 'center', alignItems: 'center', marginRight: 16,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
-  optionLetterBoxSelected: { backgroundColor: theme.primary },
-  optionLetterText: { fontSize: 11, fontWeight: '700', color: theme.text },
-  optionLetterTextSelected: { color: '#FFFFFF' },
-  
-  optionTextMain: { fontSize: 13, color: theme.text, fontWeight: '500' },
-  optionTextMainSelected: { color: theme.primary, fontWeight: '700' },
+  optionLetterText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.text,
+  },
+  optionTextMain: {
+    flex: 1,
+    fontSize: 14,
+    color: theme.text,
+    fontWeight: '500',
+  },
 
   flagButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: theme.isDarkMode ? '#7F1D1D30' : '#FFFBEB', borderWidth: 1, borderColor: theme.isDarkMode ? '#EF444450' : '#FDE68A', borderRadius: 8, paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderRadius: 8,
+    paddingVertical: 10,
+    backgroundColor: theme.surface,
   },
-  flagButtonText: { color: '#F59E0B', fontSize: 13, fontWeight: '700' },
+  flagButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
 
-  actionFooter: { gap: 12 },
-  navigationRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  prevBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: theme.primary, borderRadius: 6, paddingVertical: 10, backgroundColor: theme.surface
+  actionFooter: {
+    gap: 12,
   },
-  prevBtnText: { color: theme.primary, fontSize: 13, fontWeight: '700' },
-  
-  nextBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: theme.primary, borderRadius: 6, paddingVertical: 10,
+  navigationRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
   },
-  nextBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  navBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: theme.primary,
+    borderRadius: 8,
+    paddingVertical: 12,
+    backgroundColor: theme.surface,
+  },
+  navBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
 
   submitBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#F97316', borderRadius: 6, paddingVertical: 12,
-    shadowColor: '#EA580C', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.success,
+    borderRadius: 8,
+    paddingVertical: 14,
+    elevation: 3,
   },
-  submitBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+  submitBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+  },
 
-  // Loading and Error States
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -495,7 +725,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    fontSize: 16,
+    fontSize: 15,
     color: theme.subtext,
     fontWeight: '500',
   },
@@ -505,14 +735,15 @@ const getStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: theme.background,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
   },
   errorText: {
-    fontSize: 16,
-    color: '#EF4444',
+    fontSize: 15,
+    color: theme.danger,
     textAlign: 'center',
     marginTop: 16,
     marginBottom: 24,
+    fontWeight: '600',
   },
   retryButton: {
     backgroundColor: theme.primary,
@@ -526,13 +757,8 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Disabled States
   disabledBtn: {
     opacity: 0.5,
-  },
-  disabledBtnText: {
-    opacity: 0.5,
-    color: theme.subtext,
   },
 });
 

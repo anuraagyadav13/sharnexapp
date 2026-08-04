@@ -327,6 +327,12 @@ const studentService = {
     );
   },
 
+  getStudentAllResults() {
+    return apiClient.get(
+      ENDPOINTS.STUDENT.OFFICIAL_RESULT_ALL,
+    );
+  },
+
   // Quizzes
   getQuizzes() {
     return apiClient.get(
@@ -348,7 +354,7 @@ const studentService = {
 
   getStartQuiz(id: string) {
     return apiClient.get(
-      ENDPOINTS.STUDENT.START_QUIZ(id),
+      ENDPOINTS.STUDENT.QUIZ_DETAILS(id),
     );
   },
 

@@ -14,7 +14,7 @@ export type RootStackParamList = {
   Quizzes: undefined;
   QuizDetails: { quizId: string };
   StartQuiz: { quizId: string };
-  QuizResult: { quizId: string, timestamp: number };
+  QuizResult: { quizId: string, timestamp?: number };
   ViewQuizDetail: { quizId: string };
   Performance: undefined;
   StudyMaterial: undefined;
@@ -66,6 +66,11 @@ export type RootStackParamList = {
     classId: string; 
     examName: string;
     className: string;
+  };
+  TeacherStudentResultDetail: {
+    studentId: string;
+    studentName: string;
+    rollNo?: string;
   };
   TeacherTimetable: undefined;
   TeacherSelfAttendance: undefined;

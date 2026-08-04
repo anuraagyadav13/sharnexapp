@@ -5,11 +5,9 @@ import {
   Text,
   StyleSheet,
   StatusBar,
-  Dimensions,
-  Platform,
   ActivityIndicator,
-  Image,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -17,7 +15,6 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
@@ -30,258 +27,348 @@ interface Props {
   navigation: QuizzesNavigationProp;
 }
 
+type FilterType = 'all' | 'upcoming' | 'open' | 'completed' | 'grades';
+
 const QuizzesScreen: React.FC<Props> = ({ navigation }) => {
-  const { theme, isDarkMode, toggleDarkMode } = useTheme();
+  const { theme, isDarkMode } = useTheme();
   const styles = getStyles(theme);
   const { authState } = useAuth();
 
-  const SummaryCard = ({ delay, number, label, borderColor }: { delay: number, number: string, label: string, borderColor: string }) => {
-    return (
-      <Animated.View entering={FadeInUp.delay(delay).springify()} style={[styles.summaryCard, { borderTopColor: borderColor }]}>
-        <Text style={styles.summaryNumber}>{number}</Text>
-        <Text style={styles.summaryLabel}>{label}</Text>
-      </Animated.View>
-    );
-  }
-
-  const QuizCard = ({ 
-    delay, headerTitle, headerBadge, badgeColor, badgeBg, 
-    cardBadge, cardBadgeColor, cardBadgeBg, 
-    actionBtnText, actionBtnColor, actionBtnBg, actionBtnBorder, actionBtnIcon, onAction,
-    title, subtitle, subject, questionsCount, points, duration, teacherName
-  }: any) => {
-    return (
-       <Animated.View entering={FadeInUp.delay(delay).springify()} style={styles.sectionContainer}>
-          <View style={styles.sectionHeaderLine}>
-             <Text style={styles.sectionTitle}>{headerTitle}</Text>
-             {headerBadge && (
-                <View style={[styles.smallBadge, { backgroundColor: badgeBg }]}>
-                   <Text style={[styles.smallBadgeText, { color: badgeColor }]}>{headerBadge}</Text>
-                </View>
-             )}
-          </View>
-
-           <View style={styles.quizCard}>
-              <View style={styles.quizCardTopRow}>
-                 <Text style={styles.quizTitle} numberOfLines={1}>{title}</Text>
-                 {cardBadge && (
-                    <View style={[styles.cardPill, { backgroundColor: cardBadgeBg, marginLeft: 8 }]}>
-                       <Text style={[styles.cardPillText, { color: cardBadgeColor }]}>{cardBadge}</Text>
-                    </View>
-                 )}
-              </View>
-              <Text style={styles.quizSubtitle} numberOfLines={2}>{subtitle || 'No description available'}</Text>
-
-              <View style={styles.quizGrid}>
-                 <View style={styles.quizGridCol}>
-                    <MaterialCommunityIcons name="book" size={14} color={theme.primary} />
-                    <Text style={styles.quizGridText}>{subject}</Text>
-                 </View>
-                 <View style={styles.quizGridCol}>
-                    <Ionicons name="help-circle" size={14} color={theme.primary} />
-                    <Text style={styles.quizGridText}>{questionsCount} Questions</Text>
-                 </View>
-                 <View style={styles.quizGridCol}>
-                    <Ionicons name="star" size={14} color={theme.primary} />
-                    <Text style={styles.quizGridText}>{points} Points</Text>
-                 </View>
-                 <View style={styles.quizGridCol}>
-                    <Ionicons name="time" size={14} color={theme.primary} />
-                    <Text style={styles.quizGridText}>{duration} Mins</Text>
-                 </View>
-              </View>
-
-              <View style={styles.cardBottomRow}>
-                 <View style={styles.instructorProfile}>
-                    <Ionicons name="person" size={14} color={theme.subtext} style={{ marginRight: 6 }} />
-                    <Text style={styles.instructorName}>{teacherName || 'Instructor'}</Text>
-                 </View>
-                 <ScaleButton 
-                    style={[styles.actionBtn, { backgroundColor: actionBtnBg, borderWidth: actionBtnBorder ? 1 : 0, borderColor: actionBtnColor }]}
-                    activeOpacity={0.8}
-                    scaleTo={0.96}
-                    onPress={onAction}
-                 >
-                    {actionBtnIcon && <Ionicons name={actionBtnIcon} size={14} color={actionBtnColor} style={styles.btnIconLayout} />}
-                    <Text style={[styles.actionBtnText, { color: actionBtnColor }]}>{actionBtnText}</Text>
-                 </ScaleButton>
-              </View>
-           </View>
-       </Animated.View>
-    );
-  }
-
-  console.log('[Quizzes] screen mounted');
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const [stats, setStats] = useState({
     upcoming: 0,
-    active: 0,
+    open: 0,
     completed: 0,
-    grades: 0
+    grades: 0,
   });
 
   useEffect(() => {
-    const fetchQuizzes = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const res = await studentService.getQuizzes();
-        const data = res.normalized?.data ?? null;
-        const rawQuizzes = Array.isArray(data)
-          ? data
-          : Array.isArray(data?.quizzes)
-            ? data.quizzes
-            : [];
+    fetchQuizzes();
+  }, []);
 
-        const quizzesArray = rawQuizzes.map((quiz: any) => ({
+  const fetchQuizzes = async (isRef = false) => {
+    try {
+      if (isRef) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
+      setError(null);
+      const res = await studentService.getQuizzes();
+      const data = res.normalized?.data ?? res.data ?? null;
+      const rawQuizzes = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.quizzes)
+          ? data.quizzes
+          : [];
+
+      // Filter out draft quizzes (enforce student view constraint)
+      const studentQuizzes = rawQuizzes
+        .map((quiz: any) => ({
           ...quiz,
           derivedStatus:
             quiz.derivedStatus ||
             quiz.status ||
-            (quiz.hasAttempt ? 'completed' : 'available'),
-        }));
+            (quiz.hasAttempt ? 'completed' : 'open'),
+        }))
+        .filter((q: any) => q.derivedStatus !== 'draft');
 
-        setQuizzes(quizzesArray);
+      setQuizzes(studentQuizzes);
 
-        setStats({
-          upcoming: quizzesArray.filter((q: any) => q.derivedStatus === 'upcoming' || q.derivedStatus === 'available').length,
-          active: quizzesArray.filter((q: any) => q.derivedStatus === 'started' || q.derivedStatus === 'active' || q.derivedStatus === 'open').length,
-          completed: quizzesArray.filter((q: any) => q.hasAttempt).length,
-          grades: quizzesArray.filter((q: any) => q.hasAttempt && (q.score !== undefined || q.percentage !== undefined)).length
-        });
-      } catch (err: any) {
-        console.error('[Quizzes] failed:', err?.response || err?.message || err);
-        setError('Failed to load quizzes');
-        setQuizzes([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      setStats({
+        upcoming: studentQuizzes.filter((q: any) => q.derivedStatus === 'upcoming').length,
+        open: studentQuizzes.filter((q: any) => q.derivedStatus === 'open').length,
+        completed: studentQuizzes.filter((q: any) => q.hasAttempt || q.derivedStatus === 'completed').length,
+        grades: studentQuizzes.filter((q: any) => (q.hasAttempt || q.derivedStatus === 'completed') && (q.score !== undefined || q.percentage !== undefined)).length,
+      });
+    } catch (err: any) {
+      console.error('[Quizzes] failed:', err?.response || err?.message || err);
+      setError('Failed to load quizzes. Please try again.');
+      setQuizzes([]);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
 
-    fetchQuizzes();
-  }, []);
+  const onRefresh = () => {
+    fetchQuizzes(true);
+  };
+
+  const handleFilterToggle = (filter: FilterType) => {
+    setActiveFilter(prev => (prev === filter ? 'all' : filter));
+  };
+
+  const getFilteredQuizzes = () => {
+    switch (activeFilter) {
+      case 'upcoming':
+        return quizzes.filter(q => q.derivedStatus === 'upcoming');
+      case 'open':
+        return quizzes.filter(q => q.derivedStatus === 'open');
+      case 'completed':
+        return quizzes.filter(q => q.hasAttempt || q.derivedStatus === 'completed');
+      case 'grades':
+        return quizzes.filter(q => q.hasAttempt || q.derivedStatus === 'completed');
+      case 'all':
+      default:
+        return quizzes;
+    }
+  };
+
+  const filteredQuizzes = getFilteredQuizzes();
+
+  const SummaryCard = ({
+    delay,
+    number,
+    label,
+    borderColor,
+    filterType,
+  }: {
+    delay: number;
+    number: string;
+    label: string;
+    borderColor: string;
+    filterType: FilterType;
+  }) => {
+    const isSelected = activeFilter === filterType;
+    return (
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={() => handleFilterToggle(filterType)}
+        style={styles.summaryCardWrapper}
+      >
+        <Animated.View
+          entering={FadeInUp.delay(delay).springify()}
+          style={[
+            styles.summaryCard,
+            { borderTopColor: borderColor },
+            isSelected && { backgroundColor: isDarkMode ? '#1E1B4B' : '#EEF2FF', borderColor: theme.primary },
+          ]}
+        >
+          <Text style={[styles.summaryNumber, isSelected && { color: theme.primary }]}>{number}</Text>
+          <Text style={[styles.summaryLabel, isSelected && { color: theme.primary, fontWeight: '700' }]}>{label}</Text>
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderStatusBadge = (status: string) => {
+    switch (status) {
+      case 'open':
+        return { text: 'Active Now', color: theme.success, bg: isDarkMode ? '#065F4630' : '#ECFDF5' };
+      case 'upcoming':
+        return { text: 'Upcoming', color: theme.warning, bg: isDarkMode ? '#78350F30' : '#FEF3C7' };
+      case 'completed':
+        return { text: 'Completed', color: theme.primary, bg: isDarkMode ? '#312E81' : '#EEF2FF' };
+      case 'expired':
+        return { text: 'Expired', color: theme.subtext, bg: isDarkMode ? '#334155' : '#F1F5F9' };
+      default:
+        return { text: status, color: theme.subtext, bg: theme.surface };
+    }
+  };
+
+  const handleQuizAction = (quiz: any) => {
+    if (quiz.derivedStatus === 'open') {
+      navigation.navigate('StartQuiz', { quizId: quiz.id });
+    } else if (quiz.hasAttempt || quiz.derivedStatus === 'completed') {
+      navigation.navigate('QuizResult', { quizId: quiz.id, timestamp: Date.now() });
+    } else {
+      navigation.navigate('ViewQuizDetail', { quizId: quiz.id });
+    }
+  };
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.surface} />
 
-      <StudentHeader 
+      <StudentHeader
         title="Quizzes"
         navigation={navigation}
         onMenuPress={() => setDrawerOpen(true)}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.primary}
+            colors={[theme.primary]}
+          />
+        }
+      >
         
         <View style={styles.pageTitleContainer}>
-          <Text style={styles.pageTitle}>Quizzes</Text>
+          <Text style={styles.pageTitle}>Quizzes & Tests</Text>
           <Text style={styles.pageSubtitle}>Take quiz and view test results</Text>
         </View>
 
+        {/* Interactive KPI Summary Cards */}
         <View style={styles.summaryGrid}>
-          <SummaryCard delay={100} number={stats.upcoming.toString()} label="Upcoming Quizzes" borderColor="#3B82F6" />
-          <SummaryCard delay={150} number={stats.active.toString()} label="Active Now" borderColor="#10B981" />
-          <SummaryCard delay={200} number={stats.completed.toString()} label="Completed" borderColor="#F59E0B" />
-          <SummaryCard delay={250} number={stats.grades.toString()} label="Grades" borderColor="#8B5CF6" />
+          <SummaryCard
+            delay={100}
+            number={stats.upcoming.toString()}
+            label="Upcoming Quizzes"
+            borderColor={theme.warning}
+            filterType="upcoming"
+          />
+          <SummaryCard
+            delay={150}
+            number={stats.open.toString()}
+            label="Active Now"
+            borderColor={theme.success}
+            filterType="open"
+          />
+          <SummaryCard
+            delay={200}
+            number={stats.completed.toString()}
+            label="Completed"
+            borderColor={theme.primary}
+            filterType="completed"
+          />
+          <SummaryCard
+            delay={250}
+            number={stats.grades.toString()}
+            label="Grades"
+            borderColor={theme.secondary}
+            filterType="grades"
+          />
         </View>
 
+        {/* Active Filter Pill Bar */}
+        <View style={styles.filterBarRow}>
+          <Text style={styles.filterBarTitle}>
+            {activeFilter === 'all'
+              ? 'All Quizzes'
+              : `${activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1)} Quizzes`}
+            <Text style={styles.filterCount}> ({filteredQuizzes.length})</Text>
+          </Text>
+          {activeFilter !== 'all' && (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setActiveFilter('all')}
+              style={styles.clearFilterBtn}
+            >
+              <Ionicons name="close-circle-outline" size={14} color={theme.primary} />
+              <Text style={styles.clearFilterText}>Show All</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Quiz List Container */}
         <View style={styles.listsWrapper}>
-           {isLoading ? (
-             <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
-           ) : error ? (
-             <View style={styles.emptyContainer}>
-               <Ionicons name="alert-circle" size={60} color="#EF4444" />
-               <Text style={styles.emptyText}>{error}</Text>
-             </View>
-           ) : quizzes.length === 0 ? (
-             <View style={styles.emptyContainer}>
-               <Ionicons name="time-outline" size={60} color={theme.subtext} />
-               <Text style={styles.emptyText}>No quizzes found</Text>
-             </View>
-           ) : (
-             <>
-               {quizzes.filter(q => q.derivedStatus === 'started' || q.derivedStatus === 'active').map((q, i) => (
-                 <QuizCard 
-                   key={q.id}
-                   delay={300 + i * 50}
-                   headerTitle="Active Quiz"
-                   headerBadge="Started"
-                   badgeColor="#10B981"
-                   badgeBg="#ECFDF5"
-                   title={q.title}
-                   subtitle={q.description}
-                   subject={q.subject}
-                   questionsCount={q.questions?.length || 0}
-                   points={q.totalMarks || 100}
-                   duration={q.duration || q.timeLimit || 0}
-                   teacherName={q.teacherName || 'Instructor'}
-                   actionBtnText="Resume Quiz"
-                   actionBtnColor="#FFFFFF"
-                   actionBtnBg={theme.primary} 
-                   actionBtnIcon="play-circle"
-                   onAction={() => navigation.navigate('StartQuiz', { quizId: q.id })} 
-                 />
-               ))}
+          {isLoading ? (
+            <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
+          ) : error ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="alert-circle-outline" size={54} color={theme.danger} />
+              <Text style={styles.emptyText}>{error}</Text>
+              <ScaleButton style={styles.retryBtn} onPress={() => fetchQuizzes(false)} scaleTo={0.95}>
+                <Text style={styles.retryBtnText}>Retry</Text>
+              </ScaleButton>
+            </View>
+          ) : filteredQuizzes.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="clipboard-outline" size={54} color={theme.subtext} />
+              <Text style={styles.emptyText}>No quizzes match the selected filter</Text>
+            </View>
+          ) : (
+            filteredQuizzes.map((quiz, index) => {
+              const badge = renderStatusBadge(quiz.derivedStatus);
+              const questionCount = Array.isArray(quiz.questions) ? quiz.questions.length : (quiz.questionsCount || 0);
+              const durationMinutes = quiz.timeLimit || quiz.duration || 0;
+              const dateDisplay = quiz.startAt
+                ? new Date(quiz.startAt).toLocaleDateString()
+                : quiz.dueDate
+                  ? new Date(quiz.dueDate).toLocaleDateString()
+                  : 'Not scheduled';
 
-               {quizzes.filter(q => q.derivedStatus === 'upcoming' || q.derivedStatus === 'available').map((q, i) => (
-                 <QuizCard 
-                   key={q.id}
-                   delay={400 + i * 50}
-                   headerTitle={q.derivedStatus === 'available' ? "Available Now" : "Upcoming Quiz"}
-                   headerBadge={q.derivedStatus === 'available' ? "Ready" : "Scheduled"}
-                   badgeColor={q.derivedStatus === 'available' ? "#3B82F6" : "#EF4444"}
-                   badgeBg={q.derivedStatus === 'available' ? "#EFF6FF" : "#FEF2F2"}
-                   title={q.title}
-                   subtitle={q.description}
-                   subject={q.subject}
-                   questionsCount={q.questions?.length || 0}
-                   points={q.totalMarks || 100}
-                   duration={q.duration || q.timeLimit || 0}
-                   teacherName={q.teacherName || 'Instructor'}
-                   cardBadge={q.startAt ? new Date(q.startAt).toLocaleDateString() : 'Available'}
-                   cardBadgeColor={q.derivedStatus === 'available' ? "#10B981" : "#EF4444"}
-                   cardBadgeBg={q.derivedStatus === 'available' ? "#ECFDF5" : "#FEF2F2"}
-                   actionBtnText={q.derivedStatus === 'available' ? "Start Now" : "View Details"}
-                   actionBtnColor={q.derivedStatus === 'available' ? "#FFFFFF" : theme.primary}
-                   actionBtnBg={q.derivedStatus === 'available' ? "#10B981" : "transparent"}
-                   actionBtnBorder={q.derivedStatus === 'available' ? undefined : theme.primary}
-                   actionBtnIcon={q.derivedStatus === 'available' ? "play" : "eye"}
-                   onAction={() => q.derivedStatus === 'available' 
-                     ? navigation.navigate('StartQuiz', { quizId: q.id }) 
-                     : navigation.navigate('ViewQuizDetail', { quizId: q.id })}
-                 />
-               ))}
+              let actionText = 'View Details';
+              let actionIcon = 'eye';
+              let actionBg = theme.primary;
+              let actionColor = '#FFFFFF';
 
-               {quizzes.filter(q => q.hasAttempt || q.derivedStatus === 'completed').map((q, i)  => (
-                 <QuizCard 
-                   key={q.id}
-                   delay={500 + i * 50}
-                   headerTitle="Completed"
-                   headerBadge="Result Ready"
-                   badgeColor="#3B82F6"
-                   badgeBg="#EFF6FF"
-                   title={q.title}
-                   subtitle={q.description}
-                   subject={q.subject}
-                   questionsCount={q.questions?.length || 0}
-                   points={q.totalMarks || 100}
-                   duration={q.duration || q.timeLimit || 0}
-                   teacherName={q.teacherName || 'Instructor'}
-                   cardBadge="Completed"
-                   cardBadgeColor="#3B82F6"
-                   cardBadgeBg="#EFF6FF"
-                   actionBtnText="View Analytics"
-                   actionBtnColor="#FFFFFF"
-                   actionBtnBg="#8B5CF6" 
-                   actionBtnIcon="bar-chart-outline" 
-                   onAction={() => navigation.navigate('QuizDetails', { quizId: q.id })}
-                 />
-               ))}
-             </>
-           )}
+              if (quiz.derivedStatus === 'open') {
+                actionText = 'Start Quiz';
+                actionIcon = 'play';
+                actionBg = theme.success;
+              } else if (quiz.hasAttempt || quiz.derivedStatus === 'completed') {
+                actionText = 'View Result';
+                actionIcon = 'bar-chart-outline';
+                actionBg = theme.secondary;
+              } else if (quiz.derivedStatus === 'expired') {
+                actionText = 'Expired';
+                actionIcon = 'lock-closed';
+                actionBg = theme.border;
+                actionColor = theme.subtext;
+              }
+
+              return (
+                <Animated.View
+                  key={quiz.id}
+                  entering={FadeInUp.delay(100 + index * 50).springify()}
+                  style={styles.quizCard}
+                >
+                  <View style={styles.quizCardTopRow}>
+                    <Text style={styles.quizTitle} numberOfLines={1}>
+                      {quiz.title}
+                    </Text>
+                    <View style={[styles.cardPill, { backgroundColor: badge.bg }]}>
+                      <Text style={[styles.cardPillText, { color: badge.color }]}>{badge.text}</Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.quizSubtitle} numberOfLines={2}>
+                    {quiz.description || 'No description available'}
+                  </Text>
+
+                  <View style={styles.quizGrid}>
+                    <View style={styles.quizGridCol}>
+                      <MaterialCommunityIcons name="book-open-variant" size={14} color={theme.primary} />
+                      <Text style={styles.quizGridText}>{quiz.subject || 'General'}</Text>
+                    </View>
+                    <View style={styles.quizGridCol}>
+                      <Ionicons name="help-circle-outline" size={14} color={theme.primary} />
+                      <Text style={styles.quizGridText}>{questionCount} Questions</Text>
+                    </View>
+                    <View style={styles.quizGridCol}>
+                      <Ionicons name="calendar-outline" size={14} color={theme.primary} />
+                      <Text style={styles.quizGridText}>{dateDisplay}</Text>
+                    </View>
+                    <View style={styles.quizGridCol}>
+                      <Ionicons name="time-outline" size={14} color={theme.primary} />
+                      <Text style={styles.quizGridText}>{durationMinutes} Mins</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.cardBottomRow}>
+                    <View style={styles.instructorProfile}>
+                      <Ionicons name="person-outline" size={14} color={theme.subtext} style={{ marginRight: 6 }} />
+                      <Text style={styles.instructorName}>{quiz.teacherName || 'Instructor'}</Text>
+                    </View>
+                    <ScaleButton
+                      style={[styles.actionBtn, { backgroundColor: actionBg }]}
+                      activeOpacity={0.8}
+                      scaleTo={0.96}
+                      onPress={() => handleQuizAction(quiz)}
+                    >
+                      <Ionicons name={actionIcon} size={14} color={actionColor} style={styles.btnIconLayout} />
+                      <Text style={[styles.actionBtnText, { color: actionColor }]}>{actionText}</Text>
+                    </ScaleButton>
+                  </View>
+                </Animated.View>
+              );
+            })
+          )}
         </View>
 
       </ScrollView>
@@ -298,56 +385,14 @@ const QuizzesScreen: React.FC<Props> = ({ navigation }) => {
 const getStyles = (theme: any) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
-  
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40, 
-    paddingBottom: 16,
-    backgroundColor: theme.surface, 
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 8,
-    zIndex: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
-  },
-  menuHandle: { paddingRight: 10, paddingVertical: 10 },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: theme.primary,
-    flex: 1,
-    textAlign: 'center',
-    marginHorizontal: 10,
-  },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: theme.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: theme.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 6,
-    elevation: 8,
-  },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
   pageTitleContainer: {
     paddingHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 16,
     marginTop: 10,
   },
   pageTitle: {
-    fontSize: 28, 
+    fontSize: 26,
     fontWeight: '800',
     color: theme.primary,
     letterSpacing: -0.5,
@@ -364,113 +409,122 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexWrap: 'wrap',
     paddingHorizontal: 20,
     justifyContent: 'space-between',
-    marginBottom: 32,
-    rowGap: 16,
+    marginBottom: 20,
+    rowGap: 12,
+  },
+  summaryCardWrapper: {
+    width: '48%',
   },
   summaryCard: {
-    width: '48%',
     backgroundColor: theme.surface,
-    borderRadius: 16, 
-    paddingVertical: 18,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     alignItems: 'center',
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 4,
-    borderWidth: 1.5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+    borderWidth: 1,
     borderColor: theme.border,
-    borderTopWidth: 2, 
+    borderTopWidth: 3,
   },
   summaryNumber: {
-    fontSize: 20, 
+    fontSize: 20,
     fontWeight: '800',
     color: theme.text,
   },
   summaryLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: theme.subtext,
-    fontWeight: '500', 
+    fontWeight: '500',
+    marginTop: 2,
+  },
+
+  filterBarRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 14,
+  },
+  filterBarTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.text,
+  },
+  filterCount: {
+    color: theme.subtext,
+    fontWeight: '500',
+  },
+  clearFilterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  clearFilterText: {
+    fontSize: 12,
+    color: theme.primary,
+    fontWeight: '600',
   },
 
   listsWrapper: {
     paddingHorizontal: 20,
-    gap: 24, 
-  },
-  
-  sectionContainer: {
-    marginBottom: 20,
-  },
-  sectionHeaderLine: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18, 
-    fontWeight: '700',
-    color: theme.text,
-  },
-  smallBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20, 
-  },
-  smallBadgeText: {
-    fontSize: 11,
-    fontWeight: '500', 
+    gap: 16,
   },
 
   quizCard: {
     backgroundColor: theme.surface,
-    borderRadius: 12, 
-    padding: 18, 
+    borderRadius: 12,
+    padding: 16,
     borderLeftWidth: 4,
-    borderLeftColor: theme.primary, 
+    borderLeftColor: theme.primary,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
     borderTopWidth: 1,
     borderRightWidth: 1,
     borderBottomWidth: 1,
-    borderColor: theme.border, 
+    borderColor: theme.border,
   },
   quizCardTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center', 
-    marginBottom: 4,
+    alignItems: 'center',
+    marginBottom: 6,
   },
   quizTitle: {
-    fontSize: 17, 
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     color: theme.text,
     flex: 1,
   },
   cardPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20, 
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 14,
   },
   cardPillText: {
     fontSize: 11,
-    fontWeight: '500', 
+    fontWeight: '600',
   },
   quizSubtitle: {
-    fontSize: 13, 
+    fontSize: 13,
     color: theme.subtext,
-    marginBottom: 20, 
+    marginBottom: 16,
     fontWeight: '400',
   },
 
   quizGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    rowGap: 14,
-    marginBottom: 20, 
+    rowGap: 10,
+    marginBottom: 16,
   },
   quizGridCol: {
     width: '50%',
@@ -480,14 +534,17 @@ const getStyles = (theme: any) => StyleSheet.create({
   quizGridText: {
     fontSize: 12,
     color: theme.subtext,
-    fontWeight: '400', 
+    fontWeight: '400',
     marginLeft: 6,
   },
 
   cardBottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end', 
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+    paddingTop: 12,
   },
   instructorProfile: {
     flexDirection: 'row',
@@ -497,19 +554,19 @@ const getStyles = (theme: any) => StyleSheet.create({
   instructorName: {
     fontSize: 12,
     color: theme.subtext,
-    fontWeight: '400',
+    fontWeight: '500',
   },
 
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14, 
-    paddingVertical: 6,
-    borderRadius: 6, 
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 8,
   },
   actionBtnText: {
-    fontSize: 13, 
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
   },
   btnIconLayout: {
     marginRight: 4,
@@ -517,14 +574,27 @@ const getStyles = (theme: any) => StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 60,
-    opacity: 0.5,
+    marginTop: 40,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 12,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: theme.subtext,
+    textAlign: 'center',
+  },
+  retryBtn: {
+    marginTop: 16,
+    backgroundColor: theme.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 13,
   },
 });
 

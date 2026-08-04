@@ -62,6 +62,7 @@ import TeacherMonitorLiveScreen from './src/screens/teacher/TeacherMonitorLiveSc
 import TeacherResultManagementScreen from './src/screens/teacher/TeacherResultManagementScreen';
 import TeacherMarksEntryScreen from './src/screens/teacher/TeacherMarksEntryScreen';
 import TeacherReviewSubmissionScreen from './src/screens/teacher/TeacherReviewSubmissionScreen';
+import TeacherStudentResultDetailScreen from './src/screens/teacher/TeacherStudentResultDetailScreen';
 import TeacherDashboard from './src/screens/teacher/TeacherDashboard';
 import TeacherTimetableScreen from './src/screens/teacher/TeacherTimetableScreen';
 import TeacherSelfAttendanceScreen from './src/screens/teacher/TeacherSelfAttendanceScreen';
@@ -288,6 +289,14 @@ function RootNavigator() {
               <Stack.Screen
                 name="TeacherReviewSubmission"
                 component={TeacherReviewSubmissionScreen}
+              />
+              <Stack.Screen
+                name="TeacherStudentResultDetail"
+                component={TeacherStudentResultDetailScreen}
+              />
+              <Stack.Screen
+                name="OfficialResult"
+                component={OfficialResultScreen}
               />
               <Stack.Screen
                 name="TeacherTimetable"
