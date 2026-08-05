@@ -5,18 +5,13 @@ import {
   Text,
   StyleSheet,
   StatusBar,
-  Platform,
   ActivityIndicator,
-  Image,
-  TouchableOpacity,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import Svg, { Circle, G } from 'react-native-svg';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
 import { StudentHeader } from '../../components/StudentHeader';
@@ -26,11 +21,21 @@ type QuizDetailsNavigationProp = NativeStackNavigationProp<RootStackParamList, '
 
 interface Props {
   navigation: QuizDetailsNavigationProp;
-  route: any; // Add route for params
+  route: any;
 }
 
+const formatSeconds = (seconds: number | null | undefined): string => {
+  if (seconds == null || isNaN(seconds)) return 'N/A';
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  if (mins > 0) {
+    return `${mins}m ${secs}s`;
+  }
+  return `${secs}s`;
+};
+
 const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { theme, isDarkMode, toggleDarkMode } = useTheme();
+  const { theme, isDarkMode } = useTheme();
   const styles = getStyles(theme);
 
   const ScoreRow = ({ label, value, hideBorder = false, valueColor = theme.text }: any) => (
@@ -54,25 +59,6 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
     </View>
   );
 
-  const TopicRow = ({ title, percent, color }: any) => (
-    <View style={styles.topicRow}>
-      <View style={styles.topicTextRow}>
-         <Text style={styles.topicName}>{title}</Text>
-         <Text style={styles.topicPercent}>{percent}%</Text>
-      </View>
-      <View style={styles.topicBarTrack}>
-         <View style={[styles.topicBarFill, { width: `${percent}%`, backgroundColor: color }]} />
-      </View>
-    </View>
-  );
-
-  const LegendItem = ({ color, label }: any) => (
-    <View style={styles.legendItem}>
-      <View style={[styles.legendSquare, { backgroundColor: color }]} />
-      <Text style={styles.legendText}>{label}</Text>
-    </View>
-  );
-
   const QuestionCard = ({ number, question, status, options }: any) => {
     const isCorrect = status === 'correct';
     const isSkipped = status === 'skipped';
@@ -82,7 +68,6 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
 
     return (
       <View style={styles.questionCard}>
-        {/* Absolute left border to avoid React Native curved border artifacts */}
         <View style={[styles.cardLeftBorder, { backgroundColor: cardBorderColor }]} />
         
         <View style={styles.questionHeader}>
@@ -129,143 +114,128 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
       </View>
     );
   };
+
   const { authState } = useAuth();
-  const [activeTab, setActiveTab] = useState('topic');
+  const [activeTab, setActiveTab] = useState<'performance' | 'question'>('performance');
   const [quizData, setQuizData] = useState<any>(null);
-  const [analysisData, setAnalysisData] = useState<any>(null);
-  const [selectedFilter, setSelectedFilter] = useState('all');
-  const [topicQuestionIndex, setTopicQuestionIndex] = useState(0);
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'correct' | 'incorrect' | 'skipped'>('all');
+  const [questionIndex, setQuestionIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchQuizDetails = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const quizId = route?.params?.quizId;
-        if (!quizId) {
-          setError('Quiz ID not found');
-          return;
-        }
-
-        const res = await studentService.getQuizDetails(quizId);
-        const responseData = res.normalized?.data ?? res.data?.data ?? null;
-        
-        // If the student has already attempted, get the result as well
-        if (responseData?.hasAttempt || responseData?.derivedStatus === 'completed') {
-           try {
-              const resultRes = await studentService.getQuizResult(quizId);
-              const resultData = resultRes.normalized?.data;
-              if (resultData) {
-                // Merge result statistics into quiz data for rendering
-                setQuizData({
-                  ...responseData,
-                  ...resultData.statistics,
-                  attempt: resultData.attempt
-                });
-                return;
-              }
-           } catch (resErr) {
-              console.error('Could not fetch quiz result for details:', resErr);
-           }
-        }
-        
-        setQuizData(responseData);
-      } catch (err: any) {
-        console.error('Failed to fetch quiz details:', err);
-        setError('Failed to load quiz details. Please try again.');
-        setQuizData(null);
-      } finally {
-        setIsLoading(false);
+  const fetchQuizDetails = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const quizId = route?.params?.quizId;
+      if (!quizId) {
+        setError('Quiz ID not found');
+        return;
       }
-    };
+
+      const res = await studentService.getQuizDetails(quizId);
+      const detailsData = res.normalized?.data ?? res.data?.data ?? res.data ?? null;
+
+      let resultData: any = null;
+      try {
+        const resultRes = await studentService.getQuizResult(quizId);
+        resultData = resultRes.normalized?.data ?? resultRes.data?.data ?? resultRes.data ?? null;
+      } catch (resErr) {
+        console.error('Could not fetch quiz result for details:', resErr);
+      }
+
+      if (resultData) {
+        setQuizData({
+          ...detailsData,
+          ...resultData.quiz,
+          ...resultData.statistics,
+          attempt: resultData.attempt,
+          questionReview: resultData.questionReview || [],
+        });
+      } else {
+        setQuizData(detailsData);
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch quiz details:', err);
+      setError('Failed to load quiz details. Please try again.');
+      setQuizData(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchQuizDetails();
-  }, [route?.params?.quizId]); 
+  }, [route?.params?.quizId]);
 
   useEffect(() => {
-    const fetchQuizAnalysis = async () => {
-      if (activeTab !== 'topic' || !!analysisData) return;
-      
-      try {
-        setIsAnalysisLoading(true);
-        const quizId = route?.params?.quizId;
-        if (!quizId) return;
-
-        const res = await studentService.getQuizAnalysis(quizId);
-        const data = res.normalized?.data;
-        if (data) {
-          setAnalysisData(data);
-        }
-      } catch (err: any) {
-        console.error('Failed to fetch quiz analysis:', err);
-      } finally {
-        setIsAnalysisLoading(false);
-      }
-    };
-     fetchQuizAnalysis();
-  }, [activeTab, route?.params?.quizId, analysisData]);
-
-  const handleNextTopicQuestion = (total: number) => {
-    if (topicQuestionIndex < total - 1) {
-      setTopicQuestionIndex(prev => prev + 1);
-    }
-  };
-
-  const handlePrevTopicQuestion = () => {
-    if (topicQuestionIndex > 0) {
-      setTopicQuestionIndex(prev => prev - 1);
-    }
-  };
-
-  useEffect(() => {
-    setTopicQuestionIndex(0);
+    setQuestionIndex(0);
   }, [selectedFilter]);
+
+  const questionReviewList = quizData?.questionReview || [];
+
+  const filteredQuestions = questionReviewList.filter((q: any) => {
+    if (selectedFilter === 'correct') return q.isCorrect === true;
+    if (selectedFilter === 'incorrect') return q.isCorrect === false && q.submittedAnswer !== null;
+    if (selectedFilter === 'skipped') return q.submittedAnswer === null;
+    return true; // 'all'
+  });
+
+  const countAll = questionReviewList.length;
+  const countCorrect = questionReviewList.filter((q: any) => q.isCorrect === true).length;
+  const countIncorrect = questionReviewList.filter((q: any) => q.isCorrect === false && q.submittedAnswer !== null).length;
+  const countSkipped = questionReviewList.filter((q: any) => q.submittedAnswer === null).length;
+
+  const handleNextQuestion = (total: number) => {
+    if (questionIndex < total - 1) {
+      setQuestionIndex(prev => prev + 1);
+    }
+  };
+
+  const handlePrevQuestion = () => {
+    if (questionIndex > 0) {
+      setQuestionIndex(prev => prev - 1);
+    }
+  };
 
   const renderPerformanceTab = () => (
     <Animated.View entering={FadeIn.duration(300)} style={styles.detailsGlobalBody}>
        <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Score Breakdown</Text>
           <View style={styles.tableWrapper}>
-             <ScoreRow label="Your Score" value={`${quizData?.score || 0}/${quizData?.totalMarks || 100}`} />
-             <ScoreRow label="Class Average" value={`${quizData?.classAverage || 0}%`} />
-             <ScoreRow label="High Score" value={`${quizData?.highScore || 0}%`} />
-             <ScoreRow label="Your Rank" value={`${quizData?.rank || 'N/A'}/${quizData?.totalStudents || 'N/A'}`} />
-             <ScoreRow label="Percentage" value={`${quizData?.percentage || 0}%`} hideBorder={true} />
+             <ScoreRow label="Your Score" value={`${quizData?.score ?? 0} / ${quizData?.totalQuestions ?? 0}`} />
+             <ScoreRow label="Total Questions" value={`${quizData?.totalQuestions ?? 0}`} />
+             <ScoreRow label="Correct Answers" value={`${quizData?.correctCount ?? 0}`} />
+             <ScoreRow label="Incorrect Answers" value={`${quizData?.incorrectCount ?? 0}`} />
+             <ScoreRow label="Unanswered" value={`${quizData?.unansweredCount ?? 0}`} />
+             <ScoreRow label="Percentage" value={`${quizData?.percentage ?? 0}%`} hideBorder={true} />
           </View>
        </View>
 
        <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Time Management</Text>
           <View style={styles.tableWrapper}>
-             <ScoreRow label="Time Taken" value={quizData?.timeTaken || 'N/A'} />
-             <ScoreRow label="Average Time" value={quizData?.averageTime || 'N/A'} />
-             <ScoreRow label="Time Efficiency" value={`${quizData?.timeEfficiency || 0}%`} />
-             <ScoreRow label="Questions/Minute" value={quizData?.questionsPerMinute || 'N/A'} hideBorder={true} />
+             <ScoreRow label="Time Taken" value={formatSeconds(quizData?.attempt?.timeTakenSeconds)} />
+             <ScoreRow label="Time Allowed" value={quizData?.timeLimit ? `${quizData.timeLimit} Minutes` : 'N/A'} hideBorder={true} />
           </View>
        </View>
 
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Improvement Areas</Text>
+       <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Result Summary</Text>
           <View style={styles.tableWrapper}>
              <ImprovementRow 
-                label="Result Analysis" 
-                valueText={quizData?.percentage >= 80 ? "Excellent Mastery" : quizData?.percentage >= 50 ? "Good Progress" : "Needs Review"} 
+                label="Result Status" 
+                valueText={(quizData?.percentage ?? 0) >= 80 ? "Excellent Mastery" : (quizData?.percentage ?? 0) >= 50 ? "Good Progress" : "Needs Review"} 
                 diffSign={false} 
              />
              <ImprovementRow 
                 label="Accuracy" 
-                labelColor={quizData?.percentage >= 70 ? "#10B981" : "#EF4444"} 
-                valueText={`${quizData?.percentage || 0}% Accuracy`} 
+                labelColor={(quizData?.percentage ?? 0) >= 70 ? "#10B981" : "#EF4444"} 
+                valueText={`${quizData?.percentage ?? 0}% Accuracy`} 
                 diffSign={true} 
-                diffColor={quizData?.percentage >= 70 ? "#10B981" : "#EF4444"} 
-                iconName={quizData?.percentage >= 70 ? "checkmark-circle" : "alert-circle"} 
-             />
-             <ImprovementRow 
-                label="Recommendation" 
-                valueText={quizData?.percentage < 70 ? `Re-read ${quizData?.subject || 'subject'} materials` : "Ready for advanced topics"} 
-                hideBorder={true} 
+                diffColor={(quizData?.percentage ?? 0) >= 70 ? "#10B981" : "#EF4444"} 
+                iconName={(quizData?.percentage ?? 0) >= 70 ? "checkmark-circle" : "alert-circle"} 
+                hideBorder={true}
              />
           </View>
        </View>
@@ -273,233 +243,134 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 
   const renderQuestionTab = () => {
+    const currentQ = filteredQuestions[questionIndex];
+    const totalQ = filteredQuestions.length;
 
-     return (
-       <Animated.View entering={FadeIn.duration(300)} style={styles.detailsGlobalBody}>
-           <View style={styles.sectionCard}>
-              <View style={styles.sectionTitleRow}>
-                <Ionicons name="pie-chart" size={16} color="#3B82F6" style={{marginRight: 6}} />
-                <Text style={styles.sectionTitleNoMargin}>Topic Performance</Text>
-              </View>
-              <View style={styles.topicList}>
-                 {(quizData?.topics || []).map((topic: any, index: number) => (
-                   <TopicRow 
-                     key={index}
-                     title={topic.name || 'Topic'} 
-                     percent={topic.percentage || 0} 
-                     color={topic.color || '#3B82F6'} 
-                   />
-                 ))}
-                 {(quizData?.topics || []).length === 0 && (
-                   <Text style={{ textAlign: 'center', color: '#6B7280', padding: 20 }}>No topic data available</Text>
-                 )}
-              </View>
-           </View>
+    let processedOptions: any[] = [];
+    if (currentQ?.options) {
+      processedOptions = currentQ.options.map((opt: any, i: number) => {
+        const optText = typeof opt === 'string' ? opt : (opt?.text || opt?.id || '');
+        const isCorrectOpt = optText === currentQ.correctAnswer;
+        const isSubmittedOpt = optText === currentQ.submittedAnswer;
 
-           <View style={styles.sectionCard}>
-              <View style={styles.sectionTitleRow}>
-                <MaterialCommunityIcons name="scale-balance" size={16} color="#3B82F6" style={{marginRight: 6}} />
-                <Text style={styles.sectionTitleNoMargin}>Performance Summary</Text>
-              </View>
-              <View style={styles.strengthsWrapper}>
-                 <View style={[styles.strengthBox, { backgroundColor: quizData?.percentage >= 70 ? '#F0FDF4' : '#FEF2F2', flex: 1 }]}>
-                    <View style={styles.strengthBoxHeader}>
-                       <Ionicons name={quizData?.percentage >= 70 ? "checkmark-circle" : "alert-circle"} size={14} color={quizData?.percentage >= 70 ? "#10B981" : "#EF4444"} />
-                       <Text style={[styles.strengthBoxTitle, { color: quizData?.percentage >= 70 ? '#10B981' : '#EF4444' }]}>
-                         {quizData?.percentage >= 70 ? 'Key Strengths' : 'Critical Gaps'}
-                       </Text>
-                    </View>
-                    <Text style={styles.strengthBullet}>• {quizData?.percentage >= 70 ? 'High accuracy in attempted questions' : 'Review fundamental concepts'}</Text>
-                    <Text style={styles.strengthBullet}>• {quizData?.percentage >= 70 ? 'Good speed management' : 'Practice more time-bound tests'}</Text>
-                    <Text style={styles.strengthBullet}>• {quizData?.subject} - Current focus area</Text>
-                 </View>
-              </View>
-           </View>
+        let state = 'normal';
+        if (isCorrectOpt) {
+          state = 'correct';
+        } else if (isSubmittedOpt && !currentQ.isCorrect) {
+          state = 'incorrect';
+        }
 
-           <View style={styles.sectionCard}>
-              <View style={styles.sectionTitleRow}>
-                <Ionicons name="school" size={16} color="#3B82F6" style={{marginRight: 6}} />
-                <Text style={styles.sectionTitleNoMargin}>Study Recommendations</Text>
-              </View>
-              <View style={styles.recommendationsGrid}>
-                 <View style={styles.recoCardWide}>
-                    <Text style={[styles.recoPriority, { color: '#EF4444' }]}>Priority 1</Text>
-                    <Text style={styles.recoText}>Practice Tree problems from textbook</Text>
-                 </View>
-                 <View style={styles.recoCardWide}>
-                    <Text style={[styles.recoPriority, { color: '#F59E0B' }]}>Priority 2</Text>
-                    <Text style={styles.recoText}>Practice Tree problems from textbook</Text>
-                 </View>
-                 <View style={styles.recoCardWide}>
-                    <Text style={[styles.recoText, { marginTop: 12 }]}>Practice Tree problems from textbook</Text>
-                 </View>
-                 <View style={styles.recoCardWide}>
-                    <Text style={[styles.recoText, { marginTop: 12 }]}>Practice Questions: 15 Linked list & Tree problems</Text>
-                 </View>
-              </View>
-           </View>
+        return {
+          letter: String.fromCharCode(65 + i),
+          text: optText,
+          state,
+        };
+      });
+    }
 
-           <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Topic Distribution</Text>
-              <View style={styles.distributionWrapper}>
-                 <View style={styles.chartContainer}>
-                    <Svg height="120" width="120" viewBox="0 0 120 120">
-                      <G transform="rotate(-90 60 60)">
-                        {(quizData?.topicDistribution || []).map((segment: any, index: number) => {
-                          const RADIUS = 40;
-                          const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-                          const percent = segment.percentage / 100;
-                          const dash = percent * CIRCUMFERENCE;
-                          const offset = -(index > 0 ? (quizData.topicDistribution.slice(0, index).reduce((sum: number, s: any) => sum + (s.percentage / 100), 0) * CIRCUMFERENCE) : 0);
-                          
-                          return (
-                            <Circle 
-                              key={index} 
-                              cx="60" cy="60" r={RADIUS} 
-                              stroke={segment.color || '#3B82F6'} strokeWidth="24" fill="transparent" 
-                              strokeDasharray={`${dash} ${CIRCUMFERENCE}`} 
-                              strokeDashoffset={offset} 
-                            />
-                          );
-                        })}
-                      </G>
-                    </Svg>
-                 </View>
-                 <View style={styles.chartLegend}>
-                    {(quizData?.topicDistribution || []).map((segment: any, index: number) => (
-                      <LegendItem key={index} color={segment.color || '#3B82F6'} label={segment.name || 'Topic'} />
-                    ))}
-                    {(quizData?.topicDistribution || []).length === 0 && (
-                      <Text style={{ textAlign: 'center', color: '#6B7280', padding: 20 }}>No distribution data</Text>
-                    )}
-                 </View>
-              </View>
-           </View>
-       </Animated.View>
-     );
-  };
+    const questionStatus = currentQ?.isCorrect
+      ? 'correct'
+      : (currentQ?.submittedAnswer === null ? 'skipped' : 'incorrect');
 
-  const renderTopicTab = () => {
-    const questionsToDisplay = analysisData && analysisData[selectedFilter] ? analysisData[selectedFilter] : [];
-    const currentQuestion = questionsToDisplay[topicQuestionIndex];
-    const totalQuestions = questionsToDisplay.length;
-    
     return (
-    <Animated.View entering={FadeIn.duration(300)} style={styles.detailsGlobalBody}>
-      
-      {/* Filters Row */}
-      <View style={styles.filterPillsRow}>
-        <ScaleButton 
-          activeOpacity={0.8} 
-          style={selectedFilter === 'all' ? styles.activeFilterPill : styles.inactiveFilterPill}
-          onPress={() => setSelectedFilter('all')}
-        >
-          <Text style={selectedFilter === 'all' ? styles.activeFilterPillText : styles.inactiveFilterPillText}>
-            All ({analysisData?.all?.length || 0})
-          </Text>
-        </ScaleButton>
-        
-        <ScaleButton 
-          activeOpacity={0.8} 
-          style={selectedFilter === 'correct' ? styles.activeFilterPill : styles.inactiveFilterPill}
-          onPress={() => setSelectedFilter('correct')}
-        >
-          <Text style={selectedFilter === 'correct' ? styles.activeFilterPillText : styles.inactiveFilterPillText}>
-            Correct ({analysisData?.correct?.length || 0})
-          </Text>
-        </ScaleButton>
+      <Animated.View entering={FadeIn.duration(300)} style={styles.detailsGlobalBody}>
+        {/* Filters Row */}
+        <View style={styles.filterPillsRow}>
+          <ScaleButton 
+            activeOpacity={0.8} 
+            style={selectedFilter === 'all' ? styles.activeFilterPill : styles.inactiveFilterPill}
+            onPress={() => setSelectedFilter('all')}
+          >
+            <Text style={selectedFilter === 'all' ? styles.activeFilterPillText : styles.inactiveFilterPillText}>
+              All ({countAll})
+            </Text>
+          </ScaleButton>
+          
+          <ScaleButton 
+            activeOpacity={0.8} 
+            style={selectedFilter === 'correct' ? styles.activeFilterPill : styles.inactiveFilterPill}
+            onPress={() => setSelectedFilter('correct')}
+          >
+            <Text style={selectedFilter === 'correct' ? styles.activeFilterPillText : styles.inactiveFilterPillText}>
+              Correct ({countCorrect})
+            </Text>
+          </ScaleButton>
 
-        <ScaleButton 
-          activeOpacity={0.8} 
-          style={selectedFilter === 'incorrect' ? styles.activeFilterPill : styles.inactiveFilterPill}
-          onPress={() => setSelectedFilter('incorrect')}
-        >
-          <Text style={selectedFilter === 'incorrect' ? styles.activeFilterPillText : styles.inactiveFilterPillText}>
-            Incorrect ({analysisData?.incorrect?.length || 0})
-          </Text>
-        </ScaleButton>
+          <ScaleButton 
+            activeOpacity={0.8} 
+            style={selectedFilter === 'incorrect' ? styles.activeFilterPill : styles.inactiveFilterPill}
+            onPress={() => setSelectedFilter('incorrect')}
+          >
+            <Text style={selectedFilter === 'incorrect' ? styles.activeFilterPillText : styles.inactiveFilterPillText}>
+              Incorrect ({countIncorrect})
+            </Text>
+          </ScaleButton>
 
-        <ScaleButton 
-          activeOpacity={0.8} 
-          style={selectedFilter === 'skipped' ? styles.activeFilterPill : styles.inactiveFilterPill}
-          onPress={() => setSelectedFilter('skipped')}
-        >
-          <Text style={selectedFilter === 'skipped' ? styles.activeFilterPillText : styles.inactiveFilterPillText}>
-            Skipped ({analysisData?.skipped?.length || 0})
-          </Text>
-        </ScaleButton>
-      </View>
+          <ScaleButton 
+            activeOpacity={0.8} 
+            style={selectedFilter === 'skipped' ? styles.activeFilterPill : styles.inactiveFilterPill}
+            onPress={() => setSelectedFilter('skipped')}
+          >
+            <Text style={selectedFilter === 'skipped' ? styles.activeFilterPillText : styles.inactiveFilterPillText}>
+              Skipped ({countSkipped})
+            </Text>
+          </ScaleButton>
+        </View>
 
-      {/* Question Viewing Area */}
-      {isAnalysisLoading ? (
-        <ActivityIndicator size="small" color="#4F46E5" style={{ marginTop: 20 }} />
-      ) : (
-        <>
-          {currentQuestion ? (
-            <>
-              <QuestionCard 
-                key={currentQuestion.id || topicQuestionIndex}
-                number={topicQuestionIndex + 1} 
-                question={currentQuestion.text || 'Question text not available'} 
-                status={currentQuestion.status || 'unknown'}
-                options={currentQuestion.options || []} 
-              />
+        {currentQ ? (
+          <>
+            <QuestionCard 
+              key={currentQ.questionIndex ?? questionIndex}
+              number={(currentQ.questionIndex != null ? currentQ.questionIndex : questionIndex) + 1} 
+              question={currentQ.questionText || 'Question text not available'} 
+              status={questionStatus}
+              options={processedOptions} 
+            />
 
-              {/* Navigation Buttons Row */}
-              <View style={styles.analysisNavRow}>
-                <ScaleButton
-                  style={[styles.analysisNavBtn, topicQuestionIndex === 0 && styles.disabledBtn]}
-                  onPress={handlePrevTopicQuestion}
-                  disabled={topicQuestionIndex === 0}
-                >
-                  <Ionicons name="arrow-back" size={16} color={topicQuestionIndex === 0 ? "#9CA3AF" : "#4F46E5"} style={{marginRight: 6}} />
-                  <Text style={[styles.analysisNavBtnText, topicQuestionIndex === 0 && styles.disabledBtnText]}>Previous</Text>
-                </ScaleButton>
+            {/* Navigation Buttons Row */}
+            <View style={styles.analysisNavRow}>
+              <ScaleButton
+                style={[styles.analysisNavBtn, questionIndex === 0 && styles.disabledBtn]}
+                onPress={handlePrevQuestion}
+                disabled={questionIndex === 0}
+              >
+                <Ionicons name="arrow-back" size={16} color={questionIndex === 0 ? "#9CA3AF" : theme.primary} style={{marginRight: 6}} />
+                <Text style={[styles.analysisNavBtnText, questionIndex === 0 && styles.disabledBtnText]}>Previous</Text>
+              </ScaleButton>
 
-                <View style={styles.analysisPageIndicator}>
-                   <Text style={styles.analysisPageText}>{topicQuestionIndex + 1} / {totalQuestions}</Text>
-                </View>
-
-                <ScaleButton
-                  style={[styles.analysisNavBtn, (topicQuestionIndex === totalQuestions - 1) && styles.disabledBtn]}
-                  onPress={() => handleNextTopicQuestion(totalQuestions)}
-                  disabled={topicQuestionIndex === totalQuestions - 1}
-                >
-                  <Text style={[styles.analysisNavBtnText, (topicQuestionIndex === totalQuestions - 1) && styles.disabledBtnText]}>Next</Text>
-                  <Ionicons name="arrow-forward" size={16} color={(topicQuestionIndex === totalQuestions - 1) ? "#9CA3AF" : "#4F46E5"} style={{marginLeft: 6}} />
-                </ScaleButton>
+              <View style={styles.analysisPageIndicator}>
+                 <Text style={styles.analysisPageText}>{questionIndex + 1} / {totalQ}</Text>
               </View>
-            </>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="help-circle-outline" size={60} color="#E5E7EB" />
-              <Text style={styles.emptyText}>No questions found in this category</Text>
-            </View>
-          )}
-        </>
-      )}
 
-    </Animated.View>
-  )};
+              <ScaleButton
+                style={[styles.analysisNavBtn, (questionIndex === totalQ - 1) && styles.disabledBtn]}
+                onPress={() => handleNextQuestion(totalQ)}
+                disabled={questionIndex === totalQ - 1}
+              >
+                <Text style={[styles.analysisNavBtnText, (questionIndex === totalQ - 1) && styles.disabledBtnText]}>Next</Text>
+                <Ionicons name="arrow-forward" size={16} color={(questionIndex === totalQ - 1) ? "#9CA3AF" : theme.primary} style={{marginLeft: 6}} />
+              </ScaleButton>
+            </View>
+          </>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="help-circle-outline" size={60} color={theme.subtext} />
+            <Text style={styles.emptyText}>No questions found in this category</Text>
+          </View>
+        )}
+      </Animated.View>
+    );
+  };
 
   if (isLoading && !quizData) {
     return (
       <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
   if (error && !quizData) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={styles.loadingText}>Loading quiz analysis...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
     return (
       <View style={styles.errorContainer}>
         <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
@@ -508,27 +379,7 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           style={styles.retryButton}
           activeOpacity={0.8}
           scaleTo={0.95}
-          onPress={() => {
-            setError(null);
-            setIsLoading(true);
-            const fetchQuizDetails = async () => {
-              try {
-                const quizId = route?.params?.quizId;
-                if (!quizId) {
-                  setError('Quiz ID not found');
-                  return;
-                }
-                const res = await studentService.getQuizDetails(quizId);
-                const responseData = res.normalized?.data ?? null;
-                setQuizData(responseData);
-              } catch (err: any) {
-                setError('Failed to load quiz details. Please try again.');
-              } finally {
-                setIsLoading(false);
-              }
-            };
-            fetchQuizDetails();
-          }}
+          onPress={fetchQuizDetails}
         >
           <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
         </ScaleButton>
@@ -574,25 +425,25 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
                    <Text style={styles.infoTitle}>{quizData?.title || 'Quiz Result'}</Text>
                    
                    <View style={styles.infoMetaRow}>
-                     <Ionicons name="calendar-outline" size={12} color="#9CA3AF" style={{marginRight: 6}} />
-                     <Text style={styles.infoMetaText}>Completed: {quizData?.completedAt ? new Date(quizData.completedAt).toLocaleDateString() : 'N/A'}</Text>
+                     <Ionicons name="calendar-outline" size={12} color={theme.subtext} style={{marginRight: 6}} />
+                     <Text style={styles.infoMetaText}>Completed: {quizData?.attempt?.submittedAt ? new Date(quizData.attempt.submittedAt).toLocaleDateString() : 'N/A'}</Text>
                    </View>
                    <View style={styles.infoMetaRow}>
-                     <Ionicons name="time-outline" size={12} color="#9CA3AF" style={{marginRight: 6}} />
-                     <Text style={styles.infoMetaText}>Time Taken: {quizData?.timeTaken || 'N/A'}</Text>
+                     <Ionicons name="time-outline" size={12} color={theme.subtext} style={{marginRight: 6}} />
+                     <Text style={styles.infoMetaText}>Time Taken: {formatSeconds(quizData?.attempt?.timeTakenSeconds)}</Text>
                    </View>
                    <View style={styles.infoMetaRow}>
-                     <Ionicons name="help-circle-outline" size={12} color="#9CA3AF" style={{marginRight: 6}} />
-                     <Text style={styles.infoMetaText}>{quizData?.totalQuestions || 0} Questions | {quizData?.duration || 0} Minutes Allowed</Text>
+                     <Ionicons name="help-circle-outline" size={12} color={theme.subtext} style={{marginRight: 6}} />
+                     <Text style={styles.infoMetaText}>{quizData?.totalQuestions ?? quizData?.statistics?.totalQuestions ?? 0} Questions | {quizData?.timeLimit ?? 0} Minutes Allowed</Text>
                    </View>
                 </View>
 
                 <View style={styles.infoRight}>
                    <View style={styles.scoreRing}>
-                     <Text style={styles.ringValue}>{quizData?.percentage || 0}%</Text>
+                     <Text style={styles.ringValue}>{quizData?.percentage ?? 0}%</Text>
                      <Text style={styles.ringLabel}>Score</Text>
                    </View>
-                   <Text style={styles.correctAnswersText}>{quizData?.correctAnswers || 0}/{quizData?.totalQuestions || 0} Correct Answers</Text>
+                   <Text style={styles.correctAnswersText}>{quizData?.correctCount ?? 0}/{quizData?.totalQuestions ?? 0} Correct</Text>
                 </View>
              </View>
           </Animated.View>
@@ -606,15 +457,12 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
                  <Text style={[styles.tabText, activeTab === 'performance' && styles.tabTextActive]} numberOfLines={1}>Performance Analysis</Text>
                </ScaleButton>
                <ScaleButton activeOpacity={0.8} scaleTo={0.98} style={[styles.tabItem, activeTab === 'question' && styles.tabActiveBg]} onPress={() => setActiveTab('question')}>
-                 <Text style={[styles.tabText, activeTab === 'question' && styles.tabTextActive]} numberOfLines={1}>Question Details</Text>
-               </ScaleButton>
-               <ScaleButton activeOpacity={0.8} scaleTo={0.98} style={[styles.tabItem, activeTab === 'topic' && styles.tabActiveBg]} onPress={() => setActiveTab('topic')}>
-                 <Text style={[styles.tabText, activeTab === 'topic' && styles.tabTextActive]} numberOfLines={1}>Topic Analysis</Text>
+                 <Text style={[styles.tabText, activeTab === 'question' && styles.tabTextActive]} numberOfLines={1}>Question Review</Text>
                </ScaleButton>
             </View>
 
             {/* Render Section */}
-            {activeTab === 'performance' ? renderPerformanceTab() : activeTab === 'question' ? renderQuestionTab() : renderTopicTab()}
+            {activeTab === 'performance' ? renderPerformanceTab() : renderQuestionTab()}
 
           </Animated.View>
 
@@ -628,21 +476,6 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
 const getStyles = (theme: any) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
-
-  globalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40, 
-    paddingBottom: 12,
-    backgroundColor: theme.surface,
-  },
-  menuHandle: { paddingRight: 10, paddingVertical: 10 },
-  headerTitle: { fontSize: 14, fontWeight: '500', color: theme.primary, flex: 1, textAlign: 'center' },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center', marginLeft: 4 },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
 
   heroContainer: {
     backgroundColor: theme.primary, 
@@ -719,7 +552,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.isDarkMode ? '#1E293B' : '#F8FAFC', 
     borderBottomColor: theme.primary 
   },
-  tabText: { fontSize: 10, fontWeight: '600', color: theme.subtext, textAlign: 'center' },
+  tabText: { fontSize: 11, fontWeight: '600', color: theme.subtext, textAlign: 'center' },
   tabTextActive: { color: theme.primary },
 
   detailsGlobalBody: { padding: 16, gap: 16, backgroundColor: theme.surface },
@@ -738,37 +571,6 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: theme.primary, marginBottom: 12 },
   
-  // Custom Topic Tab Styles
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  sectionTitleNoMargin: { fontSize: 16, fontWeight: '700', color: theme.primary },
-  
-  topicList: {},
-  topicRow: { marginBottom: 12 },
-  topicTextRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  topicName: { fontSize: 11, color: theme.text, fontWeight: '600' },
-  topicPercent: { fontSize: 11, color: theme.primary, fontWeight: '700' },
-  topicBarTrack: { height: 6, backgroundColor: theme.isDarkMode ? '#334155' : '#E5E7EB', borderRadius: 3, overflow: 'hidden' },
-  topicBarFill: { height: '100%', borderRadius: 3 },
-
-  strengthsWrapper: { flexDirection: 'row', gap: 12 },
-  strengthBox: { flex: 1, borderRadius: 8, padding: 12 },
-  strengthBoxHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 4 },
-  strengthBoxTitle: { fontSize: 11, fontWeight: '700' },
-  strengthBullet: { fontSize: 9, color: theme.subtext, marginBottom: 4, lineHeight: 12 },
-
-  recommendationsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  recoCardWide: { width: '31%', backgroundColor: theme.isDarkMode ? '#1E3A8A30' : '#EFF6FF', borderRadius: 6, padding: 10 },
-  recoPriority: { fontSize: 9, fontWeight: '700', marginBottom: 4 },
-  recoText: { fontSize: 10, color: theme.subtext, lineHeight: 14 },
-
-  distributionWrapper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 32, paddingVertical: 10 },
-  chartContainer: { width: 120, height: 120 },
-  chartLegend: { justifyContent: 'center' },
-  legendItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  legendSquare: { width: 8, height: 8, borderRadius: 2, marginRight: 8 },
-  legendText: { fontSize: 10, color: theme.subtext, fontWeight: '500' },
-
-  // Shared Styles
   tableWrapper: { width: '100%' },
   scoreRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: theme.border },
   scoreLabel: { fontSize: 12, color: theme.text, fontWeight: '500' },
@@ -776,7 +578,6 @@ const getStyles = (theme: any) => StyleSheet.create({
   diffWrapper: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   diffText: { fontSize: 12, fontWeight: '500' },
 
-  // NEW: Topic Tab Styles
   filterPillsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -792,7 +593,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   activeFilterPillText: {
     color: '#FFFFFF',
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '700',
   },
   inactiveFilterPill: {
@@ -803,7 +604,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   inactiveFilterPillText: {
     color: theme.subtext,
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '600',
   },
 
@@ -886,7 +687,6 @@ const getStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
-  // Analysis Navigation Styles
   analysisNavRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -924,7 +724,6 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.subtext,
   },
 
-  // Disabled States
   disabledBtn: {
     opacity: 0.5,
   },

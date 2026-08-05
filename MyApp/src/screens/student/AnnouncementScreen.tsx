@@ -9,6 +9,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  Linking,
+  Alert,
+  RefreshControl,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -27,18 +30,7 @@ interface Props {
   navigation: AnnouncementScreenNavigationProp;
 }
 
-const ANNOUNCEMENTS = [
-  {
-    id: 1,
-    title: 'Mid-Term Examination Schedule',
-    priority: 'High priority',
-    time: '2 hrs ago',
-    sender: "Institution's Office",
-    description: 'The mid-term examination schedule for the current semester has been released. Please check the exam timetable on the school portal. All exams will be conducted in the main examination hall. Students must bring their school ID cards and admit cards.',
-    attachments: ['Exam_Schedule.pdf', 'Guidelines.pdf'],
-    theme: '#EF4444', // Red
-  },
-];
+// ANNOUNCEMENTS static mock array removed — data comes from studentService.getAnnouncements() only.
 
 const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, isDarkMode, toggleDarkMode } = useTheme();
@@ -47,30 +39,38 @@ const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
   const { authState } = useAuth();
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchAnnouncements = async () => {
-      try {
+  const fetchAnnouncements = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
         setIsLoading(true);
-        setError(null);
-        
-        // Fetch announcements using studentService
-        const res = await studentService.getAnnouncements();
-        
-        // Handle various response types including normalized
-        const data = res.normalized?.data?.announcements || res.normalized?.data || res.data?.announcements || res.data?.data || res.data || [];
-        const announcementsArray = Array.isArray(data) ? data : (data.announcements ? data.announcements : []);
-        setAnnouncements(announcementsArray);
-      } catch (error: any) {
-        console.error('Failed to fetch announcements:', error);
-        setError('Failed to load announcements');
-        setAnnouncements([]);
-      } finally {
-        setIsLoading(false);
       }
-    };
+      setError(null);
+      
+      // Fetch announcements using studentService
+      const res = await studentService.getAnnouncements();
+      
+      // Handle various response types including normalized
+      const data = res.normalized?.data?.announcements || res.normalized?.data || res.data?.announcements || res.data?.data || res.data || [];
+      const announcementsArray = Array.isArray(data) ? data : (data.announcements ? data.announcements : []);
+      setAnnouncements(announcementsArray);
+    } catch (error: any) {
+      console.error('Failed to fetch announcements:', error);
+      setError('Failed to load announcements');
+      setAnnouncements([]);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
 
+  const onRefresh = () => fetchAnnouncements(true);
+
+  useEffect(() => {
     fetchAnnouncements();
   }, [authState.user?.id]);
 
@@ -85,7 +85,18 @@ const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
         onMenuPress={() => setDrawerOpen(true)}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={[theme.primary]}
+            tintColor={theme.primary}
+          />
+        }
+      >
         
         {/* Page Title */}
         <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
@@ -95,29 +106,47 @@ const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* Announcement List */}
         {isLoading ? (
-          <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 40 }} />
+          <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
         ) : error ? (
           <View style={styles.emptyContainer}>
-            <Ionicons name="alert-circle-outline" size={60} color="#EF4444" />
+            <Ionicons name="alert-circle-outline" size={60} color={theme.danger} />
             <Text style={styles.emptyText}>{error}</Text>
+            <TouchableOpacity
+              style={[styles.retryBtn, { backgroundColor: theme.primary }]}
+              onPress={() => {
+                setError(null);
+                setIsLoading(true);
+                studentService.getAnnouncements()
+                  .then(res => {
+                    const data = res.normalized?.data?.announcements || res.normalized?.data || res.data?.announcements || res.data?.data || res.data || [];
+                    const arr = Array.isArray(data) ? data : (data.announcements ? data.announcements : []);
+                    setAnnouncements(arr);
+                  })
+                  .catch((e: any) => setError(e?.message || 'Failed to load announcements'))
+                  .finally(() => setIsLoading(false));
+              }}
+            >
+              <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 13 }}>Retry</Text>
+            </TouchableOpacity>
           </View>
         ) : announcements.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Ionicons name="notifications-off-outline" size={60} color="#E5E7EB" />
-            <Text style={styles.emptyText}>No announcements found</Text>
+            <Ionicons name="notifications-off-outline" size={60} color={theme.border} />
+            <Text style={styles.emptyText}>No announcements yet</Text>
+            <Text style={[styles.emptyText, { fontSize: 12, marginTop: 4, opacity: 0.6 }]}>Check back later for updates from your school</Text>
           </View>
         ) : (
           announcements.map((item, index) => (
             <Animated.View 
               key={item.id} 
               entering={FadeInUp.delay(100 + (index * 50)).springify()} 
-              style={[styles.card, { borderLeftColor: item.priority === 'URGENT' || item.priority === 'HIGH' ? '#EF4444' : '#3B82F6' }]}
+              style={[styles.card, { borderLeftColor: item.priority === 'URGENT' || item.priority === 'HIGH' ? theme.danger : theme.primary }]}
             >
                <View style={styles.cardHeaderRow}>
                  <Text style={styles.cardTitle}>{item.title}</Text>
                   <View style={[styles.priorityPill, { backgroundColor: item.priority === 'URGENT' || item.priority === 'HIGH' ? (isDarkMode ? '#7F1D1D' : '#FEE2E2') : (isDarkMode ? '#1E3A8A' : '#DBEAFE') }]}>
-                    <Ionicons name="alert-circle" size={13} color={item.priority === 'URGENT' || item.priority === 'HIGH' ? (isDarkMode ? '#FCA5A5' : '#EF4444') : (isDarkMode ? '#93C5FD' : '#3B82F6')} style={{marginRight: 4}} />
-                    <Text style={[styles.priorityText, { color: item.priority === 'URGENT' || item.priority === 'HIGH' ? (isDarkMode ? '#FCA5A5' : '#EF4444') : (isDarkMode ? '#93C5FD' : '#3B82F6') }]}>
+                    <Ionicons name="alert-circle" size={13} color={item.priority === 'URGENT' || item.priority === 'HIGH' ? theme.danger : theme.primary} style={{marginRight: 4}} />
+                    <Text style={[styles.priorityText, { color: item.priority === 'URGENT' || item.priority === 'HIGH' ? theme.danger : theme.primary }]}>
                       {item.priority || 'Normal'} priority
                     </Text>
                   </View>
@@ -138,15 +167,38 @@ const AnnouncementScreen: React.FC<Props> = ({ navigation }) => {
 
                <Text style={styles.description}>{item.content || item.description}</Text>
 
-               {(item.attachments || []).map((attach: any, idx: number) => (
-                 <TouchableOpacity key={idx} style={styles.attachmentBox} activeOpacity={0.8}>
-                   <View style={styles.pdfIconWrap}>
-                     <Ionicons name="document" size={16} color="#EF4444" />
-                     <Text style={styles.pdfIconText}>PDF</Text>
-                   </View>
-                   <Text style={styles.attachmentText}>{typeof attach === 'string' ? attach : attach.name || 'document.pdf'}</Text>
-                 </TouchableOpacity>
-               ))}
+               {(item.attachments || []).map((attach: any, idx: number) => {
+                 const attachUrl = typeof attach === 'string' ? null : (attach.url || attach.fileUrl || null);
+                 const attachName = typeof attach === 'string' ? attach : (attach.name || attach.fileName || 'document.pdf');
+                 const hasUrl = !!attachUrl;
+                 const AttachWrapper = hasUrl ? TouchableOpacity : View;
+                 return (
+                   <AttachWrapper
+                     key={idx}
+                     style={[styles.attachmentBox, !hasUrl && { opacity: 0.55 }]}
+                     {...(hasUrl ? {
+                       activeOpacity: 0.8,
+                       onPress: () => Linking.openURL(attachUrl).catch(() =>
+                         Alert.alert('Error', 'Could not open attachment.')
+                       ),
+                     } : {})}
+                   >
+                     <View style={styles.pdfIconWrap}>
+                       <Ionicons name="document" size={16} color={theme.danger} />
+                       <Text style={styles.pdfIconText}>PDF</Text>
+                     </View>
+                     <View style={{ flex: 1 }}>
+                       <Text style={styles.attachmentText} numberOfLines={1}>{attachName}</Text>
+                       {!hasUrl && (
+                         <Text style={{ fontSize: 10, color: theme.subtext, marginTop: 2 }}>No download link available</Text>
+                       )}
+                     </View>
+                     {hasUrl && (
+                       <Ionicons name="download-outline" size={14} color={theme.primary} style={{ marginLeft: 8 }} />
+                     )}
+                   </AttachWrapper>
+                 );
+               })}
             </Animated.View>
           ))
         )}
@@ -175,7 +227,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40, 
     paddingBottom: 16,
     backgroundColor: theme.surface, 
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -205,7 +257,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     shadowRadius: 6,
     elevation: 8,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 },
 
   pageTitleWrapper: { marginBottom: 16, paddingHorizontal: 20, marginTop: 10 },
   pageTitle: { fontSize: 24, fontWeight: '800', color: theme.primary, marginBottom: 4 },
@@ -220,7 +272,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderWidth: 1, 
     borderColor: theme.border,
     borderLeftWidth: 4,
-    shadowColor: '#1E293B', 
+    shadowColor: theme.text, 
     shadowOffset: { width: 0, height: 4 }, 
     shadowOpacity: 0.08, 
     shadowRadius: 10, 
@@ -295,7 +347,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontSize: 5,
     fontWeight: '900',
     color: '#FFFFFF',
-    backgroundColor: '#EF4444',
+    backgroundColor: theme.danger,
     paddingHorizontal: 2,
     borderRadius: 2,
     overflow: 'hidden'
@@ -316,6 +368,12 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: theme.subtext,
+  },
+  retryBtn: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 8,
   },
 });
 

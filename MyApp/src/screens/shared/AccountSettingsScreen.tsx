@@ -389,6 +389,20 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
             address: parentRaw.address || '',
           });
         }
+
+        // Emergency contact — separate endpoint, fetch in parallel with parent
+        const emergencyResponse = isStudent
+          ? await accountService.getEmergencyContact().catch(() => null)
+          : null;
+        if (emergencyResponse?.data?.data || emergencyResponse?.data) {
+          const eRaw = emergencyResponse.data.data || emergencyResponse.data;
+          setEmergencyData({
+            name: eRaw.emergencyName || eRaw.name || '',
+            relationship: eRaw.emergencyRelationship || eRaw.relationship || '',
+            email: eRaw.emergencyEmail || eRaw.email || '',
+            phone: eRaw.emergencyPhone || eRaw.phone || '',
+          });
+        }
       }
     } catch (error) {
       console.error('[AccountSettings] Error fetching profile:', error);
@@ -604,6 +618,32 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
     } catch (error: any) {
       console.error('[AccountSettings] Password change error:', error?.response?.data || error);
       setTimeout(() => Alert.alert('Error', error?.response?.data?.message || 'Failed to change password.'), 100);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveEmergencyInfo = async () => {
+    Keyboard.dismiss();
+    try {
+      setIsLoading(true);
+
+      const payload = {
+        emergencyName: emergencyData.name,
+        emergencyRelationship: emergencyData.relationship,
+        emergencyEmail: emergencyData.email,
+        emergencyPhone: emergencyData.phone,
+      };
+
+      await accountService.updateEmergencyContact(payload);
+      setTimeout(() => {
+        Alert.alert('Success', 'Emergency contact updated successfully.');
+      }, 100);
+
+      fetchProfile();
+    } catch (error) {
+      console.error('[AccountSettings] Emergency Contact Update Error:', error);
+      setTimeout(() => Alert.alert('Error', 'Failed to update emergency contact.'), 100);
     } finally {
       setIsLoading(false);
     }
@@ -1394,6 +1434,77 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
                       <>
                         <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
                         <Text style={styles.saveBtnText}>Save Parent Info</Text>
+                      </>
+                    )}
+                  </ScaleButton>
+                </View>
+
+                {/* Emergency Contact Section */}
+                <View style={[styles.sectionHeader, { marginTop: 28 }]}>
+                  <View style={styles.sectionIconBadge}>
+                    <Ionicons name="call-outline" size={16} color={theme.primary} />
+                  </View>
+                  <Text style={styles.sectionTitle}>Emergency Contact</Text>
+                </View>
+
+                <View style={styles.divider} />
+
+                <InputField
+                  label="Emergency Contact Name"
+                  labelIcon="person-outline"
+                  inputIcon="person"
+                  placeholder="Enter emergency contact name"
+                  value={emergencyData.name}
+                  onChangeText={(text: string) =>
+                    setEmergencyData({ ...emergencyData, name: text })
+                  }
+                />
+
+                <InputField
+                  label="Relationship"
+                  labelIcon="heart-outline"
+                  inputIcon="heart"
+                  placeholder="e.g. Father / Mother / Sibling"
+                  value={emergencyData.relationship}
+                  onChangeText={(text: string) =>
+                    setEmergencyData({ ...emergencyData, relationship: text })
+                  }
+                />
+
+                <InputField
+                  label="Emergency Email"
+                  labelIcon="mail-outline"
+                  inputIcon="mail"
+                  placeholder="Enter emergency contact email"
+                  value={emergencyData.email}
+                  onChangeText={(text: string) =>
+                    setEmergencyData({ ...emergencyData, email: text })
+                  }
+                />
+
+                <InputField
+                  label="Emergency Phone"
+                  labelIcon="call-outline"
+                  inputIcon="call"
+                  placeholder="Enter emergency contact phone"
+                  value={emergencyData.phone}
+                  onChangeText={(text: string) =>
+                    setEmergencyData({ ...emergencyData, phone: text })
+                  }
+                />
+
+                <View style={styles.buttonsRow}>
+                  <TouchableOpacity style={styles.cancelBtn} onPress={() => fetchProfile()}>
+                    <Text style={styles.cancelBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+
+                  <ScaleButton style={styles.saveBtn} onPress={saveEmergencyInfo}>
+                    {isLoading ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                        <Text style={styles.saveBtnText}>Save Emergency Contact</Text>
                       </>
                     )}
                   </ScaleButton>

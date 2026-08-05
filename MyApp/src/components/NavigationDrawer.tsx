@@ -46,7 +46,7 @@ const STUDENT_MENU: MenuItem[] = [
   { id: '6', label: 'Attendance', icon: 'calendar-outline' },
   { id: '7', label: 'Announcements', icon: 'megaphone-outline' },
 
-  { id: '8', label: 'Grades & Reports', icon: 'document-text-outline' },
+  // { id: '8', label: 'Grades & Reports', icon: 'document-text-outline' },
   { id: 'result-mgmt', label: 'Official Result', icon: 'reader-outline' },
   { id: '9', label: 'Fees Portal', icon: 'receipt-outline' },
   { id: 'div2', label: '', icon: '', isDivider: true },

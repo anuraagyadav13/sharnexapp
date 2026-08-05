@@ -150,9 +150,9 @@ const studentService = {
     return apiClient.get(ENDPOINTS.AUTH.ME);
   },
 
-  // Profile (legacy - do not use for timetable)
+  // Profile - uses /auth/me (HRT-main route)
   getProfile() {
-    return apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+    return apiClient.get(ENDPOINTS.AUTH.ME);
   },
 
   // Attendance
@@ -375,6 +375,11 @@ const studentService = {
     return apiClient.get(
       ENDPOINTS.STUDENT.QUIZ_ANALYSIS(id),
     );
+  },
+
+  // Contact / Support
+  contactSupport(data: { fullName: string; email: string; phone?: string; school?: string; message: string }) {
+    return apiClient.post(ENDPOINTS.CONTACT, data);
   },
 };
 

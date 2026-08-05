@@ -12,6 +12,8 @@ import {
   SafeAreaView,
   RefreshControl,
   Image,
+  Share,
+  Alert,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -91,6 +93,44 @@ const ResultManagementScreen: React.FC<Props> = ({ navigation }) => {
   }), [selectedResult, authState.user]);
 
   const performanceData = selectedResult?.subjects || [];
+
+  const hasResult = !!selectedResult && performanceData.length > 0;
+
+  const handleExportMarksheet = async () => {
+    if (!hasResult) {
+      Alert.alert('Notice', 'No exam result available to export.');
+      return;
+    }
+
+    try {
+      const lines: string[] = [
+        '📋 OFFICIAL MARKSHEET REPORT',
+        '═══════════════════════════════',
+        `Student : ${studentInfo.name}`,
+        studentInfo.roll !== 'N/A' ? `Roll No : ${studentInfo.roll}` : '',
+        `Term    : ${studentInfo.term}`,
+        `Exam    : ${selectedResult?.exam_type || 'Official Examination'}`,
+        `Grade   : ${studentInfo.grade}`,
+        '',
+        '📊 Subject-wise Breakdown',
+        '-------------------------------',
+        ...performanceData.map((p: any) =>
+          `${(p.subject_name || 'Subject').padEnd(18)}: ${p.marks_obtained}/${p.max_marks} (${Math.round(p.percentage || 0)}%) Grade: ${p.grade || '-'}`
+        ),
+        '-------------------------------',
+        `Generated on ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`,
+      ].filter(Boolean);
+
+      await Share.share({
+        message: lines.join('\n'),
+        title: `${selectedResult?.exam_type || 'Official'} Marksheet`,
+      });
+    } catch (err: any) {
+      if (err?.message !== 'Share was not shared') {
+        Alert.alert('Error', err?.message || 'Failed to export marksheet.');
+      }
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.mainContainer, { backgroundColor: theme.background }]}>
@@ -248,11 +288,22 @@ const ResultManagementScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* Action Buttons */}
         <Animated.View entering={FadeInUp.delay(500).springify()} style={styles.footerActions}>
-           <ScaleButton style={[styles.downloadBtn, { backgroundColor: theme.primary }]}>
+           <ScaleButton
+             style={[
+               styles.downloadBtn,
+               { backgroundColor: theme.primary, opacity: hasResult ? 1 : 0.5 }
+             ]}
+             onPress={handleExportMarksheet}
+             disabled={!hasResult}
+           >
               <Feather name="download" size={18} color="#FFF" style={{ marginRight: 10 }} />
               <Text style={styles.downloadBtnText}>Download Official Marksheet</Text>
            </ScaleButton>
-           <TouchableOpacity style={styles.printLink}>
+           <TouchableOpacity
+             style={[styles.printLink, { opacity: hasResult ? 1 : 0.5 }]}
+             onPress={handleExportMarksheet}
+             disabled={!hasResult}
+           >
               <Ionicons name="print-outline" size={16} color={theme.subtext} />
               <Text style={[styles.printLinkText, { color: theme.subtext }]}>Print Document</Text>
            </TouchableOpacity>

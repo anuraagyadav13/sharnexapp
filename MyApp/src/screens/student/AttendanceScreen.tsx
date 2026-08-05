@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  Linking,
+  Share,
   Alert,
   Image,
 } from 'react-native';
@@ -210,20 +210,61 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
   }, [fetchAttendance]);
 
   const handleGenerateReport = useCallback(async () => {
-    // The backend report endpoint requires a CSRF token (browser-session-only).
-    // Direct downloads work from the web app. Mobile support needs a backend fix.
-    Alert.alert(
-      'Download Report',
-      'PDF report generation requires your browser session.\n\nTap "Open Web" to download from sharnex.com — you\'ll be able to generate and save the PDF there.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Open Web',
-          onPress: () => Linking.openURL('https://sharnex.com/student/attendance'),
-        },
-      ]
-    );
-  }, []);
+    setIsGeneratingReport(true);
+    try {
+      // Resolve studentId the same way fetchAttendance does
+      const meRes = await studentService.getMe();
+      const meData = meRes.normalized?.data;
+      const studentId: string = meData?.id ?? meData?.student?.id ?? '';
+
+      if (!studentId) {
+        throw new Error('Could not resolve student ID. Please try again.');
+      }
+
+      const res = await studentService.getAttendanceReport(studentId);
+      const report = res.normalized?.data || res.data || {};
+
+      // Format the JSON data into a readable text report for native Share
+      const stats = attendanceData?.statistics;
+      const studentName = report.student?.name || meData?.name || 'Student';
+      const className = report.student?.class || report.student?.className || '';
+
+      const lines: string[] = [
+        '📋 ATTENDANCE REPORT',
+        '═══════════════════════════════',
+        `Student : ${studentName}`,
+        className ? `Class   : ${className}` : '',
+        '',
+        '📊 Summary',
+        `Attendance   : ${stats?.attendancePercentage?.toFixed(1) ?? '–'}%`,
+        `Total Days   : ${stats?.totalDays ?? '–'}`,
+        `Present      : ${stats?.presentDays ?? '–'}`,
+        `Absent       : ${stats?.absentDays ?? '–'}`,
+        `Late         : ${stats?.lateDays ?? '–'}`,
+        `Excused      : ${stats?.excusedDays ?? '–'}`,
+        '',
+        '📅 Academic Year',
+        `Present      : ${stats?.academicYear?.presentDays ?? '–'}`,
+        `Absent       : ${stats?.academicYear?.absentDays ?? '–'}`,
+        `Percentage   : ${stats?.academicYear?.presentPercentage?.toFixed(1) ?? '–'}%`,
+        '',
+        `Generated on ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`,
+      ].filter(l => l !== undefined);
+
+      await Share.share({
+        message: lines.join('\n'),
+        title: 'Attendance Report',
+      });
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to generate report.';
+      if (msg !== 'Share was not shared') {
+        // 'Share was not shared' = user dismissed the sheet — not an error
+        Alert.alert('Report Error', msg);
+      }
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  }, [attendanceData]);
 
   // ─── Derived data ────────────────────────────────────────────────────────────
 

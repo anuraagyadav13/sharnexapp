@@ -578,9 +578,9 @@ const Messages = () => {
     const initSSE = async () => {
       try {
         const { accessToken } = await getStoredTokens();
-        const token = accessToken === 'COOKIE_AUTH'
-          ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InRlYWNoZXItMTc2NzcyNjc3MzEzOCIsInJvbGUiOiJURUFDSEVSIiwiaW5zdGl0dXRpb25JZCI6Imluc3RpdHV0aW9uLTE3Njc2Mzk1MDMwODkteXJmMHExcnB3IiwiZW1haWwiOiJhbnVyYWcuMjJiMDMxMTA4MEBhYmVzLmFjLmluIiwibmFtZSI6IkFOVVJBRyBZQURBViIsImlzQWN0aXZlIjp0cnVlLCJpc1ZlcmlmaWVkIjpmYWxzZSwiaWF0IjoxNzgyODE0MDM4LCJleHAiOjE3ODI4MTQ5Mzh9.2PzgHp774mX6C_2mKAP0M5hJnnAoARHatFMpFEmpqt4'
-          : accessToken;
+        // Cookie-based sessions cannot be forwarded via XHR Authorization headers on native.
+        // Skip SSE in that case to avoid either a missing-auth error or a stale hardcoded token.
+        const token = accessToken === 'COOKIE_AUTH' ? null : accessToken;
 
         if (!token || !isMounted) return;
 

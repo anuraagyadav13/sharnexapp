@@ -1,13 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ScrollView,
   View,
   Text,
   StyleSheet,
   StatusBar,
-  Platform,
-  Image,
-  TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -17,17 +15,106 @@ import { StudentHeader } from '../../components/StudentHeader';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import studentService from '../../services/studentService';
 
 type ViewQuizDetailNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ViewQuizDetail'>;
 
 interface Props {
   navigation: ViewQuizDetailNavigationProp;
+  route: any;
 }
 
-const ViewQuizDetailScreen: React.FC<Props> = ({ navigation }) => {
-  const { theme, isDarkMode, toggleDarkMode } = useTheme();
+const ViewQuizDetailScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { theme, isDarkMode } = useTheme();
   const styles = getStyles(theme);
   const { authState } = useAuth();
+
+  const [quizData, setQuizData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const quizId = route?.params?.quizId;
+
+  const fetchQuiz = async () => {
+    if (!quizId) {
+      setError('Quiz ID not provided');
+      setIsLoading(false);
+      return;
+    }
+    try {
+      setIsLoading(true);
+      setError(null);
+      const res = await studentService.getQuizDetails(quizId);
+      const data = res.normalized?.data ?? res.data?.data ?? res.data ?? null;
+      if (data) {
+        setQuizData(data);
+      } else {
+        setError('Quiz data not found');
+      }
+    } catch (err: any) {
+      console.error('Failed to load quiz details:', err);
+      setError('Failed to load quiz details. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchQuiz();
+  }, [quizId]);
+
+  const questionsCount = quizData?.questions?.length || 0;
+
+  // Determine derived status (consistent with backend and QuizzesScreen list)
+  const rawStatus = quizData?.derivedStatus || (
+    quizData?.dueDate && new Date(quizData.dueDate) < new Date() ? 'expired' : 'open'
+  );
+
+  const isCompleted = quizData?.hasAttempt || rawStatus === 'completed';
+  const isExpired = rawStatus === 'expired' && !quizData?.hasAttempt;
+  const isUpcoming = rawStatus === 'upcoming';
+  const isDraft = rawStatus === 'draft';
+  const isOpen = rawStatus === 'open' && !isCompleted && !isExpired;
+
+  const formatDateTime = (isoStr?: string) => {
+    if (!isoStr) return null;
+    try {
+      const d = new Date(isoStr);
+      if (isNaN(d.getTime())) return null;
+      return d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+    } catch {
+      return null;
+    }
+  };
+
+  const startTimeStr = formatDateTime(quizData?.startAt) || 'Available immediately';
+  const dueDateStr = formatDateTime(quizData?.dueDate) || 'No Due Date';
+
+  if (isLoading) {
+    return (
+      <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+      </View>
+    );
+  }
+
+  if (error || !quizData) {
+    return (
+      <View style={styles.errorContainer}>
+        <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+        <Text style={styles.errorText}>{error || 'Quiz not found'}</Text>
+        <ScaleButton
+          style={styles.retryButton}
+          activeOpacity={0.8}
+          scaleTo={0.95}
+          onPress={fetchQuiz}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
+        </ScaleButton>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
@@ -52,8 +139,10 @@ const ViewQuizDetailScreen: React.FC<Props> = ({ navigation }) => {
             <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </ScaleButton>
 
-          <Text style={styles.heroTitle}>Data Structures - Weekly Quiz</Text>
-          <Text style={styles.heroSubtitle}>Comprehensive exam covering Arrays, Linked Lists, Stacks, and Queues</Text>
+          <Text style={styles.heroTitle}>{quizData?.title || 'Quiz Details'}</Text>
+          <Text style={styles.heroSubtitle}>
+            {quizData?.subject ? `${quizData.subject} • ${quizData.className || 'General'}` : 'Review instructions before starting'}
+          </Text>
         </Animated.View>
 
         <View style={styles.contentWrapper}>
@@ -64,7 +153,7 @@ const ViewQuizDetailScreen: React.FC<Props> = ({ navigation }) => {
               <View style={[styles.highlightIconBg, { backgroundColor: isDarkMode ? '#1E1B4B' : '#EEF2FF' }]}>
                 <Ionicons name="time" size={14} color={theme.primary} />
               </View>
-              <Text style={styles.highlightVal}>120 min</Text>
+              <Text style={styles.highlightVal}>{quizData?.timeLimit ? `${quizData.timeLimit} min` : 'Untimed'}</Text>
               <Text style={styles.highlightLbl}>Duration</Text>
             </View>
 
@@ -72,7 +161,7 @@ const ViewQuizDetailScreen: React.FC<Props> = ({ navigation }) => {
               <View style={[styles.highlightIconBg, { backgroundColor: isDarkMode ? '#701A7530' : '#FAD1E8' }]}>
                 <Ionicons name="help-circle" size={14} color="#C026D3" />
               </View>
-              <Text style={styles.highlightVal}>50</Text>
+              <Text style={styles.highlightVal}>{questionsCount}</Text>
               <Text style={styles.highlightLbl}>Questions</Text>
             </View>
 
@@ -80,8 +169,8 @@ const ViewQuizDetailScreen: React.FC<Props> = ({ navigation }) => {
               <View style={[styles.highlightIconBg, { backgroundColor: isDarkMode ? '#065F4630' : '#DCFCE7' }]}>
                 <Ionicons name="star" size={14} color="#10B981" />
               </View>
-              <Text style={styles.highlightVal}>200</Text>
-              <Text style={styles.highlightLbl}>Points</Text>
+              <Text style={styles.highlightVal}>{questionsCount}</Text>
+              <Text style={styles.highlightLbl}>Max Points</Text>
             </View>
           </Animated.View>
 
@@ -94,67 +183,100 @@ const ViewQuizDetailScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoRowLeft}>Course</Text>
-              <Text style={styles.infoRowRight}>Data Structures</Text>
+              <Text style={styles.infoRowLeft}>Subject</Text>
+              <Text style={styles.infoRowRight}>{quizData?.subject || 'N/A'}</Text>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoRowLeft}>Teacher</Text>
-              <Text style={styles.infoRowRight}>Dr. Priya Sharma</Text>
+              <Text style={styles.infoRowLeft}>Class</Text>
+              <Text style={styles.infoRowRight}>
+                {quizData?.className ? `${quizData.className}${quizData.classSection ? ` (${quizData.classSection})` : ''}` : 'N/A'}
+              </Text>
             </View>
+            {quizData?.teacherName ? (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoRowLeft}>Teacher</Text>
+                <Text style={styles.infoRowRight}>{quizData.teacherName}</Text>
+              </View>
+            ) : null}
             <View style={styles.infoRow}>
-              <Text style={styles.infoRowLeft}>Marks</Text>
-              <Text style={styles.infoRowRight}>50</Text>
+              <Text style={styles.infoRowLeft}>Total Questions</Text>
+              <Text style={styles.infoRowRight}>{questionsCount}</Text>
             </View>
 
             <View style={styles.warningPill}>
               <Ionicons name="information-circle" size={16} color="#F97316" style={{ marginRight: 6 }} />
-              <Text style={styles.warningPillText}>Single Attempt Allowed</Text>
+              <Text style={styles.warningPillText}>
+                {quizData?.maxAttempts ? `${quizData.maxAttempts} Attempt Allowed` : 'Single Attempt Allowed'}
+              </Text>
             </View>
           </Animated.View>
 
           {/* Important Instructions */}
           <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.infoCard}>
             <View style={styles.cardHeaderRow}>
-              <Ionicons name="information-circle" size={20} color={theme.primary} style={{ marginRight: 8 }} />
+              <Ionicons name="document-text-outline" size={20} color={theme.primary} style={{ marginRight: 8 }} />
               <Text style={styles.cardHeaderTitle}>Important Instructions</Text>
             </View>
             <View style={styles.divider} />
 
             <View style={styles.instructionItem}>
-              <Ionicons name="lock-closed-outline" size={16} color={theme.primary} style={styles.instIcon} />
-              <Text style={styles.instText}><Text style={styles.instBold}>Start Time:</Text> May 25, 2023 • 10:00 AM</Text>
+              <Ionicons name="play-circle-outline" size={16} color={theme.primary} style={styles.instIcon} />
+              <Text style={styles.instText}><Text style={styles.instBold}>Start Time:</Text> {startTimeStr}</Text>
             </View>
             <View style={styles.instructionItem}>
               <Ionicons name="calendar-outline" size={16} color={theme.primary} style={styles.instIcon} />
-              <Text style={styles.instText}><Text style={styles.instBold}>End Time:</Text> May 25, 2023 • 10:00 AM</Text>
+              <Text style={styles.instText}><Text style={styles.instBold}>Due Date:</Text> {dueDateStr}</Text>
             </View>
             <View style={styles.instructionItem}>
-              <Ionicons name="desktop-outline" size={16} color={theme.primary} style={styles.instIcon} />
-              <Text style={styles.instText}><Text style={styles.instBold}>Browser Requirements:</Text> May 25, 2023 • 10:00 AM</Text>
+              <Ionicons name="time-outline" size={16} color={theme.primary} style={styles.instIcon} />
+              <Text style={styles.instText}>
+                <Text style={styles.instBold}>Time Limit:</Text> {quizData?.timeLimit ? `${quizData.timeLimit} minutes once started` : 'Untimed test'}
+              </Text>
             </View>
             <View style={styles.instructionItem}>
-              <Ionicons name="close-circle-outline" size={16} color={theme.primary} style={styles.instIcon} />
-              <Text style={styles.instText}><Text style={styles.instBold}>Restriction:</Text> May 25, 2023 • 10:00 AM</Text>
+              <Ionicons name="shield-checkmark-outline" size={16} color={theme.primary} style={styles.instIcon} />
+              <Text style={styles.instText}>
+                <Text style={styles.instBold}>Submission:</Text> Quiz submits automatically when time expires.
+              </Text>
             </View>
           </Animated.View>
 
-          {/* Topic Covered */}
-          <Animated.View entering={FadeInUp.delay(250).springify()} style={styles.infoCard}>
-            <View style={styles.cardHeaderRow}>
-              <Ionicons name="book-outline" size={20} color={theme.primary} style={{ marginRight: 8 }} />
-              <Text style={styles.cardHeaderTitle}>Topic Covered</Text>
-            </View>
-            <View style={styles.divider} />
-
-            <View style={styles.topicsGrid}>
-              {[1, 2, 3, 4, 5, 6].map((it) => (
-                <View key={it} style={styles.topicBox}>
-                  <Text style={styles.topicBoxText}>Arrays &</Text>
-                  <Text style={styles.topicBoxText}>Linked List</Text>
-                </View>
-              ))}
-            </View>
-
+          {/* Action Button - Branches strictly on derivedStatus */}
+          <Animated.View entering={FadeInUp.delay(250).springify()} style={{ marginTop: 8 }}>
+            {isCompleted ? (
+              <ScaleButton
+                style={styles.actionBtnPrimary}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate('QuizResult', { quizId, timestamp: Date.now() })}
+              >
+                <Ionicons name="bar-chart-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                <Text style={styles.actionBtnText}>View Result</Text>
+              </ScaleButton>
+            ) : isExpired ? (
+              <View style={styles.actionBtnDisabled}>
+                <Ionicons name="lock-closed" size={18} color={theme.subtext} style={{ marginRight: 8 }} />
+                <Text style={styles.actionBtnDisabledText}>Expired</Text>
+              </View>
+            ) : isUpcoming ? (
+              <View style={styles.actionBtnDisabled}>
+                <Ionicons name="time-outline" size={18} color={theme.subtext} style={{ marginRight: 8 }} />
+                <Text style={styles.actionBtnDisabledText}>Starts on {startTimeStr}</Text>
+              </View>
+            ) : isDraft ? (
+              <View style={styles.actionBtnDisabled}>
+                <Ionicons name="alert-circle-outline" size={18} color={theme.subtext} style={{ marginRight: 8 }} />
+                <Text style={styles.actionBtnDisabledText}>Not Available</Text>
+              </View>
+            ) : (
+              <ScaleButton
+                style={styles.actionBtnPrimary}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate('StartQuiz', { quizId })}
+              >
+                <Ionicons name="play-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                <Text style={styles.actionBtnText}>Start Quiz Now</Text>
+              </ScaleButton>
+            )}
           </Animated.View>
 
         </View>
@@ -167,20 +289,6 @@ const ViewQuizDetailScreen: React.FC<Props> = ({ navigation }) => {
 const getStyles = (theme: any) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
-
-  globalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 12,
-    backgroundColor: theme.surface,
-  },
-  headerTitle: { fontSize: 14, fontWeight: '500', color: theme.primary, flex: 1, textAlign: 'center' },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center', marginLeft: 4 },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
 
   heroContainer: {
     backgroundColor: theme.primary,
@@ -232,12 +340,60 @@ const getStyles = (theme: any) => StyleSheet.create({
   instText: { flex: 1, fontSize: 11, color: theme.text, lineHeight: 18 },
   instBold: { fontWeight: '700' },
 
-  topicsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
-  topicBox: {
-    width: '31%', backgroundColor: theme.isDarkMode ? '#312E8130' : '#EEF2FF', borderRadius: 8, paddingVertical: 10,
-    alignItems: 'center', justifyContent: 'center'
+  actionBtnPrimary: {
+    backgroundColor: theme.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: theme.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  topicBoxText: { fontSize: 10, color: theme.text, fontWeight: '500', textAlign: 'center' },
+  actionBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  actionBtnDisabled: {
+    backgroundColor: theme.isDarkMode ? '#334155' : '#E2E8F0',
+    borderRadius: 12,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  actionBtnDisabledText: {
+    color: theme.subtext,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.background,
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#EF4444',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: theme.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
 });
 
 export default ViewQuizDetailScreen;

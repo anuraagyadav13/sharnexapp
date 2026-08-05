@@ -8,6 +8,7 @@ import {
   Platform,
   ActivityIndicator,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -34,6 +35,7 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [performance, setPerformance] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [selectedQuizMonth, setSelectedQuizMonth] = useState<string>('');
@@ -69,9 +71,13 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const fetchPerformance = async () => {
+  const fetchPerformance = async (isRefresh = false) => {
     try {
-      setIsLoading(true);
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       setError(null);
 
       const res = await studentService.getPerformance();
@@ -83,6 +89,14 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
       setError(err?.message || 'Failed to load performance data.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    fetchPerformance(true);
+    if (insights) {
+      fetchInsights();
     }
   };
 
@@ -136,7 +150,7 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
         <Text style={{ fontSize: 13, color: theme.subtext, textAlign: 'center', marginTop: 8 }}>{error}</Text>
         <ScaleButton
           style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: theme.primary, borderRadius: 8 }}
-          onPress={fetchPerformance}
+          onPress={() => fetchPerformance()}
           scaleTo={0.95}
         >
           <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
@@ -232,7 +246,18 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
         onMenuPress={() => setDrawerOpen(true)}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={[theme.primary]}
+            tintColor={theme.primary}
+          />
+        }
+      >
         
         {/* 1. Page Title & Subtitle */}
         <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>

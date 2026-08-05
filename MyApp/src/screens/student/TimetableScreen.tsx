@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, ActivityIndicator, RefreshControl } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -15,16 +15,9 @@ interface Props {
   navigation: TimetableNavigationProp;
 }
 
-const BRAND = {
-  primary: '#2563EB',
-  accentPurple: '#8B5CF6',
-  accentGreen: '#10B981',
-  background: '#F8FAFC',
-  surface: '#FFFFFF',
-  text: '#0F172A',
-  subtext: '#64748B',
-  border: '#E2E8F0',
-};
+// TimetableScreen uses theme tokens from useTheme() — local BRAND removed.
+// Subject-specific icon colours (iconBg/iconColor per subject) are visual
+// identity colours with no equivalent theme token; left as design constants.
 
 const ALL_DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
@@ -62,6 +55,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
   const [exams, setExams] = useState<any[]>([]);
   
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isEventsLoading, setIsEventsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -147,9 +141,13 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
     });
   }, [currentDayKey, normalizeTime, calculateStatus]);
 
-  const fetchTimetable = async () => {
+  const fetchTimetable = async (isRefresh = false) => {
     try {
-      setIsLoading(true);
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       setError(null);
       setSchedule([]);
 
@@ -174,8 +172,14 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
       setError(err.message || 'Failed to load timetable.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
+
+  const onRefresh = useCallback(() => {
+    fetchTimetable(true);
+    fetchCalendarEvents();
+  }, []);
 
   const fetchCalendarEvents = async () => {
     try {
@@ -304,7 +308,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
     return (
       <View style={s.tabContent}>
         <View style={s.dayDateHeader}>
-          <Ionicons name="calendar-outline" size={16} color={BRAND.subtext} />
+          <Ionicons name="calendar-outline" size={16} color={theme.subtext} />
           <Text style={s.dayDateText}>{dateString}</Text>
           {isToday && (
             <View style={s.todayBadge}>
@@ -315,7 +319,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
 
         <View style={s.dayNavControls}>
           <TouchableOpacity style={s.dayNavBtn} onPress={handlePrevDay}>
-            <Ionicons name="chevron-back" size={16} color={BRAND.subtext} />
+            <Ionicons name="chevron-back" size={16} color={theme.subtext} />
             <Text style={s.dayNavText}>Prev</Text>
           </TouchableOpacity>
           
@@ -325,11 +329,21 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
 
           <TouchableOpacity style={s.dayNavBtn} onPress={handleNextDay}>
             <Text style={s.dayNavText}>Next</Text>
-            <Ionicons name="chevron-forward" size={16} color={BRAND.subtext} />
+            <Ionicons name="chevron-forward" size={16} color={theme.subtext} />
           </TouchableOpacity>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              colors={[theme.primary]}
+              tintColor={theme.primary}
+            />
+          }
+        >
           <View style={s.dayTimeline}>
             {daySchedule.map((slot: any, idx: number) => {
               if (slot.type === 'lunch') {
@@ -400,7 +414,18 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
     return (
       <View style={s.tabContent}>
         <View style={s.gridCanvas}>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 40 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={onRefresh}
+                colors={[theme.primary]}
+                tintColor={theme.primary}
+              />
+            }
+          >
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View>
                 {/* Header Row */}
@@ -470,11 +495,22 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const renderEventsTab = () => (
-    <ScrollView style={s.tabContent} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={s.tabContent}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={onRefresh}
+          colors={[theme.primary]}
+          tintColor={theme.primary}
+        />
+      }
+    >
       {/* 1. School Year */}
       <View style={s.eventSection}>
         <View style={s.eventSectionHeader}>
-          <Ionicons name="school-outline" size={18} color={BRAND.accentPurple} />
+          <Ionicons name="school-outline" size={18} color={theme.primary} />
           <Text style={s.eventSectionTitle}>School Year 2024-2025</Text>
         </View>
         
@@ -514,10 +550,10 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
       {/* 2. Upcoming Events */}
       <View style={s.eventSection}>
         <View style={s.eventSectionHeader}>
-          <Ionicons name="calendar-outline" size={18} color={BRAND.accentPurple} />
+          <Ionicons name="calendar-outline" size={18} color={theme.primary} />
           <Text style={s.eventSectionTitle}>Upcoming Events</Text>
         </View>
-        {isEventsLoading ? <ActivityIndicator size="small" color={BRAND.accentPurple} /> :
+        {isEventsLoading ? <ActivityIndicator size="small" color={theme.primary} /> :
          events.length === 0 ? (
            <View style={s.emptyEventCard}><Text style={s.emptyEventText}>No events scheduled.</Text></View>
          ) : (
@@ -525,19 +561,19 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
              <View key={i} style={s.termCard}>
                 <Text style={s.termTitle}>{ev.title}</Text>
                 <View style={s.eventRow}>
-                  <Ionicons name="calendar-outline" size={14} color={BRAND.accentPurple} />
+                  <Ionicons name="calendar-outline" size={14} color={theme.primary} />
                   <Text style={s.eventRowText}>
                     {new Date(ev.start_date).toLocaleDateString()} - {new Date(ev.end_date).toLocaleDateString()}
                   </Text>
                 </View>
                 <View style={s.eventRow}>
-                  <Ionicons name="location-outline" size={14} color={BRAND.subtext} />
+                  <Ionicons name="location-outline" size={14} color={theme.subtext} />
                   <Text style={s.eventRowText}>{ev.location || 'N/A'}</Text>
                 </View>
                 
                 <View style={{flexDirection: 'row', gap: 8, marginTop: 8}}>
                   {ev.event_type && <View style={s.tagBadge}><Text style={s.tagText}>{ev.event_type}</Text></View>}
-                  {ev.event_priority && <View style={s.tagBadge}><Text style={[s.tagText, {color: BRAND.accentPurple}]}>{ev.event_priority}</Text></View>}
+                  {ev.event_priority && <View style={s.tagBadge}><Text style={[s.tagText, {color: theme.primary}]}>{ev.event_priority}</Text></View>}
                 </View>
              </View>
            ))
@@ -616,7 +652,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
           </TouchableOpacity>
           <TouchableOpacity style={[s.tabButton, activeTab === 'events' && s.tabButtonActive]} onPress={() => setActiveTab('events')}>
             <View style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>
-              <Ionicons name="megaphone-outline" size={14} color={activeTab === 'events' ? '#FFF' : BRAND.subtext} />
+              <Ionicons name="megaphone-outline" size={14} color={activeTab === 'events' ? '#FFF' : theme.subtext} />
               <Text style={[s.tabText, activeTab === 'events' && s.tabTextActive]}>EVENTS</Text>
             </View>
           </TouchableOpacity>
@@ -625,12 +661,12 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
 
       <View style={s.contentArea}>
         {isLoading && schedule.length === 0 ? (
-          <ActivityIndicator size="large" color={BRAND.accentPurple} style={{marginTop: 50}} />
+          <ActivityIndicator size="large" color={theme.primary} style={{marginTop: 50}} />
         ) : error ? (
            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
-            <Ionicons name="alert-circle" size={48} color="#EF4444" style={{ marginBottom: 16 }} />
+            <Ionicons name="alert-circle" size={48} color={theme.danger} style={{ marginBottom: 16 }} />
             <Text style={{ fontSize: 16, fontWeight: '700', color: theme.text }}>Unable to Load Timetable</Text>
-            <TouchableOpacity style={{ marginTop: 16, padding: 12, backgroundColor: BRAND.primary, borderRadius: 8 }} onPress={fetchTimetable}>
+            <TouchableOpacity style={{ marginTop: 16, padding: 12, backgroundColor: theme.primary, borderRadius: 8 }} onPress={() => fetchTimetable()}>
               <Text style={{ color: '#FFF' }}>Retry</Text>
             </TouchableOpacity>
           </View>
@@ -841,7 +877,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   lunchText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#94A3B8',
+    color: theme.subtext,
   },
 
   // WEEK TAB
@@ -849,12 +885,12 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   timeColumnHeader: { width: 50 },
   daysHeaderRow: { flexDirection: 'row', paddingBottom: 10 },
   dayHeaderCell: { width: 110, alignItems: 'center' },
-  dayHeaderText: { fontSize: 12, fontWeight: '800', color: '#94A3B8' },
-  dayHeaderTextActive: { color: '#8B5CF6' },
+  dayHeaderText: { fontSize: 12, fontWeight: '800', color: theme.subtext },
+  dayHeaderTextActive: { color: theme.primary },
   
   gridRow: { flexDirection: 'row', marginBottom: 12 },
   timeCell: { width: 50, alignItems: 'center', paddingTop: 10 },
-  timeText: { fontSize: 11, fontWeight: '800', color: '#334155' },
+  timeText: { fontSize: 11, fontWeight: '800', color: theme.subtext },
   
   cellOuter: { width: 110, paddingHorizontal: 4 },
   gridCard: {
@@ -862,23 +898,23 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     padding: 10,
     minHeight: 60,
   },
-  gridCardSubject: { fontSize: 12, fontWeight: '800', color: '#0F172A', marginBottom: 4 },
-  gridCardTeacher: { fontSize: 10, color: '#64748B' },
+  gridCardSubject: { fontSize: 12, fontWeight: '800', color: theme.text, marginBottom: 4 },
+  gridCardTeacher: { fontSize: 10, color: theme.subtext },
   
   freePeriodCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
     borderStyle: 'dashed',
     minHeight: 60,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  freePeriodText: { fontSize: 9, fontWeight: '800', color: '#94A3B8', marginTop: 4 },
+  freePeriodText: { fontSize: 9, fontWeight: '800', color: theme.subtext, marginTop: 4 },
   
   gridLunchRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 8 },
-  gridLunchContent: { flex: 1, backgroundColor: '#FFFFFF', padding: 8, alignItems: 'center' },
-  gridLunchText: { fontSize: 12, fontWeight: '900', color: '#0F172A', letterSpacing: 2 },
+  gridLunchContent: { flex: 1, backgroundColor: theme.surface, padding: 8, alignItems: 'center' },
+  gridLunchText: { fontSize: 12, fontWeight: '900', color: theme.text, letterSpacing: 2 },
 
   // EVENTS TAB
   eventSection: {
@@ -893,16 +929,16 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   eventSectionTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0F172A',
+    color: theme.text,
   },
   termCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: theme.border,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#64748B',
+    shadowColor: theme.subtext,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -914,7 +950,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     minHeight: 110,
-    shadowColor: '#64748B',
+    shadowColor: theme.subtext,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -923,35 +959,35 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   termTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#0F172A',
+    color: theme.text,
     marginBottom: 4,
   },
   termDates: {
     fontSize: 12,
-    color: '#64748B',
+    color: theme.subtext,
     marginBottom: 12,
   },
   termDaysVal: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#0F172A',
+    color: theme.text,
   },
   termDaysLbl: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: theme.subtext,
     fontWeight: '500',
   },
   emptyEventCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: theme.border,
     borderRadius: 12,
     padding: 24,
     alignItems: 'center',
   },
   emptyEventText: {
     fontSize: 13,
-    color: '#64748B',
+    color: theme.subtext,
   },
   eventRow: {
     flexDirection: 'row',
@@ -961,10 +997,10 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   },
   eventRowText: {
     fontSize: 12,
-    color: '#64748B',
+    color: theme.subtext,
   },
   tagBadge: {
-    backgroundColor: '#F3E8FF',
+    backgroundColor: theme.iconBackground,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 12,
@@ -972,7 +1008,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   tagText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#64748B',
+    color: theme.subtext,
   }
 });
 

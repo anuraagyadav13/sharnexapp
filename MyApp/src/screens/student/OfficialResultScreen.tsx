@@ -9,6 +9,9 @@ import {
   Platform,
   ActivityIndicator,
   Image,
+  RefreshControl,
+  Share,
+  Alert,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -38,6 +41,7 @@ const OfficialResultScreen: React.FC<Props> = ({ navigation, route }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [resultData, setResultData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch result data on mount
@@ -45,9 +49,13 @@ const OfficialResultScreen: React.FC<Props> = ({ navigation, route }) => {
     fetchResultData();
   }, []);
 
-  const fetchResultData = async () => {
+  const fetchResultData = async (isRefresh = false) => {
     try {
-      setIsLoading(true);
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       setError(null);
 
       const resultId = route?.params?.resultId as string;
@@ -64,8 +72,46 @@ const OfficialResultScreen: React.FC<Props> = ({ navigation, route }) => {
       setError(err.message || 'Failed to load result');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
+
+  const handleShareMarksheet = async () => {
+    if (!resultData) return;
+    try {
+      const subjects = resultData.subjects || [];
+      const lines = [
+        '📋 OFFICIAL ACADEMIC MARKSHEET',
+        '═══════════════════════════════',
+        `Student   : ${resultData.studentName || authState.user?.name || 'Student'}`,
+        resultData.rollNumber ? `Roll No   : ${resultData.rollNumber}` : '',
+        resultData.className ? `Class     : ${resultData.className}` : '',
+        resultData.term ? `Term      : ${resultData.term}` : '',
+        resultData.examType ? `Exam Type : ${resultData.examType}` : '',
+        `Overall   : ${resultData.totalPercentage || 0}% (Grade ${resultData.overallGrade || 'N/A'})`,
+        `Status    : ${resultData.status || 'N/A'}`,
+        '',
+        '📊 Subject-wise Performance',
+        '-------------------------------',
+        ...subjects.map((s: any) =>
+          `${(s.name || s.subjectName || 'Subject').padEnd(18)}: ${(s.marks || s.obtainedMarks || 0).toFixed(1)}/${(s.maxMarks || s.totalMarks || 100).toFixed(1)} (${Math.round(((s.marks || s.obtainedMarks || 0) / (s.maxMarks || s.totalMarks || 100)) * 100)}%) Grade: ${s.grade || '-'}`
+        ),
+        '-------------------------------',
+        `Generated on ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`,
+      ].filter(Boolean);
+
+      await Share.share({
+        message: lines.join('\n'),
+        title: `${resultData.examType || 'Official'} Marksheet`,
+      });
+    } catch (err: any) {
+      if (err?.message !== 'Share was not shared') {
+        Alert.alert('Error', err?.message || 'Failed to share marksheet.');
+      }
+    }
+  };
+
+  const onRefresh = () => fetchResultData(true);
 
   if (isLoading) {
     return (
@@ -85,7 +131,7 @@ const OfficialResultScreen: React.FC<Props> = ({ navigation, route }) => {
           style={styles.retryButton}
           activeOpacity={0.8}
           scaleTo={0.95}
-          onPress={fetchResultData}
+          onPress={() => fetchResultData()}
         >
           <Text style={styles.retryButtonText}>Retry</Text>
         </ScaleButton>
@@ -102,7 +148,18 @@ const OfficialResultScreen: React.FC<Props> = ({ navigation, route }) => {
         navigation={navigation}
         onMenuPress={() => setDrawerOpen(true)}
       />
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={[theme.primary]}
+            tintColor={theme.primary}
+          />
+        }
+      >
         <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.resultCard}>
           <View style={styles.profileRow}>
             <View style={styles.profileCircle}><Text style={styles.profileInitials}>
@@ -155,6 +212,29 @@ const OfficialResultScreen: React.FC<Props> = ({ navigation, route }) => {
             <Text style={styles.statusLabel}>TOTAL SUBJECTS</Text>
             <Text style={styles.statusValue}>{(resultData?.subjects || []).length} Subjects Evaluated</Text>
           </View>
+        </Animated.View>
+
+        {/* Marksheet Export Button */}
+        <Animated.View entering={FadeInUp.delay(400).springify()} style={{ marginHorizontal: 16, marginTop: 8, marginBottom: 20 }}>
+          <ScaleButton
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: theme.primary,
+              paddingVertical: 14,
+              borderRadius: 12,
+              shadowColor: theme.primary,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.2,
+              shadowRadius: 6,
+              elevation: 4,
+            }}
+            onPress={handleShareMarksheet}
+          >
+            <Ionicons name="share-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 15 }}>Share / Download Official Marksheet</Text>
+          </ScaleButton>
         </Animated.View>
       </ScrollView>
       <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="student" />

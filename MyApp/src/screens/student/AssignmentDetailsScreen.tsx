@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   Image,
   TouchableOpacity,
+  Linking,
+  Alert,
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -44,8 +46,8 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
     </View>
   );
 
-  const AttachmentItem = ({ title, meta }: { title: string, meta: string }) => (
-    <ScaleButton style={styles.attachmentItem} activeOpacity={0.8} scaleTo={0.98}>
+  const AttachmentItem = ({ title, meta, onPress }: { title: string, meta: string, onPress?: () => void }) => (
+    <ScaleButton style={styles.attachmentItem} activeOpacity={0.8} scaleTo={0.98} onPress={onPress}>
       <View style={styles.pdfIconContainer}>
         <MaterialCommunityIcons name="file-pdf-box" size={28} color="#FFFFFF" />
       </View>
@@ -203,13 +205,27 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
 
             <View style={styles.attachmentsContainer}>
               {assignmentData?.attachments && assignmentData.attachments.length > 0 ? (
-                assignmentData.attachments.map((attachment: any, idx: number) => (
-                  <AttachmentItem
-                    key={idx}
-                    title={attachment.name || attachment.fileName}
-                    meta={attachment.type || 'PDF'} 
-                  />
-                ))
+                assignmentData.attachments.map((attachment: any, idx: number) => {
+                  const url = typeof attachment === 'string' ? attachment : (attachment.url || attachment.fileUrl || attachment.path || null);
+                  const title = typeof attachment === 'string' ? attachment : (attachment.name || attachment.fileName || 'Attachment');
+                  const meta = typeof attachment === 'string' ? 'PDF' : (attachment.type || attachment.fileType || 'PDF');
+                  return (
+                    <AttachmentItem
+                      key={idx}
+                      title={title}
+                      meta={meta}
+                      onPress={() => {
+                        if (url) {
+                          Linking.openURL(url).catch(() =>
+                            Alert.alert('Error', 'Could not open attachment.')
+                          );
+                        } else {
+                          Alert.alert('Notice', 'No download link available for this attachment.');
+                        }
+                      }}
+                    />
+                  );
+                })
               ) : (
                 <Text style={{ textAlign: 'center', color: '#9CA3AF', paddingVertical: 20 }}>
                   No attachments available

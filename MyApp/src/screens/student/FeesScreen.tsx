@@ -13,6 +13,8 @@ import {
   Alert,
   Image,
   Dimensions,
+  RefreshControl,
+  Share,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -50,6 +52,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
   const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
 
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Checkout Modal State
@@ -72,9 +75,42 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const fetchData = async () => {
+  const handleShareReceipt = async () => {
+    if (!selectedReceipt) return;
     try {
-      setIsLoading(true);
+      const lines = [
+        '🧾 OFFICIAL PAYMENT RECEIPT',
+        '═══════════════════════════════',
+        `Receipt Ref  : ${selectedReceipt.id || selectedReceipt.paymentId || 'N/A'}`,
+        `Invoice No   : ${selectedReceipt.invoiceNumber || selectedReceipt.invoice_number || 'N/A'}`,
+        `Amount Paid  : ₹${selectedReceipt.amount || 0}`,
+        `Status       : ${selectedReceipt.status || 'SUCCESS'}`,
+        `Txn Ref      : ${selectedReceipt.gatewayPaymentId || selectedReceipt.gateway_payment_id || 'N/A'}`,
+        `Date & Time  : ${new Date(selectedReceipt.completedAt || selectedReceipt.createdAt || new Date()).toLocaleString('en-IN')}`,
+        selectedReceipt.institutionName ? `Institution  : ${selectedReceipt.institutionName}` : '',
+        selectedReceipt.description ? `Description  : ${selectedReceipt.description}` : '',
+        '═══════════════════════════════',
+        'Verified by Sharnex Cryptographic Ledger',
+      ].filter(Boolean);
+
+      await Share.share({
+        message: lines.join('\n'),
+        title: `Payment Receipt #${selectedReceipt.invoiceNumber || 'Receipt'}`,
+      });
+    } catch (err: any) {
+      if (err?.message !== 'Share was not shared') {
+        Alert.alert('Error', err?.message || 'Failed to share receipt.');
+      }
+    }
+  };
+
+  const fetchData = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       setError(null);
 
       const invRes = await studentService.getInvoices();
@@ -111,8 +147,11 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
       setSummary({ totalPending: 0, totalPaid: 0, pendingCount: 0, overdueCount: 0, paidCount: 0 });
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
+
+  const onRefresh = () => fetchData(true);
 
   useEffect(() => {
     fetchData();
@@ -284,7 +323,18 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
         onMenuPress={() => setDrawerOpen(true)}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={[theme.primary]}
+            tintColor={theme.primary}
+          />
+        }
+      >
 
         <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
           <View style={styles.doubleEntryBadge}>
@@ -343,7 +393,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
               </ScrollView>
 
               {isLoading ? (
-                <ActivityIndicator size="large" color="#7C3AED" style={{ marginTop: 40 }} />
+                <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
               ) : filteredInvoices.length === 0 ? (
                 <View style={styles.emptyContainer}>
                   <Text style={styles.emptyText}>No active invoices.</Text>
@@ -391,7 +441,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
                   <Ionicons name="lock-closed" size={14} color="#64748B" style={{ marginRight: 6 }} />
                   <Text style={styles.historyBoxTitle}>CRYPTOGRAPHIC PAYMENT LOG</Text>
                 </View>
-                <TouchableOpacity onPress={fetchData} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <TouchableOpacity onPress={() => fetchData()} style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="refresh" size={12} color="#64748B" />
                   <Text style={styles.historyBoxRefresh}>Refresh Ledger</Text>
                 </TouchableOpacity>
@@ -433,9 +483,9 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
                   <View style={{ flex: 1, alignItems: 'flex-end' }}>
                     {item.status === 'SUCCESS' ? (
                       <TouchableOpacity style={styles.histReceiptBtn} onPress={() => handleReceiptPress(item.id)}>
-                        {activeReceiptId === item.id ? <ActivityIndicator size="small" color="#4F46E5" /> : (
+                        {activeReceiptId === item.id ? <ActivityIndicator size="small" color={theme.primary} /> : (
                           <>
-                            <Ionicons name="download-outline" size={12} color="#4F46E5" style={{ marginRight: 4 }} />
+                            <Ionicons name="download-outline" size={12} color={theme.primary} style={{ marginRight: 4 }} />
                             <Text style={styles.histReceiptText}>Receipt</Text>
                           </>
                         )}
@@ -553,7 +603,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
                       {paymentMode === 'CARD' && <View style={styles.radioInner} />}
                     </View>
                     <Text style={styles.methodAmount}>₹{checkoutInvoice?.totalAmount}</Text>
-                    <Text style={{ fontSize: 9, color: '#94A3B8', marginTop: 2 }}>(+₹{(checkoutInvoice?.totalAmount * 0.02).toFixed(2)} fee)</Text>
+                    <Text style={{ fontSize: 9, color: theme.subtext, marginTop: 2 }}>(+₹{(checkoutInvoice?.totalAmount * 0.02).toFixed(2)} fee)</Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -601,6 +651,90 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
               )}
             </TouchableOpacity>
 
+          </View>
+        </View>
+      </Modal>
+
+      {/* Receipt Viewer Modal */}
+      <Modal
+        visible={!!selectedReceipt}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedReceipt(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.checkoutModalContent}>
+            {/* Modal Header */}
+            <View style={styles.checkoutHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#D1FAE5', justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
+                  <Ionicons name="checkmark-circle" size={22} color="#059669" />
+                </View>
+                <View>
+                  <Text style={styles.checkoutTitle}>Payment Receipt</Text>
+                  <Text style={styles.checkoutSubtitle}>#{selectedReceipt?.invoiceNumber || selectedReceipt?.invoice_number || selectedReceipt?.id}</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedReceipt(null)} style={styles.closeBtnDark}>
+                <Ionicons name="close" size={20} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Receipt Summary Card */}
+            <View style={[styles.amountSummaryBox, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0', marginVertical: 16 }]}>
+              <View>
+                <Text style={[styles.summaryLabel, { color: '#065F46' }]}>AMOUNT PAID</Text>
+                <Text style={[styles.summaryValue, { color: '#059669' }]}>₹{selectedReceipt?.amount || 0}</Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={[styles.summaryLabel, { color: '#065F46' }]}>STATUS</Text>
+                <View style={[styles.histStatusPill, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0', marginTop: 4 }]}>
+                  <View style={[styles.histStatusDot, { backgroundColor: '#10B981' }]} />
+                  <Text style={[styles.histStatusText, { color: '#059669' }]}>{selectedReceipt?.status || 'SUCCESS'}</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Receipt Details Breakdown */}
+            <View style={[styles.billBox, { marginBottom: 20 }]}>
+              <View style={styles.billRow}>
+                <Text style={styles.billLabel}>Invoice Number</Text>
+                <Text style={[styles.billValue, { fontWeight: '700' }]}>{selectedReceipt?.invoiceNumber || selectedReceipt?.invoice_number || 'N/A'}</Text>
+              </View>
+              <View style={styles.billRow}>
+                <Text style={styles.billLabel}>Transaction Ref</Text>
+                <Text style={[styles.billValue, { fontSize: 11 }]}>{selectedReceipt?.gatewayPaymentId || selectedReceipt?.gateway_payment_id || selectedReceipt?.id || 'N/A'}</Text>
+              </View>
+              <View style={styles.billRow}>
+                <Text style={styles.billLabel}>Date & Time</Text>
+                <Text style={styles.billValue}>
+                  {new Date(selectedReceipt?.completedAt || selectedReceipt?.createdAt || new Date()).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
+              {selectedReceipt?.description ? (
+                <View style={styles.billRow}>
+                  <Text style={styles.billLabel}>Description</Text>
+                  <Text style={styles.billValue}>{selectedReceipt.description}</Text>
+                </View>
+              ) : null}
+            </View>
+
+            {/* Modal Actions */}
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                style={[styles.proceedBtn, { flex: 1, backgroundColor: '#0F172A' }]}
+                onPress={() => setSelectedReceipt(null)}
+              >
+                <Text style={styles.proceedBtnText}>Close</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.proceedBtn, { flex: 1, backgroundColor: theme.primary }]}
+                onPress={handleShareReceipt}
+              >
+                <Ionicons name="share-outline" size={16} color="#FFF" style={{ marginRight: 6 }} />
+                <Text style={styles.proceedBtnText}>Share Receipt</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
