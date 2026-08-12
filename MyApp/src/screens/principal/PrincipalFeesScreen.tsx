@@ -478,13 +478,25 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
           </TouchableOpacity>
           {actionMenuId === item.id && (
             <View style={s.actionMenu}>
-              <TouchableOpacity style={s.actionMenuItem} onPress={() => { setActionMenuId(null); }}>
-                <Ionicons name="download-outline" size={16} color="#334155" />
-                <Text style={s.actionMenuText}>Download Receipt</Text>
+              <TouchableOpacity
+                style={[s.actionMenuItem, { opacity: 0.7 }]}
+                onPress={() => {
+                  setActionMenuId(null);
+                  Alert.alert('Export Not Available', 'Download receipt functionality is not yet available on the server.');
+                }}
+              >
+                <Ionicons name="download-outline" size={16} color="#64748B" />
+                <Text style={[s.actionMenuText, { color: '#64748B' }]}>Download Receipt</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.actionMenuItem} onPress={() => { setActionMenuId(null); }}>
-                <Ionicons name="book-outline" size={16} color="#334155" />
-                <Text style={s.actionMenuText}>View Ledger Entries</Text>
+              <TouchableOpacity
+                style={[s.actionMenuItem, { opacity: 0.7 }]}
+                onPress={() => {
+                  setActionMenuId(null);
+                  Alert.alert('Not Available', 'Ledger entries view is not yet available on the server.');
+                }}
+              >
+                <Ionicons name="book-outline" size={16} color="#64748B" />
+                <Text style={[s.actionMenuText, { color: '#64748B' }]}>View Ledger Entries</Text>
               </TouchableOpacity>
               {(item.status || '').toUpperCase() === 'PAID' && mainTab === 'refunds' && (
                 <TouchableOpacity
@@ -613,7 +625,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
           <Ionicons name="shield-checkmark" size={12} color="#059669" />
           <Text style={s.reconStatusText}>Matched & Reconciled</Text>
         </View>
-        
+
         <View style={{ position: 'relative' }}>
           <TouchableOpacity
             style={s.actionDotBtn}
@@ -623,13 +635,25 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
           </TouchableOpacity>
           {actionMenuId === item.id && (
             <View style={[s.actionMenu, { right: 0, top: 30, width: 180 }]}>
-              <TouchableOpacity style={s.actionMenuItem} onPress={() => { setActionMenuId(null); }}>
-                <Ionicons name="download-outline" size={16} color="#334155" />
-                <Text style={s.actionMenuText}>Download Receipt</Text>
+              <TouchableOpacity
+                style={[s.actionMenuItem, { opacity: 0.7 }]}
+                onPress={() => {
+                  setActionMenuId(null);
+                  Alert.alert('Export Not Available', 'Download receipt functionality is not yet available on the backend server.');
+                }}
+              >
+                <Ionicons name="download-outline" size={16} color="#64748B" />
+                <Text style={[s.actionMenuText, { color: '#64748B' }]}>Download Receipt</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.actionMenuItem} onPress={() => { setActionMenuId(null); }}>
-                <Ionicons name="book-outline" size={16} color="#334155" />
-                <Text style={s.actionMenuText}>View Ledger Entries</Text>
+              <TouchableOpacity
+                style={[s.actionMenuItem, { opacity: 0.7 }]}
+                onPress={() => {
+                  setActionMenuId(null);
+                  Alert.alert('Not Available', 'Ledger entries view is not yet available on the backend server.');
+                }}
+              >
+                <Ionicons name="book-outline" size={16} color="#64748B" />
+                <Text style={[s.actionMenuText, { color: '#64748B' }]}>View Ledger Entries</Text>
               </TouchableOpacity>
             </View>
           )}

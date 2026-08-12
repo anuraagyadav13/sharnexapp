@@ -1041,8 +1041,8 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                                 styles.miniActionBtn,
                                 styles.selectStaffBtn,
                                 selectedStaffIds.includes(log.teacherId) && {
-                                  borderColor: '#10B981',
-                                  backgroundColor: isDarkMode ? '#064E3B' : '#D1FAE5',
+                                  borderColor: theme.success || '#10B981',
+                                  backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : '#D1FAE5',
                                 }
                               ]}
                               onPress={() => toggleStaffSelection(log.teacherId)}
@@ -1052,12 +1052,12 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                               <Text style={[
                                 styles.selectStaffText,
                                 selectedStaffIds.includes(log.teacherId) && {
-                                  color: '#10B981',
+                                  color: theme.success || '#10B981',
                                   fontWeight: 'bold',
                                 }
                               ]}>
                                 {selectedStaffIds.includes(log.teacherId) ? (
-                                  <Ionicons name="checkmark" size={14} color="#10B981" />
+                                  <Ionicons name="checkmark" size={14} color={theme.success || '#10B981'} />
                                 ) : (
                                   'S'
                                 )}
@@ -1067,9 +1067,9 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                         )}
                       </View>
                       <View style={styles.logBadgeRow}>
-                        <View style={[styles.logStatusPill, { backgroundColor: log.status === 'Absent' ? '#FEE2E2' : (log.status.includes('OUT') ? '#FEF3C7' : '#D1FAE5') }]}>
-                          <View style={[styles.statusDot, { backgroundColor: log.status === 'Absent' ? '#EF4444' : (log.status.includes('OUT') ? '#F59E0B' : '#10B981') }]} />
-                          <Text style={[styles.logStatusText, { color: log.status === 'Absent' ? '#991B1B' : (log.status.includes('OUT') ? '#92400E' : '#065F46') }]}>{log.status}</Text>
+                        <View style={[styles.logStatusPill, { backgroundColor: log.status === 'Absent' ? (isDarkMode ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2') : (log.status.includes('OUT') ? (isDarkMode ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7') : (isDarkMode ? 'rgba(16, 185, 129, 0.2)' : '#D1FAE5')) }]}>
+                          <View style={[styles.statusDot, { backgroundColor: log.status === 'Absent' ? (theme.danger || '#EF4444') : (log.status.includes('OUT') ? (theme.warning || '#F59E0B') : (theme.success || '#10B981')) }]} />
+                          <Text style={[styles.logStatusText, { color: log.status === 'Absent' ? (theme.danger || '#EF4444') : (log.status.includes('OUT') ? (theme.warning || '#F59E0B') : (theme.success || '#10B981')) }]}>{log.status}</Text>
                         </View>
                         {log.isPresent && (
                           <View style={styles.methodBadge}>

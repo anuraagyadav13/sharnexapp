@@ -202,6 +202,7 @@ export const ENDPOINTS = {
     RMS_PUBLISH: '/rms/results/publish',
     RMS_PREVIEW: '/rms/results/preview',
     RMS_ADMIN: '/rms/results/admin',
+    RMS_MARKS_AUDIT: (marksId: string) => `/rms/marks/audit/${marksId}`,
     EQUIPMENT_REQUESTS: '/equipment/requests',
     ATTENDANCE: '/attendance',
     ATTENDANCE_SUMMARY: '/institution/attendance-summary',

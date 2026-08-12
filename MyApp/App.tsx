@@ -408,6 +408,10 @@ function RootNavigator() {
                 component={PrincipalCreateExam}
               />
               <Stack.Screen
+                name="PrincipalEditExam"
+                component={PrincipalCreateExam}
+              />
+              <Stack.Screen
                 name="PrincipalAddSubject"
                 component={PrincipalAddSubject}
               />

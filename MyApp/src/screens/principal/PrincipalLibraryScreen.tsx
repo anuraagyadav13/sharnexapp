@@ -1086,8 +1086,8 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
                 >
                   <View style={styles.cardHeader}>
                     <Text style={styles.bookTitleText}>{item.title}</Text>
-                    <View style={{ backgroundColor: isDarkMode ? '#4F46E530' : '#EEF2FF', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: isDarkMode ? '#818CF8' : '#4F46E5' }}>ISBN: {item.isbn}</Text>
+                    <View style={{ backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.2)' : '#F3E8FF', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: theme.primary }}>ISBN: {item.isbn}</Text>
                     </View>
                   </View>
                   <Text style={{ fontSize: 13, color: theme.subtext, marginBottom: 4 }}>Author: {item.author}</Text>

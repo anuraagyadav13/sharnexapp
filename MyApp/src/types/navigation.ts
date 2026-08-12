@@ -105,6 +105,7 @@ export type RootStackParamList = {
   PrincipalRMS: undefined;
   PrincipalReviewExam: { examId: string };
   PrincipalCreateExam: undefined;
+  PrincipalEditExam: { examId: string };
   PrincipalAddSubject: undefined;
   PrincipalEditSubject: { subjectId: string, initialData?: any };
   PrincipalAddClass: undefined;

@@ -6,8 +6,8 @@ import { ENDPOINTS } from '../constants/api';
 export interface ClassItem {
   id: string;
   name: string;
-  section: string | null;
-  grade: string | null;
+  section?: string;
+  grade?: string;
   academicYear: string;
   studentCount: number;
   teacherCount: number;
@@ -146,16 +146,52 @@ export interface ClassScheduleResponse {
   schedule: ScheduleDay[];
 }
 
+export interface RmsExamSubjectConfig {
+  id?: string;
+  marksId?: string;
+  subjectId: string;
+  subjectName?: string;
+  maxMarks: number;
+  passMarks: number;
+}
+
+export interface RmsParticipatingClass {
+  classId: string;
+  className?: string;
+  section?: string;
+  grade?: string;
+  subjects: RmsExamSubjectConfig[];
+}
+
 export interface RmsExamItem {
   id: string;
   name: string;
-  examType: 'MIDTERM' | 'FINAL' | 'UNIT_TEST' | 'QUARTERLY' | string;
+  examType: 'MIDTERM' | 'FINAL' | 'UNIT_TEST' | 'QUARTERLY' | 'HALF_YEARLY' | string;
   academicYear: string;
-  status: 'ACTIVE' | string;
+  status: 'ACTIVE' | 'DRAFT' | 'COMPLETED' | string;
   createdAt: string;
-  _count: {
+  description?: string;
+  classes_count?: number;
+  _count?: {
     classes: number;
   };
+  classes?: RmsParticipatingClass[];
+}
+
+export interface RmsExamDetail extends RmsExamItem {
+  createdBy?: string;
+}
+
+export interface RmsMarksAuditItem {
+  id: string;
+  marks_id?: string;
+  old_marks?: number | null;
+  new_marks?: number | null;
+  old_status?: string | null;
+  new_status?: string | null;
+  change_reason?: string | null;
+  created_at?: string;
+  changed_by_name?: string;
 }
 
 export interface AnnouncementItem {
@@ -391,8 +427,9 @@ const principalService = {
     return apiClient.get<any>(ENDPOINTS.PRINCIPAL.EXPORT_STUDENTS(classId));
   },
 
-  getSubjects() {
-    return apiClient.get<{ subjects: SubjectItem[] }>(ENDPOINTS.PRINCIPAL.SUBJECTS);
+  async getSubjects() {
+    const res = await apiClient.get<{ subjects: SubjectItem[] }>(ENDPOINTS.PRINCIPAL.SUBJECTS);
+    return res.data;
   },
 
   getTeachers(institutionId: string) {
@@ -434,8 +471,54 @@ const principalService = {
     return apiClient.get<ClassScheduleResponse>(`${ENDPOINTS.PRINCIPAL.CLASS_SCHEDULE(classId)}?week=${week}`);
   },
 
-  getRmsExams() {
-    return apiClient.get<{ data: RmsExamItem[] }>(`${ENDPOINTS.PRINCIPAL.RMS_EXAMS}?limit=100`);
+  async getRmsExams() {
+    const res = await apiClient.get<{ success?: boolean; data?: RmsExamItem[]; exams?: RmsExamItem[] }>(`${ENDPOINTS.PRINCIPAL.RMS_EXAMS}?limit=100`);
+    return res.data;
+  },
+
+  async getExamDetail(id: string) {
+    const res = await apiClient.get<{ success?: boolean; data: RmsExamDetail }>(ENDPOINTS.PRINCIPAL.EXAM_DETAIL(id));
+    return res.data;
+  },
+
+  async createExam(payload: {
+    name: string;
+    examType: string;
+    academicYear: string;
+    description?: string;
+    status?: string;
+    classes: {
+      classId: string;
+      subjects: { subjectId: string; maxMarks: number; passMarks: number }[];
+    }[];
+  }) {
+    const res = await apiClient.post<{ success?: boolean; message?: string; id?: string }>(ENDPOINTS.PRINCIPAL.RMS_EXAMS, payload);
+    return res.data;
+  },
+
+  async updateExam(id: string, payload: {
+    name?: string;
+    examType?: string;
+    academicYear?: string;
+    description?: string;
+    status?: string;
+    classes?: {
+      classId: string;
+      subjects: { subjectId: string; maxMarks: number; passMarks: number }[];
+    }[];
+  }) {
+    const res = await apiClient.patch<{ success?: boolean; message?: string }>(ENDPOINTS.PRINCIPAL.EXAM_DETAIL(id), payload);
+    return res.data;
+  },
+
+  async deleteExam(id: string) {
+    const res = await apiClient.delete<{ success?: boolean; message?: string }>(ENDPOINTS.PRINCIPAL.EXAM_DETAIL(id));
+    return res.data;
+  },
+
+  async getMarksAuditHistory(marksId: string) {
+    const res = await apiClient.get<RmsMarksAuditItem[] | { data: RmsMarksAuditItem[] }>(ENDPOINTS.PRINCIPAL.RMS_MARKS_AUDIT(marksId));
+    return res.data;
   },
 
   getAnnouncements(institutionId: string) {
