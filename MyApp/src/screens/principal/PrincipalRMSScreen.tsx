@@ -21,7 +21,7 @@ import { useAuth } from '../../store/AuthContext';
 import { getCacheBustedUri } from '../../utils/image';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
-import principalService, { RmsExamItem } from '../../services/principalService';
+import principalService, { RmsExamItem, RmsExamDetail } from '../../services/principalService';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 
 type PrincipalRMSNavigationProp = NativeStackNavigationProp<
@@ -53,6 +53,47 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [isExamDropdownOpen, setIsExamDropdownOpen] = useState<boolean>(false);
   const [isClassDropdownOpen, setIsClassDropdownOpen] = useState<boolean>(false);
+
+  const [selectedExamDetail, setSelectedExamDetail] = useState<RmsExamDetail | null>(null);
+  const [isLoadingExamDetail, setIsLoadingExamDetail] = useState<boolean>(false);
+  const [examDetailError, setExamDetailError] = useState<string | null>(null);
+
+  const fetchExamDetail = useCallback(async (examId: string) => {
+    if (!examId) {
+      setSelectedExamDetail(null);
+      setExamDetailError(null);
+      setIsLoadingExamDetail(false);
+      return;
+    }
+
+    setIsLoadingExamDetail(true);
+    setExamDetailError(null);
+    setSelectedExamDetail(null);
+
+    try {
+      const res = await principalService.getExamDetail(examId);
+      if (res && res.data) {
+        setSelectedExamDetail(res.data);
+      } else {
+        setExamDetailError('Unable to load participating classes.');
+      }
+    } catch (err: any) {
+      console.error('[PrincipalRMS] Error loading exam details:', err);
+      setExamDetailError(err?.message || 'Failed to load participating classes.');
+    } finally {
+      setIsLoadingExamDetail(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedExamId) {
+      fetchExamDetail(selectedExamId);
+    } else {
+      setSelectedExamDetail(null);
+      setExamDetailError(null);
+      setIsLoadingExamDetail(false);
+    }
+  }, [selectedExamId, fetchExamDetail]);
 
   const loadData = useCallback(async (showRefreshIndicator = false) => {
     if (showRefreshIndicator) {
@@ -106,9 +147,9 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
   }, [exams, selectedExamId]);
 
   const availableClasses = useMemo(() => {
-    if (!selectedExam || !selectedExam.classes) return [];
-    return selectedExam.classes;
-  }, [selectedExam]);
+    if (!selectedExamDetail || !selectedExamDetail.classes) return [];
+    return selectedExamDetail.classes;
+  }, [selectedExamDetail]);
 
   const selectedClassObj = useMemo(() => {
     return availableClasses.find((c) => c.classId === selectedClassId);
@@ -400,16 +441,27 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
                 disabled={!selectedExamId}
                 activeOpacity={0.8}
               >
-                <Text
-                  style={[
-                    styles.selectValueText,
-                    !selectedExamId && styles.selectValueDisabled,
-                  ]}
-                >
-                  {selectedClassObj
-                    ? selectedClassObj.className || `Class ${selectedClassObj.classId}`
-                    : '-- SELECT CLASS --'}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+                  {isLoadingExamDetail && (
+                    <ActivityIndicator size="small" color="#7C3AED" style={{ marginRight: 8 }} />
+                  )}
+                  <Text
+                    style={[
+                      styles.selectValueText,
+                      !selectedExamId && styles.selectValueDisabled,
+                      examDetailError ? { color: '#EF4444' } : null,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {isLoadingExamDetail
+                      ? 'Loading classes...'
+                      : examDetailError
+                      ? 'Failed to load classes'
+                      : selectedClassObj
+                      ? selectedClassObj.className || `Class ${selectedClassObj.classId}`
+                      : '-- SELECT CLASS --'}
+                  </Text>
+                </View>
                 <Ionicons name="chevron-down" size={18} color={theme.subtext} />
               </TouchableOpacity>
             </View>
@@ -495,37 +547,67 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
         >
           <View style={styles.dropdownModalCard}>
             <Text style={styles.dropdownModalTitle}>Select Class</Text>
-            <ScrollView style={{ maxHeight: 300 }}>
-              <TouchableOpacity
-                style={styles.dropdownOption}
-                onPress={() => {
-                  setSelectedClassId('');
-                  setIsClassDropdownOpen(false);
-                }}
-              >
-                <Text style={styles.dropdownOptionText}>-- SELECT CLASS --</Text>
-              </TouchableOpacity>
-              {availableClasses.map((cls) => (
+            {isLoadingExamDetail ? (
+              <View style={{ paddingVertical: 24, alignItems: 'center', justifyContent: 'center' }}>
+                <ActivityIndicator size="small" color="#7C3AED" />
+                <Text style={{ marginTop: 8, fontSize: 13, color: theme.subtext || '#64748B' }}>
+                  Loading participating classes...
+                </Text>
+              </View>
+            ) : examDetailError ? (
+              <View style={{ paddingVertical: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 }}>
+                <Ionicons name="alert-circle-outline" size={28} color="#EF4444" style={{ marginBottom: 6 }} />
+                <Text style={{ fontSize: 13, color: '#EF4444', textAlign: 'center', marginBottom: 12 }}>
+                  {examDetailError}
+                </Text>
                 <TouchableOpacity
-                  key={cls.classId}
-                  style={[
-                    styles.dropdownOption,
-                    selectedClassId === cls.classId && styles.dropdownOptionSelected,
-                  ]}
+                  style={{ backgroundColor: '#7C3AED', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 }}
+                  onPress={() => fetchExamDetail(selectedExamId)}
+                >
+                  <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 13 }}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <ScrollView style={{ maxHeight: 300 }}>
+                <TouchableOpacity
+                  style={styles.dropdownOption}
                   onPress={() => {
-                    setSelectedClassId(cls.classId);
+                    setSelectedClassId('');
                     setIsClassDropdownOpen(false);
                   }}
                 >
-                  <Text style={styles.dropdownOptionText}>
-                    {cls.className || `Class ${cls.classId}`}
-                  </Text>
-                  {selectedClassId === cls.classId && (
-                    <Ionicons name="checkmark" size={18} color="#7C3AED" />
-                  )}
+                  <Text style={styles.dropdownOptionText}>-- SELECT CLASS --</Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+                {availableClasses.length === 0 ? (
+                  <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 13, color: theme.subtext || '#64748B' }}>
+                      No participating classes found for this exam.
+                    </Text>
+                  </View>
+                ) : (
+                  availableClasses.map((cls) => (
+                    <TouchableOpacity
+                      key={cls.classId}
+                      style={[
+                        styles.dropdownOption,
+                        selectedClassId === cls.classId && styles.dropdownOptionSelected,
+                      ]}
+                      onPress={() => {
+                        setSelectedClassId(cls.classId);
+                        setIsClassDropdownOpen(false);
+                      }}
+                    >
+                      <Text style={styles.dropdownOptionText}>
+                        {cls.className || `Class ${cls.classId}`}
+                      </Text>
+                      {selectedClassId === cls.classId && (
+                        <Ionicons name="checkmark" size={18} color="#7C3AED" />
+                      )}
+                    </TouchableOpacity>
+                  ))
+                )}
+              </ScrollView>
+            )}
           </View>
         </TouchableOpacity>
       </Modal>

@@ -13,6 +13,7 @@ import {
   Alert,
   ActivityIndicator,
   Dimensions,
+  RefreshControl,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -43,6 +44,7 @@ const PrincipalStaffDetailsScreen: React.FC<Props> = ({ navigation, route }) => 
 
   const [activeTab, setActiveTab] = useState('personal');
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [staffData, setStaffData] = useState<any>(null);
 
   const EliteField = ({ icon, label, value, color = theme.subtext }: any) => (
@@ -66,19 +68,25 @@ const PrincipalStaffDetailsScreen: React.FC<Props> = ({ navigation, route }) => 
     </View>
   );
 
-  useEffect(() => {
-    const fetchDetails = async () => {
-      try {
+  const fetchDetails = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
         setIsLoading(true);
-        const res = await apiClient.get(`${ENDPOINTS.PRINCIPAL.STAFF}/${staffId}`);
-        setStaffData(res.data.data || res.data);
-      } catch (err) {
-        console.error('Failed to fetch staff details:', err);
-        setStaffData(null);
-      } finally {
-        setIsLoading(false);
       }
-    };
+      const res = await apiClient.get(`${ENDPOINTS.PRINCIPAL.STAFF}/${staffId}`);
+      setStaffData(res.data.data || res.data);
+    } catch (err) {
+      console.error('Failed to fetch staff details:', err);
+      setStaffData(null);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
     fetchDetails();
   }, [staffId]);
 
@@ -150,7 +158,19 @@ const PrincipalStaffDetailsScreen: React.FC<Props> = ({ navigation, route }) => 
            </ScrollView>
         </View>
 
-        <ScrollView style={styles.detailScroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.detailScrollContent}>
+        <ScrollView
+          style={styles.detailScroll}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.detailScrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => fetchDetails(true)}
+              colors={[theme.primary]}
+              tintColor={theme.primary}
+            />
+          }
+        >
           
           {activeTab === 'personal' && (
             <Animated.View entering={FadeInUp.duration(300)}>

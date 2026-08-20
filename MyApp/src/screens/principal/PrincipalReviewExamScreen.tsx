@@ -10,6 +10,7 @@ import {
   StatusBar,
   Image,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
@@ -27,20 +28,26 @@ export const PrincipalReviewExamScreen = ({ navigation, route }: any) => {
 
   const [exam, setExam] = useState<RmsExamDetail | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   // Audit modal state
   const [auditMarksId, setAuditMarksId] = useState<string | null>(null);
 
-  const loadExamDetail = useCallback(async () => {
+  const loadExamDetail = useCallback(async (isRefresh = false) => {
     if (!examId) {
       setError('Exam ID is missing.');
       setIsLoading(false);
+      setIsRefreshing(false);
       return;
     }
 
     try {
-      setIsLoading(true);
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       setError(null);
       const res = await principalService.getExamDetail(examId);
       if (res && res.data) {
@@ -53,6 +60,7 @@ export const PrincipalReviewExamScreen = ({ navigation, route }: any) => {
       setError(err?.message || 'Unable to fetch exam details.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, [examId]);
 
@@ -199,12 +207,23 @@ export const PrincipalReviewExamScreen = ({ navigation, route }: any) => {
         <View style={styles.errorBox}>
           <Ionicons name="alert-circle" size={24} color="#EF4444" />
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={loadExamDetail}>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => loadExamDetail()}>
             <Text style={styles.retryBtnText}>Retry</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <ScrollView style={styles.scrollBody} contentContainerStyle={styles.scrollBodyContent}>
+        <ScrollView
+          style={styles.scrollBody}
+          contentContainerStyle={styles.scrollBodyContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => loadExamDetail(true)}
+              colors={[theme.primary]}
+              tintColor={theme.primary}
+            />
+          }
+        >
           {/* Summary Stat Cards */}
           <View style={styles.statCardsRow}>
             {/* Card 1: Participating Classes */}

@@ -254,9 +254,13 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
     fetchData();
   }, [selectedDate]);
 
-  const fetchData = async () => {
+  const fetchData = async (isRefresh = false) => {
     try {
-      if (!isRefreshing) setIsLoading(true);
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else if (!isRefreshing) {
+        setIsLoading(true);
+      }
 
       const dateStr = selectedDate.toISOString().split('T')[0];
       const institutionId = authState.user?.institutionId || '';
@@ -384,7 +388,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
 
   const onRefresh = () => {
     setIsRefreshing(true);
-    fetchData();
+    fetchData(true);
   };
 
   const toggleStaffSelection = (id: string) => {
@@ -743,7 +747,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
           style={styles.container}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />}
         >
           <View style={styles.pageHeader}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>

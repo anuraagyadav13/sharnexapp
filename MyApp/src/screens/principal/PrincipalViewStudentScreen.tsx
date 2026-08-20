@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  RefreshControl,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import apiClient, { getApiErrorMessage } from '../../services/apiClient';
@@ -23,6 +24,7 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
 
   const { studentId } = route.params;
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [student, setStudent] = useState<any>(null);
 
   const InfoField = ({ label, value }: { label: string, value: string | null | undefined }) => (
@@ -32,22 +34,29 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
     </View>
   );
 
-  useEffect(() => {
-    const fetchStudentData = async () => {
-      try {
-        const response = await principalService.getStudentDetail(studentId);
-        const rawData = response.data?.data || response.data || {};
-        const data = rawData.student || rawData;
-        setStudent(data);
-      } catch (error) {
-        console.error('Failed to fetch student:', error);
-        Alert.alert('Error', getApiErrorMessage(error), [
-          { text: 'Go Back', onPress: () => navigation.goBack() }
-        ]);
-      } finally {
-        setIsLoading(false);
+  const fetchStudentData = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
       }
-    };
+      const response = await principalService.getStudentDetail(studentId);
+      const rawData = response.data?.data || response.data || {};
+      const data = rawData.student || rawData;
+      setStudent(data);
+    } catch (error) {
+      console.error('Failed to fetch student:', error);
+      Alert.alert('Error', getApiErrorMessage(error), [
+        { text: 'Go Back', onPress: () => navigation.goBack() }
+      ]);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
     fetchStudentData();
   }, [studentId]);
 
@@ -95,7 +104,19 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
     <View style={styles.mainContainer}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.background} translucent />
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => fetchStudentData(true)}
+            colors={[theme.primary]}
+            tintColor={theme.primary}
+          />
+        }
+      >
         
         {/* Top Header */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingTop: Platform.OS === 'ios' ? 40 : 20 }}>
