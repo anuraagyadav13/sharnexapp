@@ -32,7 +32,7 @@ interface Props {
 
 const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
 
@@ -215,7 +215,7 @@ const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
 };
 
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 
@@ -264,7 +264,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   pageSubtitle: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
 
   infoBanner: {
-    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F3F4F6',
+    backgroundColor: isDarkMode ? '#1E293B' : '#F3F4F6',
     borderLeftWidth: 4,
     borderLeftColor: theme.primary,
     paddingVertical: 12,
@@ -290,7 +290,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     overflow: 'hidden', 
   },
   cardTop: {
-    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F3F8FF', 
+    backgroundColor: isDarkMode ? '#1E293B' : '#F3F8FF', 
     padding: 16,
   },
   typePill: {
@@ -334,7 +334,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginBottom: 16,
   },
   tagPill: {
-    backgroundColor: theme.isDarkMode ? '#312E8130' : '#EEF2FF',
+    backgroundColor: isDarkMode ? '#312E8130' : '#EEF2FF',
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 16,

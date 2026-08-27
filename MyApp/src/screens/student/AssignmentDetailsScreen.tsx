@@ -32,7 +32,7 @@ interface Props {
 
 const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   const { theme, isDarkMode, toggleDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const { authState } = useAuth();
   const assignmentId = route?.params?.assignmentId;
   const [assignmentData, setAssignmentData] = useState<any>(null);
@@ -268,7 +268,7 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
 
   globalHeader: {
@@ -334,19 +334,18 @@ const getStyles = (theme: any) => StyleSheet.create({
   cardsContainer: {
     paddingHorizontal: 16,
     paddingTop: 24, // Normal distinct space below the blue header
-    gap: 16,
+    gap: 20,
   },
 
   card: {
     backgroundColor: theme.surface,
-    borderRadius: 20, // richer, modern curve
-    paddingVertical: 22,
-    paddingHorizontal: 20,
+    borderRadius: 12,
+    padding: 20,
     shadowColor: '#1E293B', // sophisticated deep shadow tint
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
     borderWidth: 1,
     borderColor: theme.border, // very subtle, rich translucent border
   },
@@ -359,7 +358,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: theme.isDarkMode ? '#1E3A8A' : '#EFF6FF',
+    backgroundColor: isDarkMode ? '#1E3A8A' : '#EFF6FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
@@ -439,7 +438,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F8FAFC', // exact subtle blueish-grey fill
+    backgroundColor: isDarkMode ? '#334155' : '#F8FAFC', // exact subtle blueish-grey fill
     borderRadius: 8,
     borderWidth: 1,
     borderColor: theme.border,

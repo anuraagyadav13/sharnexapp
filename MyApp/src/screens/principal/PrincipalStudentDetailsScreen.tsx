@@ -498,8 +498,8 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
   const renderHeader = useCallback(() => (
     <View>
       <View style={styles.pageHeader}>
-        <Text style={styles.screenTitle}>Student Directory</Text>
-        <Text style={styles.screenSubtitle}>Class-wise student roster & metrics</Text>
+        <Text style={styles.screenTitle}>Students details</Text>
+        <Text style={styles.screenSubtitle}>Class-Wise students details</Text>
       </View>
 
       {/* Stats Summary Grid (3 Cards) */}

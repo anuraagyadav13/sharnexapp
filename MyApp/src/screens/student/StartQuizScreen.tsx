@@ -30,7 +30,7 @@ interface Props {
 
 const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
 
   const [quizData, setQuizData] = useState<any>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -465,7 +465,7 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 
@@ -646,7 +646,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9',
+    backgroundColor: isDarkMode ? '#334155' : '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,

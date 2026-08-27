@@ -68,7 +68,7 @@ const StatCard = ({ title, value, color, icon }: { title: string, value: string 
   );
 };
 
-const StaffCard = ({ item, index, delay, onToggleStatus }: any) => {
+const StaffCard = ({ item, index, delay, onToggleStatus, onEnrollFace }: any) => {
   const { theme } = useTheme();
   const styles = getStyles(theme);
   const navigation = useNavigation<any>();
@@ -95,12 +95,28 @@ const StaffCard = ({ item, index, delay, onToggleStatus }: any) => {
           <TouchableOpacity onPress={() => onToggleStatus(item.id, item.isActive)} style={styles.actionBtn}>
             <Ionicons name={item.isActive ? "ban-outline" : "checkmark-circle-outline"} size={18} color={item.isActive ? "#EF4444" : "#10B981"} />
           </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => onEnrollFace(item.id, item.faceEnrolled)}
+            style={[styles.actionBtn, { opacity: item.faceEnrolled ? 0.5 : 1 }]}
+            accessibilityLabel={item.faceEnrolled ? 'Face already enrolled' : 'Enroll face'}
+          >
+            <Ionicons
+              name={item.faceEnrolled ? 'scan-circle' : 'scan-circle-outline'}
+              size={18}
+              color={item.faceEnrolled ? '#10B981' : theme.subtext}
+            />
+          </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.badgeRow}>
         <View style={styles.badge}><Text style={styles.badgeText}>{item.department || 'General'}</Text></View>
         <View style={[styles.statusBadge, { backgroundColor: item.isActive ? '#E0F2FE' : '#FEE2E2' }]}><Text style={[styles.statusText, { color: item.isActive ? '#0284C7' : '#EF4444' }]}>{item.isActive ? 'Active' : 'Inactive'}</Text></View>
+        {item.faceEnrolled && (
+          <View style={[styles.statusBadge, { backgroundColor: '#DCFCE7' }]}>
+            <Text style={[styles.statusText, { color: '#059669' }]}>Face ✓</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.contactFooter}>
@@ -131,6 +147,7 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedClassForAssign, setSelectedClassForAssign] = useState<any>(null);
   const [assignForm, setAssignForm] = useState({ classId: '', teacherId: '' });
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE' | 'FACE_ENROLLED'>('ALL');
   const [toast, setToast] = useState<{ visible: boolean; message: string; type: ToastType; onUndo?: () => void }>({
     visible: false,
     message: '',
@@ -263,6 +280,36 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
     );
   };
 
+  const handleEnrollFace = (id: string, alreadyEnrolled: boolean) => {
+    if (alreadyEnrolled) {
+      showToast('Face already enrolled for this staff member.', 'info');
+      return;
+    }
+    Alert.alert(
+      'Enroll Face',
+      'This will trigger face enrollment for this staff member. Proceed?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Enroll',
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              await apiClient.post(`/teachers/${id}/enroll-face`, {});
+              showToast('Face enrollment initiated successfully.', 'success');
+              fetchData();
+            } catch (error: any) {
+              const msg = error?.response?.data?.message || error?.message || 'Failed to initiate face enrollment.';
+              showToast(msg, 'error');
+            } finally {
+              setIsLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <View style={styles.mainContainer}>
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} translucent />
@@ -311,7 +358,7 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.primary]} />}
         >
           <View style={styles.pageHeader}>
-            <Text style={styles.screenTitle}>Staff Managment</Text>
+            <Text style={styles.screenTitle}>Staff Management</Text>
             <Text style={styles.screenSubtitle}>Manage teaching and administrative staff members.</Text>
           </View>
 
@@ -351,14 +398,40 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
           </View>
 
           <View style={styles.listContainer}>
+            {/* Staff Directory heading + filter pills */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Staff Directory</Text>
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+              {(['ALL', 'ACTIVE', 'INACTIVE', 'FACE_ENROLLED'] as const).map(f => (
+                <TouchableOpacity
+                  key={f}
+                  onPress={() => setStatusFilter(f)}
+                  style={[
+                    { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: statusFilter === f ? theme.primary : theme.border, backgroundColor: statusFilter === f ? theme.primary : theme.surface },
+                  ]}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: statusFilter === f ? '#FFF' : theme.subtext }}>
+                    {f === 'ALL' ? 'All' : f === 'ACTIVE' ? 'Active' : f === 'INACTIVE' ? 'Inactive' : 'Face Enrolled'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             {staffList
-              .filter(s =>
-                s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                s.department?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                s.id?.toLowerCase().includes(searchQuery.toLowerCase())
-              )
+              .filter(s => {
+                const matchesSearch = (
+                  s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  s.department?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  s.id?.toLowerCase().includes(searchQuery.toLowerCase())
+                );
+                if (!matchesSearch) return false;
+                if (statusFilter === 'ACTIVE') return s.isActive;
+                if (statusFilter === 'INACTIVE') return !s.isActive;
+                if (statusFilter === 'FACE_ENROLLED') return s.faceEnrolled;
+                return true;
+              })
               .map((item, index) => (
-                <StaffCard key={item.id} item={item} index={index} delay={index * 50} onToggleStatus={handleToggleStatus} />
+                <StaffCard key={item.id} item={item} index={index} delay={index * 50} onToggleStatus={handleToggleStatus} onEnrollFace={handleEnrollFace} />
               ))}
           </View>
 

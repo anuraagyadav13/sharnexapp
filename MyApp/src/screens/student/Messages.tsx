@@ -213,7 +213,7 @@ const Messages = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -848,7 +848,6 @@ const Messages = () => {
               })
             )}
           </ScrollView>
-
           <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="student" />
         </View>
       )}
@@ -856,7 +855,7 @@ const Messages = () => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.background,
@@ -879,16 +878,18 @@ const getStyles = (theme: any) => StyleSheet.create({
   backBtn: {
     padding: 4,
   },
-  menuBtn: {
-    padding: 4,
-  },
-  centerHeaderTitle: {
-    alignItems: 'center',
-  },
-  headerMainTitle: {
+  headerTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: theme.text,
+    color: theme.primary,
+  },
+  headerSubTitle: {
+    fontSize: 11,
+    color: theme.subtext,
+    marginTop: 2,
+  },
+  menuBtn: {
+    padding: 4,
   },
   portalLabel: {
     fontSize: 9,
@@ -987,10 +988,10 @@ const getStyles = (theme: any) => StyleSheet.create({
     elevation: 2,
   },
   chatRowSelected: {
-    borderColor: theme.isDarkMode ? '#312E81' : '#C7D2FE',
+    borderColor: isDarkMode ? '#312E81' : '#C7D2FE',
     borderLeftWidth: 4,
     borderLeftColor: theme.primary,
-    backgroundColor: theme.isDarkMode ? '#1E1B4B' : '#F5F7FF',
+    backgroundColor: isDarkMode ? '#1E1B4B' : '#F5F7FF',
   },
   chatInfo: {
     flex: 1,

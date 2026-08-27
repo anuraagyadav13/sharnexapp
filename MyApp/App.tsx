@@ -396,7 +396,6 @@ function RootNavigator() {
               />
               <Stack.Screen name="PrincipalFees" component={PrincipalFees} />
               <Stack.Screen name="PrincipalCreateInvoice" component={PrincipalCreateInvoice} />
-              <Stack.Screen name="PrincipalRSM" component={PrincipalRMS} />
               <Stack.Screen name="PrincipalRMS" component={PrincipalRMS} />
               <Stack.Screen name="PrincipalReviewExam" component={PrincipalReviewExamScreen} />
               <Stack.Screen name="PrincipalClassDetail" component={PrincipalClassDetailScreen} />

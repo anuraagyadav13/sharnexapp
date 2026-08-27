@@ -415,6 +415,10 @@ const principalService = {
     return apiClient.delete<any>(ENDPOINTS.PRINCIPAL.DELETE_STUDENT(studentId));
   },
 
+  getExamResultsAdmin(examId: string, classId: string) {
+    return apiClient.get<{ data: any }>(`${ENDPOINTS.PRINCIPAL.RMS_ADMIN}?examId=${examId}&classId=${classId}`);
+  },
+
   updateStudent(studentId: string, payload: any) {
     return apiClient.put<any>(ENDPOINTS.PRINCIPAL.UPDATE_STUDENT(studentId), payload);
   },

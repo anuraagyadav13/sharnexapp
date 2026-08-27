@@ -36,7 +36,7 @@ const formatSeconds = (seconds: number | null | undefined): string => {
 
 const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
 
   const ScoreRow = ({ label, value, hideBorder = false, valueColor = theme.text }: any) => (
     <View style={[styles.scoreRow, hideBorder && { borderBottomWidth: 0 }]}>
@@ -473,7 +473,7 @@ const QuizDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 
@@ -499,14 +499,18 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderLeftWidth: 1, borderRightWidth: 1, borderBottomWidth: 1, borderColor: theme.border,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 4,
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 4,
     marginBottom: 20, 
   },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  infoLeft: { flex: 1, marginRight: 10 },
+  infoLeft: { flex: 1, paddingRight: 10 },
   infoTitle: { fontSize: 16, fontWeight: '700', color: theme.text, marginBottom: 8 },
   infoMetaRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  infoMetaText: { fontSize: 11, color: theme.subtext, fontWeight: '400' },
+  infoMetaText: { fontSize: 11, color: theme.subtext, fontWeight: '500' },
 
   infoRight: { alignItems: 'center', width: 80 },
   scoreRing: {
@@ -549,7 +553,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 4,
   },
   tabActiveBg: { 
-    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F8FAFC', 
+    backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC', 
     borderBottomColor: theme.primary 
   },
   tabText: { fontSize: 11, fontWeight: '600', color: theme.subtext, textAlign: 'center' },
@@ -597,7 +601,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '700',
   },
   inactiveFilterPill: {
-    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F1F5F9', 
+    backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9', 
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -609,7 +613,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
 
   questionCard: {
-    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F8FAFC',
+    backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC',
     borderRadius: 12,
     marginBottom: 16,
     padding: 16,

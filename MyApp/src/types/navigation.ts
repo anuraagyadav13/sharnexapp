@@ -25,7 +25,7 @@ export type RootStackParamList = {
   AccountSettings: { targetTab?: 'Personal Details' | 'Parent Information' | 'Preferences' } | undefined;
   Messages: { recipientId?: string; recipientName?: string } | undefined;
 
-  OfficialResult: { resultId: string };
+  OfficialResult: { resultId?: string; examId?: string };
   ResultManagement: undefined;
   Timetable: undefined;
 

@@ -34,7 +34,7 @@ interface Props {
 const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
     console.log('[Assignments] screen mounted');
   const { theme, isDarkMode, toggleDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [assignments, setAssignments] = useState<any[]>([]);
@@ -322,7 +322,7 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
   
@@ -469,9 +469,9 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 20, 
-    backgroundColor: theme.isDarkMode ? '#1E3A8A' : '#EFF6FF',
+    backgroundColor: isDarkMode ? '#1E3A8A' : '#EFF6FF',
     borderWidth: 1,
-    borderColor: theme.isDarkMode ? '#3B82F6' : '#93C5FD',
+    borderColor: isDarkMode ? '#3B82F6' : '#93C5FD',
   },
   categoryBadgeText: {
     fontSize: 11,
@@ -482,21 +482,21 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 20, 
-    backgroundColor: theme.isDarkMode ? '#78350F30' : '#FFFBEB',
+    backgroundColor: isDarkMode ? '#78350F30' : '#FFFBEB',
     borderWidth: 1,
-    borderColor: theme.isDarkMode ? '#D97706' : '#FCD34D',
+    borderColor: isDarkMode ? '#D97706' : '#FCD34D',
   },
   statusBadgeText: {
     fontSize: 11,
-    fontWeight: '500',
+    fontWeight: '500', 
     color: '#F59E0B',
   },
   statusBadgeSubmitted: {
-    backgroundColor: theme.isDarkMode ? '#065F4630' : '#ECFDF5',
-    borderColor: theme.isDarkMode ? '#34D399' : '#6EE7B7',
+    backgroundColor: isDarkMode ? '#065F4630' : '#ECFDF5',
+    borderColor: isDarkMode ? '#34D399' : '#6EE7B7',
   },
   statusBadgeTextSubmitted: {
-    color: theme.isDarkMode ? '#34D399' : '#10B981',
+    color: isDarkMode ? '#34D399' : '#10B981',
   },
   
   cardTitle: {

@@ -30,7 +30,7 @@ interface Props {
 
 const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const { authState } = useAuth();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [performance, setPerformance] = useState<any>(null);
@@ -680,7 +680,7 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 
@@ -745,7 +745,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   noAttemptText: { fontSize: 12, fontStyle: 'italic', color: theme.subtext, marginTop: 4 },
   subjectAttemptCaption: { fontSize: 11, color: theme.subtext, fontWeight: '500', marginTop: 6 },
 
-  progressBarBg: { height: 7, backgroundColor: theme.isDarkMode ? '#334155' : '#E2E8F0', borderRadius: 4, width: '100%', overflow: 'hidden' },
+  progressBarBg: { height: 7, backgroundColor: isDarkMode ? '#334155' : '#E2E8F0', borderRadius: 4, width: '100%', overflow: 'hidden' },
   progressBarFill: { height: '100%', borderRadius: 4 },
 
   // Chips
@@ -754,7 +754,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F1F5F9',
+    backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9',
     borderWidth: 1,
     borderColor: theme.border,
   },
@@ -780,14 +780,14 @@ const getStyles = (theme: any) => StyleSheet.create({
 
   // Month Scores Indicator List
   monthScoresRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 8 },
-  monthScoreBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: theme.isDarkMode ? '#1E293B' : '#F8FAFC' },
+  monthScoreBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC' },
   monthScoreBadgeActive: { borderWidth: 1, borderColor: theme.primary },
   dotIndicator: { width: 6, height: 6, borderRadius: 3 },
   monthScoreLabel: { fontSize: 11, color: theme.subtext, fontWeight: '500' },
 
   // Attendance Grid & Chart Layout
   attGridContainer: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, marginVertical: 12 },
-  attGridTile: { flex: 1, backgroundColor: theme.isDarkMode ? '#1E293B' : '#F8FAFC', borderRadius: 8, padding: 10, alignItems: 'center' },
+  attGridTile: { flex: 1, backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC', borderRadius: 8, padding: 10, alignItems: 'center' },
   attTileVal: { fontSize: 14, fontWeight: '800', color: theme.text, marginTop: 4 },
   attTileLbl: { fontSize: 10, color: theme.subtext, fontWeight: '500' },
 
@@ -823,7 +823,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: theme.isDarkMode ? '#311414' : '#FEE2E2',
+    backgroundColor: isDarkMode ? '#311414' : '#FEE2E2',
     padding: 10,
     borderRadius: 8,
   },
@@ -860,7 +860,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     lineHeight: 18,
   },
   motivationBox: {
-    backgroundColor: theme.isDarkMode ? '#1E1B4B' : '#F3E8FF',
+    backgroundColor: isDarkMode ? '#1E1B4B' : '#F3E8FF',
     borderLeftWidth: 4,
     borderLeftColor: '#9333EA',
     padding: 12,

@@ -33,7 +33,7 @@ interface Props {
   navigation: PrincipalRMSNavigationProp;
 }
 
-type TabType = 'Exam Definitions' | 'View Results';
+type TabType = 'Exam Definitions' | 'Analyze Results';
 
 const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, isDarkMode } = useTheme();
@@ -57,6 +57,10 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
   const [selectedExamDetail, setSelectedExamDetail] = useState<RmsExamDetail | null>(null);
   const [isLoadingExamDetail, setIsLoadingExamDetail] = useState<boolean>(false);
   const [examDetailError, setExamDetailError] = useState<string | null>(null);
+
+  const [examResults, setExamResults] = useState<any[]>([]);
+  const [isLoadingResults, setIsLoadingResults] = useState<boolean>(false);
+  const [resultsError, setResultsError] = useState<string | null>(null);
 
   const fetchExamDetail = useCallback(async (examId: string) => {
     if (!examId) {
@@ -94,6 +98,31 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
       setIsLoadingExamDetail(false);
     }
   }, [selectedExamId, fetchExamDetail]);
+
+  const fetchResults = useCallback(async () => {
+    if (!selectedExamId || !selectedClassId) return;
+    setIsLoadingResults(true);
+    setResultsError(null);
+    try {
+      const res = await principalService.getExamResultsAdmin(selectedExamId, selectedClassId);
+      const data = res.data?.data || res.data || [];
+      setExamResults(Array.isArray(data) ? data : data.results || []);
+    } catch (err: any) {
+      console.warn('Failed to fetch results:', err);
+      setResultsError(err?.message || 'Failed to fetch results');
+    } finally {
+      setIsLoadingResults(false);
+    }
+  }, [selectedExamId, selectedClassId]);
+
+  useEffect(() => {
+    if (selectedExamId && selectedClassId) {
+      fetchResults();
+    } else {
+      setExamResults([]);
+      setResultsError(null);
+    }
+  }, [selectedExamId, selectedClassId, fetchResults]);
 
   const loadData = useCallback(async (showRefreshIndicator = false) => {
     if (showRefreshIndicator) {
@@ -333,12 +362,12 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'View Results' && styles.tabButtonActive]}
-          onPress={() => setActiveTab('View Results')}
+          style={[styles.tabButton, activeTab === 'Analyze Results' && styles.tabButtonActive]}
+          onPress={() => setActiveTab('Analyze Results')}
           activeOpacity={0.8}
         >
-          <Text style={[styles.tabText, activeTab === 'View Results' && styles.tabTextActive]}>
-            View Results
+          <Text style={[styles.tabText, activeTab === 'Analyze Results' && styles.tabTextActive]}>
+            Analyze Results
           </Text>
         </TouchableOpacity>
       </View>
@@ -407,7 +436,7 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
           )}
         </View>
       ) : (
-        /* Tab 2: View Results Selector View */
+        /* Tab 2: Analyze Results Selector View */
         <ScrollView style={styles.tabContent} contentContainerStyle={styles.resultsTabContent}>
           <View style={styles.filterCard}>
             {/* Target Examination Dropdown */}
@@ -468,17 +497,59 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
           </View>
 
           {/* Selector scope boundary state */}
-          <View style={styles.resultsPlaceholderCard}>
-            <Ionicons name="stats-chart-outline" size={48} color="#7C3AED" style={{ marginBottom: 12 }} />
-            <Text style={styles.placeholderTitle}>Exam Results View</Text>
-            <Text style={styles.placeholderSubtext}>
-              {!selectedExamId
-                ? 'Select a published examination above to load participating classes.'
-                : !selectedClassId
-                ? 'Now select a participating class to view generated student results.'
-                : `Viewing results for ${selectedExam?.name} — ${selectedClassObj?.className || 'Selected Class'}.`}
-            </Text>
-          </View>
+          {!selectedExamId || !selectedClassId ? (
+            <View style={styles.resultsPlaceholderCard}>
+              <Ionicons name="stats-chart-outline" size={48} color="#7C3AED" style={{ marginBottom: 12 }} />
+              <Text style={styles.placeholderTitle}>Exam Results View</Text>
+              <Text style={styles.placeholderSubtext}>
+                {!selectedExamId
+                  ? 'Select a published examination above to load participating classes.'
+                  : 'Now select a participating class to view generated student results.'}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.resultsContainer}>
+              <Text style={styles.resultsHeaderTitle}>Results for {selectedClassObj?.className}</Text>
+              {isLoadingResults ? (
+                <View style={{ padding: 40, alignItems: 'center' }}>
+                  <ActivityIndicator size="large" color="#7C3AED" />
+                  <Text style={{ marginTop: 12, color: theme.subtext }}>Fetching results...</Text>
+                </View>
+              ) : resultsError ? (
+                <View style={{ padding: 40, alignItems: 'center' }}>
+                  <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+                  <Text style={{ marginTop: 12, color: '#EF4444' }}>{resultsError}</Text>
+                </View>
+              ) : examResults.length === 0 ? (
+                <View style={{ padding: 40, alignItems: 'center' }}>
+                  <Ionicons name="document-text-outline" size={48} color={theme.subtext} />
+                  <Text style={{ marginTop: 12, color: theme.subtext }}>No results found for this class.</Text>
+                </View>
+              ) : (
+                examResults.map((result, idx) => (
+                  <View key={result.studentId || idx} style={styles.resultRow}>
+                    <View style={styles.resultStudentInfo}>
+                      <View style={styles.avatar}>
+                        <Text style={styles.avatarText}>{(result.studentName || 'S').charAt(0)}</Text>
+                      </View>
+                      <View style={{ marginLeft: 12 }}>
+                        <Text style={styles.resultStudentName}>{result.studentName}</Text>
+                        <Text style={styles.resultStudentRoll}>Roll No: {result.rollNumber || 'N/A'}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.resultScoreInfo}>
+                      <Text style={styles.resultScoreValue}>
+                        {result.percentage !== undefined ? `${Number(result.percentage).toFixed(1)}%` : '-'}
+                      </Text>
+                      <Text style={[styles.resultGradeValue, { color: result.grade === 'F' ? '#EF4444' : '#10B981' }]}>
+                        {result.grade || 'N/A'}
+                      </Text>
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
+          )}
         </ScrollView>
       )}
 
@@ -961,25 +1032,75 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       color: theme.subtext || '#94A3B8',
     },
     resultsPlaceholderCard: {
-      backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
-      borderRadius: 14,
+      backgroundColor: theme.surface,
+      marginHorizontal: 16,
+      borderRadius: 12,
+      padding: 32,
+      alignItems: 'center',
       borderWidth: 1,
       borderColor: theme.border,
-      padding: 24,
-      alignItems: 'center',
-      justifyContent: 'center',
+      borderStyle: 'dashed',
     },
     placeholderTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.text,
+      marginBottom: 8,
+    },
+    placeholderSubtext: {
+      fontSize: 14,
+      color: theme.subtext,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+    resultsContainer: {
+      marginHorizontal: 16,
+      marginTop: 16,
+      marginBottom: 32,
+    },
+    resultsHeaderTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.text,
+      marginBottom: 12,
+    },
+    resultRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: theme.surface,
+      padding: 16,
+      borderRadius: 12,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    resultStudentInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    resultStudentName: {
       fontSize: 15,
       fontWeight: '700',
       color: theme.text,
-      marginBottom: 4,
     },
-    placeholderSubtext: {
+    resultStudentRoll: {
       fontSize: 12,
-      color: theme.subtext || '#64748B',
-      textAlign: 'center',
-      lineHeight: 16,
+      color: theme.subtext,
+      marginTop: 2,
+    },
+    resultScoreInfo: {
+      alignItems: 'flex-end',
+    },
+    resultScoreValue: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: theme.text,
+    },
+    resultGradeValue: {
+      fontSize: 14,
+      fontWeight: '700',
+      marginTop: 2,
     },
     modalOverlay: {
       flex: 1,

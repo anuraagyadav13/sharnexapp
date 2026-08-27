@@ -26,7 +26,7 @@ interface Props {
 
 const ViewQuizDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const { authState } = useAuth();
 
   const [quizData, setQuizData] = useState<any>(null);
@@ -286,7 +286,7 @@ const ViewQuizDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 
@@ -330,7 +330,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   infoRowRight: { fontSize: 12, color: theme.text, fontWeight: '600' },
 
   warningPill: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: theme.isDarkMode ? '#C2410C30' : '#FFF7ED',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: isDarkMode ? '#C2410C30' : '#FFF7ED',
     alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, marginTop: 4
   },
   warningPillText: { color: '#F97316', fontSize: 10, fontWeight: '600' },
@@ -359,7 +359,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '700',
   },
   actionBtnDisabled: {
-    backgroundColor: theme.isDarkMode ? '#334155' : '#E2E8F0',
+    backgroundColor: isDarkMode ? '#334155' : '#E2E8F0',
     borderRadius: 12,
     paddingVertical: 14,
     flexDirection: 'row',

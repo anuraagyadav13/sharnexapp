@@ -62,7 +62,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isActivityCollapsed, setIsActivityCollapsed] = useState(false);
-  const [isApprovalsCollapsed, setIsApprovalsCollapsed] = useState(false);
+  const [isApprovalsCollapsed, setIsApprovalsCollapsed] = useState(false);  const [activeGuide, setActiveGuide] = useState<string | null>(null);
   const [toast, setToast] = useState<{ visible: boolean; message: string; type: ToastType }>({
     visible: false,
     message: '',
@@ -387,21 +387,21 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
           <View style={[styles.sectionPadding, { marginTop: 16 }]}>
             <View style={styles.metricRow}>
               <MetricCard
-                title="STUDENTS"
+                title="Total Students"
                 value={stats.students}
                 trend={dashboardData?.stats?.students?.trend}
                 icon="school"
                 color="#4F46E5"
               />
               <MetricCard
-                title="STAFF"
+                title="Teaching Staff"
                 value={stats.staff}
                 trend={dashboardData?.stats?.teachers?.trend}
                 icon="people"
                 color="#8B5CF6"
               />
               <MetricCard
-                title="ATTENDANCE"
+                title="Attendance Rate"
                 value={stats.attendance !== null ? `${stats.attendance}%` : null}
                 trend={dashboardData?.stats?.attendance?.trend}
                 icon="calendar"
@@ -420,35 +420,35 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
               <View style={styles.quickActionsGrid}>
                 <QuickActionCard
                   delay={100}
-                  title="Staff"
-                  desc="Manage your team"
+                  title="Generate Report"
+                  desc="Download reports"
                   color="#4F46E5"
-                  icon="people"
-                  onPress={() => navigation.navigate('PrincipalStaff')}
+                  icon="document-text"
+                  onPress={() => setActiveGuide('Generate Report')}
                 />
                 <QuickActionCard
                   delay={150}
-                  title="Students"
-                  desc="Enroll & track"
+                  title="Add Staff"
+                  desc="Register new staff"
                   color="#10B981"
-                  icon="school"
-                  onPress={() => navigation.navigate('PrincipalStudentDetails')}
+                  icon="person-add"
+                  onPress={() => setActiveGuide('Add Staff')}
                 />
                 <QuickActionCard
                   delay={200}
-                  title="Announce"
+                  title="Announcements"
                   desc="Notify everyone"
                   color="#F59E0B"
                   icon="megaphone"
-                  onPress={() => navigation.navigate('PrincipalAnnouncements')}
+                  onPress={() => setActiveGuide('Announcements')}
                 />
                 <QuickActionCard
                   delay={250}
-                  title="Calendar"
+                  title="Schedule Event"
                   desc="Schedule events"
                   color="#EC4899"
                   icon="calendar"
-                  onPress={() => navigation.navigate('PrincipalCalendar')}
+                  onPress={() => setActiveGuide('Schedule Event')}
                 />
               </View>
             </View>
@@ -491,7 +491,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
               >
                 <View style={[styles.sectionTitleDot, { backgroundColor: '#10B981' }]} />
-                <Text style={styles.sectionTitle}>Staff Activity</Text>
+                <Text style={styles.sectionTitle}>Recent Staff Activity</Text>
                 <Ionicons name={isActivityCollapsed ? "chevron-down" : "chevron-up"} size={16} color={theme.subtext} />
               </TouchableOpacity>
               <TouchableOpacity>

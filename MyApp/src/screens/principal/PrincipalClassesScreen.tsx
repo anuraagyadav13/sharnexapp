@@ -216,7 +216,7 @@ const PrincipalClassesScreen: React.FC<Props> = ({ navigation }) => {
               </View>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              {/* <TouchableOpacity
+              <TouchableOpacity
                 style={{ padding: 6 }}
                 onPress={(e) => {
                   e.stopPropagation();
@@ -224,7 +224,7 @@ const PrincipalClassesScreen: React.FC<Props> = ({ navigation }) => {
                 }}
               >
                 <Ionicons name="pencil-outline" size={18} color={theme.primary} />
-              </TouchableOpacity> */}
+              </TouchableOpacity>
 
               <TouchableOpacity
                 style={{ padding: 6 }}
