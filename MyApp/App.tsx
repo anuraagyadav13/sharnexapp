@@ -62,6 +62,7 @@ import TeacherMonitorLiveScreen from './src/screens/teacher/TeacherMonitorLiveSc
 import TeacherResultManagementScreen from './src/screens/teacher/TeacherResultManagementScreen';
 import TeacherMarksEntryScreen from './src/screens/teacher/TeacherMarksEntryScreen';
 import TeacherReviewSubmissionScreen from './src/screens/teacher/TeacherReviewSubmissionScreen';
+import TeacherStudentResultDetailScreen from './src/screens/teacher/TeacherStudentResultDetailScreen';
 import TeacherDashboard from './src/screens/teacher/TeacherDashboard';
 import TeacherTimetableScreen from './src/screens/teacher/TeacherTimetableScreen';
 import TeacherSelfAttendanceScreen from './src/screens/teacher/TeacherSelfAttendanceScreen';
@@ -100,8 +101,27 @@ import PrincipalAddClass from './src/screens/principal/PrincipalAddClassScreen';
 import PrincipalManageClass from './src/screens/principal/PrincipalManageClassScreen';
 import PrincipalEditClass from './src/screens/principal/PrincipalEditClassScreen';
 import LibraryScreen from './src/screens/library/LibraryScreen';
+import LibraryDashboardScreen from './src/screens/library/LibraryDashboardScreen';
+import LibraryBookCatalogScreen from './src/screens/library/LibraryBookCatalogScreen';
+import LibraryCirculationScreen from './src/screens/library/LibraryCirculationScreen';
+import LibraryCategoriesScreen from './src/screens/library/LibraryCategoriesScreen';
+import LibraryAnnouncementsScreen from './src/screens/library/LibraryAnnouncementsScreen';
+import LibraryEquipmentScreen from './src/screens/library/LibraryEquipmentScreen';
+import LibraryNewSupplyScreen from './src/screens/library/LibraryNewSupplyScreen';
 import StudentMessagesScreen from './src/screens/student/Messages';
 import TeacherMessagesScreen from './src/screens/teacher/Messages';
+
+// Bus Tracking Module Screens
+import { BusDashboardScreen } from './src/screens/principal/bus/BusDashboardScreen';
+import { FleetTrackingScreen } from './src/screens/principal/bus/FleetTrackingScreen';
+import { AddVehicleScreen } from './src/screens/principal/bus/AddVehicleScreen';
+import { RouteManagementScreen } from './src/screens/principal/bus/RouteManagementScreen';
+import { RouteConfigurationScreen } from './src/screens/principal/bus/RouteConfigurationScreen';
+import { SchedulesScreen } from './src/screens/principal/bus/SchedulesScreen';
+import { AddScheduleScreen } from './src/screens/principal/bus/AddScheduleScreen';
+import { DriverManagementScreen } from './src/screens/principal/bus/DriverManagementScreen';
+import { AddDriverScreen } from './src/screens/principal/bus/AddDriverScreen';
+import { EnrollStudentScreen } from './src/screens/principal/bus/EnrollStudentScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -117,11 +137,13 @@ function RootNavigator() {
     if (authState.role === 'student') return 'StudentDashboard';
     if (authState.role === 'teacher') return 'TeacherDashboard';
     if (authState.role === 'principal') return 'PrincipalDashboard';
+    if (authState.role === 'library') return 'LibraryDashboard';
     return 'Login';
   };
 
   const effectiveToken = authState.token;
   const effectiveRole = authState.role;
+  console.log('[DEBUG_NAVIGATOR] Effective Role:', effectiveRole, '| Initial Route:', getInitialRoute());
 
   return (
     <Stack.Navigator
@@ -269,6 +291,14 @@ function RootNavigator() {
                 component={TeacherReviewSubmissionScreen}
               />
               <Stack.Screen
+                name="TeacherStudentResultDetail"
+                component={TeacherStudentResultDetailScreen}
+              />
+              <Stack.Screen
+                name="OfficialResult"
+                component={OfficialResultScreen}
+              />
+              <Stack.Screen
                 name="TeacherTimetable"
                 component={TeacherTimetableScreen}
               />
@@ -366,7 +396,6 @@ function RootNavigator() {
               />
               <Stack.Screen name="PrincipalFees" component={PrincipalFees} />
               <Stack.Screen name="PrincipalCreateInvoice" component={PrincipalCreateInvoice} />
-              <Stack.Screen name="PrincipalRSM" component={PrincipalRMS} />
               <Stack.Screen name="PrincipalRMS" component={PrincipalRMS} />
               <Stack.Screen name="PrincipalReviewExam" component={PrincipalReviewExamScreen} />
               <Stack.Screen name="PrincipalClassDetail" component={PrincipalClassDetailScreen} />
@@ -375,6 +404,10 @@ function RootNavigator() {
               <Stack.Screen name="PrincipalLibrary" component={PrincipalLibraryScreen} />
               <Stack.Screen
                 name="PrincipalCreateExam"
+                component={PrincipalCreateExam}
+              />
+              <Stack.Screen
+                name="PrincipalEditExam"
                 component={PrincipalCreateExam}
               />
               <Stack.Screen
@@ -397,6 +430,31 @@ function RootNavigator() {
                 name="PrincipalEditClass"
                 component={PrincipalEditClass}
               />
+
+              {/* Bus Tracking Module Screens */}
+              <Stack.Screen name="BusDashboard" component={BusDashboardScreen} />
+              <Stack.Screen name="FleetTracking" component={FleetTrackingScreen} />
+              <Stack.Screen name="AddVehicle" component={AddVehicleScreen} />
+              <Stack.Screen name="RouteManagement" component={RouteManagementScreen} />
+              <Stack.Screen name="RouteConfiguration" component={RouteConfigurationScreen} />
+              <Stack.Screen name="Schedules" component={SchedulesScreen} />
+              <Stack.Screen name="AddSchedule" component={AddScheduleScreen} />
+              <Stack.Screen name="DriverManagement" component={DriverManagementScreen} />
+              <Stack.Screen name="AddDriver" component={AddDriverScreen} />
+              <Stack.Screen name="EnrollStudent" component={EnrollStudentScreen} />
+            </>
+          )}
+
+          {/* Library Case */}
+          {effectiveRole === 'library' && (
+            <>
+              <Stack.Screen name="LibraryDashboard" component={LibraryDashboardScreen} />
+              <Stack.Screen name="LibraryBookCatalog" component={LibraryBookCatalogScreen} />
+              <Stack.Screen name="LibraryCirculation" component={LibraryCirculationScreen} />
+              <Stack.Screen name="LibraryCategories" component={LibraryCategoriesScreen} />
+              <Stack.Screen name="LibraryAnnouncements" component={LibraryAnnouncementsScreen} />
+              <Stack.Screen name="LibraryEquipment" component={LibraryEquipmentScreen} />
+              <Stack.Screen name="LibraryNewSupply" component={LibraryNewSupplyScreen} />
             </>
           )}
 

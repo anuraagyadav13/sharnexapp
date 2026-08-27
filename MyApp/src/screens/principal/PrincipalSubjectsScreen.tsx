@@ -215,7 +215,7 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
         <ScaleButton onPress={() => setDrawerOpen(true)}>
           <Ionicons name="menu" size={28} color={theme.text} />
         </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1}>Academic Curriculum</Text>
+        <Text style={styles.headerTitle} numberOfLines={1}>Subjects</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}>
             <View style={styles.avatarHeader}>
@@ -237,7 +237,7 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
           <View style={styles.pageHeader}>
             <View style={styles.titleRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.screenTitle}>Subject Inventory</Text>
+                <Text style={styles.screenTitle}>Subjects</Text>
                 <Text style={styles.screenSubtitle}>Catalog and manage course offerings.</Text>
               </View>
               <TouchableOpacity
@@ -245,7 +245,7 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
                 onPress={() => navigation.navigate('PrincipalAddSubject')}
               >
                 <Ionicons name="add" size={18} color="#FFF" />
-                <Text style={styles.addNewBtnText}>Add New Subject</Text>
+                <Text style={styles.addNewBtnText}>Add Subject</Text>
               </TouchableOpacity>
             </View>
           </View>

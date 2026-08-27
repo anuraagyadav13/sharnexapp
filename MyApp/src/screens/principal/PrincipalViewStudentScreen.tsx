@@ -10,40 +10,53 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  RefreshControl,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import apiClient, { getApiErrorMessage } from '../../services/apiClient';
 import principalService from '../../services/principalService';
 import { ENDPOINTS } from '../../constants/api';
-
-const InfoField = ({ label, value }: { label: string, value: string | null | undefined }) => (
-  <View style={styles.infoField}>
-    <Text style={styles.infoLabel}>{label.toUpperCase()}</Text>
-    <Text style={styles.infoValue}>{value || '-'}</Text>
-  </View>
-);
+import { useTheme } from '../../store/ThemeContext';
 
 const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
+
   const { studentId } = route.params;
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [student, setStudent] = useState<any>(null);
 
-  useEffect(() => {
-    const fetchStudentData = async () => {
-      try {
-        const response = await principalService.getStudentDetail(studentId);
-        const rawData = response.data?.data || response.data || {};
-        const data = rawData.student || rawData;
-        setStudent(data);
-      } catch (error) {
-        console.error('Failed to fetch student:', error);
-        Alert.alert('Error', getApiErrorMessage(error), [
-          { text: 'Go Back', onPress: () => navigation.goBack() }
-        ]);
-      } finally {
-        setIsLoading(false);
+  const InfoField = ({ label, value }: { label: string, value: string | null | undefined }) => (
+    <View style={styles.infoField}>
+      <Text style={styles.infoLabel}>{label.toUpperCase()}</Text>
+      <Text style={styles.infoValue}>{value || '-'}</Text>
+    </View>
+  );
+
+  const fetchStudentData = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
       }
-    };
+      const response = await principalService.getStudentDetail(studentId);
+      const rawData = response.data?.data || response.data || {};
+      const data = rawData.student || rawData;
+      setStudent(data);
+    } catch (error) {
+      console.error('Failed to fetch student:', error);
+      Alert.alert('Error', getApiErrorMessage(error), [
+        { text: 'Go Back', onPress: () => navigation.goBack() }
+      ]);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
     fetchStudentData();
   }, [studentId]);
 
@@ -89,14 +102,26 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" translucent />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.background} translucent />
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => fetchStudentData(true)}
+            colors={[theme.primary]}
+            tintColor={theme.primary}
+          />
+        }
+      >
         
         {/* Top Header */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingTop: Platform.OS === 'ios' ? 40 : 20 }}>
           <TouchableOpacity style={[styles.backNav, { marginBottom: 0, paddingTop: 0 }]} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={16} color="#3B82F6" />
+            <Ionicons name="arrow-back" size={16} color={theme.primary} />
             <Text style={styles.backNavText}>Back to Students</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleDeleteStudent}>
@@ -118,15 +143,9 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
             <Text style={styles.heroEmail}>{student.email}</Text>
             <View style={styles.heroBadges}>
               <View style={styles.badge}><Text style={styles.badgeText}>Roll No: {student.rollNo || '-'}</Text></View>
-              {student.className && (
-                <View style={styles.badge}><Text style={styles.badgeText}>Class {student.className} {student.classSection}</Text></View>
-              )}
-              {student.isApproved && (
-                <View style={[styles.badge, { backgroundColor: '#10B981', borderColor: '#10B981' }]}>
-                  <Ionicons name="checkmark" size={12} color="#FFF" style={{ marginRight: 4 }} />
-                  <Text style={[styles.badgeText, { color: '#FFF' }]}>Approved</Text>
-                </View>
-              )}
+              {student.className ? (
+                <View style={styles.badge}><Text style={styles.badgeText}>Class: {student.className} {student.classSection || ''}</Text></View>
+              ) : null}
             </View>
           </View>
         </View>
@@ -282,56 +301,57 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#F8FAFC' },
-  container: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 60 },
+const getStyles = (theme: any, isDarkMode: boolean) =>
+  StyleSheet.create({
+    mainContainer: { flex: 1, backgroundColor: theme.background },
+    container: { flex: 1 },
+    scrollContent: { padding: 20, paddingBottom: 60 },
 
-  backNav: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, paddingTop: Platform.OS === 'ios' ? 40 : 20 },
-  backNavText: { color: '#3B82F6', fontSize: 14, fontWeight: '600', marginLeft: 6 },
+    backNav: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, paddingTop: Platform.OS === 'ios' ? 40 : 20 },
+    backNavText: { color: theme.primary, fontSize: 14, fontWeight: '600', marginLeft: 6 },
 
-  heroCard: {
-    backgroundColor: '#8B5CF6',
-    borderRadius: 16,
-    padding: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: '#8B5CF6', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
-  },
-  heroAvatar: {
-    width: 64, height: 64, borderRadius: 32, backgroundColor: '#A78BFA',
-    alignItems: 'center', justifyContent: 'center', marginRight: 20,
-    borderWidth: 2, borderColor: '#C4B5FD',
-  },
-  heroAvatarText: { fontSize: 28, fontWeight: 'bold', color: '#FFF' },
-  heroInfo: { flex: 1 },
-  heroName: { fontSize: 24, fontWeight: 'bold', color: '#FFF', marginBottom: 4 },
-  heroEmail: { fontSize: 13, color: '#DDD6FE', marginBottom: 12 },
-  heroBadges: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  badge: { 
-    paddingHorizontal: 10, paddingVertical: 4, 
-    borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', 
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
-    flexDirection: 'row', alignItems: 'center'
-  },
-  badgeText: { fontSize: 11, fontWeight: '600', color: '#FFF' },
+    heroCard: {
+      backgroundColor: '#8B5CF6',
+      borderRadius: 16,
+      padding: 24,
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 24,
+      shadowColor: '#8B5CF6', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
+    },
+    heroAvatar: {
+      width: 64, height: 64, borderRadius: 32, backgroundColor: '#A78BFA',
+      alignItems: 'center', justifyContent: 'center', marginRight: 20,
+      borderWidth: 2, borderColor: '#C4B5FD',
+    },
+    heroAvatarText: { fontSize: 28, fontWeight: 'bold', color: '#FFF' },
+    heroInfo: { flex: 1 },
+    heroName: { fontSize: 24, fontWeight: 'bold', color: '#FFF', marginBottom: 4 },
+    heroEmail: { fontSize: 13, color: '#DDD6FE', marginBottom: 12 },
+    heroBadges: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    badge: { 
+      paddingHorizontal: 10, paddingVertical: 4, 
+      borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', 
+      borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
+      flexDirection: 'row', alignItems: 'center'
+    },
+    badgeText: { fontSize: 11, fontWeight: '600', color: '#FFF' },
 
-  sectionCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1, borderColor: '#E2E8F0',
-    shadowColor: '#64748B', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
-  },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1E293B', marginLeft: 8 },
+    sectionCard: {
+      backgroundColor: theme.surface,
+      borderRadius: 12,
+      padding: 20,
+      marginBottom: 16,
+      borderWidth: 1, borderColor: theme.border,
+      shadowColor: '#64748B', shadowOffset: { width: 0, height: 2 }, shadowOpacity: isDarkMode ? 0.2 : 0.05, shadowRadius: 4, elevation: 2,
+    },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: theme.border },
+    sectionTitle: { fontSize: 16, fontWeight: '700', color: theme.text, marginLeft: 8 },
 
-  gridRow: { flexDirection: 'row', marginBottom: 16, flexWrap: 'wrap', gap: 20 },
-  infoField: { flex: 1, minWidth: '45%' },
-  infoLabel: { fontSize: 10, fontWeight: '700', color: '#64748B', marginBottom: 6, letterSpacing: 0.5 },
-  infoValue: { fontSize: 14, color: '#1E293B', fontWeight: '500' },
-});
+    gridRow: { flexDirection: 'row', marginBottom: 16, flexWrap: 'wrap', gap: 20 },
+    infoField: { flex: 1, minWidth: '45%' },
+    infoLabel: { fontSize: 10, fontWeight: '700', color: theme.subtext, marginBottom: 6, letterSpacing: 0.5 },
+    infoValue: { fontSize: 14, color: theme.text, fontWeight: '500' },
+  });
 
 export default PrincipalViewStudentScreen;

@@ -7,19 +7,21 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  StatusBar,
-  SafeAreaView,
   TextInput,
-  Image,
   ScrollView,
+  Alert,
+  Modal,
+  StatusBar,
+  Image,
   Platform,
 } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
+import { useAuth } from '../../store/AuthContext';
+import { getCacheBustedUri } from '../../utils/image';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
-import principalService, { RmsExamItem } from '../../services/principalService';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useAuth } from '../../store/AuthContext';
+import principalService, { RmsExamItem, RmsExamDetail } from '../../services/principalService';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 
 type PrincipalRMSNavigationProp = NativeStackNavigationProp<
@@ -31,19 +33,96 @@ interface Props {
   navigation: PrincipalRMSNavigationProp;
 }
 
-type TabType = 'All' | 'MIDTERM' | 'FINAL' | 'UNIT_TEST' | 'QUARTERLY';
+type TabType = 'Exam Definitions' | 'Analyze Results';
 
 const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isError, setIsError] = useState(false);
   const { authState } = useAuth();
+  const styles = getStyles(theme, isDarkMode);
+
+  const [activeTab, setActiveTab] = useState<TabType>('Exam Definitions');
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   const [exams, setExams] = useState<RmsExamItem[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTab, setSelectedTab] = useState<TabType>('All');
-  const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isDrawerOpen, setDrawerOpen] = useState<boolean>(false);
+
+  // --- View Results Tab state ---
+  const [selectedExamId, setSelectedExamId] = useState<string>('');
+  const [selectedClassId, setSelectedClassId] = useState<string>('');
+  const [isExamDropdownOpen, setIsExamDropdownOpen] = useState<boolean>(false);
+  const [isClassDropdownOpen, setIsClassDropdownOpen] = useState<boolean>(false);
+
+  const [selectedExamDetail, setSelectedExamDetail] = useState<RmsExamDetail | null>(null);
+  const [isLoadingExamDetail, setIsLoadingExamDetail] = useState<boolean>(false);
+  const [examDetailError, setExamDetailError] = useState<string | null>(null);
+
+  const [examResults, setExamResults] = useState<any[]>([]);
+  const [isLoadingResults, setIsLoadingResults] = useState<boolean>(false);
+  const [resultsError, setResultsError] = useState<string | null>(null);
+
+  const fetchExamDetail = useCallback(async (examId: string) => {
+    if (!examId) {
+      setSelectedExamDetail(null);
+      setExamDetailError(null);
+      setIsLoadingExamDetail(false);
+      return;
+    }
+
+    setIsLoadingExamDetail(true);
+    setExamDetailError(null);
+    setSelectedExamDetail(null);
+
+    try {
+      const res = await principalService.getExamDetail(examId);
+      if (res && res.data) {
+        setSelectedExamDetail(res.data);
+      } else {
+        setExamDetailError('Unable to load participating classes.');
+      }
+    } catch (err: any) {
+      console.error('[PrincipalRMS] Error loading exam details:', err);
+      setExamDetailError(err?.message || 'Failed to load participating classes.');
+    } finally {
+      setIsLoadingExamDetail(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedExamId) {
+      fetchExamDetail(selectedExamId);
+    } else {
+      setSelectedExamDetail(null);
+      setExamDetailError(null);
+      setIsLoadingExamDetail(false);
+    }
+  }, [selectedExamId, fetchExamDetail]);
+
+  const fetchResults = useCallback(async () => {
+    if (!selectedExamId || !selectedClassId) return;
+    setIsLoadingResults(true);
+    setResultsError(null);
+    try {
+      const res = await principalService.getExamResultsAdmin(selectedExamId, selectedClassId);
+      const data = res.data?.data || res.data || [];
+      setExamResults(Array.isArray(data) ? data : data.results || []);
+    } catch (err: any) {
+      console.warn('Failed to fetch results:', err);
+      setResultsError(err?.message || 'Failed to fetch results');
+    } finally {
+      setIsLoadingResults(false);
+    }
+  }, [selectedExamId, selectedClassId]);
+
+  useEffect(() => {
+    if (selectedExamId && selectedClassId) {
+      fetchResults();
+    } else {
+      setExamResults([]);
+      setResultsError(null);
+    }
+  }, [selectedExamId, selectedClassId, fetchResults]);
 
   const loadData = useCallback(async (showRefreshIndicator = false) => {
     if (showRefreshIndicator) {
@@ -51,14 +130,20 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
     } else {
       setIsLoading(true);
     }
-    setIsError(false);
+    setError(null);
 
     try {
       const res = await principalService.getRmsExams();
-      setExams(res.data?.data || []);
-    } catch (error) {
-      console.error('[PrincipalRMS] Failed to fetch exams:', error);
-      setIsError(true);
+      let rawList: RmsExamItem[] = [];
+      if (res && res.data && Array.isArray(res.data)) {
+        rawList = res.data;
+      } else if (res && (res as any).exams && Array.isArray((res as any).exams)) {
+        rawList = (res as any).exams;
+      }
+      setExams(rawList);
+    } catch (err: any) {
+      console.error('[PrincipalRMS] Error loading exams:', err);
+      setError(err?.message || 'Unable to load exams. Please try again.');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -69,127 +154,175 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
     loadData();
   }, [loadData]);
 
+  // Filter exams for Exam Definitions tab search
   const filteredExams = useMemo(() => {
-    return exams.filter((exam) => {
-      // Tab filter
-      if (selectedTab !== 'All' && exam.examType !== selectedTab) return false;
+    if (!searchQuery.trim()) return exams;
+    const q = searchQuery.toLowerCase().trim();
+    return exams.filter(
+      (e) =>
+        e.name.toLowerCase().includes(q) ||
+        e.examType.toLowerCase().includes(q) ||
+        e.academicYear.toLowerCase().includes(q)
+    );
+  }, [exams, searchQuery]);
 
-      // Search filter
-      if (searchQuery.trim() !== '') {
-        const query = searchQuery.toLowerCase();
-        return exam.name?.toLowerCase().includes(query);
-      }
+  // Filter published/active exams for View Results dropdown
+  const publishedExams = useMemo(() => {
+    return exams.filter((e) => e.status !== 'DRAFT');
+  }, [exams]);
 
-      return true;
-    });
-  }, [exams, selectedTab, searchQuery]);
+  const selectedExam = useMemo(() => {
+    return exams.find((e) => e.id === selectedExamId);
+  }, [exams, selectedExamId]);
 
-  const formatDate = useCallback((dateStr: string) => {
-    try {
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return 'N/A';
-      return date.toLocaleDateString('en-GB'); // DD/MM/YYYY
-    } catch {
-      return 'N/A';
-    }
-  }, []);
+  const availableClasses = useMemo(() => {
+    if (!selectedExamDetail || !selectedExamDetail.classes) return [];
+    return selectedExamDetail.classes;
+  }, [selectedExamDetail]);
 
-  const getExamTypeStyles = useCallback((type: string) => {
-    switch (type) {
-      case 'MIDTERM':
-        return { bg: isDarkMode ? '#3B82F620' : '#EFF6FF', text: '#3B82F6' }; // blue
-      case 'FINAL':
-        return { bg: isDarkMode ? '#EF444420' : '#FEF2F2', text: '#EF4444' }; // red
-      case 'UNIT_TEST':
-        return { bg: isDarkMode ? '#F9731620' : '#FFF7ED', text: '#F97316' }; // orange
-      case 'QUARTERLY':
-        return { bg: isDarkMode ? '#8B5CF620' : '#F5F3FF', text: '#8B5CF6' }; // purple
-      default:
-        return { bg: isDarkMode ? '#374151' : '#F3F4F6', text: theme.subtext }; // grey
-    }
-  }, [isDarkMode, theme]);
+  const selectedClassObj = useMemo(() => {
+    return availableClasses.find((c) => c.classId === selectedClassId);
+  }, [availableClasses, selectedClassId]);
 
-  const renderExamCard = useCallback(
-    ({ item }: { item: RmsExamItem }) => {
-      const typeStyles = getExamTypeStyles(item.examType);
-      const isStatusActive = item.status === 'ACTIVE';
+  const handleDeleteExam = (exam: RmsExamItem) => {
+    Alert.alert(
+      'Delete Exam Definition',
+      `Are you sure you want to delete "${exam.name}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              const res = await principalService.deleteExam(exam.id);
+              if (res && res.message && !res.success) {
+                Alert.alert('Action Blocked', res.message);
+              } else {
+                Alert.alert('Success', 'Exam definition deleted successfully.');
+                loadData();
+              }
+            } catch (err: any) {
+              console.error('[PrincipalRMS] Delete error:', err);
+              const msg = err?.response?.data?.message || err?.message || 'Failed to delete exam.';
+              Alert.alert('Cannot Delete Exam', msg);
+            } finally {
+              setIsLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
-      return (
-        <TouchableOpacity
-          style={styles.examCard}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('PrincipalReviewExam', { examId: item.id })}
-        >
-          <View style={styles.cardHeader}>
-            <Text style={styles.examNameText}>{item.name}</Text>
-            <View style={[styles.typeBadge, { backgroundColor: typeStyles.bg }]}>
-              <Text style={[styles.typeBadgeText, { color: typeStyles.text }]}>
-                {item.examType}
-              </Text>
+  const renderExamRow = ({ item }: { item: RmsExamItem }) => {
+    const classCount = item.classes_count ?? item._count?.classes ?? item.classes?.length ?? 0;
+    const isDraft = item.status === 'DRAFT';
+
+    return (
+      <View style={styles.examCard}>
+        <View style={styles.cardHeader}>
+          <View style={styles.examTitleRow}>
+            <View style={styles.docIconBox}>
+              <Ionicons name="document-text" size={18} color="#7C3AED" />
+            </View>
+            <View style={styles.examTitleCol}>
+              <Text style={styles.examNameText}>{item.name}</Text>
+              <Text style={styles.examYearText}>{item.academicYear}</Text>
             </View>
           </View>
-
-          <View style={styles.cardDivider} />
-
-          <View style={styles.cardBody}>
-            <View style={styles.detailRow}>
-              <Ionicons name="calendar-outline" size={16} color="#6B7280" style={styles.rowIcon} />
-              <Text style={styles.detailLabel}>Academic Year:</Text>
-              <Text style={styles.detailValue}>{item.academicYear || 'N/A'}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Ionicons name="grid-outline" size={16} color="#6B7280" style={styles.rowIcon} />
-              <Text style={styles.detailLabel}>Classes Count:</Text>
-              <Text style={styles.detailValue}>
-                {item._count?.classes !== undefined ? `${item._count.classes} classes` : 'N/A'}
-              </Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Ionicons name="time-outline" size={16} color="#6B7280" style={styles.rowIcon} />
-              <Text style={styles.detailLabel}>Created On:</Text>
-              <Text style={styles.detailValue}>{formatDate(item.createdAt)}</Text>
-            </View>
-          </View>
-
-          <View style={styles.cardFooter}>
-            <View
+          <View
+            style={[
+              styles.statusBadge,
+              isDraft ? styles.statusBadgeDraft : styles.statusBadgeActive,
+            ]}
+          >
+            <Text
               style={[
-                styles.statusBadge,
-                { backgroundColor: isStatusActive ? (isDarkMode ? '#05966920' : '#ECFDF5') : (isDarkMode ? '#374151' : '#F3F4F6') },
+                styles.statusBadgeText,
+                isDraft ? styles.statusTextDraft : styles.statusTextActive,
               ]}
             >
-              <Text
-                style={[
-                  styles.statusText,
-                  { color: isStatusActive ? '#059669' : theme.subtext },
-                ]}
-              >
-                {item.status || 'INACTIVE'}
+              {item.status || 'ACTIVE'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.cardBodyRow}>
+          <View style={styles.metaItem}>
+            <Text style={styles.metaLabel}>TYPE</Text>
+            <View style={styles.typeBadge}>
+              <Text style={styles.typeBadgeText}>{item.examType}</Text>
+            </View>
+          </View>
+
+          <View style={styles.metaItem}>
+            <Text style={styles.metaLabel}>SCOPE</Text>
+            <View style={styles.scopePill}>
+              <Text style={styles.scopePillText}>
+                {classCount} {classCount === 1 ? 'Class' : 'Classes'}
               </Text>
             </View>
           </View>
-        </TouchableOpacity>
-      );
-    },
-    [getExamTypeStyles, formatDate, navigation]
-  );
+
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => navigation.navigate('PrincipalReviewExam', { examId: item.id })}
+              activeOpacity={0.7}
+              accessibilityLabel="View Exam"
+            >
+              <Ionicons name="eye-outline" size={18} color="#7C3AED" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => navigation.navigate('PrincipalEditExam', { examId: item.id })}
+              activeOpacity={0.7}
+              accessibilityLabel="Edit Exam"
+            >
+              <Ionicons name="create-outline" size={18} color="#3B82F6" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => handleDeleteExam(item)}
+              activeOpacity={0.7}
+              accessibilityLabel="Delete Exam"
+            >
+              <Ionicons name="trash-outline" size={18} color="#EF4444" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  };
 
   return (
-    <SafeAreaView style={styles.safeContainer}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
+    <View style={styles.safeContainer}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.background} />
 
-      {/* Header */}
+      {/* Shared Standard Header */}
       <View style={styles.appHeader}>
-        <TouchableOpacity style={styles.headerBtn} onPress={() => setDrawerOpen(true)}>
+        <TouchableOpacity
+          style={styles.headerBtn}
+          onPress={() => setDrawerOpen(true)}
+          accessibilityLabel="Open menu"
+        >
           <Ionicons name="menu" size={28} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.appHeaderTitle}>RMS Exams</Text>
+        <Text style={styles.appHeaderTitle}>Result Management</Text>
         <TouchableOpacity
-          activeOpacity={0.8}
+          style={styles.headerBtn}
           onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
+          accessibilityLabel="Account settings"
         >
           {authState.user?.photoUrl ? (
-            <Image source={{ uri: authState.user.photoUrl }} style={styles.headerAvatarImage} />
+            <Image
+              source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }}
+              style={styles.headerAvatarImage}
+            />
           ) : (
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
@@ -198,317 +331,814 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color={theme.subtext} style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search exams by name..."
-          placeholderTextColor={theme.subtext}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Ionicons name="close-circle" size={18} color={theme.subtext} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Filter Tabs */}
-      <View style={styles.tabsWrapper}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabsScrollContent}
-        >
-          {(['All', 'MIDTERM', 'FINAL', 'UNIT_TEST', 'QUARTERLY'] as TabType[]).map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.tabBtn, selectedTab === tab && styles.tabActive]}
-              onPress={() => setSelectedTab(tab)}
-            >
-              <Text style={[styles.tabText, selectedTab === tab && styles.tabTextActive]}>
-                {tab}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {isLoading ? (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
-        </View>
-      ) : isError ? (
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
-          <Text style={styles.errorTitle}>Failed to load exams</Text>
-          <Text style={styles.errorSubtitle}>
-            An error occurred while fetching the RMS exams list. Please try again.
+      {/* Sub-Header Row in Screen Body */}
+      <View style={styles.subHeaderRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.pageSubtext}>
+            Manage official exam definitions and their lifecycle.
           </Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => loadData()}>
-            <Text style={styles.retryBtnText}>Retry</Text>
-          </TouchableOpacity>
         </View>
-      ) : (
-        <FlatList
-          data={filteredExams}
-          keyExtractor={(item) => item.id}
-          renderItem={renderExamCard}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={() => loadData(true)}
-              colors={['#4F46E5']}
+
+        <TouchableOpacity
+          style={styles.addExamButton}
+          onPress={() => navigation.navigate('PrincipalCreateExam')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={16} color="#FFFFFF" />
+          <Text style={styles.addExamButtonText}>Add New Exam</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Tabs Control */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === 'Exam Definitions' && styles.tabButtonActive]}
+          onPress={() => setActiveTab('Exam Definitions')}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.tabText, activeTab === 'Exam Definitions' && styles.tabTextActive]}>
+            Exam Definitions
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === 'Analyze Results' && styles.tabButtonActive]}
+          onPress={() => setActiveTab('Analyze Results')}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.tabText, activeTab === 'Analyze Results' && styles.tabTextActive]}>
+            Analyze Results
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Main Content Area */}
+      {activeTab === 'Exam Definitions' ? (
+        <View style={styles.tabContent}>
+          {/* Search Bar */}
+          <View style={styles.searchBox}>
+            <Ionicons name="search" size={18} color={theme.subtext} style={{ marginRight: 8 }} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search exams by name, type, or year..."
+              placeholderTextColor={theme.subtext || '#94A3B8'}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
             />
-          }
-          ListEmptyComponent={
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={18} color={theme.subtext} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* List View */}
+          {isLoading && !isRefreshing ? (
+            <View style={styles.centerContainer}>
+              <ActivityIndicator size="large" color="#7C3AED" />
+              <Text style={styles.loadingText}>Loading exam definitions...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.errorBox}>
+              <Ionicons name="alert-circle" size={24} color="#EF4444" />
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity style={styles.retryBtn} onPress={() => loadData()}>
+                <Text style={styles.retryBtnText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : filteredExams.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="reader-outline" size={64} color={theme.subtext} />
-              <Text style={styles.emptyTitle}>No exams found</Text>
-              <Text style={styles.emptySubtitle}>
-                No exams found matching your current filters or query.
+              <Ionicons name="document-text-outline" size={48} color={theme.subtext} />
+              <Text style={styles.emptyTitle}>
+                {searchQuery ? 'No matching exams found' : 'No Exam Definitions'}
+              </Text>
+              <Text style={styles.emptySubtext}>
+                {searchQuery
+                  ? 'Try searching with a different term or year.'
+                  : 'Click "+ Add New Exam" to create your first examination.'}
               </Text>
             </View>
-          }
+          ) : (
+            <FlatList
+              data={filteredExams}
+              keyExtractor={(item) => item.id}
+              renderItem={renderExamRow}
+              contentContainerStyle={styles.listContent}
+              refreshControl={
+                <RefreshControl
+                  refreshing={isRefreshing}
+                  onRefresh={() => loadData(true)}
+                  tintColor="#7C3AED"
+                  colors={['#7C3AED']}
+                />
+              }
+            />
+          )}
+        </View>
+      ) : (
+        /* Tab 2: Analyze Results Selector View */
+        <ScrollView style={styles.tabContent} contentContainerStyle={styles.resultsTabContent}>
+          <View style={styles.filterCard}>
+            {/* Target Examination Dropdown */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>TARGET EXAMINATION</Text>
+              <TouchableOpacity
+                style={styles.selectBox}
+                onPress={() => setIsExamDropdownOpen(true)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.selectValueText}>
+                  {selectedExam
+                    ? `${selectedExam.name} (${selectedExam.academicYear})`
+                    : '-- SELECT PUBLISHED EXAM --'}
+                </Text>
+                <Ionicons name="chevron-down" size={18} color={theme.subtext} />
+              </TouchableOpacity>
+            </View>
 
-        />
+            {/* Target Class Dropdown */}
+            <View style={[styles.fieldGroup, { marginTop: 16 }]}>
+              <Text style={styles.fieldLabel}>TARGET CLASS</Text>
+              <TouchableOpacity
+                style={[
+                  styles.selectBox,
+                  !selectedExamId && styles.selectBoxDisabled,
+                ]}
+                onPress={() => {
+                  if (selectedExamId) setIsClassDropdownOpen(true);
+                }}
+                disabled={!selectedExamId}
+                activeOpacity={0.8}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+                  {isLoadingExamDetail && (
+                    <ActivityIndicator size="small" color="#7C3AED" style={{ marginRight: 8 }} />
+                  )}
+                  <Text
+                    style={[
+                      styles.selectValueText,
+                      !selectedExamId && styles.selectValueDisabled,
+                      examDetailError ? { color: '#EF4444' } : null,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {isLoadingExamDetail
+                      ? 'Loading classes...'
+                      : examDetailError
+                      ? 'Failed to load classes'
+                      : selectedClassObj
+                      ? selectedClassObj.className || `Class ${selectedClassObj.classId}`
+                      : '-- SELECT CLASS --'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-down" size={18} color={theme.subtext} />
+              </TouchableOpacity>
+            </View>
+          </View>
 
+          {/* Selector scope boundary state */}
+          {!selectedExamId || !selectedClassId ? (
+            <View style={styles.resultsPlaceholderCard}>
+              <Ionicons name="stats-chart-outline" size={48} color="#7C3AED" style={{ marginBottom: 12 }} />
+              <Text style={styles.placeholderTitle}>Exam Results View</Text>
+              <Text style={styles.placeholderSubtext}>
+                {!selectedExamId
+                  ? 'Select a published examination above to load participating classes.'
+                  : 'Now select a participating class to view generated student results.'}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.resultsContainer}>
+              <Text style={styles.resultsHeaderTitle}>Results for {selectedClassObj?.className}</Text>
+              {isLoadingResults ? (
+                <View style={{ padding: 40, alignItems: 'center' }}>
+                  <ActivityIndicator size="large" color="#7C3AED" />
+                  <Text style={{ marginTop: 12, color: theme.subtext }}>Fetching results...</Text>
+                </View>
+              ) : resultsError ? (
+                <View style={{ padding: 40, alignItems: 'center' }}>
+                  <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+                  <Text style={{ marginTop: 12, color: '#EF4444' }}>{resultsError}</Text>
+                </View>
+              ) : examResults.length === 0 ? (
+                <View style={{ padding: 40, alignItems: 'center' }}>
+                  <Ionicons name="document-text-outline" size={48} color={theme.subtext} />
+                  <Text style={{ marginTop: 12, color: theme.subtext }}>No results found for this class.</Text>
+                </View>
+              ) : (
+                examResults.map((result, idx) => (
+                  <View key={result.studentId || idx} style={styles.resultRow}>
+                    <View style={styles.resultStudentInfo}>
+                      <View style={styles.avatar}>
+                        <Text style={styles.avatarText}>{(result.studentName || 'S').charAt(0)}</Text>
+                      </View>
+                      <View style={{ marginLeft: 12 }}>
+                        <Text style={styles.resultStudentName}>{result.studentName}</Text>
+                        <Text style={styles.resultStudentRoll}>Roll No: {result.rollNumber || 'N/A'}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.resultScoreInfo}>
+                      <Text style={styles.resultScoreValue}>
+                        {result.percentage !== undefined ? `${Number(result.percentage).toFixed(1)}%` : '-'}
+                      </Text>
+                      <Text style={[styles.resultGradeValue, { color: result.grade === 'F' ? '#EF4444' : '#10B981' }]}>
+                        {result.grade || 'N/A'}
+                      </Text>
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
+          )}
+        </ScrollView>
       )}
-      <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
-    </SafeAreaView>
+
+      {/* Target Examination Modal Dropdown */}
+      <Modal
+        visible={isExamDropdownOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsExamDropdownOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsExamDropdownOpen(false)}
+        >
+          <View style={styles.dropdownModalCard}>
+            <Text style={styles.dropdownModalTitle}>Select Published Exam</Text>
+            <ScrollView style={{ maxHeight: 300 }}>
+              <TouchableOpacity
+                style={styles.dropdownOption}
+                onPress={() => {
+                  setSelectedExamId('');
+                  setSelectedClassId('');
+                  setIsExamDropdownOpen(false);
+                }}
+              >
+                <Text style={styles.dropdownOptionText}>-- SELECT PUBLISHED EXAM --</Text>
+              </TouchableOpacity>
+              {publishedExams.map((exam) => (
+                <TouchableOpacity
+                  key={exam.id}
+                  style={[
+                    styles.dropdownOption,
+                    selectedExamId === exam.id && styles.dropdownOptionSelected,
+                  ]}
+                  onPress={() => {
+                    setSelectedExamId(exam.id);
+                    setSelectedClassId('');
+                    setIsExamDropdownOpen(false);
+                  }}
+                >
+                  <Text style={styles.dropdownOptionText}>
+                    {exam.name} ({exam.academicYear})
+                  </Text>
+                  {selectedExamId === exam.id && (
+                    <Ionicons name="checkmark" size={18} color="#7C3AED" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Target Class Modal Dropdown */}
+      <Modal
+        visible={isClassDropdownOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsClassDropdownOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsClassDropdownOpen(false)}
+        >
+          <View style={styles.dropdownModalCard}>
+            <Text style={styles.dropdownModalTitle}>Select Class</Text>
+            {isLoadingExamDetail ? (
+              <View style={{ paddingVertical: 24, alignItems: 'center', justifyContent: 'center' }}>
+                <ActivityIndicator size="small" color="#7C3AED" />
+                <Text style={{ marginTop: 8, fontSize: 13, color: theme.subtext || '#64748B' }}>
+                  Loading participating classes...
+                </Text>
+              </View>
+            ) : examDetailError ? (
+              <View style={{ paddingVertical: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 }}>
+                <Ionicons name="alert-circle-outline" size={28} color="#EF4444" style={{ marginBottom: 6 }} />
+                <Text style={{ fontSize: 13, color: '#EF4444', textAlign: 'center', marginBottom: 12 }}>
+                  {examDetailError}
+                </Text>
+                <TouchableOpacity
+                  style={{ backgroundColor: '#7C3AED', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 }}
+                  onPress={() => fetchExamDetail(selectedExamId)}
+                >
+                  <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 13 }}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <ScrollView style={{ maxHeight: 300 }}>
+                <TouchableOpacity
+                  style={styles.dropdownOption}
+                  onPress={() => {
+                    setSelectedClassId('');
+                    setIsClassDropdownOpen(false);
+                  }}
+                >
+                  <Text style={styles.dropdownOptionText}>-- SELECT CLASS --</Text>
+                </TouchableOpacity>
+                {availableClasses.length === 0 ? (
+                  <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 13, color: theme.subtext || '#64748B' }}>
+                      No participating classes found for this exam.
+                    </Text>
+                  </View>
+                ) : (
+                  availableClasses.map((cls) => (
+                    <TouchableOpacity
+                      key={cls.classId}
+                      style={[
+                        styles.dropdownOption,
+                        selectedClassId === cls.classId && styles.dropdownOptionSelected,
+                      ]}
+                      onPress={() => {
+                        setSelectedClassId(cls.classId);
+                        setIsClassDropdownOpen(false);
+                      }}
+                    >
+                      <Text style={styles.dropdownOptionText}>
+                        {cls.className || `Class ${cls.classId}`}
+                      </Text>
+                      {selectedClassId === cls.classId && (
+                        <Ionicons name="checkmark" size={18} color="#7C3AED" />
+                      )}
+                    </TouchableOpacity>
+                  ))
+                )}
+              </ScrollView>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Navigation Drawer Component */}
+      <NavigationDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        role="principal"
+      />
+    </View>
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
-  safeContainer: {
-    flex: 1,
-    backgroundColor: theme.background,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.background,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    backgroundColor: theme.background,
-  },
-  errorTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: theme.text,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  errorSubtitle: {
-    fontSize: 14,
-    color: theme.subtext,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  retryBtn: {
-    backgroundColor: theme.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  retryBtnText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  appHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: theme.background,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-  },
-  headerBtn: {
-    padding: 4,
-  },
-  appHeaderTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: theme.text,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.surface,
-    marginHorizontal: 16,
-    marginVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.border,
-    height: 48,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: theme.text,
-  },
-  tabsWrapper: {
-    backgroundColor: theme.background,
-    marginBottom: 8,
-  },
-  tabsScrollContent: {
-    paddingHorizontal: 16,
-  },
-  tabBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: theme.surface,
-    borderWidth: 1,
-    borderColor: theme.border,
-    marginRight: 8,
-  },
-  tabActive: {
-    backgroundColor: theme.primary,
-    borderColor: theme.primary,
-  },
-  tabText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.text,
-  },
-  tabTextActive: {
-    color: '#FFF',
-  },
-  listContent: {
-    padding: 16,
-  },
-  examCard: {
-    backgroundColor: theme.surface,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: theme.border,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  examNameText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: theme.text,
-    flex: 1,
-    marginRight: 12,
-  },
-  typeBadge: {
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-  },
-  typeBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  cardDivider: {
-    height: 1,
-    backgroundColor: theme.border,
-    marginVertical: 12,
-  },
-  cardBody: {},
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  rowIcon: {
-    marginRight: 8,
-    width: 16,
-  },
-  detailLabel: {
-    fontSize: 13,
-    color: theme.subtext,
-    marginRight: 4,
-  },
-  detailValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.text,
-  },
-  cardFooter: {
-    borderTopWidth: 1,
-    borderTopColor: theme.border,
-    paddingTop: 12,
-    marginTop: 4,
-    alignItems: 'flex-end',
-  },
-  statusBadge: {
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  emptyContainer: {
-    paddingVertical: 80,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: theme.text,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: theme.subtext,
-    textAlign: 'center',
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#9F7AEA',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 4,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-  },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
-  headerAvatarImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginLeft: 4,
-  },
-});
+const getStyles = (theme: any, isDarkMode: boolean) =>
+  StyleSheet.create({
+    safeContainer: {
+      flex: 1,
+      backgroundColor: theme.background,
+      paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    },
+    appHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: theme.background,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    headerBtn: {
+      padding: 4,
+    },
+    appHeaderTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.text,
+    },
+    avatar: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: '#9F7AEA',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 4,
+      shadowColor: '#1E293B',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.06,
+      shadowRadius: 20,
+      elevation: 6,
+    },
+    avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+    headerAvatarImage: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      marginLeft: 4,
+    },
+    subHeaderRow: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: theme.background,
+    },
+    pageSubtext: {
+      fontSize: 12,
+      color: theme.subtext || '#64748B',
+    },
+    addExamButton: {
+      backgroundColor: '#7C3AED',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 8,
+    },
+    addExamButtonText: {
+      color: '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    tabContainer: {
+      flexDirection: 'row',
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      backgroundColor: theme.background,
+      gap: 10,
+    },
+    tabButton: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 8,
+      backgroundColor: isDarkMode ? '#1E293B' : '#E2E8F0',
+    },
+    tabButtonActive: {
+      backgroundColor: '#7C3AED',
+    },
+    tabText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: isDarkMode ? '#94A3B8' : '#475569',
+    },
+    tabTextActive: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+    },
+    tabContent: {
+      flex: 1,
+      paddingHorizontal: 16,
+      paddingTop: 12,
+    },
+    searchBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      marginBottom: 12,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 14,
+      color: theme.text,
+    },
+    centerContainer: {
+      paddingVertical: 48,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    loadingText: {
+      marginTop: 12,
+      fontSize: 14,
+      color: theme.subtext || '#64748B',
+    },
+    errorBox: {
+      padding: 20,
+      borderRadius: 16,
+      backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.15)' : '#FEF2F2',
+      borderWidth: 1,
+      borderColor: isDarkMode ? '#991B1B' : '#FCA5A5',
+      alignItems: 'center',
+      marginVertical: 20,
+    },
+    errorText: {
+      fontSize: 14,
+      color: '#EF4444',
+      textAlign: 'center',
+      marginVertical: 10,
+    },
+    retryBtn: {
+      backgroundColor: '#EF4444',
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+    },
+    retryBtnText: {
+      color: '#FFFFFF',
+      fontWeight: '600',
+      fontSize: 13,
+    },
+    emptyContainer: {
+      paddingVertical: 60,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    emptyTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: theme.text,
+      marginTop: 12,
+    },
+    emptySubtext: {
+      fontSize: 13,
+      color: theme.subtext || '#64748B',
+      textAlign: 'center',
+      marginTop: 4,
+    },
+    listContent: {
+      paddingBottom: 24,
+    },
+    examCard: {
+      backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 14,
+      marginBottom: 10,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 6,
+      elevation: 2,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+      paddingBottom: 10,
+      marginBottom: 10,
+    },
+    examTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    docIconBox: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.2)' : '#F3E8FF',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    examTitleCol: {
+      justifyContent: 'center',
+    },
+    examNameText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: theme.text,
+    },
+    examYearText: {
+      fontSize: 11,
+      color: theme.subtext || '#64748B',
+    },
+    statusBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 16,
+    },
+    statusBadgeActive: {
+      backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : '#D1FAE5',
+    },
+    statusBadgeDraft: {
+      backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7',
+    },
+    statusBadgeText: {
+      fontSize: 10,
+      fontWeight: '800',
+    },
+    statusTextActive: {
+      color: '#10B981',
+    },
+    statusTextDraft: {
+      color: '#F59E0B',
+    },
+    cardBodyRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    metaItem: {
+      justifyContent: 'center',
+    },
+    metaLabel: {
+      fontSize: 9,
+      fontWeight: '800',
+      color: theme.subtext || '#94A3B8',
+      letterSpacing: 0.5,
+      marginBottom: 2,
+    },
+    typeBadge: {
+      backgroundColor: isDarkMode ? '#334155' : '#F1F5F9',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    typeBadgeText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: isDarkMode ? '#CBD5E1' : '#475569',
+    },
+    scopePill: {
+      backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.15)' : '#F3E8FF',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 10,
+    },
+    scopePillText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: '#7C3AED',
+    },
+    actionsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    actionBtn: {
+      width: 30,
+      height: 30,
+      borderRadius: 8,
+      backgroundColor: isDarkMode ? '#0F172A' : '#F8FAFC',
+      borderWidth: 1,
+      borderColor: theme.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    resultsTabContent: {
+      paddingBottom: 40,
+    },
+    filterCard: {
+      backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 16,
+      marginBottom: 14,
+    },
+    fieldGroup: {
+      width: '100%',
+    },
+    fieldLabel: {
+      fontSize: 10,
+      fontWeight: '800',
+      color: theme.subtext || '#64748B',
+      letterSpacing: 0.5,
+      marginBottom: 4,
+    },
+    selectBox: {
+      backgroundColor: isDarkMode ? '#0F172A' : '#F8FAFC',
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    selectBoxDisabled: {
+      opacity: 0.5,
+      backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9',
+    },
+    selectValueText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    selectValueDisabled: {
+      color: theme.subtext || '#94A3B8',
+    },
+    resultsPlaceholderCard: {
+      backgroundColor: theme.surface,
+      marginHorizontal: 16,
+      borderRadius: 12,
+      padding: 32,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderStyle: 'dashed',
+    },
+    placeholderTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.text,
+      marginBottom: 8,
+    },
+    placeholderSubtext: {
+      fontSize: 14,
+      color: theme.subtext,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+    resultsContainer: {
+      marginHorizontal: 16,
+      marginTop: 16,
+      marginBottom: 32,
+    },
+    resultsHeaderTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.text,
+      marginBottom: 12,
+    },
+    resultRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: theme.surface,
+      padding: 16,
+      borderRadius: 12,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    resultStudentInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    resultStudentName: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: theme.text,
+    },
+    resultStudentRoll: {
+      fontSize: 12,
+      color: theme.subtext,
+      marginTop: 2,
+    },
+    resultScoreInfo: {
+      alignItems: 'flex-end',
+    },
+    resultScoreValue: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: theme.text,
+    },
+    resultGradeValue: {
+      fontSize: 14,
+      fontWeight: '700',
+      marginTop: 2,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(15, 23, 42, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    dropdownModalCard: {
+      width: '100%',
+      maxWidth: 440,
+      backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 16,
+    },
+    dropdownModalTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: theme.text,
+      marginBottom: 10,
+    },
+    dropdownOption: {
+      paddingVertical: 10,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    dropdownOptionSelected: {
+      backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.2)' : '#F3E8FF',
+    },
+    dropdownOptionText: {
+      fontSize: 13,
+      color: theme.text,
+    },
+  });
 
 export default PrincipalRMSScreen;

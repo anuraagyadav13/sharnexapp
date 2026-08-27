@@ -38,6 +38,7 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
   const [searchText, setSearchText] = useState('');
   const [marks, setMarks] = useState<Record<string, { score: string, isAbsent: boolean, remark?: string }>>({});
   const [maxMarks, setMaxMarks] = useState(100);
+  const [sheetStatus, setSheetStatus] = useState('DRAFT');
 
   useEffect(() => {
     fetchSheet();
@@ -51,6 +52,7 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
       
       setStudents(data.students || []);
       setMaxMarks(data.maxMarks || 100);
+      setSheetStatus(data.status || 'DRAFT');
       
       // Initialize marks state
       const initialMarks: Record<string, { score: string, isAbsent: boolean, remark: string }> = {};
@@ -67,6 +69,20 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
       Alert.alert('Error', 'Failed to load marksheet data');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRecall = async () => {
+    try {
+      setIsSubmitting(true);
+      await teacherService.recallRmsMarks({ examId, classId, subjectId });
+      Alert.alert('Recalled', 'Marks submission recalled to draft status.');
+      await fetchSheet();
+    } catch (error: any) {
+      console.error('Failed to recall marks:', error);
+      Alert.alert('Error', error.response?.data?.message || 'Failed to recall marks');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -121,30 +137,36 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
 
     try {
       setIsSubmitting(true);
-      const payload = {
+      
+      // Step 1: Bulk Save Marks (DRAFT) matching marksBulkSaveSchema
+      const bulkPayload = {
         examId,
         classId,
         subjectId,
         marks: Object.entries(marks).map(([studentId, data]) => ({
           studentId,
-          marks: data.isAbsent ? null : (parseFloat(data.score) || 0),
-          isAbsent: data.isAbsent,
-          remark: data.remark || ''
+          marksObtained: data.isAbsent ? null : (data.score !== '' ? (parseFloat(data.score) || 0) : null),
+          isAbsent: !!data.isAbsent,
         })),
-        isFinal
       };
 
+      await teacherService.bulkSaveRmsMarks(bulkPayload);
+
+      // Step 2: If final submission, call submit endpoint matching marksSubmitSchema strictly { examId, classId, subjectId }
       if (isFinal) {
-        await teacherService.submitRmsMarks(payload);
-      } else {
-        await teacherService.bulkSaveRmsMarks(payload);
+        const submitPayload = {
+          examId,
+          classId,
+          subjectId,
+        };
+        await teacherService.submitRmsMarks(submitPayload);
       }
       
-      Alert.alert('Success', isFinal ? 'Marks submitted successfully' : 'Marks saved as draft');
+      Alert.alert('Success', isFinal ? 'Marks submitted for review successfully!' : 'Marks saved as draft');
       if (isFinal) navigation.goBack();
     } catch (error: any) {
       console.error('Failed to save marks:', error);
-      Alert.alert('Error', error.response?.data?.message || 'Failed to save marks');
+      Alert.alert('Error', error.response?.data?.message || error.message || 'Failed to save marks');
     } finally {
       setIsSubmitting(false);
     }

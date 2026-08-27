@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  Linking,
+  Share,
   Alert,
   Image,
 } from 'react-native';
@@ -135,7 +135,7 @@ const PageSkeleton: React.FC<{ styles: any }> = ({ styles }) => (
 
 const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const { authState } = useAuth();
 
   const getStatusStyle = (status: string) => {
@@ -210,20 +210,61 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
   }, [fetchAttendance]);
 
   const handleGenerateReport = useCallback(async () => {
-    // The backend report endpoint requires a CSRF token (browser-session-only).
-    // Direct downloads work from the web app. Mobile support needs a backend fix.
-    Alert.alert(
-      'Download Report',
-      'PDF report generation requires your browser session.\n\nTap "Open Web" to download from sharnex.com — you\'ll be able to generate and save the PDF there.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Open Web',
-          onPress: () => Linking.openURL('https://sharnex.com/student/attendance'),
-        },
-      ]
-    );
-  }, []);
+    setIsGeneratingReport(true);
+    try {
+      // Resolve studentId the same way fetchAttendance does
+      const meRes = await studentService.getMe();
+      const meData = meRes.normalized?.data;
+      const studentId: string = meData?.id ?? meData?.student?.id ?? '';
+
+      if (!studentId) {
+        throw new Error('Could not resolve student ID. Please try again.');
+      }
+
+      const res = await studentService.getAttendanceReport(studentId);
+      const report = res.normalized?.data || res.data || {};
+
+      // Format the JSON data into a readable text report for native Share
+      const stats = attendanceData?.statistics;
+      const studentName = report.student?.name || meData?.name || 'Student';
+      const className = report.student?.class || report.student?.className || '';
+
+      const lines: string[] = [
+        '📋 ATTENDANCE REPORT',
+        '═══════════════════════════════',
+        `Student : ${studentName}`,
+        className ? `Class   : ${className}` : '',
+        '',
+        '📊 Summary',
+        `Attendance   : ${stats?.attendancePercentage?.toFixed(1) ?? '–'}%`,
+        `Total Days   : ${stats?.totalDays ?? '–'}`,
+        `Present      : ${stats?.presentDays ?? '–'}`,
+        `Absent       : ${stats?.absentDays ?? '–'}`,
+        `Late         : ${stats?.lateDays ?? '–'}`,
+        `Excused      : ${stats?.excusedDays ?? '–'}`,
+        '',
+        '📅 Academic Year',
+        `Present      : ${stats?.academicYear?.presentDays ?? '–'}`,
+        `Absent       : ${stats?.academicYear?.absentDays ?? '–'}`,
+        `Percentage   : ${stats?.academicYear?.presentPercentage?.toFixed(1) ?? '–'}%`,
+        '',
+        `Generated on ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`,
+      ].filter(l => l !== undefined);
+
+      await Share.share({
+        message: lines.join('\n'),
+        title: 'Attendance Report',
+      });
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to generate report.';
+      if (msg !== 'Share was not shared') {
+        // 'Share was not shared' = user dismissed the sheet — not an error
+        Alert.alert('Report Error', msg);
+      }
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  }, [attendanceData]);
 
   // ─── Derived data ────────────────────────────────────────────────────────────
 
@@ -701,7 +742,7 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 20 },
 
@@ -720,43 +761,48 @@ const getStyles = (theme: any) => StyleSheet.create({
     elevation: 8,
     zIndex: 10,
   },
-  menuHandle: { paddingRight: 10, paddingVertical: 10 },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: theme.primary,
-    flex: 1,
-    textAlign: 'center',
-    marginHorizontal: 10,
-  },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  menuHandle: { paddingRight: 4, paddingVertical: 10 },
+  headerTitle: { fontSize: 18, fontWeight: '500', color: theme.primary, flex: 1, textAlign: 'center' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 20 },
   avatar: {
-    width: 34, height: 34, borderRadius: 17,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: theme.primary,
-    justifyContent: 'center', alignItems: 'center',
-    shadowColor: theme.primary, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5, shadowRadius: 6, elevation: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 4,
+    elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 },
 
   pageTitleWrapper: { marginBottom: 16, paddingHorizontal: 20, marginTop: 16 },
   pageTitle: { fontSize: 24, fontWeight: '800', color: theme.primary, marginBottom: 4 },
   pageSubtitle: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
 
+  // ── Cards ──
   card: {
-    backgroundColor: theme.surface, borderRadius: 14, padding: 16,
-    marginHorizontal: 20, marginBottom: 16,
-    shadowColor: '#1E293B', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08, shadowRadius: 10, elevation: 4,
-    borderWidth: 1, borderColor: theme.border,
+    backgroundColor: theme.surface,
+    borderRadius: 14,
+    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: theme.border,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
-  cardHeader: { fontSize: 15, fontWeight: '700', color: theme.text },
+  cardHeader: { fontSize: 14, fontWeight: '700', color: theme.text },
+  cardSubheader: { fontSize: 11, color: theme.subtext, marginTop: 2 },
   cardRowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
 
   // ── Stat Boxes ──
   statsRow: { flexDirection: 'row', justifyContent: 'space-between' },
   statBox: {
-    flex: 1, backgroundColor: theme.isDarkMode ? '#1E293B' : '#FAFAFA',
+    flex: 1, backgroundColor: isDarkMode ? '#1E293B' : '#FAFAFA',
     borderWidth: 1, borderColor: theme.border,
     borderLeftWidth: 4, borderRadius: 8,
     paddingVertical: 10, paddingHorizontal: 8,
@@ -784,16 +830,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
     marginBottom: 4, borderRadius: 6,
   },
-  calCellPresent: { backgroundColor: theme.isDarkMode ? '#064E3B' : '#D1FAE5' },
-  calCellAbsent: { backgroundColor: theme.isDarkMode ? '#7F1D1D30' : '#FEE2E2', borderWidth: 1, borderColor: '#FCA5A5' },
-  calCellLate: { backgroundColor: theme.isDarkMode ? '#78350F30' : '#FEF3C7', borderWidth: 1, borderColor: '#D97706' },
-  calCellExcused: { backgroundColor: theme.isDarkMode ? '#1E3A8A30' : '#DBEAFE', borderWidth: 1, borderColor: '#3B82F6' },
+  calCellPresent: { backgroundColor: isDarkMode ? '#064E3B' : '#D1FAE5' },
+  calCellAbsent: { backgroundColor: isDarkMode ? '#7F1D1D30' : '#FEE2E2', borderWidth: 1, borderColor: '#FCA5A5' },
+  calCellLate: { backgroundColor: isDarkMode ? '#78350F30' : '#FEF3C7', borderWidth: 1, borderColor: '#D97706' },
+  calCellExcused: { backgroundColor: isDarkMode ? '#1E3A8A30' : '#DBEAFE', borderWidth: 1, borderColor: '#3B82F6' },
   calCellToday: { borderWidth: 2, borderColor: theme.primary },
   calCellText: { fontSize: 11, fontWeight: '600', color: theme.text },
-  calCellTextPresent: { color: theme.isDarkMode ? '#34D399' : '#059669' },
-  calCellTextAbsent: { color: theme.isDarkMode ? '#FCA5A5' : '#DC2626' },
-  calCellTextLate: { color: theme.isDarkMode ? '#F59E0B' : '#D97706' },
-  calCellTextExcused: { color: theme.isDarkMode ? '#93C5FD' : '#2563EB' },
+  calCellTextPresent: { color: isDarkMode ? '#34D399' : '#059669' },
+  calCellTextAbsent: { color: isDarkMode ? '#FCA5A5' : '#DC2626' },
+  calCellTextLate: { color: isDarkMode ? '#F59E0B' : '#D97706' },
+  calCellTextExcused: { color: isDarkMode ? '#93C5FD' : '#2563EB' },
   calDivider: { height: 1, backgroundColor: theme.border, marginVertical: 10 },
   calLegend: { flexDirection: 'row', justifyContent: 'space-around' },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
@@ -802,7 +848,7 @@ const getStyles = (theme: any) => StyleSheet.create({
 
   // ── Academic Year badge ──
   yearBadge: {
-    marginLeft: 10, backgroundColor: theme.isDarkMode ? '#1E3A8A30' : '#EEF2FF',
+    marginLeft: 10, backgroundColor: isDarkMode ? '#1E3A8A30' : '#EEF2FF',
     paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20,
   },
   yearBadgeText: { fontSize: 11, fontWeight: '700', color: theme.primary },
@@ -819,17 +865,17 @@ const getStyles = (theme: any) => StyleSheet.create({
   // ── Warning banner ──
   warningBanner: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: theme.isDarkMode ? '#78350F30' : '#FFFBEB', borderRadius: 8,
+    backgroundColor: isDarkMode ? '#78350F30' : '#FFFBEB', borderRadius: 8,
     paddingHorizontal: 12, paddingVertical: 8, marginTop: 12,
-    borderWidth: 1, borderColor: theme.isDarkMode ? '#D97706' : '#FDE68A',
+    borderWidth: 1, borderColor: isDarkMode ? '#D97706' : '#FDE68A',
   },
-  warningText: { fontSize: 11, color: theme.isDarkMode ? '#F59E0B' : '#92400E', fontWeight: '500', flex: 1 },
+  warningText: { fontSize: 11, color: isDarkMode ? '#F59E0B' : '#92400E', fontWeight: '500', flex: 1 },
 
   // ── Progress bar ──
   targetTitle: { fontSize: 12, fontWeight: '700', color: theme.text },
   targetPercent: { fontSize: 14, fontWeight: '800', color: theme.primary },
   progressBarBg: {
-    height: 8, backgroundColor: theme.isDarkMode ? '#334155' : '#E2E8F0', borderRadius: 4,
+    height: 8, backgroundColor: isDarkMode ? '#334155' : '#E2E8F0', borderRadius: 4,
     width: '100%', overflow: 'hidden', marginBottom: 10,
     position: 'relative',
   },
@@ -842,11 +888,11 @@ const getStyles = (theme: any) => StyleSheet.create({
   metricText: { fontSize: 10, color: theme.subtext, fontWeight: '500' },
 
   // ── Table ──
-  viewAllBtn: { backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 4 },
+  viewAllBtn: { backgroundColor: isDarkMode ? '#334155' : '#F3F4F6', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 4 },
   viewAllText: { fontSize: 10, fontWeight: '600', color: theme.text },
   table: { marginTop: 4 },
   tableHeaderRow: {
-    flexDirection: 'row', backgroundColor: theme.isDarkMode ? '#1E293B' : '#F3F4F6',
+    flexDirection: 'row', backgroundColor: isDarkMode ? '#1E293B' : '#F3F4F6',
     paddingVertical: 9, paddingHorizontal: 8, borderRadius: 6, marginBottom: 4,
   },
   thText: { fontSize: 9, fontWeight: '700', color: theme.text },
@@ -860,14 +906,14 @@ const getStyles = (theme: any) => StyleSheet.create({
   tdPillWrap: { alignItems: 'flex-start' },
 
   // Status pills
-  statusPresent: { backgroundColor: theme.isDarkMode ? '#064E3B' : '#D1FAE5', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 12 },
-  statusAbsent: { backgroundColor: theme.isDarkMode ? '#7F1D1D30' : '#FEE2E2', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 12 },
-  statusLate: { backgroundColor: theme.isDarkMode ? '#78350F30' : '#FEF3C7', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 12 },
-  statusExcused: { backgroundColor: theme.isDarkMode ? '#1E3A8A30' : '#DBEAFE', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 12 },
-  statusTextPresent: { fontSize: 9, color: theme.isDarkMode ? '#34D399' : '#059669', fontWeight: '700' },
-  statusTextAbsent: { fontSize: 9, color: theme.isDarkMode ? '#FCA5A5' : '#DC2626', fontWeight: '700' },
-  statusTextLate: { fontSize: 9, color: theme.isDarkMode ? '#F59E0B' : '#D97706', fontWeight: '700' },
-  statusTextExcused: { fontSize: 9, color: theme.isDarkMode ? '#93C5FD' : '#2563EB', fontWeight: '700' },
+  statusPresent: { backgroundColor: isDarkMode ? '#064E3B' : '#D1FAE5', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 12 },
+  statusAbsent: { backgroundColor: isDarkMode ? '#7F1D1D30' : '#FEE2E2', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 12 },
+  statusLate: { backgroundColor: isDarkMode ? '#78350F30' : '#FEF3C7', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 12 },
+  statusExcused: { backgroundColor: isDarkMode ? '#1E3A8A30' : '#DBEAFE', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 12 },
+  statusTextPresent: { fontSize: 9, color: isDarkMode ? '#34D399' : '#059669', fontWeight: '700' },
+  statusTextAbsent: { fontSize: 9, color: isDarkMode ? '#FCA5A5' : '#DC2626', fontWeight: '700' },
+  statusTextLate: { fontSize: 9, color: isDarkMode ? '#F59E0B' : '#D97706', fontWeight: '700' },
+  statusTextExcused: { fontSize: 9, color: isDarkMode ? '#93C5FD' : '#2563EB', fontWeight: '700' },
 
   // ── PDF button ──
   pdfButton: {

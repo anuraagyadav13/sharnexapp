@@ -20,6 +20,11 @@ import {
   Platform,
   StatusBar,
   RefreshControl,
+  Modal,
+  TextInput,
+  Linking,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -360,113 +365,12 @@ const getStyles = (theme: any) =>
     assignmentItemTitle: { fontSize: 14, fontWeight: '700', color: theme.text },
     assignmentItemSubtext: { fontSize: 11, color: theme.subtext, marginTop: 2 },
 
-    // TOP PERFORMERS NEW UI
-    podiumContainer: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      alignItems: 'flex-end',
-      paddingTop: 40,
-      marginBottom: 32,
-      gap: 16,
-    },
-    podiumCard: {
-      backgroundColor: theme.cardSurface,
-      borderRadius: 16,
-      alignItems: 'center',
-      paddingHorizontal: 8,
-      paddingBottom: 16,
-      paddingTop: 36,
-      width: '28%',
-      borderColor: theme.cardNestedBorder,
-      borderWidth: 1,
-    },
-    podiumCard1: {
-      height: 140,
-      borderColor: '#10B981',
-      borderWidth: 2,
-      shadowColor: '#10B981',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.2,
-      shadowRadius: 10,
-      elevation: 6,
-      zIndex: 10,
-    },
-    podiumCard2: { height: 120 },
-    podiumCard3: { height: 110 },
-    podiumAvatarWrapper: {
-      position: 'absolute',
-      top: -32,
-      alignItems: 'center',
-    },
-    podiumAvatarWrapper1: { top: -40 },
-    podiumAvatar: {
-      width: 54,
-      height: 54,
-      borderRadius: 27,
-      borderWidth: 2,
-      backgroundColor: theme.cardSurface,
-    },
-    podiumAvatar1: {
-      width: 68,
-      height: 68,
-      borderRadius: 34,
-      borderColor: '#10B981',
-      borderWidth: 3,
-    },
-    podiumAvatar2: { borderColor: '#3B82F6' },
-    podiumAvatar3: { borderColor: '#F97316' },
-    podiumRankBadge: {
-      paddingHorizontal: 10,
-      paddingVertical: 3,
-      borderRadius: 12,
-      marginTop: -12,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 2,
-    },
-    podiumRankBadge1: { backgroundColor: '#10B981' },
-    podiumRankBadge2: { backgroundColor: '#3B82F6' },
-    podiumRankBadge3: { backgroundColor: '#F97316' },
-    podiumRankText: {
-      color: '#FFF',
-      fontSize: 10,
-      fontWeight: '800',
-    },
-    podiumName: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: theme.text,
-      textAlign: 'center',
-      marginBottom: 4,
-    },
-    podiumPercent: {
-      fontSize: 18,
-      fontWeight: '800',
-      marginBottom: 6,
-    },
-    podiumPercent1: { color: '#10B981', fontSize: 22 },
-    podiumPercent2: { color: '#3B82F6' },
-    podiumPercent3: { color: '#F97316' },
-    podiumTopPill: {
-      backgroundColor: BRAND.accentPurple,
-      paddingHorizontal: 10,
-      paddingVertical: 3,
-      borderRadius: 12,
-    },
-    podiumTopPill2: { backgroundColor: '#DBEAFE' },
-    podiumTopPillText: {
-      fontSize: 9,
-      fontWeight: '900',
-      color: '#FFF',
-    },
-    podiumTopPillText2: { color: '#2563EB' },
-
+    // TOP PERFORMERS UI
     topPerformersHeaderRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 16,
+      marginBottom: 20,
       paddingHorizontal: 4,
     },
     topPerformersTitle: {
@@ -474,63 +378,179 @@ const getStyles = (theme: any) =>
       fontWeight: '800',
       color: theme.text,
     },
-    viewAllText: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: BRAND.accentPurple,
+    podiumContainer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'flex-end',
+      marginTop: 28,
+      marginBottom: 20,
+      gap: 10,
     },
-    performerListContainer: { gap: 12 },
+    podiumCard: {
+      flex: 1,
+      backgroundColor: theme.cardSurface,
+      borderRadius: 18,
+      paddingTop: 36,
+      paddingBottom: 14,
+      paddingHorizontal: 6,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.cardNestedBorder,
+      position: 'relative',
+    },
+    podiumCard1: {
+      backgroundColor: theme.cardSurface,
+      borderColor: '#F59E0B',
+      borderWidth: 2,
+      paddingTop: 42,
+      paddingBottom: 16,
+      shadowColor: '#F59E0B',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.25,
+      shadowRadius: 10,
+      elevation: 6,
+    },
+    podiumCard2: {
+      backgroundColor: theme.cardSurface,
+      borderColor: '#3B82F6',
+      borderWidth: 1.5,
+    },
+    podiumCard3: {
+      backgroundColor: theme.cardSurface,
+      borderColor: '#F97316',
+      borderWidth: 1.5,
+    },
+    podiumAvatarWrapper: {
+      position: 'absolute',
+      top: -28,
+      alignItems: 'center',
+    },
+    podiumAvatarWrapper1: {
+      top: -34,
+    },
+    podiumRankBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 10,
+      marginTop: -10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+    },
+    podiumRankBadge1: { backgroundColor: '#F59E0B' },
+    podiumRankBadge2: { backgroundColor: '#3B82F6' },
+    podiumRankBadge3: { backgroundColor: '#F97316' },
+    podiumRankText: {
+      color: '#FFFFFF',
+      fontSize: 10,
+      fontWeight: '900',
+    },
+    podiumName: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: theme.text,
+      textAlign: 'center',
+      marginBottom: 2,
+      marginTop: 4,
+    },
+    podiumName1: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: theme.text,
+      textAlign: 'center',
+      marginBottom: 2,
+      marginTop: 4,
+    },
+    podiumPercent: {
+      fontSize: 16,
+      fontWeight: '900',
+      marginBottom: 6,
+    },
+    podiumPercent1: { color: '#F59E0B', fontSize: 20 },
+    podiumPercent2: { color: '#3B82F6' },
+    podiumPercent3: { color: '#F97316' },
+    podiumTopPill: {
+      backgroundColor: BRAND.accentPurple,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 8,
+    },
+    podiumTopPill1: {
+      backgroundColor: '#F59E0B',
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+      borderRadius: 10,
+    },
+    podiumTopPill2: { backgroundColor: '#3B82F6' },
+    podiumTopPill3: { backgroundColor: '#F97316' },
+    podiumTopPillText: {
+      fontSize: 9,
+      fontWeight: '800',
+      color: '#FFFFFF',
+    },
+    podiumTopPillText1: {
+      fontSize: 9,
+      fontWeight: '900',
+      color: '#FFFFFF',
+      letterSpacing: 0.5,
+    },
+    podiumTopPillText2: { color: '#FFFFFF' },
+    podiumTopPillText3: { color: '#FFFFFF' },
+
+    // Performer List (Ranks 4, 5+)
+    performerListContainer: { gap: 10, marginTop: 4 },
     performerListCard: {
       flexDirection: 'row',
       alignItems: 'center',
-      padding: 14,
-      borderRadius: 16,
+      padding: 12,
+      borderRadius: 14,
+      backgroundColor: theme.cardSurface,
+      borderWidth: 1,
+      borderColor: theme.cardNestedBorder,
     },
-    performerListCard4: { backgroundColor: '#E0F2FE' },
-    performerListCard5: { backgroundColor: '#F3E8FF' },
-    performerRank: {
-      fontSize: 15,
-      fontWeight: '800',
-      color: '#94A3B8',
-      width: 24,
-      textAlign: 'center',
+    performerRankBadge: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: theme.iconBoxPurpleBg || 'rgba(124, 58, 237, 0.1)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 4,
     },
-    performerAvatar: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      marginHorizontal: 12,
-    },
-    performerInfo: { flex: 1 },
-    performerName: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: theme.text,
-      marginBottom: 4,
-    },
-    performerDeptPill: {
-      backgroundColor: 'rgba(255,255,255,0.7)',
-      alignSelf: 'flex-start',
-      paddingHorizontal: 10,
-      paddingVertical: 3,
-      borderRadius: 12,
-    },
-    performerDeptText: {
-      fontSize: 10,
-      fontWeight: '700',
-      color: '#64748B',
-    },
-    performerRightInfo: { alignItems: 'flex-end' },
-    performerPercent: {
-      fontSize: 17,
+    performerRankText: {
+      fontSize: 12,
       fontWeight: '800',
       color: BRAND.accentPurple,
     },
-    performerPercent4: { color: '#0284C7' },
+    performerInfo: { flex: 1, marginLeft: 10 },
+    performerName: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: theme.text,
+      marginBottom: 3,
+    },
+    performerDeptPill: {
+      backgroundColor: theme.iconBoxPurpleBg || 'rgba(124, 58, 237, 0.08)',
+      alignSelf: 'flex-start',
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    performerDeptText: {
+      fontSize: 10,
+      fontWeight: '600',
+      color: theme.subtext,
+    },
+    performerRightInfo: { alignItems: 'flex-end' },
+    performerPercent: {
+      fontSize: 15,
+      fontWeight: '900',
+      color: BRAND.accentPurple,
+    },
     performerStatusText: {
       fontSize: 9,
       fontWeight: '800',
-      color: '#94A3B8',
+      color: '#10B981',
       marginTop: 2,
     },
 
@@ -797,9 +817,70 @@ const formatDueDate = (dateStr: string) => {
 };
 
 // ---------------------------------------------------------------------------
+// LeaderboardAvatar Component
+// ---------------------------------------------------------------------------
+const getInitials = (name?: string) => {
+  if (!name) return 'ST';
+  const parts = name.trim().split(' ').filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const LeaderboardAvatar: React.FC<{
+  img?: string;
+  name?: string;
+  size?: number;
+  borderColor?: string;
+  borderWidth?: number;
+}> = ({ img, name, size = 52, borderColor = '#CBD5E1', borderWidth = 2 }) => {
+  const [imgError, setImgError] = useState(false);
+  const initials = useMemo(() => getInitials(name), [name]);
+  const isDefaultAvatar = !img || img.includes('ui-avatars.com') || imgError;
+
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        borderWidth,
+        borderColor,
+        backgroundColor: '#1E293B',
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
+      }}
+    >
+      {isDefaultAvatar ? (
+        <View
+          style={{
+            width: '100%',
+            height: '100%',
+            backgroundColor: borderColor,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: size * 0.38 }}>
+            {initials}
+          </Text>
+        </View>
+      ) : (
+        <Image
+          source={{ uri: img }}
+          style={{ width: '100%', height: '100%' }}
+          onError={() => setImgError(true)}
+        />
+      )}
+    </View>
+  );
+};
+
+// ---------------------------------------------------------------------------
 // StudentDashboard
 // ---------------------------------------------------------------------------
 const StudentDashboard: React.FC<Props> = ({ navigation }) => {
+  console.log('[DEBUG_MOUNT] StudentDashboard mounted!');
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const { theme, isDarkMode } = useTheme();
@@ -814,6 +895,69 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [expandedFaqId, setExpandedFaqId] = useState<number | null>(null);
 
+  // Contact Support Modal State
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  const [supportName, setSupportName] = useState('');
+  const [supportPhone, setSupportPhone] = useState('');
+  const [supportEmail, setSupportEmail] = useState('');
+  const [supportSchool, setSupportSchool] = useState('');
+  const [supportMessage, setSupportMessage] = useState('');
+  const [agreePrivacy, setAgreePrivacy] = useState(false);
+  const [isSubmittingSupport, setIsSubmittingSupport] = useState(false);
+
+  const openSupportModal = useCallback(() => {
+    setSupportName(authState?.user?.name || '');
+    setSupportEmail(authState?.user?.email || '');
+    setSupportPhone(authState?.user?.phone || '');
+    setSupportSchool(authState?.user?.institutionName || '');
+    setSupportMessage('');
+    setAgreePrivacy(false);
+    setIsSupportModalOpen(true);
+  }, [authState?.user]);
+
+  const handleSendSupportMessage = async () => {
+    if (!supportName.trim()) {
+      Alert.alert('Validation Error', 'Please enter your full name.');
+      return;
+    }
+    if (!supportEmail.trim() || !/^\S+@\S+\.\S+$/.test(supportEmail.trim())) {
+      Alert.alert('Validation Error', 'Please enter a valid email address.');
+      return;
+    }
+    if (!supportMessage.trim()) {
+      Alert.alert('Validation Error', 'Please enter your message.');
+      return;
+    }
+    if (!agreePrivacy) {
+      Alert.alert('Validation Error', 'You must agree to our privacy policy to submit.');
+      return;
+    }
+
+    try {
+      setIsSubmittingSupport(true);
+      await studentService.contactSupport({
+        fullName: supportName.trim(),
+        email: supportEmail.trim(),
+        phone: supportPhone.trim(),
+        school: supportSchool.trim(),
+        message: supportMessage.trim(),
+      });
+      Alert.alert(
+        'Message Sent',
+        'Thank you! Your message has been sent to our support team. We will get back to you shortly.',
+      );
+      setIsSupportModalOpen(false);
+    } catch (err: any) {
+      console.error('Contact support submission error:', err);
+      Alert.alert(
+        'Submission Failed',
+        err?.response?.data?.error || err?.message || 'Failed to send message. Please try again.',
+      );
+    } finally {
+      setIsSubmittingSupport(false);
+    }
+  };
+
   const fetchAllData = useCallback(
     async (isRefresh = false) => {
       try {
@@ -824,60 +968,68 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
         }
 
         const userId = authState?.user?.id;
-        let resolvedId = userId;
+        let studentDbId: string | null = null;
 
         try {
-          const profileRes = await studentService.getProfile();
-          resolvedId =
-            profileRes?.normalized?.data?.id || profileRes?.data?.id || userId;
-        } catch {
-          // use fallback userId
+          const meRes = await studentService.getMe();
+          const meData = meRes?.normalized?.data || meRes?.data?.data || meRes?.data;
+          studentDbId = meData?.student?.id || meData?.studentId || null;
+        } catch (meErr) {
+          console.warn('[StudentDashboard] Warning fetching /auth/me profile:', meErr);
         }
 
-        if (resolvedId) {
-          const [dashRes, scheduleRes, assignRes, quizRes, leaderboardRes] =
-            await Promise.allSettled([
-              studentService.getDashboard(resolvedId),
-              studentService.getSchedule(resolvedId),
-              studentService.getAssignments(resolvedId),
-              studentService.getQuizzes(),
-              studentService.getLeaderboard(5),
-            ]);
+        console.log('[StudentDashboard] Resolved IDs:', { userId, studentDbId });
 
-          if (dashRes.status === 'fulfilled' && dashRes.value) {
-            setDashboardData(
-              dashRes.value?.normalized?.data || dashRes.value?.data || {},
-            );
-          }
-          if (scheduleRes.status === 'fulfilled' && scheduleRes.value) {
-            const p =
-              scheduleRes.value?.normalized?.data || scheduleRes.value?.data || {};
-            const slots =
-              p.schedule || p.slots || p.timetable ||
-              (Array.isArray(p) ? p : []);
-            setScheduleData(Array.isArray(slots) ? slots : []);
-          }
-          if (assignRes.status === 'fulfilled' && assignRes.value) {
-            const p =
-              assignRes.value?.normalized?.data?.assignments ||
-              assignRes.value?.data?.assignments ||
-              (Array.isArray(assignRes.value?.data) ? assignRes.value.data : []);
-            setAssignmentsData(Array.isArray(p) ? p : []);
-          }
-          if (quizRes.status === 'fulfilled' && quizRes.value) {
-            const p =
-              quizRes.value?.normalized?.data?.quizzes ||
-              quizRes.value?.data?.quizzes ||
-              (Array.isArray(quizRes.value?.data) ? quizRes.value.data : []);
-            setQuizzesData(Array.isArray(p) ? p : []);
-          }
-          if (leaderboardRes.status === 'fulfilled' && leaderboardRes.value) {
-            const p =
-              leaderboardRes.value?.normalized?.data ||
-              leaderboardRes.value?.data ||
-              [];
-            setLeaderboardData(Array.isArray(p) ? p : (Array.isArray(p.leaderboard) ? p.leaderboard : []));
-          }
+        const [dashRes, scheduleRes, assignRes, quizRes, leaderboardRes] =
+          await Promise.allSettled([
+            studentDbId ? studentService.getDashboard(studentDbId) : Promise.resolve(null),
+            studentDbId ? studentService.getSchedule(studentDbId) : Promise.resolve(null),
+            userId ? studentService.getAssignments(userId) : Promise.resolve(null),
+            studentService.getQuizzes(),
+            studentService.getLeaderboard(5),
+          ]);
+
+        if (!studentDbId) {
+          console.warn('[StudentDashboard] Student record not found on /auth/me for user:', userId);
+          setDashboardData({ notFound: true, message: 'Student record not found' });
+          setScheduleData([]);
+        } else if (dashRes.status === 'fulfilled' && dashRes.value) {
+          setDashboardData(
+            dashRes.value?.normalized?.data || dashRes.value?.data || {},
+          );
+        }
+
+        if (studentDbId && scheduleRes.status === 'fulfilled' && scheduleRes.value) {
+          const p =
+            scheduleRes.value?.normalized?.data || scheduleRes.value?.data || {};
+          const slots =
+            p.schedule || p.slots || p.timetable ||
+            (Array.isArray(p) ? p : []);
+          setScheduleData(Array.isArray(slots) ? slots : []);
+        }
+
+        if (assignRes.status === 'fulfilled' && assignRes.value) {
+          const p =
+            assignRes.value?.normalized?.data?.assignments ||
+            assignRes.value?.data?.assignments ||
+            (Array.isArray(assignRes.value?.data) ? assignRes.value.data : []);
+          setAssignmentsData(Array.isArray(p) ? p : []);
+        }
+
+        if (quizRes.status === 'fulfilled' && quizRes.value) {
+          const p =
+            quizRes.value?.normalized?.data?.quizzes ||
+            quizRes.value?.data?.quizzes ||
+            (Array.isArray(quizRes.value?.data) ? quizRes.value.data : []);
+          setQuizzesData(Array.isArray(p) ? p : []);
+        }
+
+        if (leaderboardRes.status === 'fulfilled' && leaderboardRes.value) {
+          const p =
+            leaderboardRes.value?.normalized?.data ||
+            leaderboardRes.value?.data ||
+            [];
+          setLeaderboardData(Array.isArray(p) ? p : (Array.isArray(p.leaderboard) ? p.leaderboard : []));
         }
       } catch (error) {
         console.error('Fetch failed:', error);
@@ -1085,6 +1237,16 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
             </View> */}
           </View>
 
+          {/* Student Record Not Found Banner Guard */}
+          {dashboardData?.notFound && (
+            <View style={{ marginHorizontal: 20, marginVertical: 12, padding: 16, backgroundColor: '#FEF2F2', borderRadius: 12, borderWidth: 1, borderColor: '#FCA5A5', flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="alert-circle-outline" size={24} color="#DC2626" style={{ marginRight: 12 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#991B1B' }}>Student Record Not Found</Text>
+                <Text style={{ fontSize: 12, color: '#B91C1C', marginTop: 2 }}>Your account has not been assigned a student profile record yet. Please contact administration.</Text>
+              </View>
+            </View>
+          )}
 
           {/* 3. Today's Schedule */}
           <View style={s.section}>
@@ -1243,73 +1405,95 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
 
           {/* 6. Top Performers */}
           <View style={s.section}>
+            {/* Section Header */}
             <View style={s.topPerformersHeaderRow}>
-              <Text style={s.topPerformersTitle}>Top Performers</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: 'rgba(245, 158, 11, 0.15)', justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="trophy" size={18} color="#F59E0B" />
+                </View>
+                <View>
+                  <Text style={s.topPerformersTitle}>Top Performers</Text>
+                  <Text style={{ fontSize: 11, color: theme.subtext, marginTop: 1 }}>Leaderboard standings for this term</Text>
+                </View>
+              </View>
+              <View style={{ backgroundColor: 'rgba(245, 158, 11, 0.12)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(245, 158, 11, 0.3)' }}>
+                <Text style={{ fontSize: 10, fontWeight: '800', color: '#D97706' }}>THIS TERM</Text>
+              </View>
             </View>
 
             {top5Students.length >= 3 && (
               <View style={s.podiumContainer}>
-                {/* 2nd Place */}
+                {/* 2nd Place (Left) */}
                 <View style={[s.podiumCard, s.podiumCard2]}>
-                  <View style={[s.podiumAvatarWrapper, s.podiumAvatarWrapper2]}>
-                    <Image source={{ uri: top5Students[1].img || 'https://i.pravatar.cc/150' }} style={[s.podiumAvatar, s.podiumAvatar2]} />
+                  <View style={s.podiumAvatarWrapper}>
+                    <LeaderboardAvatar name={top5Students[1].name} img={top5Students[1].img} size={54} borderColor="#3B82F6" borderWidth={3} />
                     <View style={[s.podiumRankBadge, s.podiumRankBadge2]}>
+                      <MaterialCommunityIcons name="medal" size={12} color="#FFFFFF" />
                       <Text style={s.podiumRankText}>2nd</Text>
                     </View>
                   </View>
                   <Text style={s.podiumName} numberOfLines={1}>{top5Students[1].name || 'Student'}</Text>
                   <Text style={[s.podiumPercent, s.podiumPercent2]}>{top5Students[1].percentage}</Text>
                   <View style={[s.podiumTopPill, s.podiumTopPill2]}>
-                    <Text style={[s.podiumTopPillText, s.podiumTopPillText2]}>TOP</Text>
+                    <Text style={[s.podiumTopPillText, s.podiumTopPillText2]}>TOP 5</Text>
                   </View>
                 </View>
 
-                {/* 1st Place */}
+                {/* 1st Place (Center - Champion) */}
                 <View style={[s.podiumCard, s.podiumCard1]}>
+                  <View style={{ position: 'absolute', top: -48, zIndex: 10 }}>
+                    <MaterialCommunityIcons name="crown" size={26} color="#F59E0B" />
+                  </View>
                   <View style={[s.podiumAvatarWrapper, s.podiumAvatarWrapper1]}>
-                    <Image source={{ uri: top5Students[0].img || 'https://i.pravatar.cc/150' }} style={[s.podiumAvatar, s.podiumAvatar1]} />
+                    <LeaderboardAvatar name={top5Students[0].name} img={top5Students[0].img} size={66} borderColor="#F59E0B" borderWidth={3} />
                     <View style={[s.podiumRankBadge, s.podiumRankBadge1]}>
-                      <Ionicons name="ribbon" size={10} color="#FFF" />
+                      <Ionicons name="trophy" size={11} color="#FFFFFF" />
                       <Text style={s.podiumRankText}>1st</Text>
                     </View>
                   </View>
-                  <Text style={s.podiumName} numberOfLines={1}>{top5Students[0].name || 'Student'}</Text>
+                  <Text style={s.podiumName1} numberOfLines={1}>{top5Students[0].name || 'Student'}</Text>
                   <Text style={[s.podiumPercent, s.podiumPercent1]}>{top5Students[0].percentage}</Text>
-                  <View style={s.podiumTopPill}>
-                    <Text style={s.podiumTopPillText}>TOP</Text>
+                  <View style={s.podiumTopPill1}>
+                    <Text style={s.podiumTopPillText1}>CHAMPION</Text>
                   </View>
                 </View>
 
-                {/* 3rd Place */}
+                {/* 3rd Place (Right) */}
                 <View style={[s.podiumCard, s.podiumCard3]}>
-                  <View style={[s.podiumAvatarWrapper, s.podiumAvatarWrapper3]}>
-                    <Image source={{ uri: top5Students[2].img || 'https://i.pravatar.cc/150' }} style={[s.podiumAvatar, s.podiumAvatar3]} />
+                  <View style={s.podiumAvatarWrapper}>
+                    <LeaderboardAvatar name={top5Students[2].name} img={top5Students[2].img} size={54} borderColor="#F97316" borderWidth={3} />
                     <View style={[s.podiumRankBadge, s.podiumRankBadge3]}>
+                      <MaterialCommunityIcons name="medal-outline" size={12} color="#FFFFFF" />
                       <Text style={s.podiumRankText}>3rd</Text>
                     </View>
                   </View>
                   <Text style={s.podiumName} numberOfLines={1}>{top5Students[2].name || 'Student'}</Text>
                   <Text style={[s.podiumPercent, s.podiumPercent3]}>{top5Students[2].percentage}</Text>
+                  <View style={[s.podiumTopPill, s.podiumTopPill3]}>
+                    <Text style={[s.podiumTopPillText, s.podiumTopPillText3]}>TOP 5</Text>
+                  </View>
                 </View>
               </View>
             )}
 
+            {/* Ranks 4th & 5th Rows */}
             <View style={s.performerListContainer}>
               {top5Students.slice(3).map((student: any, index: number) => {
                 const rank = index + 4;
-                const isRank4 = rank === 4;
                 return (
-                  <View key={index} style={[s.performerListCard, isRank4 ? s.performerListCard4 : s.performerListCard5]}>
-                    <Text style={s.performerRank}>{rank}</Text>
-                    <Image source={{ uri: student.img || 'https://i.pravatar.cc/150' }} style={s.performerAvatar} />
+                  <View key={index} style={s.performerListCard}>
+                    <View style={s.performerRankBadge}>
+                      <Text style={s.performerRankText}>{rank}</Text>
+                    </View>
+                    <LeaderboardAvatar name={student.name} img={student.img} size={42} borderColor={isDarkMode ? '#334155' : '#E2E8F0'} borderWidth={2} />
                     <View style={s.performerInfo}>
-                      <Text style={s.performerName}>{student.name || 'Student'}</Text>
+                      <Text style={s.performerName} numberOfLines={1}>{student.name || 'Student'}</Text>
                       <View style={s.performerDeptPill}>
-                        <Text style={s.performerDeptText}>{student.dept || 'Department'}</Text>
+                        <Text style={s.performerDeptText}>{student.dept || 'Class'}</Text>
                       </View>
                     </View>
                     <View style={s.performerRightInfo}>
-                      <Text style={[s.performerPercent, isRank4 ? s.performerPercent4 : null]}>{student.percentage || '0%'}</Text>
+                      <Text style={s.performerPercent}>{student.percentage || '0%'}</Text>
                       <Text style={s.performerStatusText}>{student.statusText || 'STABLE'}</Text>
                     </View>
                   </View>
@@ -1362,7 +1546,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
             <Text style={s.needHelpDesc}>
               Our support team is here to assist you with any questions or concerns.
             </Text>
-            <TouchableOpacity style={s.contactSupportBtn} activeOpacity={0.8}>
+            <TouchableOpacity style={s.contactSupportBtn} activeOpacity={0.8} onPress={openSupportModal}>
               <Text style={s.contactSupportBtnText}>Contact Support</Text>
             </TouchableOpacity>
           </View>
@@ -1374,6 +1558,152 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
         onClose={() => setDrawerOpen(false)}
         role="student"
       />
+
+      {/* Contact Support Modal */}
+      <Modal
+        visible={isSupportModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsSupportModalOpen(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.75)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ width: '100%', maxWidth: 480, maxHeight: '90%', backgroundColor: isDarkMode ? '#0F172A' : '#FFFFFF', borderRadius: 20, padding: 24, borderWidth: 1, borderColor: isDarkMode ? '#1E293B' : '#E2E8F0', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 }}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
+              {/* Header */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                <View style={{ flex: 1, paddingRight: 10 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#A855F7', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 4 }}>
+                    CONTACT SUPPORT
+                  </Text>
+                  <Text style={{ fontSize: 24, fontWeight: '900', color: theme.text }}>
+                    We're here to help
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setIsSupportModalOpen(false)}
+                  style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9', justifyContent: 'center', alignItems: 'center' }}
+                >
+                  <Ionicons name="close" size={20} color={theme.subtext} />
+                </TouchableOpacity>
+              </View>
+              <Text style={{ fontSize: 13, color: theme.subtext, lineHeight: 18, marginBottom: 20 }}>
+                Have a question or ran into an issue? Send us a message and our team will get back to you shortly.
+              </Text>
+
+              {/* Fields */}
+              <View style={{ gap: 14 }}>
+                {/* Full Name */}
+                <View>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 6 }}>Full Name</Text>
+                  <TextInput
+                    style={{ backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC', borderWidth: 1, borderColor: isDarkMode ? '#334155' : '#CBD5E1', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: theme.text }}
+                    placeholder="Jane Doe"
+                    placeholderTextColor={theme.subtext}
+                    value={supportName}
+                    onChangeText={setSupportName}
+                  />
+                </View>
+
+                {/* Phone */}
+                <View>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 6 }}>Phone</Text>
+                  <TextInput
+                    style={{ backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC', borderWidth: 1, borderColor: isDarkMode ? '#334155' : '#CBD5E1', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: theme.text }}
+                    placeholder="+91 00000 00000"
+                    placeholderTextColor={theme.subtext}
+                    keyboardType="phone-pad"
+                    value={supportPhone}
+                    onChangeText={setSupportPhone}
+                  />
+                </View>
+
+                {/* Work Email */}
+                <View>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 6 }}>Work Email</Text>
+                  <TextInput
+                    style={{ backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC', borderWidth: 1, borderColor: isDarkMode ? '#334155' : '#CBD5E1', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: theme.text }}
+                    placeholder="jane@school.com"
+                    placeholderTextColor={theme.subtext}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    value={supportEmail}
+                    onChangeText={setSupportEmail}
+                  />
+                </View>
+
+                {/* School / Institution */}
+                <View>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 6 }}>School / Institution</Text>
+                  <TextInput
+                    style={{ backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC', borderWidth: 1, borderColor: isDarkMode ? '#334155' : '#CBD5E1', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: theme.text }}
+                    placeholder="Enter school name"
+                    placeholderTextColor={theme.subtext}
+                    value={supportSchool}
+                    onChangeText={setSupportSchool}
+                  />
+                </View>
+
+                {/* Message */}
+                <View>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 6 }}>Message</Text>
+                  <TextInput
+                    style={{ backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC', borderWidth: 1, borderColor: isDarkMode ? '#334155' : '#CBD5E1', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: theme.text, minHeight: 90, textAlignVertical: 'top' }}
+                    placeholder="Tell us what's going on..."
+                    placeholderTextColor={theme.subtext}
+                    multiline
+                    numberOfLines={4}
+                    value={supportMessage}
+                    onChangeText={setSupportMessage}
+                  />
+                </View>
+
+                {/* Privacy Policy Checkbox */}
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}
+                  activeOpacity={0.8}
+                  onPress={() => setAgreePrivacy(!agreePrivacy)}
+                >
+                  <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: agreePrivacy ? '#9333EA' : isDarkMode ? '#475569' : '#94A3B8', backgroundColor: agreePrivacy ? '#9333EA' : 'transparent', justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
+                    {agreePrivacy && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
+                  </View>
+                  <Text style={{ fontSize: 13, color: theme.subtext, flex: 1 }}>
+                    You agree to our{' '}
+                    <Text
+                      style={{ color: theme.primary, textDecorationLine: 'underline' }}
+                      onPress={() => Linking.openURL('https://www.sharnex.com/privacy-policy')}
+                    >
+                      privacy policy
+                    </Text>
+                    .
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Action Buttons */}
+                <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+                  <TouchableOpacity
+                    style={{ flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: isDarkMode ? '#1E293B' : '#E2E8F0', justifyContent: 'center', alignItems: 'center' }}
+                    onPress={() => setIsSupportModalOpen(false)}
+                    disabled={isSubmittingSupport}
+                  >
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: theme.text }}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{ flex: 2, paddingVertical: 14, borderRadius: 12, backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center', opacity: isSubmittingSupport ? 0.7 : 1 }}
+                    onPress={handleSendSupportMessage}
+                    disabled={isSubmittingSupport}
+                  >
+                    {isSubmittingSupport ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF' }}>Send Message</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };

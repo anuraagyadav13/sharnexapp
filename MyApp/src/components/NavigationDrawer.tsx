@@ -24,7 +24,7 @@ const SWIPE_THRESHOLD = -DRAWER_WIDTH / 3;
 interface NavigationDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  role?: 'student' | 'teacher' | 'admin' | 'principal';
+  role?: 'student' | 'teacher' | 'admin' | 'principal' | 'library';
 }
 
 interface MenuItem {
@@ -46,7 +46,7 @@ const STUDENT_MENU: MenuItem[] = [
   { id: '6', label: 'Attendance', icon: 'calendar-outline' },
   { id: '7', label: 'Announcements', icon: 'megaphone-outline' },
 
-  { id: '8', label: 'Grades & Reports', icon: 'document-text-outline' },
+  // { id: '8', label: 'Grades & Reports', icon: 'document-text-outline' },
   { id: 'result-mgmt', label: 'Official Result', icon: 'reader-outline' },
   { id: '9', label: 'Fees Portal', icon: 'receipt-outline' },
   { id: 'div2', label: '', icon: '', isDivider: true },
@@ -74,7 +74,8 @@ const PRINCIPAL_MENU: MenuItem[] = [
   { id: '9', label: 'Announcements', icon: 'megaphone-outline' },
   { id: '10', label: 'Fees & Payments', icon: 'card-outline' },
   { id: 'equip', label: 'Equipment Requests', icon: 'construct-outline' },
-  { id: 'library', label: 'Library', icon: 'book-outline' },
+  { id: 'library', label: 'Library Management', icon: 'book-outline' },
+  // { id: 'Bus Tracking', label: 'Bus Tracking', icon: 'bus-sharp' },
   { id: 'div1', label: '', icon: '', isDivider: true },
   { id: '12', label: 'Account Settings', icon: 'settings-outline' },
   { id: '13', label: 'Logout', icon: 'log-out-outline' },
@@ -96,6 +97,18 @@ const TEACHER_MENU: MenuItem[] = [
   { id: '9', label: 'Messages', icon: 'chatbox-ellipses-outline' },
   { id: '10', label: 'Account Settings', icon: 'settings-outline' },
   { id: '11', label: 'Logout', icon: 'log-out-outline' },
+];
+
+const LIBRARY_MENU: MenuItem[] = [
+  { id: '1', label: 'Dashboard', icon: 'home-outline' },
+  { id: '2', label: 'Book Catalog', icon: 'book-outline' },
+  { id: '3', label: 'Issue / Return', icon: 'swap-horizontal-outline' },
+  { id: '4', label: 'Categories', icon: 'pricetag-outline' },
+  { id: '5', label: 'Announcements', icon: 'megaphone-outline' },
+  { id: '6', label: 'Resource Requests', icon: 'school-outline' },
+  { id: 'div1', label: '', icon: '', isDivider: true },
+  { id: '7', label: 'Settings', icon: 'settings-outline' },
+  { id: '8', label: 'Logout', icon: 'log-out-outline' },
 ];
 
 export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onClose, role = 'student' }) => {
@@ -181,10 +194,16 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
     if (role === 'teacher') menuItems = TEACHER_MENU;
     if (role === 'admin') menuItems = STUDENT_MENU;
     if (role === 'principal') menuItems = PRINCIPAL_MENU;
+    if (role === 'library') menuItems = LIBRARY_MENU;
 
     const getIsActive = (label: string): boolean => {
       switch (label) {
-        case 'Home': return currentRouteName === 'PrincipalDashboard' || currentRouteName === 'StudentDashboard' || currentRouteName === 'TeacherDashboard';
+        case 'Dashboard': return currentRouteName === 'LibraryDashboard';
+        case 'Home': return currentRouteName === 'PrincipalDashboard' || currentRouteName === 'StudentDashboard' || currentRouteName === 'TeacherDashboard' || currentRouteName === 'LibraryDashboard';
+        case 'Book Catalog': return currentRouteName === 'LibraryBookCatalog';
+        case 'Issue / Return': return currentRouteName === 'LibraryCirculation';
+        case 'Categories': return currentRouteName === 'LibraryCategories';
+        case 'Resource Requests': return currentRouteName === 'LibraryEquipment' || currentRouteName === 'LibraryNewSupply';
         case 'Classes': return currentRouteName === 'PrincipalClasses';
         case 'Subjects': return currentRouteName === 'PrincipalSubjects';
         case 'Staff Management': return currentRouteName === 'PrincipalStaff';
@@ -196,12 +215,15 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
         case 'Study Material': return currentRouteName === 'StudyMaterial' || currentRouteName === 'TeacherStudyMaterial';
         case 'Performance Report': return currentRouteName === 'TeacherPerformance';
         case 'My Attendance': return currentRouteName === 'TeacherSelfAttendance';
-        case 'Announcements': return currentRouteName === 'PrincipalAnnouncements' || currentRouteName === 'Announcements';
+        case 'Announcements': return currentRouteName === 'PrincipalAnnouncements' || currentRouteName === 'Announcements' || currentRouteName === 'LibraryAnnouncements';
         case 'Fees & Payments': return currentRouteName === 'PrincipalFees' || currentRouteName === 'Fees';
-        case 'Equipment': return currentRouteName === 'TeacherEquipment' || currentRouteName === 'TeacherAddEquipmentRequest' || currentRouteName === 'TeacherEquipmentDetail';
+        case 'Equipment': return currentRouteName === 'TeacherEquipment';
         case 'Equipment Requests': return currentRouteName === 'PrincipalEquipment';
-        case 'Library': return currentRouteName === 'PrincipalLibrary';
+        case 'Library Management': return currentRouteName === 'PrincipalLibrary';
+        case 'Library': return currentRouteName === 'PrincipalLibrary' || currentRouteName === 'LibraryDashboard';
+        case 'Bus Tracking': return currentRouteName === 'BusDashboard' || currentRouteName === 'FleetTracking' || currentRouteName === 'AddVehicle' || currentRouteName === 'RouteManagement' || currentRouteName === 'RouteConfiguration' || currentRouteName === 'Schedules' || currentRouteName === 'AddSchedule' || currentRouteName === 'DriverManagement' || currentRouteName === 'AddDriver' || currentRouteName === 'EnrollStudent';
         case 'Result Management': return currentRouteName === 'PrincipalRSM' || currentRouteName === 'PrincipalRMS' || currentRouteName === 'ResultManagement' || currentRouteName === 'TeacherResultManagement';
+        case 'Settings': return currentRouteName === 'AccountSettings';
         case 'Account Settings': return currentRouteName === 'AccountSettings';
         case 'Attendance': return currentRouteName === 'Attendance';
         default: return false;
@@ -211,16 +233,23 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
     const handleNavigation = (label: string) => {
       onClose();
       setTimeout(() => {
-        if (label === 'Home') {
-          if (role === 'principal') navigation.navigate('PrincipalDashboard');
+        if (label === 'Dashboard' || label === 'Home') {
+          if (role === 'library') navigation.navigate('LibraryDashboard');
+          else if (role === 'principal') navigation.navigate('PrincipalDashboard');
           else if (role === 'teacher') navigation.navigate('TeacherDashboard');
           else navigation.navigate('StudentDashboard');
-        } //added assignment avigation
-        else if (label == 'Assignments') {
+        } else if (label === 'Book Catalog') {
+          navigation.navigate('LibraryBookCatalog');
+        } else if (label === 'Issue / Return') {
+          navigation.navigate('LibraryCirculation');
+        } else if (label === 'Categories') {
+          navigation.navigate('LibraryCategories');
+        } else if (label === 'Resource Requests') {
+          navigation.navigate('LibraryEquipment');
+        } else if (label === 'Assignments') {
           if (role === 'teacher') navigation.navigate('TeacherAssignment')
           else navigation.navigate('Assignments')
-        }//added quizzes screen navigation
-        else if (label === 'Quizzes & Tests') {
+        } else if (label === 'Quizzes & Tests') {
           navigation.navigate('Quizzes');
         } else if (label === 'Class Attendance') {
           navigation.navigate('TeacherAttendance');
@@ -233,18 +262,13 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
           navigation.navigate('TeacherPerformance');
         } else if (label === 'My Attendance') {
           navigation.navigate('TeacherSelfAttendance');
-        }
-        //added perormance treand
-        else if (label === 'Performance Trend') {
+        } else if (label === 'Performance Trend') {
           navigation.navigate('Performance');
-        }//handel attendence navigation
-        else if (label === 'Attendance') {
+        } else if (label === 'Attendance') {
           navigation.navigate('Attendance');
-        } //official result
-        else if (label === 'Official Result') {
+        } else if (label === 'Official Result') {
           navigation.navigate('ResultManagement');
-        } // fees portal
-        else if (label === 'Fees Portal') {
+        } else if (label === 'Fees Portal') {
           navigation.navigate('Fees');
         } else if (label === 'Classes') navigation.navigate('PrincipalClasses');
         else if (label === 'Subjects') navigation.navigate('PrincipalSubjects');
@@ -256,17 +280,22 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
           else if (role === 'teacher') navigation.navigate('TeacherTimetable');
           else navigation.navigate('Timetable');
         } else if (label === 'Announcements') {
-          if (role === 'principal') navigation.navigate('PrincipalAnnouncements');
+          if (role === 'library') navigation.navigate('LibraryAnnouncements');
+          else if (role === 'principal') navigation.navigate('PrincipalAnnouncements');
           else navigation.navigate('Announcements');
         } else if (label === 'Fees & Payments') navigation.navigate('PrincipalFees');
         else if (label === 'Equipment') navigation.navigate('TeacherEquipment');
         else if (label === 'Equipment Requests') navigation.navigate('PrincipalEquipment');
-        else if (label === 'Library') navigation.navigate('PrincipalLibrary');
+        else if (label === 'Library Management' || label === 'Library') {
+          if (role === 'principal') navigation.navigate('PrincipalLibrary');
+          else navigation.navigate('LibraryDashboard');
+        }
+        else if (label === 'Bus Tracking') navigation.navigate('BusDashboard');
         else if (label === 'Result Management') {
           if (role === 'principal') navigation.navigate('PrincipalRMS');
           else if (role === 'teacher') navigation.navigate('TeacherResultManagement');
-        } //navigation for messgaes
-        else if (label === 'Messages') navigation.navigate('Messages'); else if (label === 'Account Settings') navigation.navigate('AccountSettings');
+        } else if (label === 'Messages') navigation.navigate('Messages');
+        else if (label === 'Settings' || label === 'Account Settings') navigation.navigate('AccountSettings');
         else if (label === 'Logout') logout();
       }, 250);
     };

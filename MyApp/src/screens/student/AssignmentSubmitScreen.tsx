@@ -45,7 +45,7 @@ const ensureDocumentPicker = () => {
 
 const AssignmentSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
   const { theme, isDarkMode, toggleDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const { authState } = useAuth();
   const assignmentId = route?.params?.assignmentId;
   const [assignmentData, setAssignmentData] = useState<any>(null);
@@ -280,7 +280,7 @@ const AssignmentSubmitScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
 
   globalHeader: {
@@ -351,52 +351,48 @@ const getStyles = (theme: any) => StyleSheet.create({
 
   card: {
     backgroundColor: theme.surface,
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: 12,
+    padding: 20,
     shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
     borderWidth: 1,
     borderColor: theme.border,
   },
 
   infoCard: {
-    borderLeftWidth: 5,
-    borderLeftColor: '#3B82F6',
-    borderTopLeftRadius: 12,
-    borderBottomLeftRadius: 12,
+    padding: 20,
   },
   infoCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   infoCardTitle: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
     color: theme.text,
     marginLeft: 8,
   },
   infoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    rowGap: 24,
+    rowGap: 16,
   },
   infoCol: {
     width: '50%',
   },
   infoLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.subtext,
-    marginBottom: 6,
-    fontWeight: '500',
+    marginBottom: 4,
   },
   infoValue: {
     fontSize: 13,
-    color: theme.text,
     fontWeight: '600',
+    color: theme.text,
   },
 
   uploadCardHeader: {
@@ -405,8 +401,8 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginBottom: 16,
   },
   uploadCardTitle: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
     color: theme.text,
     marginLeft: 8,
   },
@@ -414,7 +410,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   infoBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F8FAFC',
+    backgroundColor: isDarkMode ? '#334155' : '#F8FAFC',
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderRadius: 6,
@@ -433,7 +429,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderColor: theme.border,
     borderStyle: 'dashed',
     borderRadius: 16,
-    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F8FAFC',
+    backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC',
     paddingVertical: 36,
     paddingHorizontal: 20,
     alignItems: 'center',

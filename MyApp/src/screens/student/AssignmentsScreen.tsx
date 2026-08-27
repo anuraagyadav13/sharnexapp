@@ -11,6 +11,7 @@ import {
   Alert,
   Image,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -33,11 +34,12 @@ interface Props {
 const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
     console.log('[Assignments] screen mounted');
   const { theme, isDarkMode, toggleDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [assignments, setAssignments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const SummaryCard = ({ number, label, bgColor, iconName, lineColor, delay, library = 'MaterialCommunityIcons' }: any) => {
@@ -77,7 +79,7 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
         <View style={styles.cardBottomRow}>
           <View style={styles.cardDateCol}>
             <Text style={styles.cardDueDate}>Due Date : {dueDate}</Text>
-            <Text style={[styles.cardRelativeDate, isDelayed && { color: '#EF4444' }]}>
+            <Text style={[styles.cardRelativeDate, isDelayed && { color: theme.danger }]}>
               {deadlineRelative}
             </Text>
           </View>
@@ -94,7 +96,7 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
                  <Text style={styles.btnSubmitText}>Submit</Text>
                </ScaleButton>
              ) : (
-               <ScaleButton style={[styles.btnSubmit, {backgroundColor: '#10B981'}]} activeOpacity={0.8} scaleTo={0.95} onPress={onPressDownload}>
+               <ScaleButton style={[styles.btnSubmit, {backgroundColor: theme.success}]} activeOpacity={0.8} scaleTo={0.95} onPress={onPressDownload}>
                  <Ionicons name="download-outline" size={14} color="#FFFFFF" style={styles.btnIconLayout} />
                  <Text style={styles.btnSubmitText}>Download</Text>
                </ScaleButton>
@@ -113,9 +115,13 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
   });
 
 
-  const fetchAssignments = async () => {
+  const fetchAssignments = async (isRefresh = false) => {
     try {
-      setIsLoading(true);
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       setError(null);
       console.log('[Assignments] starting fetch');
       const meRes = await studentService.getMe();
@@ -169,8 +175,11 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
       setAssignments([]);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
+
+  const onRefresh = () => fetchAssignments(true);
 
   useEffect(() => {
     console.log('[Assignments] useEffect running');
@@ -188,7 +197,18 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
         onMenuPress={() => setDrawerOpen(true)}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={[theme.primary]}
+            tintColor={theme.primary}
+          />
+        }
+      >
         
         {/* Page Title */}
         <View style={styles.pageTitleContainer}>
@@ -211,10 +231,10 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
         {/* Assignment Cards List */}
         <View style={styles.listContainer}>
           {isLoading ? (
-            <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
+            <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
           ) : error ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="alert-circle" size={60} color="#EF4444" />
+              <Ionicons name="alert-circle" size={60} color={theme.danger} />
               <Text style={styles.emptyText}>{error}</Text>
               {/* <ScaleButton 
                 style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
@@ -249,7 +269,7 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
                 <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
               </ScaleButton> */}
               <ScaleButton
-                style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
+                style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: theme.primary, borderRadius: 8 }}
                 onPress={() => fetchAssignments()}
                 scaleTo={0.95}
               >
@@ -258,7 +278,7 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           ) : assignments.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="clipboard-outline" size={60} color="#E5E7EB" />
+              <Ionicons name="clipboard-outline" size={60} color={theme.border} />
               <Text style={styles.emptyText}>No assignments found</Text>
             </View>
           ) : (
@@ -302,7 +322,7 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
   
@@ -314,7 +334,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: 60, // Adjust for iOS statusbar
     paddingBottom: 16,
     backgroundColor: theme.surface, // Using pure white for better contrast with shadow
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -344,7 +364,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     shadowRadius: 6,
     elevation: 8,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 },
 
   pageTitleContainer: {
     paddingHorizontal: 20,
@@ -379,7 +399,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -429,7 +449,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     padding: 18,
     borderLeftWidth: 4,
     borderLeftColor: theme.primary, 
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -449,9 +469,9 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 20, 
-    backgroundColor: theme.isDarkMode ? '#1E3A8A' : '#EFF6FF',
+    backgroundColor: isDarkMode ? '#1E3A8A' : '#EFF6FF',
     borderWidth: 1,
-    borderColor: theme.isDarkMode ? '#3B82F6' : '#93C5FD',
+    borderColor: isDarkMode ? '#3B82F6' : '#93C5FD',
   },
   categoryBadgeText: {
     fontSize: 11,
@@ -462,21 +482,21 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 20, 
-    backgroundColor: theme.isDarkMode ? '#78350F30' : '#FFFBEB',
+    backgroundColor: isDarkMode ? '#78350F30' : '#FFFBEB',
     borderWidth: 1,
-    borderColor: theme.isDarkMode ? '#D97706' : '#FCD34D',
+    borderColor: isDarkMode ? '#D97706' : '#FCD34D',
   },
   statusBadgeText: {
     fontSize: 11,
-    fontWeight: '500',
+    fontWeight: '500', 
     color: '#F59E0B',
   },
   statusBadgeSubmitted: {
-    backgroundColor: theme.isDarkMode ? '#065F4630' : '#ECFDF5',
-    borderColor: theme.isDarkMode ? '#34D399' : '#6EE7B7',
+    backgroundColor: isDarkMode ? '#065F4630' : '#ECFDF5',
+    borderColor: isDarkMode ? '#34D399' : '#6EE7B7',
   },
   statusBadgeTextSubmitted: {
-    color: theme.isDarkMode ? '#34D399' : '#10B981',
+    color: isDarkMode ? '#34D399' : '#10B981',
   },
   
   cardTitle: {
@@ -514,7 +534,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   cardRelativeDate: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#EF4444',
+    color: theme.danger,
   },
 
   btnView: {

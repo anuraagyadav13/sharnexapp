@@ -13,6 +13,8 @@ import {
   Alert,
   Image,
   Dimensions,
+  RefreshControl,
+  Share,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -24,6 +26,7 @@ import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
 import { StudentHeader } from '../../components/StudentHeader';
 import studentService from '../../services/studentService';
+import { getApiErrorMessage } from '../../services/apiClient';
 import RazorpayCheckout from 'react-native-razorpay';
 
 const { width } = Dimensions.get('window');
@@ -38,19 +41,20 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, isDarkMode } = useTheme();
   const styles = getStyles(theme);
   const { authState } = useAuth();
-  
+
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'Active Invoices' | 'Payment History'>('Active Invoices');
   const [invoiceFilter, setInvoiceFilter] = useState<'All' | 'Pending' | 'Overdue' | 'Paid'>('All');
-  
+
   const [invoices, setInvoices] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>(null);
   const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
-  
+
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Checkout Modal State
   const [checkoutInvoice, setCheckoutInvoice] = useState<any>(null);
   const [paymentMode, setPaymentMode] = useState<'UPI' | 'CARD'>('UPI');
@@ -71,16 +75,49 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const fetchData = async () => {
+  const handleShareReceipt = async () => {
+    if (!selectedReceipt) return;
     try {
-      setIsLoading(true);
+      const lines = [
+        '🧾 OFFICIAL PAYMENT RECEIPT',
+        '═══════════════════════════════',
+        `Receipt Ref  : ${selectedReceipt.id || selectedReceipt.paymentId || 'N/A'}`,
+        `Invoice No   : ${selectedReceipt.invoiceNumber || selectedReceipt.invoice_number || 'N/A'}`,
+        `Amount Paid  : ₹${selectedReceipt.amount || 0}`,
+        `Status       : ${selectedReceipt.status || 'SUCCESS'}`,
+        `Txn Ref      : ${selectedReceipt.gatewayPaymentId || selectedReceipt.gateway_payment_id || 'N/A'}`,
+        `Date & Time  : ${new Date(selectedReceipt.completedAt || selectedReceipt.createdAt || new Date()).toLocaleString('en-IN')}`,
+        selectedReceipt.institutionName ? `Institution  : ${selectedReceipt.institutionName}` : '',
+        selectedReceipt.description ? `Description  : ${selectedReceipt.description}` : '',
+        '═══════════════════════════════',
+        'Verified by Sharnex Cryptographic Ledger',
+      ].filter(Boolean);
+
+      await Share.share({
+        message: lines.join('\n'),
+        title: `Payment Receipt #${selectedReceipt.invoiceNumber || 'Receipt'}`,
+      });
+    } catch (err: any) {
+      if (err?.message !== 'Share was not shared') {
+        Alert.alert('Error', err?.message || 'Failed to share receipt.');
+      }
+    }
+  };
+
+  const fetchData = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       setError(null);
-      
+
       const invRes = await studentService.getInvoices();
       const invData = invRes.data?.data || invRes.data || {};
       const invoicesArray = invData.invoices || invRes.data?.invoices || [];
       setInvoices(Array.isArray(invoicesArray) ? invoicesArray : []);
-      
+
       const histRes = await studentService.getPaymentHistory();
       const histData = histRes.data?.data || histRes.data || {};
       const paymentsArray = histData.payments || histRes.data?.payments || [];
@@ -92,7 +129,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
       const paid = invoicesArray.filter((i: any) => getStatusDisplay(i) === 'Paid');
       const totalPendingAmount = [...pending, ...overdue].reduce((sum: number, inv: any) => sum + (Number(inv.totalAmount) || 0), 0);
       const totalPaidAmount = paid.reduce((sum: number, inv: any) => sum + (Number(inv.totalAmount) || 0), 0);
-      
+
       setSummary({
         totalPending: totalPendingAmount,
         totalPaid: totalPaidAmount,
@@ -101,7 +138,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
         paidCount: paid.length,
         nextDue: overdue.length > 0 ? overdue[0].dueDate : (pending.length > 0 ? pending[0].dueDate : null)
       });
-      
+
     } catch (err: any) {
       console.error('Failed to fetch fee data:', err);
       setError('Failed to load fee information');
@@ -110,8 +147,11 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
       setSummary({ totalPending: 0, totalPaid: 0, pendingCount: 0, overdueCount: 0, paidCount: 0 });
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
+
+  const onRefresh = () => fetchData(true);
 
   useEffect(() => {
     fetchData();
@@ -140,7 +180,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
     try {
       setIsLoading(true);
       const generateIdempotencyKey = () => {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
           const r = Math.random() * 16 | 0;
           const v = c === 'x' ? r : (r & 0x3 | 0x8);
           return v.toString(16);
@@ -152,31 +192,44 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
         idempotencyKey: generateIdempotencyKey(),
         paymentMode: paymentMode === 'CARD' ? 'card' : 'upi'
       });
-      const responseBody = res.data || res.normalized?.data;
-      if (!responseBody?.success && !responseBody?.data) throw new Error(responseBody?.error || 'Failed to initiate order');
 
-      const paymentData = responseBody.data;
+      const rawRes = res.originalData || res.data;
+      const success = rawRes?.success ?? res.normalized?.success ?? true;
+      const serverErrMsg = rawRes?.error || rawRes?.message || res.normalized?.message || 'Failed to initiate order';
+
+      if (!success) {
+        throw new Error(serverErrMsg);
+      }
+
+      const paymentData = (rawRes?.data && typeof rawRes.data === 'object') ? rawRes.data : rawRes;
+      const razorpayKey = paymentData?.key || paymentData?.razorpayKey;
+      const orderId = paymentData?.razorpayOrderId || paymentData?.order_id || paymentData?.orderId || paymentData?.id;
+      const amountPaise = paymentData?.amountInPaise ?? paymentData?.amount ?? Math.round(checkoutInvoice.totalAmount * 100);
+
+      if (!orderId) {
+        throw new Error(rawRes?.error || 'Order creation failed: missing order_id from server');
+      }
+
+      if (!razorpayKey) {
+        throw new Error(rawRes?.error || 'Order creation failed: missing Razorpay key from server');
+      }
 
       const options: any = {
         description: checkoutInvoice.description || 'Fee Payment',
         image: 'https://sharnex.com/logo.png',
-        currency: paymentData.currency || 'INR',
-        key: paymentData.key,
-        amount: String(paymentData.amountInPaise || Math.round(checkoutInvoice.totalAmount * 100)),
+        currency: paymentData?.currency || 'INR',
+        key: razorpayKey,
+        amount: String(amountPaise),
         name: 'Sharnex',
-        order_id: paymentData.razorpayOrderId,
+        order_id: orderId,
         prefill: {
           email: authState.user?.email || '',
           contact: authState.user?.phone || '',
-          name: authState.user?.name || ''
+          name: authState.user?.name || '',
+          method: paymentMode === 'CARD' ? 'card' : 'upi'
         },
         theme: { color: '#7C3AED' }
       };
-
-      // The Android SDK might crash on web-specific displayConfigs
-      // if (paymentData.displayConfig) {
-      //   options.config = { display: paymentData.displayConfig };
-      // }
 
       RazorpayCheckout.open(options).then(async (razorpayData: any) => {
         setIsLoading(true);
@@ -185,23 +238,36 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
             razorpayPaymentId: razorpayData.razorpay_payment_id,
             razorpayOrderId: razorpayData.razorpay_order_id,
             razorpaySignature: razorpayData.razorpay_signature,
+            invoiceId: checkoutInvoice.id,
           });
           Alert.alert('Success', 'Payment completed successfully');
           setCheckoutInvoice(null);
           fetchData();
-        } catch (e) {
-          Alert.alert('Error', 'Payment verification failed');
+        } catch (e: any) {
+          const verifyErrorMsg = getApiErrorMessage(e);
+          Alert.alert('Error', `Payment verification failed: ${verifyErrorMsg}`);
         } finally {
           setIsLoading(false);
         }
       }).catch((err: any) => {
-        const errorMsg = err.message || err.description || JSON.stringify(err);
-        Alert.alert('Payment Error', `Failed to open Razorpay.\n\nDetails: ${errorMsg}\n\nDid the API key load?: ${!!options.key}`);
+        const errorMsg = err.message || err.description || (typeof err === 'string' ? err : JSON.stringify(err));
+        // Handle user cancellation gracefully
+        if (err?.code === 0 || errorMsg.toLowerCase().includes('cancel') || errorMsg.toLowerCase().includes('closed')) {
+          setIsLoading(false);
+          return;
+        }
+        Alert.alert('Payment Error', `Failed to process Razorpay checkout.\n\nDetails: ${errorMsg}`);
         setIsLoading(false);
       });
 
     } catch (e: any) {
-      Alert.alert('Error', e.message || 'Failed to initiate checkout');
+      console.log('[PAYMENT_INITIATE_DEBUG_RESPONSE]', {
+        status: e?.response?.status,
+        data: e?.response?.data,
+        message: e?.message,
+      });
+      const errorMsg = getApiErrorMessage(e);
+      Alert.alert('Error', errorMsg);
       setIsLoading(false);
     }
   };
@@ -251,14 +317,25 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
     <View style={styles.mainContainer}>
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
 
-      <StudentHeader 
+      <StudentHeader
         title="Fees"
         navigation={navigation}
         onMenuPress={() => setDrawerOpen(true)}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={[theme.primary]}
+            tintColor={theme.primary}
+          />
+        }
+      >
+
         <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
           <View style={styles.doubleEntryBadge}>
             <Ionicons name="sparkles" size={10} color="#7C3AED" />
@@ -274,8 +351,8 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* Tabs */}
         <View style={styles.tabContainer}>
-          <TouchableOpacity 
-            style={[styles.tabItem, activeTab === 'Active Invoices' && styles.tabItemActive]} 
+          <TouchableOpacity
+            style={[styles.tabItem, activeTab === 'Active Invoices' && styles.tabItemActive]}
             onPress={() => setActiveTab('Active Invoices')}
           >
             <Ionicons name="document-text" size={16} color={activeTab === 'Active Invoices' ? '#7C3AED' : '#64748B'} />
@@ -284,8 +361,8 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={[styles.tabCountText, { color: activeTab === 'Active Invoices' ? '#7C3AED' : '#64748B' }]}>{(summary?.overdueCount || 0) + (summary?.pendingCount || 0)}</Text>
             </View>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tabItem, activeTab === 'Payment History' && styles.tabItemActive]} 
+          <TouchableOpacity
+            style={[styles.tabItem, activeTab === 'Payment History' && styles.tabItemActive]}
             onPress={() => setActiveTab('Payment History')}
           >
             <Ionicons name="receipt" size={16} color={activeTab === 'Payment History' ? '#7C3AED' : '#64748B'} />
@@ -299,7 +376,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
               {/* Filter Row */}
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
                 {['All', 'Pending', 'Overdue', 'Paid'].map((f) => (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     key={f}
                     style={[styles.filterBtn, invoiceFilter === f && styles.filterBtnActive]}
                     onPress={() => setInvoiceFilter(f as any)}
@@ -307,16 +384,16 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
                     <Text style={[styles.filterBtnText, invoiceFilter === f && styles.filterBtnTextActive]}>
                       {f === 'All' ? 'All Invoices' : f}
                     </Text>
-                    {f === 'All' && <View style={[styles.filterCountBadge, { backgroundColor: '#334155' }]}><Text style={{fontSize:10, color:'#FFF'}}>{invoices.length}</Text></View>}
-                    {f === 'Pending' && <View style={[styles.filterCountBadge, { backgroundColor: '#FEF3C7' }]}><Text style={{fontSize:10, color:'#D97706'}}>{summary?.pendingCount || 0}</Text></View>}
-                    {f === 'Overdue' && <View style={[styles.filterCountBadge, { backgroundColor: '#FEE2E2' }]}><Text style={{fontSize:10, color:'#EF4444'}}>{summary?.overdueCount || 0}</Text></View>}
-                    {f === 'Paid' && <View style={[styles.filterCountBadge, { backgroundColor: '#D1FAE5' }]}><Text style={{fontSize:10, color:'#10B981'}}>{summary?.paidCount || 0}</Text></View>}
+                    {f === 'All' && <View style={[styles.filterCountBadge, { backgroundColor: '#334155' }]}><Text style={{ fontSize: 10, color: '#FFF' }}>{invoices.length}</Text></View>}
+                    {f === 'Pending' && <View style={[styles.filterCountBadge, { backgroundColor: '#FEF3C7' }]}><Text style={{ fontSize: 10, color: '#D97706' }}>{summary?.pendingCount || 0}</Text></View>}
+                    {f === 'Overdue' && <View style={[styles.filterCountBadge, { backgroundColor: '#FEE2E2' }]}><Text style={{ fontSize: 10, color: '#EF4444' }}>{summary?.overdueCount || 0}</Text></View>}
+                    {f === 'Paid' && <View style={[styles.filterCountBadge, { backgroundColor: '#D1FAE5' }]}><Text style={{ fontSize: 10, color: '#10B981' }}>{summary?.paidCount || 0}</Text></View>}
                   </TouchableOpacity>
                 ))}
               </ScrollView>
 
               {isLoading ? (
-                <ActivityIndicator size="large" color="#7C3AED" style={{ marginTop: 40 }} />
+                <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
               ) : filteredInvoices.length === 0 ? (
                 <View style={styles.emptyContainer}>
                   <Text style={styles.emptyText}>No active invoices.</Text>
@@ -331,8 +408,8 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
                       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                         <Text style={styles.invNumberText}>{inv.invoiceNumber}</Text>
                         <View style={[styles.statusBadgeSmall, { backgroundColor: inv.displayStatus === 'Overdue' ? '#FEF2F2' : inv.displayStatus === 'Paid' ? '#F0FDF4' : '#FFFBEB' }]}>
-                          {inv.displayStatus === 'Overdue' && <Ionicons name="time-outline" size={10} color="#EF4444" style={{marginRight:2}}/>}
-                          {inv.displayStatus === 'Paid' && <Ionicons name="checkmark-circle-outline" size={10} color="#10B981" style={{marginRight:2}}/>}
+                          {inv.displayStatus === 'Overdue' && <Ionicons name="time-outline" size={10} color="#EF4444" style={{ marginRight: 2 }} />}
+                          {inv.displayStatus === 'Paid' && <Ionicons name="checkmark-circle-outline" size={10} color="#10B981" style={{ marginRight: 2 }} />}
                           <Text style={[styles.statusBadgeText, { color: inv.displayStatus === 'Overdue' ? '#EF4444' : inv.displayStatus === 'Paid' ? '#10B981' : '#D97706' }]}>{inv.displayStatus}</Text>
                         </View>
                       </View>
@@ -360,40 +437,40 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
           {activeTab === 'Payment History' && (
             <View style={styles.historyBox}>
               <View style={styles.historyBoxHeader}>
-                <View style={{flexDirection: 'row', alignItems:'center'}}>
-                  <Ionicons name="lock-closed" size={14} color="#64748B" style={{marginRight:6}}/>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="lock-closed" size={14} color="#64748B" style={{ marginRight: 6 }} />
                   <Text style={styles.historyBoxTitle}>CRYPTOGRAPHIC PAYMENT LOG</Text>
                 </View>
-                <TouchableOpacity onPress={fetchData} style={{flexDirection: 'row', alignItems:'center'}}>
+                <TouchableOpacity onPress={() => fetchData()} style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="refresh" size={12} color="#64748B" />
                   <Text style={styles.historyBoxRefresh}>Refresh Ledger</Text>
                 </TouchableOpacity>
               </View>
-              
+
               {/* History Header Row */}
               <View style={styles.historyRowHeader}>
-                <Text style={[styles.historyColHead, {flex: 2}]}>INVOICE & DESC</Text>
-                <Text style={[styles.historyColHead, {flex: 1.5}]}>TIMESTAMP</Text>
-                <Text style={[styles.historyColHead, {flex: 1}]}>AMOUNT</Text>
-                <Text style={[styles.historyColHead, {flex: 1.5}]}>STATUS</Text>
-                <Text style={[styles.historyColHead, {flex: 1, textAlign: 'right'}]}>RECEIPT</Text>
+                <Text style={[styles.historyColHead, { flex: 2 }]}>INVOICE & DESC</Text>
+                <Text style={[styles.historyColHead, { flex: 1.5 }]}>TIMESTAMP</Text>
+                <Text style={[styles.historyColHead, { flex: 1 }]}>AMOUNT</Text>
+                <Text style={[styles.historyColHead, { flex: 1.5 }]}>STATUS</Text>
+                <Text style={[styles.historyColHead, { flex: 1, textAlign: 'right' }]}>RECEIPT</Text>
               </View>
 
               {history.map((item) => (
                 <View key={item.id} style={styles.historyRowItem}>
-                  <View style={{flex: 2, paddingRight: 8}}>
+                  <View style={{ flex: 2, paddingRight: 8 }}>
                     <Text style={styles.histInvNum}>{item.invoiceNumber || item.paymentId}</Text>
                     <Text style={styles.histInvDesc}>{item.gatewayPaymentId || 'N/A'}</Text>
                   </View>
-                  <View style={{flex: 1.5}}>
+                  <View style={{ flex: 1.5 }}>
                     <Text style={styles.histText}>{new Date(item.completedAt || item.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</Text>
                     <Text style={styles.histTextLight}>{new Date(item.completedAt || item.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Text>
                   </View>
-                  <View style={{flex: 1}}>
+                  <View style={{ flex: 1 }}>
                     <Text style={styles.histAmount}>₹{item.amount}</Text>
                   </View>
-                  <View style={{flex: 1.5}}>
-                    <View style={[styles.histStatusPill, { 
+                  <View style={{ flex: 1.5 }}>
+                    <View style={[styles.histStatusPill, {
                       backgroundColor: item.status === 'SUCCESS' ? '#ECFDF5' : item.status === 'FAILED' ? '#FEF2F2' : '#FFFBEB',
                       borderColor: item.status === 'SUCCESS' ? '#A7F3D0' : item.status === 'FAILED' ? '#FECACA' : '#FDE68A'
                     }]}>
@@ -403,12 +480,12 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
                       </Text>
                     </View>
                   </View>
-                  <View style={{flex: 1, alignItems: 'flex-end'}}>
+                  <View style={{ flex: 1, alignItems: 'flex-end' }}>
                     {item.status === 'SUCCESS' ? (
                       <TouchableOpacity style={styles.histReceiptBtn} onPress={() => handleReceiptPress(item.id)}>
-                        {activeReceiptId === item.id ? <ActivityIndicator size="small" color="#4F46E5" /> : (
+                        {activeReceiptId === item.id ? <ActivityIndicator size="small" color={theme.primary} /> : (
                           <>
-                            <Ionicons name="download-outline" size={12} color="#4F46E5" style={{marginRight: 4}}/>
+                            <Ionicons name="download-outline" size={12} color={theme.primary} style={{ marginRight: 4 }} />
                             <Text style={styles.histReceiptText}>Receipt</Text>
                           </>
                         )}
@@ -438,7 +515,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.checkoutHeader}>
               <View>
                 <View style={styles.secureBadge}>
-                  <Ionicons name="shield-checkmark" size={12} color="#10B981" style={{marginRight:4}}/>
+                  <Ionicons name="shield-checkmark" size={12} color="#10B981" style={{ marginRight: 4 }} />
                   <Text style={styles.secureBadgeText}>256-Bit SSL Encrypted Checkout</Text>
                 </View>
                 <Text style={styles.checkoutTitle}>Fee Checkout</Text>
@@ -448,14 +525,14 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
                 <Ionicons name="close" size={20} color="#94A3B8" />
               </TouchableOpacity>
             </View>
-            
+
             {/* Amount Summary */}
             <View style={styles.amountSummaryBox}>
               <View>
                 <Text style={styles.summaryLabel}>BASE AMOUNT DUE</Text>
                 <Text style={styles.summaryValue}>₹{checkoutInvoice?.totalAmount}</Text>
               </View>
-              <View style={{alignItems:'flex-end'}}>
+              <View style={{ alignItems: 'flex-end' }}>
                 <Text style={styles.summaryLabel}>DUE DATE</Text>
                 <Text style={styles.summaryValueLight}>{new Date(checkoutInvoice?.dueDate || new Date()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</Text>
               </View>
@@ -466,34 +543,34 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
               <View style={styles.methodsHeader}>
                 <Text style={styles.methodsTitle}>SELECT PAYMENT METHOD</Text>
                 <View style={styles.recommendedBadge}>
-                  <Ionicons name="sparkles" size={10} color="#059669" style={{marginRight:4}}/>
+                  <Ionicons name="sparkles" size={10} color="#059669" style={{ marginRight: 4 }} />
                   <Text style={styles.recommendedText}>RECOMMENDED UPI FOR 0% FEES</Text>
                 </View>
               </View>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.methodCard, paymentMode === 'UPI' && styles.methodCardActive]}
                 onPress={() => setPaymentMode('UPI')}
               >
-                {paymentMode === 'UPI' && <View style={styles.zeroFeePill}><Ionicons name="sparkles" size={10} color="#FFF" style={{marginRight:4}}/><Text style={{fontSize:10, color:'#FFF', fontWeight:'800'}}>Zero Extra Charges</Text></View>}
-                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                {paymentMode === 'UPI' && <View style={styles.zeroFeePill}><Ionicons name="sparkles" size={10} color="#FFF" style={{ marginRight: 4 }} /><Text style={{ fontSize: 10, color: '#FFF', fontWeight: '800' }}>Zero Extra Charges</Text></View>}
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <View style={[styles.methodIconBox, { backgroundColor: paymentMode === 'UPI' ? '#10B981' : '#F1F5F9' }]}>
                     <Ionicons name="phone-portrait-outline" size={20} color={paymentMode === 'UPI' ? '#FFF' : '#64748B'} />
                   </View>
-                  <View style={{flex: 1, paddingLeft: 12}}>
-                    <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                  <View style={{ flex: 1, paddingLeft: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <Text style={styles.methodTitle}>UPI Instant Pay</Text>
                       <View style={styles.feeBadgeGreen}><Text style={styles.feeBadgeTextGreen}>0% Fee</Text></View>
                     </View>
                     <Text style={styles.methodDesc}>Pay via Google Pay, PhonePe, Paytm, BHIM or any UPI ID</Text>
-                    <View style={{flexDirection: 'row', marginTop: 6, alignItems: 'center'}}>
+                    <View style={{ flexDirection: 'row', marginTop: 6, alignItems: 'center' }}>
                       <Text style={styles.supportedText}>SUPPORTED:</Text>
                       <Text style={styles.supportedTag}>GPay</Text>
                       <Text style={styles.supportedTag}>PhonePe</Text>
                       <Text style={styles.supportedTag}>Paytm</Text>
                     </View>
                   </View>
-                  <View style={{alignItems: 'flex-end'}}>
+                  <View style={{ alignItems: 'flex-end' }}>
                     <View style={[styles.radioOuter, paymentMode === 'UPI' && styles.radioOuterActive]}>
                       {paymentMode === 'UPI' && <View style={styles.radioInner} />}
                     </View>
@@ -502,31 +579,31 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.methodCard, paymentMode === 'CARD' && styles.methodCardActive]}
                 onPress={() => setPaymentMode('CARD')}
               >
-                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <View style={[styles.methodIconBox, { backgroundColor: paymentMode === 'CARD' ? '#7C3AED' : '#F1F5F9' }]}>
                     <Ionicons name="card-outline" size={20} color={paymentMode === 'CARD' ? '#FFF' : '#64748B'} />
                   </View>
-                  <View style={{flex: 1, paddingLeft: 12}}>
-                    <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                  <View style={{ flex: 1, paddingLeft: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <Text style={styles.methodTitle}>Cards, Net Banking & Wallets</Text>
                       <View style={styles.feeBadgePurple}><Text style={styles.feeBadgeTextPurple}>2% Fee</Text></View>
                     </View>
                     <Text style={styles.methodDesc}>Credit/Debit cards, Net Banking & Digital Wallets</Text>
-                    <View style={{flexDirection: 'row', marginTop: 6, alignItems: 'center'}}>
-                      <Ionicons name="wallet-outline" size={12} color="#64748B" style={{marginRight:4}}/>
+                    <View style={{ flexDirection: 'row', marginTop: 6, alignItems: 'center' }}>
+                      <Ionicons name="wallet-outline" size={12} color="#64748B" style={{ marginRight: 4 }} />
                       <Text style={styles.supportedText}>2% platform convenience fee applies</Text>
                     </View>
                   </View>
-                  <View style={{alignItems: 'flex-end'}}>
+                  <View style={{ alignItems: 'flex-end' }}>
                     <View style={[styles.radioOuter, paymentMode === 'CARD' && styles.radioOuterActive]}>
                       {paymentMode === 'CARD' && <View style={styles.radioInner} />}
                     </View>
                     <Text style={styles.methodAmount}>₹{checkoutInvoice?.totalAmount}</Text>
-                    <Text style={{fontSize: 9, color: '#94A3B8', marginTop: 2}}>(+₹{(checkoutInvoice?.totalAmount * 0.02).toFixed(2)} fee)</Text>
+                    <Text style={{ fontSize: 9, color: theme.subtext, marginTop: 2 }}>(+₹{(checkoutInvoice?.totalAmount * 0.02).toFixed(2)} fee)</Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -539,7 +616,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
                 <Text style={styles.billValue}>₹{checkoutInvoice?.totalAmount}</Text>
               </View>
               <View style={styles.billRow}>
-                <View style={{flexDirection:'row', alignItems:'center'}}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Text style={styles.billLabel}>Convenience Fee</Text>
                   {paymentMode === 'UPI' && <View style={styles.exemptBadge}><Text style={styles.exemptBadgeText}>0% Exempt</Text></View>}
                 </View>
@@ -560,20 +637,104 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
             </View>
 
             {/* Pay Button */}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.proceedBtn}
               onPress={handleCheckout}
               disabled={isLoading}
             >
               {isLoading ? <ActivityIndicator size="small" color="#FFF" /> : (
                 <>
-                  <Ionicons name="lock-closed-outline" size={16} color="#FFF" style={{marginRight:8}}/>
+                  <Ionicons name="lock-closed-outline" size={16} color="#FFF" style={{ marginRight: 8 }} />
                   <Text style={styles.proceedBtnText}>Proceed to Pay ₹{paymentMode === 'UPI' ? checkoutInvoice?.totalAmount : (checkoutInvoice?.totalAmount * 1.02).toFixed(2)}</Text>
-                  <Ionicons name="arrow-forward" size={16} color="#FFF" style={{marginLeft:8}}/>
+                  <Ionicons name="arrow-forward" size={16} color="#FFF" style={{ marginLeft: 8 }} />
                 </>
               )}
             </TouchableOpacity>
 
+          </View>
+        </View>
+      </Modal>
+
+      {/* Receipt Viewer Modal */}
+      <Modal
+        visible={!!selectedReceipt}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedReceipt(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.checkoutModalContent}>
+            {/* Modal Header */}
+            <View style={styles.checkoutHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#D1FAE5', justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
+                  <Ionicons name="checkmark-circle" size={22} color="#059669" />
+                </View>
+                <View>
+                  <Text style={styles.checkoutTitle}>Payment Receipt</Text>
+                  <Text style={styles.checkoutSubtitle}>#{selectedReceipt?.invoiceNumber || selectedReceipt?.invoice_number || selectedReceipt?.id}</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedReceipt(null)} style={styles.closeBtnDark}>
+                <Ionicons name="close" size={20} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Receipt Summary Card */}
+            <View style={[styles.amountSummaryBox, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0', marginVertical: 16 }]}>
+              <View>
+                <Text style={[styles.summaryLabel, { color: '#065F46' }]}>AMOUNT PAID</Text>
+                <Text style={[styles.summaryValue, { color: '#059669' }]}>₹{selectedReceipt?.amount || 0}</Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={[styles.summaryLabel, { color: '#065F46' }]}>STATUS</Text>
+                <View style={[styles.histStatusPill, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0', marginTop: 4 }]}>
+                  <View style={[styles.histStatusDot, { backgroundColor: '#10B981' }]} />
+                  <Text style={[styles.histStatusText, { color: '#059669' }]}>{selectedReceipt?.status || 'SUCCESS'}</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Receipt Details Breakdown */}
+            <View style={[styles.billBox, { marginBottom: 20 }]}>
+              <View style={styles.billRow}>
+                <Text style={styles.billLabel}>Invoice Number</Text>
+                <Text style={[styles.billValue, { fontWeight: '700' }]}>{selectedReceipt?.invoiceNumber || selectedReceipt?.invoice_number || 'N/A'}</Text>
+              </View>
+              <View style={styles.billRow}>
+                <Text style={styles.billLabel}>Transaction Ref</Text>
+                <Text style={[styles.billValue, { fontSize: 11 }]}>{selectedReceipt?.gatewayPaymentId || selectedReceipt?.gateway_payment_id || selectedReceipt?.id || 'N/A'}</Text>
+              </View>
+              <View style={styles.billRow}>
+                <Text style={styles.billLabel}>Date & Time</Text>
+                <Text style={styles.billValue}>
+                  {new Date(selectedReceipt?.completedAt || selectedReceipt?.createdAt || new Date()).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
+              {selectedReceipt?.description ? (
+                <View style={styles.billRow}>
+                  <Text style={styles.billLabel}>Description</Text>
+                  <Text style={styles.billValue}>{selectedReceipt.description}</Text>
+                </View>
+              ) : null}
+            </View>
+
+            {/* Modal Actions */}
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                style={[styles.proceedBtn, { flex: 1, backgroundColor: '#0F172A' }]}
+                onPress={() => setSelectedReceipt(null)}
+              >
+                <Text style={styles.proceedBtnText}>Close</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.proceedBtn, { flex: 1, backgroundColor: theme.primary }]}
+                onPress={handleShareReceipt}
+              >
+                <Ionicons name="share-outline" size={16} color="#FFF" style={{ marginRight: 6 }} />
+                <Text style={styles.proceedBtnText}>Share Receipt</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -665,7 +826,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   checkoutTitle: { fontSize: 20, fontWeight: '900', color: '#FFFFFF', marginBottom: 2 },
   checkoutSubtitle: { fontSize: 12, color: '#818CF8' },
   closeBtnDark: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
-  
+
   amountSummaryBox: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#1E1B4B', paddingHorizontal: 20, paddingBottom: 20 },
   summaryLabel: { fontSize: 10, color: '#818CF8', fontWeight: '700', letterSpacing: 0.5, marginBottom: 4 },
   summaryValue: { fontSize: 28, color: '#FFFFFF', fontWeight: '900' },
@@ -676,7 +837,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   methodsTitle: { fontSize: 11, fontWeight: '800', color: '#64748B', letterSpacing: 0.5 },
   recommendedBadge: { flexDirection: 'row', alignItems: 'center' },
   recommendedText: { fontSize: 9, color: '#059669', fontWeight: '800', letterSpacing: 0.5 },
-  
+
   methodCard: { padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 12, position: 'relative' },
   methodCardActive: { borderColor: '#10B981', backgroundColor: '#F0FDF4' },
   zeroFeePill: { position: 'absolute', top: -10, right: 16, backgroundColor: '#10B981', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, zIndex: 10 },

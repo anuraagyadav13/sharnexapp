@@ -1,363 +1,743 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Platform,
-  StatusBar,
-  TextInput,
   ActivityIndicator,
+  Alert,
+  StatusBar,
   Image,
-  Dimensions,
+  Platform,
+  RefreshControl,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
-import ScaleButton from '../../components/animations/ScaleButton';
-import { NavigationDrawer } from '../../components/NavigationDrawer';
-import { useAuth } from '../../store/AuthContext';
-import apiClient from '../../services/apiClient';
-import { ENDPOINTS } from '../../constants/api';
-import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { useTheme } from '../../store/ThemeContext';
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import { useAuth } from '../../store/AuthContext';
+import { getCacheBustedUri } from '../../utils/image';
+import principalService, { RmsExamDetail } from '../../services/principalService';
+import MarksAuditModal from '../../components/MarksAuditModal';
 
-const PrincipalReviewExamScreen = ({ navigation, route }: any) => {
-  const { examId } = route.params || { examId: '1' };
-  const { authState } = useAuth();
-  const [isDrawerOpen, setDrawerOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+export const PrincipalReviewExamScreen = ({ navigation, route }: any) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const { authState } = useAuth();
+  const styles = getStyles(theme, isDarkMode);
 
-  // Mock data for review
-  const exam = {
-    name: 'Final Term Examination',
-    type: 'Subjective',
-    year: '2026',
-    status: 'PENDING REVIEW',
-    totalStudents: 45,
-    submitted: 42,
-    avgScore: '78%',
+  const examId = route?.params?.examId;
+
+  const [exam, setExam] = useState<RmsExamDetail | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Audit modal state
+  const [auditMarksId, setAuditMarksId] = useState<string | null>(null);
+
+  const loadExamDetail = useCallback(async (isRefresh = false) => {
+    if (!examId) {
+      setError('Exam ID is missing.');
+      setIsLoading(false);
+      setIsRefreshing(false);
+      return;
+    }
+
+    try {
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
+      setError(null);
+      const res = await principalService.getExamDetail(examId);
+      if (res && res.data) {
+        setExam(res.data);
+      } else {
+        setError('Exam details not found.');
+      }
+    } catch (err: any) {
+      console.error('[PrincipalReviewExamScreen] Error fetching exam:', err);
+      setError(err?.message || 'Unable to fetch exam details.');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [examId]);
+
+  useEffect(() => {
+    loadExamDetail();
+  }, [loadExamDetail]);
+
+  const handleDelete = () => {
+    if (!exam) return;
+    Alert.alert(
+      'Delete Exam Definition',
+      `Are you sure you want to delete "${exam.name}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              const res = await principalService.deleteExam(exam.id);
+              if (res && res.message && !res.success) {
+                Alert.alert('Action Blocked', res.message);
+              } else {
+                Alert.alert('Success', 'Exam deleted successfully.', [
+                  { text: 'OK', onPress: () => navigation.goBack() },
+                ]);
+              }
+            } catch (err: any) {
+              console.error('[PrincipalReviewExamScreen] Delete error:', err);
+              const msg = err?.response?.data?.message || err?.message || 'Failed to delete exam.';
+              Alert.alert('Cannot Delete Exam', msg);
+            } finally {
+              setIsLoading(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
-  const students = [
-    { id: 's1', name: 'Arjun Mehta', roll: '101', score: '88/100', status: 'SUBMITTED' },
-    { id: 's2', name: 'Priya Sharma', roll: '102', score: '92/100', status: 'SUBMITTED' },
-    { id: 's3', name: 'Karan Singh', roll: '103', score: '45/100', status: 'FLAGGED' },
-    { id: 's4', name: 'Sanya Iyer', roll: '104', score: '76/100', status: 'SUBMITTED' },
-  ];
+  const totalClasses = exam?.classes?.length || 0;
+  const totalSubjectMappings =
+    exam?.classes?.reduce((sum, c) => sum + (c.subjects?.length || 0), 0) || 0;
+
+  const isSetupReady = totalClasses > 0 && totalSubjectMappings > 0 && exam?.status !== 'DRAFT';
 
   return (
-    <View style={styles.mainContainer}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} translucent />
+    <View style={styles.safeContainer}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.background} />
 
-      {/* Global Header - Student Pattern */}
-      <View style={styles.globalHeader}>
-        <TouchableOpacity style={styles.headerBtn} onPress={() => setDrawerOpen(true)}>
-          <Ionicons name="menu" size={28} color={theme.text} />
+      {/* Shared Standard Header */}
+      <View style={styles.appHeader}>
+        <TouchableOpacity
+          style={styles.headerBtn}
+          onPress={() => navigation.goBack()}
+          accessibilityLabel="Go back"
+        >
+          <Ionicons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>Audit Assessment</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
-          >
-            {authState.user?.photoUrl ? (
-              <Image source={{ uri: authState.user.photoUrl }} style={styles.headerAvatarImage} />
-            ) : (
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.appHeaderTitle}>Exam Overview</Text>
+        <TouchableOpacity
+          style={styles.headerBtn}
+          onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
+          accessibilityLabel="Account settings"
+        >
+          {authState.user?.photoUrl ? (
+            <Image
+              source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }}
+              style={styles.headerAvatarImage}
+            />
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.pageHeader}>
-          <Text style={styles.screenTitle}>Submission Review</Text>
-          <Text style={styles.screenSubtitle}>Validate faculty entries, audit flagged inconsistencies, and authorize certification.</Text>
-        </View>
+      {/* Sub-Header Container in Body */}
+      <View style={styles.subHeaderContainer}>
+        <Text style={styles.breadcrumbText}>
+          RESULT MANAGEMENT &gt; {exam?.name || 'Exam Detail'}
+        </Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.examTitleText}>{exam?.name || 'Loading Exam...'}</Text>
+          {exam?.status ? (
+            <View
+              style={[
+                styles.statusBadge,
+                exam.status === 'DRAFT'
+                  ? styles.statusBadgeDraft
+                  : styles.statusBadgeActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.statusBadgeText,
+                  exam.status === 'DRAFT'
+                    ? styles.statusTextDraft
+                    : styles.statusTextActive,
+                ]}
+              >
+                {exam.status}
+              </Text>
+            </View>
+          ) : null}
+          <View style={{ flex: 1 }} />
+          {exam && (
+            <View style={styles.headerActionsRow}>
+              <TouchableOpacity
+                style={styles.editConfigBtn}
+                onPress={() => navigation.navigate('PrincipalEditExam', { examId: exam.id })}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="create-outline" size={14} color={theme.text} />
+                <Text style={styles.editConfigBtnText}>Edit Config</Text>
+              </TouchableOpacity>
 
-        {/* Premium Audit Hero */}
-        {/* <Animated.View entering={FadeInUp.duration(400)} style={styles.heroCard}>
-          <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
-            <Defs>
-              <SvgLinearGradient id="auditGrad" x1="0" y1="0" x2="1" y2="1">
-                <Stop offset="0" stopColor="#6366F1" stopOpacity="1" />
-                <Stop offset="1" stopColor="#4F46E5" stopOpacity="1" />
-              </SvgLinearGradient>
-            </Defs>
-            <Rect width="100%" height="100%" fill="url(#auditGrad)" rx={28} ry={28} />
-          </Svg>
-          <View style={styles.heroContent}>
-            <View style={styles.heroTop}>
-              <View style={styles.heroIconBox}>
-                <MaterialCommunityIcons name="file-check-outline" size={24} color="#FFF" />
+              <TouchableOpacity
+                style={styles.deleteBtn}
+                onPress={handleDelete}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="trash-outline" size={14} color="#EF4444" />
+                <Text style={styles.deleteBtnText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+        {exam ? (
+          <Text style={styles.headerSubtext}>
+            {exam.examType} | Academic Year: {exam.academicYear}
+          </Text>
+        ) : null}
+      </View>
+
+      {isLoading ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#7C3AED" />
+          <Text style={styles.loadingText}>Loading exam overview...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.errorBox}>
+          <Ionicons name="alert-circle" size={24} color="#EF4444" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => loadExamDetail()}>
+            <Text style={styles.retryBtnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.scrollBody}
+          contentContainerStyle={styles.scrollBodyContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => loadExamDetail(true)}
+              colors={[theme.primary]}
+              tintColor={theme.primary}
+            />
+          }
+        >
+          {/* Summary Stat Cards */}
+          <View style={styles.statCardsRow}>
+            {/* Card 1: Participating Classes */}
+            <View style={styles.statCard}>
+              <View style={styles.statHeader}>
+                <Ionicons name="school-outline" size={18} color={theme.subtext} />
+                <Text style={styles.statLabel}>PARTICIPATING CLASSES</Text>
               </View>
-              <View style={styles.heroMainText}>
-                <Text style={styles.heroName} numberOfLines={2}>{exam.name}</Text>
-                <Text style={styles.heroMeta}>{exam.type} • {exam.year}</Text>
-              </View>
-              <View style={styles.heroStatus}>
-                <Text style={styles.heroStatusText}>{exam.status}</Text>
-              </View>
+              <Text style={styles.statVal}>{totalClasses}</Text>
+              <Text style={styles.statSubtext}>Total academic grades involved</Text>
             </View>
 
-            <View style={styles.heroStats}>
-              <View style={styles.hStat}>
-                <Text style={styles.hStatVal}>{exam.totalStudents}</Text>
-                <Text style={styles.hStatLab}>SCHOLARS</Text>
+            {/* Card 2: Subject Mappings */}
+            <View style={styles.statCard}>
+              <View style={styles.statHeader}>
+                <Ionicons name="clipboard-outline" size={18} color={theme.subtext} />
+                <Text style={styles.statLabel}>SUBJECT MAPPINGS</Text>
               </View>
-              <View style={styles.hStatDivider} />
-              <View style={styles.hStat}>
-                <Text style={styles.hStatVal}>{exam.submitted}</Text>
-                <Text style={styles.hStatLab}>ENTRIES</Text>
+              <Text style={styles.statVal}>{totalSubjectMappings}</Text>
+              <Text style={styles.statSubtext}>Total class-subject unique entries</Text>
+            </View>
+
+            {/* Card 3: Setup Status */}
+            <View style={styles.statCard}>
+              <View style={styles.statHeader}>
+                <Ionicons name="checkmark-circle-outline" size={18} color={theme.subtext} />
+                <Text style={styles.statLabel}>SETUP STATUS</Text>
               </View>
-              <View style={styles.hStatDivider} />
-              <View style={styles.hStat}>
-                <Text style={styles.hStatVal}>{exam.avgScore}</Text>
-                <Text style={styles.hStatLab}>MEAN SCORE</Text>
-              </View>
+              <Text
+                style={[
+                  styles.statValStatus,
+                  isSetupReady ? styles.statusReadyText : styles.statusPendingText,
+                ]}
+              >
+                {isSetupReady ? 'READY' : 'DRAFT'}
+              </Text>
+              <Text style={styles.statSubtext}>
+                {isSetupReady
+                  ? 'Academic configuration is complete'
+                  : 'Configuration pending activation'}
+              </Text>
             </View>
           </View>
-        </Animated.View> */}
 
-        {/* List Header */}
-        <View style={styles.listHeader}>
-          <Text style={styles.sectionTitle}>Scholastic Ledger</Text>
-          <TouchableOpacity style={styles.filterBtn}>
-            <Ionicons name="filter-outline" size={16} color={isDarkMode ? '#818CF8' : '#4F46E5'} />
-            <Text style={styles.filterText}>Show Flags</Text>
-          </TouchableOpacity>
-        </View>
+          {/* Detailed Academic Mapping Section */}
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>Detailed Academic Mapping</Text>
 
-        {/* Student List */}
-        <View style={styles.list}>
-          {students.map((student, index) => (
-            <Animated.View key={student.id} entering={FadeInUp.delay(index * 50)} style={styles.card}>
-              <View style={styles.studentRow}>
-                <View style={styles.avatarBox}>
-                  <Text style={styles.avatarText}>{student.name.charAt(0)}</Text>
-                </View>
-                <View style={styles.studentInfo}>
-                  <Text style={styles.studentName}>{student.name}</Text>
-                  <Text style={styles.studentRoll}>ROLL NO: {student.roll}</Text>
-                </View>
-                <View style={styles.scoreBox}>
-                  <Text style={styles.scoreVal}>{student.score}</Text>
-                  {student.status === 'FLAGGED' ? (
-                    <View style={styles.flag}>
-                      <Ionicons name="alert-circle" size={12} color="#EF4444" />
-                      <Text style={styles.flagText}>FLAGGED</Text>
+            {exam?.classes && exam.classes.length > 0 ? (
+              exam.classes.map((clsMap, idx) => (
+                <View key={clsMap.classId || idx} style={styles.classMappingCard}>
+                  {/* Class Card Header */}
+                  <View style={styles.classCardHeader}>
+                    <View style={styles.classHeaderLeft}>
+                      <View style={styles.capIconBox}>
+                        <Ionicons name="school-outline" size={18} color={isDarkMode ? '#CBD5E1' : '#475569'} />
+                      </View>
+                      <View>
+                        <Text style={styles.classNameTitle}>
+                          {clsMap.className || `CLASS ${clsMap.classId}`}
+                        </Text>
+                        <Text style={styles.subjCountSubtext}>
+                          {clsMap.subjects?.length || 0} SUBJECTS MAPPED
+                        </Text>
+                      </View>
                     </View>
-                  ) : (
-                    <View style={styles.check}>
-                      <Ionicons name="checkmark-circle" size={12} color="#10B981" />
-                      <Text style={styles.checkText}>VERIFIED</Text>
+
+                    <View style={styles.automatedBadge}>
+                      <Text style={styles.automatedBadgeText}>Automated Grading</Text>
                     </View>
-                  )}
+                  </View>
+
+                  {/* Subject Grid */}
+                  <View style={styles.subjectGrid}>
+                    {clsMap.subjects && clsMap.subjects.length > 0 ? (
+                      clsMap.subjects.map((subj, sIdx) => (
+                        <View key={subj.subjectId || sIdx} style={styles.subjCard}>
+                          <View style={styles.subjCardHeader}>
+                            <Text style={styles.subjNameText}>
+                              {subj.subjectName || `Subject ${subj.subjectId}`}
+                            </Text>
+                            <View style={styles.subjBadgeRow}>
+                              <View style={styles.officialBadge}>
+                                <Text style={styles.officialBadgeText}>OFFICIAL</Text>
+                              </View>
+                              <TouchableOpacity
+                                style={styles.viewHistoryBtn}
+                                onPress={() =>
+                                  setAuditMarksId(
+                                    subj.id || subj.marksId || subj.subjectId || `subject-${subj.subjectId}`
+                                  )
+                                }
+                                activeOpacity={0.8}
+                              >
+                                <Text style={styles.viewHistoryBtnText}>View History</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+
+                          <View style={styles.marksFooterRow}>
+                            <View>
+                              <Text style={styles.marksLabel}>MAX MARKS</Text>
+                              <Text style={styles.marksValue}>
+                                {Number(subj.maxMarks).toFixed(2)}
+                              </Text>
+                            </View>
+                            <View style={{ alignItems: 'flex-end' }}>
+                              <Text style={styles.marksLabel}>PASS MARKS</Text>
+                              <Text style={styles.marksValue}>
+                                {Number(subj.passMarks).toFixed(2)}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      ))
+                    ) : (
+                      <Text style={styles.noSubjText}>No subjects mapped for this class.</Text>
+                    )}
+                  </View>
                 </View>
-                <TouchableOpacity style={styles.nextBtn}>
-                  <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
-                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.emptyMappingCard}>
+                <Text style={styles.emptyMappingText}>
+                  No academic class mappings found for this exam.
+                </Text>
               </View>
-            </Animated.View>
-          ))}
-        </View>
+            )}
+          </View>
+        </ScrollView>
+      )}
 
-        {/* Multi-tier Actions */}
-        <View style={styles.actionGrid}>
-          <TouchableOpacity style={styles.rejectBtn}>
-            <MaterialCommunityIcons name="undo-variant" size={20} color="#EF4444" />
-            <Text style={styles.rejectText}>Return to Faculty</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.approveBtn}>
-            <Text style={styles.approveText}>Authorize & Publish</Text>
-            <Ionicons name="shield-checkmark" size={20} color="#FFF" />
-          </TouchableOpacity>
-        </View>
-
-      </ScrollView>
-
-      <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
+      {/* Reusable Marks Audit Modal Component */}
+      <MarksAuditModal
+        visible={!!auditMarksId}
+        marksId={auditMarksId}
+        onClose={() => setAuditMarksId(null)}
+      />
     </View>
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: theme.background },
-  container: { flex: 1 },
-  scrollContent: { paddingBottom: 60 },
-
-  // Header - Student Pattern
-  globalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop:
-      Platform.OS === 'ios'
-        ? 60
-        : (StatusBar.currentHeight ?? 0),
-    paddingBottom: 24,
-    backgroundColor: theme.background,
-  },
-  headerTitle: { fontSize: 16, fontWeight: '500', color: theme.primary, flex: 1, textAlign: 'center', marginHorizontal: 10 },
-  headerRight: { flexDirection: 'row', alignItems: 'center' },
-  avatarHeader: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center' },
-  avatarTextHeader: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
-
-  pageHeader: { marginBottom: 20, paddingHorizontal: 20, marginTop: 10 },
-  screenTitle: { fontSize: 24, fontWeight: '800', color: theme.isDarkMode ? theme.primary : '#3B82F6', marginBottom: 4 },
-  screenSubtitle: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
-
-  // Hero
-  heroCard: {
-    borderRadius: 28,
-    marginHorizontal: 20,
-    padding: 20,
-    overflow: 'hidden',
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  heroContent: {},
-  heroTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 18,
-  },
-  heroIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  heroMainText: {
-    flex: 1,
-    marginRight: 8,
-  },
-  heroName: {
-    color: '#FFF',
-    fontSize: 17,
-    fontWeight: '800',
-    lineHeight: 22,
-  },
-  heroMeta: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 11,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  heroStatus: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-    alignSelf: 'flex-start',
-  },
-  heroStatusText: {
-    color: '#FFF',
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  heroStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.12)',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-  },
-  hStat: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  hStatDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  hStatVal: {
-    color: '#FFF',
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  hStatLab: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 9,
-    fontWeight: '800',
-    marginTop: 3,
-    letterSpacing: 0.5,
-  },
-
-  // Section
-  listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 35, marginBottom: 15 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: theme.text },
-  filterBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: theme.isDarkMode ? '#6366F120' : '#EEF2FF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },
-  filterText: { fontSize: 11, fontWeight: '800', color: theme.isDarkMode ? '#818CF8' : '#4F46E5' },
-
-  // List
-  list: { paddingHorizontal: 20, gap: 12 },
-  card: { backgroundColor: theme.surface, borderRadius: 24, padding: 15, borderWidth: 1, borderColor: theme.border, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2 },
-  studentRow: { flexDirection: 'row', alignItems: 'center' },
-  avatarBox: { width: 44, height: 44, borderRadius: 14, backgroundColor: theme.isDarkMode ? '#334155' : '#F8FAFC', alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 18, fontWeight: '800', color: theme.subtext },
-  studentInfo: { flex: 1, marginLeft: 15 },
-  studentName: { fontSize: 14, fontWeight: '700', color: theme.text },
-  studentRoll: { fontSize: 10, color: theme.subtext, fontWeight: '800', marginTop: 4 },
-  scoreBox: { alignItems: 'flex-end', marginRight: 15 },
-  scoreVal: { fontSize: 16, fontWeight: '900', color: theme.text },
-  flag: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  flagText: { fontSize: 9, fontWeight: '900', color: '#EF4444' },
-  check: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  checkText: { fontSize: 9, fontWeight: '900', color: '#10B981' },
-  nextBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-
-  // Actions
-  actionGrid: { paddingHorizontal: 20, marginTop: 40, gap: 12 },
-  approveBtn: { flex: 1, backgroundColor: '#4F46E5', height: 56, borderRadius: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8, gap: 10 },
-  approveText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
-  rejectBtn: { flex: 1, height: 56, borderRadius: 18, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  rejectText: { color: '#EF4444', fontSize: 14, fontWeight: '700' },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#9F7AEA', // Soft purple
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 4,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
-  },
-  headerAvatarImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginLeft: 4,
-  },
-  headerBtn: {
-    padding: 4,
-  },
-});
+const getStyles = (theme: any, isDarkMode: boolean) =>
+  StyleSheet.create({
+    safeContainer: {
+      flex: 1,
+      backgroundColor: theme.background,
+      paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    },
+    appHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: theme.background,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    headerBtn: {
+      padding: 4,
+    },
+    appHeaderTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.text,
+    },
+    avatar: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: '#9F7AEA',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 4,
+      shadowColor: '#1E293B',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.06,
+      shadowRadius: 20,
+      elevation: 6,
+    },
+    avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+    headerAvatarImage: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      marginLeft: 4,
+    },
+    subHeaderContainer: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      backgroundColor: theme.background,
+    },
+    breadcrumbText: {
+      fontSize: 10,
+      fontWeight: '800',
+      color: theme.subtext || '#64748B',
+      letterSpacing: 0.5,
+      marginBottom: 2,
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    examTitleText: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: theme.text,
+    },
+    statusBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 12,
+    },
+    statusBadgeActive: {
+      backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : '#D1FAE5',
+    },
+    statusBadgeDraft: {
+      backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7',
+    },
+    statusBadgeText: {
+      fontSize: 10,
+      fontWeight: '800',
+    },
+    statusTextActive: {
+      color: '#10B981',
+    },
+    statusTextDraft: {
+      color: '#F59E0B',
+    },
+    headerSubtext: {
+      fontSize: 11,
+      color: theme.subtext || '#64748B',
+      marginTop: 2,
+    },
+    headerActionsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    editConfigBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: isDarkMode ? '#0F172A' : '#FFFFFF',
+    },
+    editConfigBtnText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    deleteBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 6,
+      borderRadius: 6,
+    },
+    deleteBtnText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: '#EF4444',
+    },
+    centerContainer: {
+      paddingVertical: 60,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    loadingText: {
+      marginTop: 12,
+      fontSize: 14,
+      color: theme.subtext || '#64748B',
+    },
+    errorBox: {
+      padding: 20,
+      borderRadius: 16,
+      backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.15)' : '#FEF2F2',
+      borderWidth: 1,
+      borderColor: isDarkMode ? '#991B1B' : '#FCA5A5',
+      alignItems: 'center',
+      margin: 20,
+    },
+    errorText: {
+      fontSize: 14,
+      color: '#EF4444',
+      textAlign: 'center',
+      marginVertical: 10,
+    },
+    retryBtn: {
+      backgroundColor: '#EF4444',
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+    },
+    retryBtnText: {
+      color: '#FFFFFF',
+      fontWeight: '600',
+      fontSize: 13,
+    },
+    scrollBody: {
+      flex: 1,
+    },
+    scrollBodyContent: {
+      padding: 16,
+      paddingBottom: 40,
+    },
+    statCardsRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginBottom: 20,
+    },
+    statCard: {
+      flex: 1,
+      backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 6,
+      elevation: 2,
+    },
+    statHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      marginBottom: 6,
+    },
+    statLabel: {
+      fontSize: 8,
+      fontWeight: '800',
+      color: theme.subtext || '#64748B',
+      letterSpacing: 0.5,
+    },
+    statVal: {
+      fontSize: 22,
+      fontWeight: '900',
+      color: theme.text,
+    },
+    statValStatus: {
+      fontSize: 16,
+      fontWeight: '900',
+    },
+    statusReadyText: {
+      color: '#10B981',
+    },
+    statusPendingText: {
+      color: '#F59E0B',
+    },
+    statSubtext: {
+      fontSize: 10,
+      color: theme.subtext || '#64748B',
+      marginTop: 2,
+    },
+    sectionContainer: {
+      marginTop: 4,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: theme.text,
+      marginBottom: 12,
+    },
+    classMappingCard: {
+      backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      overflow: 'hidden',
+      marginBottom: 16,
+    },
+    classCardHeader: {
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: isDarkMode ? 'rgba(15, 23, 42, 0.4)' : '#F8FAFC',
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    classHeaderLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    capIconBox: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: isDarkMode ? '#0F172A' : '#FFFFFF',
+      borderWidth: 1,
+      borderColor: theme.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    classNameTitle: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: theme.text,
+      letterSpacing: 0.5,
+    },
+    subjCountSubtext: {
+      fontSize: 9,
+      fontWeight: '800',
+      color: theme.subtext || '#64748B',
+      letterSpacing: 0.5,
+    },
+    automatedBadge: {
+      backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.15)' : '#D1FAE5',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 16,
+    },
+    automatedBadgeText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: '#10B981',
+    },
+    subjectGrid: {
+      padding: 12,
+      gap: 10,
+    },
+    subjCard: {
+      backgroundColor: isDarkMode ? 'rgba(15, 23, 42, 0.3)' : '#FAF9FF',
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 12,
+    },
+    subjCardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 10,
+    },
+    subjNameText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: theme.text,
+    },
+    subjBadgeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    officialBadge: {
+      backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.2)' : '#F3E8FF',
+      paddingHorizontal: 5,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    officialBadgeText: {
+      fontSize: 9,
+      fontWeight: '900',
+      color: '#7C3AED',
+    },
+    viewHistoryBtn: {
+      backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.15)' : '#F3E8FF',
+      borderWidth: 1,
+      borderColor: isDarkMode ? 'rgba(124, 58, 237, 0.4)' : '#DDD6FE',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+    },
+    viewHistoryBtnText: {
+      fontSize: 10,
+      fontWeight: '600',
+      color: '#7C3AED',
+    },
+    marksFooterRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    marksLabel: {
+      fontSize: 8,
+      fontWeight: '800',
+      color: theme.subtext || '#94A3B8',
+      letterSpacing: 0.5,
+    },
+    marksValue: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: isDarkMode ? '#CBD5E1' : '#334155',
+      marginTop: 1,
+    },
+    noSubjText: {
+      fontSize: 12,
+      color: theme.subtext || '#64748B',
+      fontStyle: 'italic',
+    },
+    emptyMappingCard: {
+      padding: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    emptyMappingText: {
+      fontSize: 12,
+      color: theme.subtext || '#64748B',
+    },
+  });
 
 export default PrincipalReviewExamScreen;

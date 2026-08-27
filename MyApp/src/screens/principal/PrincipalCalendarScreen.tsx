@@ -23,6 +23,8 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
+import { getCacheBustedUri } from '../../utils/image';
+
 import Skeleton from '../../components/common/Skeleton';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { useTheme } from '../../store/ThemeContext';
@@ -57,7 +59,6 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [calendarData, setCalendarData] = useState<any>(null);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
-  const [showTermHistory, setShowTermHistory] = useState(false);
 
   // Endpoint specific state
   const [eventsList, setEventsList] = useState<any[]>([]);
@@ -113,6 +114,52 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
     fetchData();
   };
 
+  const handleDeleteHoliday = (id: string, title: string) => {
+    if (!id) return;
+    Alert.alert(
+      'Remove Holiday',
+      `Remove "${title}" from the school calendar?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            setHolidaysList(prev => prev.filter((h: any) => (h.id || h._id) !== id));
+            try {
+              await apiClient.delete(`${ENDPOINTS.PRINCIPAL.CALENDAR_HOLIDAYS}/${id}`);
+            } catch {
+              fetchData();
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleDeleteExam = (id: string, title: string) => {
+    if (!id) return;
+    Alert.alert(
+      'Remove Exam',
+      `Remove "${title}" from the exam schedule?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            setExamsList(prev => prev.filter((e: any) => (e.id || e._id) !== id));
+            try {
+              await apiClient.delete(`${ENDPOINTS.PRINCIPAL.CALENDAR_EXAMS}/${id}`);
+            } catch {
+              fetchData();
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const handleCreateEvent = async () => {
     if (!newEventTitle.trim()) {
       Alert.alert('Validation Required', 'Please enter an event title.');
@@ -163,12 +210,13 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
         <ScaleButton onPress={() => setDrawerOpen(true)}>
           <Ionicons name="menu" size={28} color={theme.text} />
         </ScaleButton>
-        <Text style={styles.headerTitle} numberOfLines={1}>Institution Calendar</Text>
+        <Text style={styles.headerTitle} numberOfLines={1}>School Calendar</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('AccountSettings')}>
             {authState.user?.photoUrl ? (
-              <Image source={{ uri: authState.user.photoUrl }} style={styles.avatarHeader} />
+              <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.avatarHeader} />
             ) : (
+
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
               </View>
@@ -187,8 +235,8 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
         >
           <View style={styles.pageHeader}>
-            <Text style={styles.screenTitle}>Academic Roadmap</Text>
-            <Text style={styles.screenSubtitle}>Align institutional goals with the official academic timeline.</Text>
+            <Text style={styles.screenTitle}>School Calendar {sessionYear}</Text>
+            <Text style={styles.screenSubtitle}>Manage events, holidays and exam schedule.</Text>
           </View>
 
           {/* ===== INSTITUTION STATUS ===== */}
@@ -278,60 +326,10 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
             </View>
           </Animated.View>
 
-          {/* Term Timeline */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Academic Terms</Text>
-            <TouchableOpacity onPress={() => setShowTermHistory(true)}>
-              <Text style={styles.viewAllText}>View History</Text>
-            </TouchableOpacity>
-          </View>
 
-          <View style={styles.termList}>
-            {calendarData?.terms?.map((term: any, index: number) => (
-              <Animated.View
-                key={index}
-                entering={FadeInUp.delay(index * 100)}
-                style={[
-                  styles.termCard,
-                  term.status === 'ONGOING' && styles.termCardActive
-                ]}
-              >
-                <View style={[styles.termIndicator, { backgroundColor: term.status === 'ONGOING' ? theme.primary : '#CBD5E1' }]} />
-                <View style={styles.termMain}>
-                  <Text style={[styles.termTitle, term.status === 'ONGOING' && styles.termTitleActive]}>{term.title}</Text>
-                  <Text style={styles.termPeriod}>{term.date}</Text>
-                </View>
-                <View style={[
-                  styles.statusPill,
-                  {
-                    backgroundColor: term.status === 'ONGOING'
-                      ? (isDarkMode ? '#4F46E530' : '#EEF2FF')
-                      : (isDarkMode ? '#334155' : '#F8FAFC')
-                  }
-                ]}>
-                  <Text style={[
-                    styles.statusText,
-                    {
-                      color: term.status === 'ONGOING'
-                        ? (isDarkMode ? '#818CF8' : theme.primary)
-                        : theme.subtext
-                    }
-                  ]}>
-                    {term.status}
-                  </Text>
-                </View>
-                {term.status === 'ONGOING' && (
-                  <View style={styles.ongoingBadge}>
-                    <Text style={styles.ongoingBadgeText}>CURRENT</Text>
-                  </View>
-                )}
-              </Animated.View>
-            ))}
-          </View>
-
-          {/* Events Grid */}
-          <View style={[styles.sectionHeader, { marginTop: 32 }]}>
-            <Text style={styles.sectionTitle}>Institutional Events</Text>
+          {/* Upcoming Events */}
+          <View style={[styles.sectionHeader, { marginTop: 16 }]}>
+            <Text style={styles.sectionTitle}>Upcoming Events</Text>
             <TouchableOpacity
               style={styles.addEventBtn}
               onPress={() => setShowAddEventModal(true)}
@@ -372,9 +370,9 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
             )}
           </View>
 
-          {/* Public Holidays */}
+          {/* School Holidays */}
           <View style={[styles.sectionHeader, { marginTop: 32 }]}>
-            <Text style={styles.sectionTitle}>Public Holidays</Text>
+            <Text style={styles.sectionTitle}>School Holidays</Text>
           </View>
 
           <View style={styles.holidaysWrapper}>
@@ -395,6 +393,15 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
                     <View style={styles.durationBadge}>
                       <Text style={styles.durationText}>{hDays}d</Text>
                     </View>
+                    {!!(holiday.id || holiday._id) && (
+                      <TouchableOpacity
+                        style={{ padding: 6, marginLeft: 4 }}
+                        onPress={() => handleDeleteHoliday(holiday.id || holiday._id, hTitle)}
+                        accessibilityLabel="Remove holiday"
+                      >
+                        <Ionicons name="trash-outline" size={16} color={theme.subtext} />
+                      </TouchableOpacity>
+                    )}
                   </View>
                 );
               })
@@ -405,9 +412,9 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
             )}
           </View>
 
-          {/* Upcoming Exams Section */}
+          {/* Exam Schedule */}
           <View style={[styles.sectionHeader, { marginTop: 32 }]}>
-            <Text style={styles.sectionTitle}>Upcoming Exams</Text>
+            <Text style={styles.sectionTitle}>Exam Schedule</Text>
           </View>
 
           <View style={styles.examsWrapper}>
@@ -435,6 +442,15 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
                     <View style={styles.examClassBadge}>
                       <Text style={styles.examClassText}>{eClass}</Text>
                     </View>
+                    {!!(exam.id || exam._id) && (
+                      <TouchableOpacity
+                        style={{ padding: 6, marginLeft: 4 }}
+                        onPress={() => handleDeleteExam(exam.id || exam._id, eTitle)}
+                        accessibilityLabel="Remove exam"
+                      >
+                        <Ionicons name="trash-outline" size={16} color={theme.subtext} />
+                      </TouchableOpacity>
+                    )}
                   </View>
                 );
               })
@@ -492,34 +508,6 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
                   <Text style={styles.modalSubmitBtnText}>Create Event</Text>
                 )}
               </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Term History Modal */}
-      <Modal visible={showTermHistory} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Term History</Text>
-              <TouchableOpacity onPress={() => setShowTermHistory(false)}>
-                <Ionicons name="close" size={24} color={theme.text} />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.modalBody}>
-              {calendarData?.terms?.map((term: any, index: number) => (
-                <View key={index} style={styles.historyItem}>
-                  <View style={styles.historyDot} />
-                  <View style={styles.historyContent}>
-                    <Text style={styles.historyTitle}>{term.title}</Text>
-                    <Text style={styles.historyDate}>{term.date}</Text>
-                  </View>
-                  <View style={[styles.historyStatus, { backgroundColor: term.status === 'ONGOING' ? '#10B981' : '#94A3B8' }]}>
-                    <Text style={styles.historyStatusText}>{term.status}</Text>
-                  </View>
-                </View>
-              ))}
             </View>
           </View>
         </View>

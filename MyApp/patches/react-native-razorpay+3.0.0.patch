@@ -1,0 +1,20 @@
+diff --git a/node_modules/react-native-razorpay/RazorpayCheckout.js b/node_modules/react-native-razorpay/RazorpayCheckout.js
+index 07c73b6..d299e8c 100644
+--- a/node_modules/react-native-razorpay/RazorpayCheckout.js
++++ b/node_modules/react-native-razorpay/RazorpayCheckout.js
+@@ -16,10 +16,14 @@ if (isTurboModuleEnabled) {
+   // New Architecture - Try to load TurboModule specs
+   try {
+     RazorpayCheckoutModule = require('./src/NativeRazorpayCheckout').default;
+-    RazorpayEventEmitterModule = require('./src/NativeRazorpayEventEmitter').default;
+   } catch (error) {
+     // Fallback to old architecture if TurboModule not available
+     RazorpayCheckoutModule = NativeModules.RNRazorpayCheckout;
++  }
++
++  try {
++    RazorpayEventEmitterModule = require('./src/NativeRazorpayEventEmitter').default;
++  } catch (error) {
+     RazorpayEventEmitterModule = NativeModules.RazorpayEventEmitter;
+   }
+ } else {

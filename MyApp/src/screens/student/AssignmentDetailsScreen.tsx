@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   Image,
   TouchableOpacity,
+  Linking,
+  Alert,
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -30,7 +32,7 @@ interface Props {
 
 const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   const { theme, isDarkMode, toggleDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const { authState } = useAuth();
   const assignmentId = route?.params?.assignmentId;
   const [assignmentData, setAssignmentData] = useState<any>(null);
@@ -44,8 +46,8 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
     </View>
   );
 
-  const AttachmentItem = ({ title, meta }: { title: string, meta: string }) => (
-    <ScaleButton style={styles.attachmentItem} activeOpacity={0.8} scaleTo={0.98}>
+  const AttachmentItem = ({ title, meta, onPress }: { title: string, meta: string, onPress?: () => void }) => (
+    <ScaleButton style={styles.attachmentItem} activeOpacity={0.8} scaleTo={0.98} onPress={onPress}>
       <View style={styles.pdfIconContainer}>
         <MaterialCommunityIcons name="file-pdf-box" size={28} color="#FFFFFF" />
       </View>
@@ -203,13 +205,27 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
 
             <View style={styles.attachmentsContainer}>
               {assignmentData?.attachments && assignmentData.attachments.length > 0 ? (
-                assignmentData.attachments.map((attachment: any, idx: number) => (
-                  <AttachmentItem
-                    key={idx}
-                    title={attachment.name || attachment.fileName}
-                    meta={attachment.type || 'PDF'} 
-                  />
-                ))
+                assignmentData.attachments.map((attachment: any, idx: number) => {
+                  const url = typeof attachment === 'string' ? attachment : (attachment.url || attachment.fileUrl || attachment.path || null);
+                  const title = typeof attachment === 'string' ? attachment : (attachment.name || attachment.fileName || 'Attachment');
+                  const meta = typeof attachment === 'string' ? 'PDF' : (attachment.type || attachment.fileType || 'PDF');
+                  return (
+                    <AttachmentItem
+                      key={idx}
+                      title={title}
+                      meta={meta}
+                      onPress={() => {
+                        if (url) {
+                          Linking.openURL(url).catch(() =>
+                            Alert.alert('Error', 'Could not open attachment.')
+                          );
+                        } else {
+                          Alert.alert('Notice', 'No download link available for this attachment.');
+                        }
+                      }}
+                    />
+                  );
+                })
               ) : (
                 <Text style={{ textAlign: 'center', color: '#9CA3AF', paddingVertical: 20 }}>
                   No attachments available
@@ -252,7 +268,7 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
 
   globalHeader: {
@@ -318,19 +334,18 @@ const getStyles = (theme: any) => StyleSheet.create({
   cardsContainer: {
     paddingHorizontal: 16,
     paddingTop: 24, // Normal distinct space below the blue header
-    gap: 16,
+    gap: 20,
   },
 
   card: {
     backgroundColor: theme.surface,
-    borderRadius: 20, // richer, modern curve
-    paddingVertical: 22,
-    paddingHorizontal: 20,
+    borderRadius: 12,
+    padding: 20,
     shadowColor: '#1E293B', // sophisticated deep shadow tint
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
     borderWidth: 1,
     borderColor: theme.border, // very subtle, rich translucent border
   },
@@ -343,7 +358,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: theme.isDarkMode ? '#1E3A8A' : '#EFF6FF',
+    backgroundColor: isDarkMode ? '#1E3A8A' : '#EFF6FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
@@ -423,7 +438,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F8FAFC', // exact subtle blueish-grey fill
+    backgroundColor: isDarkMode ? '#334155' : '#F8FAFC', // exact subtle blueish-grey fill
     borderRadius: 8,
     borderWidth: 1,
     borderColor: theme.border,

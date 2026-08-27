@@ -23,6 +23,8 @@ import principalService, {
 } from '../../services/principalService';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
+import { getCacheBustedUri } from '../../utils/image';
+
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -214,7 +216,7 @@ const PrincipalClassesScreen: React.FC<Props> = ({ navigation }) => {
               </View>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              {/* <TouchableOpacity
+              <TouchableOpacity
                 style={{ padding: 6 }}
                 onPress={(e) => {
                   e.stopPropagation();
@@ -222,7 +224,7 @@ const PrincipalClassesScreen: React.FC<Props> = ({ navigation }) => {
                 }}
               >
                 <Ionicons name="pencil-outline" size={18} color={theme.primary} />
-              </TouchableOpacity> */}
+              </TouchableOpacity>
 
               <TouchableOpacity
                 style={{ padding: 6 }}
@@ -312,8 +314,9 @@ const PrincipalClassesScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
         >
           {authState.user?.photoUrl ? (
-            <Image source={{ uri: authState.user.photoUrl }} style={styles.headerAvatarImage} />
+            <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.headerAvatarImage} />
           ) : (
+
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
             </View>

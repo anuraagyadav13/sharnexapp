@@ -111,7 +111,10 @@ const teacherService = {
 
   // Gets the final results of a quiz after students have taken it
   getQuizResults(quizId: string) {
-    return apiClient.get(ENDPOINTS.TEACHER.QUIZ_RESULTS(quizId));
+    return apiClient.get(ENDPOINTS.TEACHER.QUIZ_ATTEMPTS(quizId)).catch(err => {
+      console.warn('Teacher quiz attempts failed, trying general /quizzes/' + quizId + '/attempts:', err.message);
+      return apiClient.get(`/quizzes/${quizId}/attempts`);
+    });
   },
 
   // Sees the details of students' attempts at a quiz
@@ -240,6 +243,16 @@ const teacherService = {
   // Checks the history/audit trail of changes made to marks
   getRmsAudit(marksId: string) {
     return apiClient.get(ENDPOINTS.TEACHER.RMS_AUDIT(marksId));
+  },
+
+  // Gets multi-exam aggregated results for a student in teacher's class
+  getTeacherStudentAllResults(studentId: string) {
+    return apiClient.get(ENDPOINTS.TEACHER.RMS_TEACHER_STUDENT_ALL_RESULTS(studentId));
+  },
+
+  // Gets class students roster for assigned Class Teacher
+  getTeacherClassStudents() {
+    return apiClient.get(ENDPOINTS.TEACHER.RMS_TEACHER_CLASS_STUDENTS);
   },
 
   // ----------------------------------------------------

@@ -9,6 +9,9 @@ import {
   ActivityIndicator,
   Image,
   TouchableOpacity,
+  RefreshControl,
+  Linking,
+  Alert,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -29,11 +32,11 @@ interface Props {
 
 const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
 
-  const MaterialCard = ({ delay, type, title, desc, tags }: any) => {
+  const MaterialCard = ({ delay, type, title, desc, tags, onPressDownload }: any) => {
     return (
       <Animated.View entering={FadeInUp.delay(delay).springify()} style={styles.cardContainer}>
          <View style={styles.cardTop}>
@@ -52,41 +55,83 @@ const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
                </View>
              ))}
            </View>
-           <ScaleButton activeOpacity={0.8} scaleTo={0.97} style={styles.downloadBtn}>
+           <ScaleButton activeOpacity={0.8} scaleTo={0.97} style={styles.downloadBtn} onPress={onPressDownload}>
               <Ionicons name="download-outline" size={16} color="#FFFFFF" style={{marginRight: 6}} />
               <Text style={styles.downloadBtnText}>Download</Text>
            </ScaleButton>
          </View>
       </Animated.View>
     );
-  }
+  };
   const [materials, setMaterials] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchMaterials = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
+      // 1. Resolve student ID reliably
+      const profileRes = await studentService.getProfile();
+      const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
+
+      if (!studentId) {
+        throw new Error('Student ID not found');
+      }
+
+      // 2. Fetch materials using the resolved ID
+      const res = await studentService.getStudyMaterials(studentId);
+      // Handle various response types including normalized
+      const materialData = res.normalized?.data?.materials || res.normalized?.data || res.data?.materials || res.data?.data || [];
+      setMaterials(Array.isArray(materialData) ? materialData : []);
+    } catch (err: any) {
+      console.error('Failed to fetch materials:', err);
+      setMaterials([]);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => fetchMaterials(true);
+
+  const handleDownloadMaterial = async (item: any) => {
+    try {
+      const profileRes = await studentService.getProfile();
+      const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
+
+      if (!studentId || !item?.id) {
+        const directUrl = item?.file_url || item?.url;
+        if (directUrl) {
+          Linking.openURL(directUrl).catch(() => Alert.alert('Error', 'Could not open study material link.'));
+          return;
+        }
+        Alert.alert('Notice', 'No download link available for this study material.');
+        return;
+      }
+
+      const res = await studentService.downloadMaterial(studentId, item.id);
+      const downloadUrl = res.data?.downloadUrl || res.data?.url || res.normalized?.data?.url || item.file_url || item.url;
+
+      if (downloadUrl) {
+        Linking.openURL(downloadUrl).catch(() => Alert.alert('Error', 'Could not open study material link.'));
+      } else {
+        Alert.alert('Notice', 'No download link available for this study material.');
+      }
+    } catch (err) {
+      const directUrl = item?.file_url || item?.url;
+      if (directUrl) {
+        Linking.openURL(directUrl).catch(() => Alert.alert('Error', 'Could not open study material link.'));
+      } else {
+        Alert.alert('Error', 'Failed to download study material.');
+      }
+    }
+  };
 
   useEffect(() => {
-    const fetchMaterials = async () => {
-      try {
-        setIsLoading(true);
-        // 1. Resolve student ID reliably
-        const profileRes = await studentService.getProfile();
-        const studentId = profileRes.normalized?.data?.id || profileRes.normalized?.data?.student?.id || authState.user?.id;
-
-        if (!studentId) {
-          throw new Error('Student ID not found');
-        }
-
-        // 2. Fetch materials using the resolved ID
-        const res = await studentService.getStudyMaterials(studentId);
-        // Handle various response types including normalized
-        const materialData = res.normalized?.data?.materials || res.normalized?.data || res.data?.materials || res.data?.data || [];
-        setMaterials(Array.isArray(materialData) ? materialData : []);
-      } catch (err: any) {
-        console.error('Failed to fetch materials:', err);
-        setMaterials([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchMaterials();
   }, [authState.user?.id]);
 
@@ -111,7 +156,18 @@ const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
         onMenuPress={() => setDrawerOpen(true)}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={[theme.primary]}
+            tintColor={theme.primary}
+          />
+        }
+      >
         
         {/* Page Title */}
         <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
@@ -141,6 +197,7 @@ const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
               title={item.title}
               desc={item.description}
               tags={[item.subject || 'General', item.teacher_name || 'Staff']}
+              onPressDownload={() => handleDownloadMaterial(item)}
             />
           ))
         )}
@@ -158,7 +215,7 @@ const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
 };
 
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 
@@ -207,7 +264,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   pageSubtitle: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
 
   infoBanner: {
-    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F3F4F6',
+    backgroundColor: isDarkMode ? '#1E293B' : '#F3F4F6',
     borderLeftWidth: 4,
     borderLeftColor: theme.primary,
     paddingVertical: 12,
@@ -233,7 +290,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     overflow: 'hidden', 
   },
   cardTop: {
-    backgroundColor: theme.isDarkMode ? '#1E293B' : '#F3F8FF', 
+    backgroundColor: isDarkMode ? '#1E293B' : '#F3F8FF', 
     padding: 16,
   },
   typePill: {
@@ -277,7 +334,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginBottom: 16,
   },
   tagPill: {
-    backgroundColor: theme.isDarkMode ? '#312E8130' : '#EEF2FF',
+    backgroundColor: isDarkMode ? '#312E8130' : '#EEF2FF',
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 16,

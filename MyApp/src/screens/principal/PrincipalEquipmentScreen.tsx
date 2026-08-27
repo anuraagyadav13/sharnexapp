@@ -22,6 +22,8 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import principalService, { EquipmentRequestItem } from '../../services/principalService';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
+import { getCacheBustedUri } from '../../utils/image';
+
 
 type PrincipalEquipmentNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -58,6 +60,11 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
   });
   const [remarkInput, setRemarkInput] = useState('');
   const [remarkError, setRemarkError] = useState('');
+
+  // Detail Modal State
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [selectedDetail, setSelectedDetail] = useState<any>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
   const loadData = useCallback(async (showRefreshIndicator = false) => {
     if (showRefreshIndicator) {
@@ -107,24 +114,33 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
     }
   }, []);
 
-  const handleActionPress = useCallback((requestId: string, action: 'approve' | 'reject') => {
-    setRemarkInput('');
-    setRemarkError('');
-    setModalState({
-      visible: true,
-      requestId,
-      action,
-    });
+  const handleActionPress = useCallback((id: string, action: 'approve' | 'reject') => {
+    setModalState({ visible: true, requestId: id, action });
   }, []);
 
   const closeModal = useCallback(() => {
-    setModalState({
-      visible: false,
-      requestId: '',
-      action: 'approve',
-    });
+    setModalState(prev => ({ ...prev, visible: false }));
     setRemarkInput('');
     setRemarkError('');
+  }, []);
+
+  const handleViewDetail = useCallback(async (item: EquipmentRequestItem) => {
+    setSelectedDetail(item);
+    setDetailModalVisible(true);
+    if (!item.items || item.items.length === 0) {
+      setIsLoadingDetail(true);
+      try {
+        const detailRes = await principalService.getEquipmentRequestDetail(item.id);
+        const detailData = (detailRes.data as any)?.data || detailRes.data;
+        if (detailData) {
+          setSelectedDetail(detailData);
+        }
+      } catch (err) {
+        console.warn('Failed to load request detail:', err);
+      } finally {
+        setIsLoadingDetail(false);
+      }
+    }
   }, []);
 
   const handleConfirmAction = useCallback(async () => {
@@ -142,7 +158,28 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
       closeModal();
 
       if (action === 'approve') {
-        await principalService.approveEquipmentRequest(requestId, remarkInput);
+        const targetRequest = requests.find((r) => r.id === requestId);
+        let lineItems = targetRequest?.items || [];
+
+        if (!lineItems.length) {
+          try {
+            const detailRes = await principalService.getEquipmentRequestDetail(requestId);
+            const detailData = (detailRes.data as any)?.data || detailRes.data;
+            if (detailData?.items && Array.isArray(detailData.items)) {
+              lineItems = detailData.items;
+            }
+          } catch (e) {
+            console.warn('[PrincipalEquipment] Failed to fetch request details for items:', e);
+          }
+        }
+
+        const itemsPayload = lineItems.map((item: any) => ({
+          id: item.id,
+          approvedQuantity: Number(item.requested_quantity ?? item.requestedQuantity ?? item.quantity ?? 1),
+          approvalNote: item.approval_note ?? item.approvalNote ?? '',
+        }));
+
+        await principalService.approveEquipmentRequest(requestId, remarkInput, itemsPayload);
         Alert.alert('Success', 'Request approved successfully.');
       } else {
         await principalService.rejectEquipmentRequest(requestId, remarkInput);
@@ -153,7 +190,7 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
       Alert.alert('Error', `Failed to ${action} request. Please reload and try again.`);
       loadData(); // Reload to sync state
     }
-  }, [modalState, remarkInput, closeModal, loadData]);
+  }, [modalState, remarkInput, closeModal, loadData, requests]);
 
   const renderRequestCard = useCallback(
     ({ item }: { item: EquipmentRequestItem }) => {
@@ -161,7 +198,11 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
       const itemsCount = parseInt(item.item_count || '0');
 
       return (
-        <View style={styles.requestCard}>
+        <TouchableOpacity
+          style={styles.requestCard}
+          activeOpacity={0.7}
+          onPress={() => handleViewDetail(item)}
+        >
           <View style={styles.cardHeader}>
             <View style={styles.numberBox}>
               <Text style={styles.numberText}>{item.request_number}</Text>
@@ -223,7 +264,7 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
               </Text>
             </View>
           )}
-        </View>
+        </TouchableOpacity>
       );
     },
     [getPriorityStyles, formatDate, handleActionPress]
@@ -244,8 +285,9 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
         >
           {authState.user?.photoUrl ? (
-            <Image source={{ uri: authState.user.photoUrl }} style={styles.headerAvatarImage} />
+            <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.headerAvatarImage} />
           ) : (
+
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
             </View>
@@ -357,6 +399,107 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
                 <Text style={styles.modalConfirmBtnText}>Confirm</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Detail Modal */}
+      <Modal
+        visible={detailModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setDetailModalVisible(false)}
+      >
+        <View style={styles.detailModalOverlay}>
+          <View style={styles.detailModalContainer}>
+            <View style={styles.detailModalHeader}>
+              <Text style={styles.detailModalTitle}>Request Details</Text>
+              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+                <Ionicons name="close" size={24} color={theme.text} />
+              </TouchableOpacity>
+            </View>
+
+            {isLoadingDetail ? (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={theme.primary} />
+              </View>
+            ) : selectedDetail ? (
+              <ScrollView style={{ padding: 16 }}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Request No:</Text>
+                  <Text style={styles.detailValue}>{selectedDetail.request_number}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Status:</Text>
+                  <Text style={[styles.detailValue, { fontWeight: 'bold' }]}>{selectedDetail.status}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Priority:</Text>
+                  <Text style={styles.detailValue}>{selectedDetail.priority}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Teacher:</Text>
+                  <Text style={styles.detailValue}>{selectedDetail.teacher_name}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Purpose:</Text>
+                  <Text style={styles.detailValue}>{selectedDetail.purpose}</Text>
+                </View>
+                {!!selectedDetail.teacher_note && (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Teacher Note:</Text>
+                    <Text style={styles.detailValue}>{selectedDetail.teacher_note}</Text>
+                  </View>
+                )}
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Needed By:</Text>
+                  <Text style={styles.detailValue}>{formatDate(selectedDetail.needed_by_date)}</Text>
+                </View>
+
+                <Text style={[styles.detailSectionTitle, { marginTop: 16, marginBottom: 8 }]}>Requested Items</Text>
+                {selectedDetail.items && selectedDetail.items.length > 0 ? (
+                  selectedDetail.items.map((it: any, idx: number) => (
+                    <View key={idx} style={styles.detailItemCard}>
+                      <Text style={styles.detailItemName}>{it.name || it.item_name}</Text>
+                      <Text style={styles.detailItemText}>Quantity: {it.requested_quantity || it.quantity || 1}</Text>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={{ color: theme.subtext }}>No items listed.</Text>
+                )}
+                
+                {selectedDetail.status === 'SUBMITTED' && (
+                  <View style={{ flexDirection: 'row', gap: 12, marginTop: 24, marginBottom: 40 }}>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, styles.rejectBtn, { flex: 1, justifyContent: 'center' }]}
+                      onPress={() => {
+                        setDetailModalVisible(false);
+                        handleActionPress(selectedDetail.id, 'reject');
+                      }}
+                    >
+                      <Ionicons name="close-circle-outline" size={20} color="#FFF" style={{ marginRight: 6 }} />
+                      <Text style={[styles.actionBtnText, { fontSize: 16 }]}>Reject</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.actionBtn, styles.approveBtn, { flex: 1, justifyContent: 'center' }]}
+                      onPress={() => {
+                        setDetailModalVisible(false);
+                        handleActionPress(selectedDetail.id, 'approve');
+                      }}
+                    >
+                      <Ionicons name="checkmark-circle-outline" size={20} color="#FFF" style={{ marginRight: 6 }} />
+                      <Text style={[styles.actionBtnText, { fontSize: 16 }]}>Approve</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                <View style={{ height: 40 }} />
+              </ScrollView>
+            ) : (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <Text style={{ color: theme.subtext }}>Could not load details.</Text>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
@@ -685,6 +828,69 @@ const getStyles = (theme: any) => StyleSheet.create({
     height: 32,
     borderRadius: 16,
     marginLeft: 4,
+  },
+  detailModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  detailModalContainer: {
+    backgroundColor: theme.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    minHeight: '70%',
+    maxHeight: '90%',
+  },
+  detailModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+  },
+  detailModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.text,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  detailLabel: {
+    width: 100,
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.subtext,
+  },
+  detailValue: {
+    flex: 1,
+    fontSize: 14,
+    color: theme.text,
+  },
+  detailSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.text,
+  },
+  detailItemCard: {
+    backgroundColor: theme.surface,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  detailItemName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.text,
+    marginBottom: 4,
+  },
+  detailItemText: {
+    fontSize: 13,
+    color: theme.subtext,
   },
 });
 

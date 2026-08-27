@@ -19,6 +19,8 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
 import principalService, { StudentItem } from '../../services/principalService';
+import { getCacheBustedUri } from '../../utils/image';
+
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PrincipalClassDetail'>;
 
@@ -128,8 +130,9 @@ const PrincipalClassDetailScreen: React.FC<Props> = ({ route, navigation }) => {
           onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
         >
           {authState.user?.photoUrl ? (
-            <Image source={{ uri: authState.user.photoUrl }} style={styles.headerAvatarImage} />
+            <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.headerAvatarImage} />
           ) : (
+
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
             </View>

@@ -21,6 +21,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
+import { getCacheBustedUri } from '../../utils/image';
+
 import apiClient from '../../services/apiClient';
 import principalService, {
   LibraryDashboardStats,
@@ -197,10 +199,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
     try {
       const res = await principalService.getClasses();
       const resAny = res as any;
-      // Diagnostic log — matches PrincipalClassesScreen pattern; remove once classes populate correctly
-      console.log('[PrincipalLibrary] getClasses raw res.data:', JSON.stringify(resAny.data));
       const data = resAny.data?.classes ?? (Array.isArray(resAny.data) ? resAny.data : (resAny.data?.data ?? []));
-      console.log('[PrincipalLibrary] classesList resolved:', JSON.stringify(data));
       setClassesList(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('[PrincipalLibrary] Failed to load classes:', err);
@@ -374,7 +373,6 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
       const response = await apiClient.get('/library/analytics');
       setAnalyticsData(response.data?.data || response.data || null);
     } catch (error) {
-      console.log('[PrincipalLibrary] Analytics fetch error:', error);
       setAnalyticsData(null);
       setAnalyticsError(true);
     } finally {
@@ -1088,8 +1086,8 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
                 >
                   <View style={styles.cardHeader}>
                     <Text style={styles.bookTitleText}>{item.title}</Text>
-                    <View style={{ backgroundColor: isDarkMode ? '#4F46E530' : '#EEF2FF', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: isDarkMode ? '#818CF8' : '#4F46E5' }}>ISBN: {item.isbn}</Text>
+                    <View style={{ backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.2)' : '#F3E8FF', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: theme.primary }}>ISBN: {item.isbn}</Text>
                     </View>
                   </View>
                   <Text style={{ fontSize: 13, color: theme.subtext, marginBottom: 4 }}>Author: {item.author}</Text>
@@ -1223,8 +1221,9 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
             onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
           >
             {authState.user?.photoUrl ? (
-              <Image source={{ uri: authState.user.photoUrl }} style={styles.headerAvatarImage} />
+              <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.headerAvatarImage} />
             ) : (
+
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
               </View>

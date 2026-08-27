@@ -33,6 +33,8 @@ import Animated, {
 import ScaleButton from '../../components/animations/ScaleButton';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
+import { getCacheBustedUri } from '../../utils/image';
+
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import principalService from '../../services/principalService';
@@ -203,7 +205,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
 
     launchCamera(options, async (response: ImagePickerResponse) => {
       if (response.didCancel) {
-        console.log('User cancelled camera');
+        // user cancelled
       } else if (response.errorCode) {
         if (response.errorCode === 'camera_unavailable') {
           setCameraAvailable(false);
@@ -252,9 +254,13 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
     fetchData();
   }, [selectedDate]);
 
-  const fetchData = async () => {
+  const fetchData = async (isRefresh = false) => {
     try {
-      if (!isRefreshing) setIsLoading(true);
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else if (!isRefreshing) {
+        setIsLoading(true);
+      }
 
       const dateStr = selectedDate.toISOString().split('T')[0];
       const institutionId = authState.user?.institutionId || '';
@@ -382,7 +388,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
 
   const onRefresh = () => {
     setIsRefreshing(true);
-    fetchData();
+    fetchData(true);
   };
 
   const toggleStaffSelection = (id: string) => {
@@ -723,8 +729,9 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
             accessibilityRole="button"
           >
             {authState.user?.photoUrl ? (
-              <Image source={{ uri: authState.user.photoUrl }} style={styles.avatarCircle} />
+              <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.avatarCircle} />
             ) : (
+
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
               </View>
@@ -740,7 +747,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
           style={styles.container}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />}
         >
           <View style={styles.pageHeader}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1038,8 +1045,8 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                                 styles.miniActionBtn,
                                 styles.selectStaffBtn,
                                 selectedStaffIds.includes(log.teacherId) && {
-                                  borderColor: '#10B981',
-                                  backgroundColor: isDarkMode ? '#064E3B' : '#D1FAE5',
+                                  borderColor: theme.success || '#10B981',
+                                  backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : '#D1FAE5',
                                 }
                               ]}
                               onPress={() => toggleStaffSelection(log.teacherId)}
@@ -1049,12 +1056,12 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                               <Text style={[
                                 styles.selectStaffText,
                                 selectedStaffIds.includes(log.teacherId) && {
-                                  color: '#10B981',
+                                  color: theme.success || '#10B981',
                                   fontWeight: 'bold',
                                 }
                               ]}>
                                 {selectedStaffIds.includes(log.teacherId) ? (
-                                  <Ionicons name="checkmark" size={14} color="#10B981" />
+                                  <Ionicons name="checkmark" size={14} color={theme.success || '#10B981'} />
                                 ) : (
                                   'S'
                                 )}
@@ -1064,9 +1071,9 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                         )}
                       </View>
                       <View style={styles.logBadgeRow}>
-                        <View style={[styles.logStatusPill, { backgroundColor: log.status === 'Absent' ? '#FEE2E2' : (log.status.includes('OUT') ? '#FEF3C7' : '#D1FAE5') }]}>
-                          <View style={[styles.statusDot, { backgroundColor: log.status === 'Absent' ? '#EF4444' : (log.status.includes('OUT') ? '#F59E0B' : '#10B981') }]} />
-                          <Text style={[styles.logStatusText, { color: log.status === 'Absent' ? '#991B1B' : (log.status.includes('OUT') ? '#92400E' : '#065F46') }]}>{log.status}</Text>
+                        <View style={[styles.logStatusPill, { backgroundColor: log.status === 'Absent' ? (isDarkMode ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2') : (log.status.includes('OUT') ? (isDarkMode ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7') : (isDarkMode ? 'rgba(16, 185, 129, 0.2)' : '#D1FAE5')) }]}>
+                          <View style={[styles.statusDot, { backgroundColor: log.status === 'Absent' ? (theme.danger || '#EF4444') : (log.status.includes('OUT') ? (theme.warning || '#F59E0B') : (theme.success || '#10B981')) }]} />
+                          <Text style={[styles.logStatusText, { color: log.status === 'Absent' ? (theme.danger || '#EF4444') : (log.status.includes('OUT') ? (theme.warning || '#F59E0B') : (theme.success || '#10B981')) }]}>{log.status}</Text>
                         </View>
                         {log.isPresent && (
                           <View style={styles.methodBadge}>
