@@ -117,6 +117,12 @@ export const ENDPOINTS = {
     OFFICIAL_RESULT_QUIZZES: '/rms/results/student/quizzes',
     START_QUIZ: (quizId: string) => `/quizzes/${quizId}/start`,
     SUBMIT_QUIZ: (quizId: string) => `/quizzes/${quizId}/submit`,
+    // Student LMS Syllabus & Daily Logs
+    LMS_ENROLLED_SUBJECTS: '/student/lms/enrolled-subjects',
+    LMS_BLUEPRINT: '/student/lms/blueprint',
+    LMS_DAILY_LOGS: '/student/lms/daily-logs',
+    LMS_REVISION: '/student/lms/revision',
+    LMS_MISSED_CLASSES: '/student/lms/missed-classes',
   },
   TEACHER: {
     DASHBOARD: (id: string) => `/teachers/${id}/dashboard-summary`,
@@ -175,6 +181,14 @@ export const ENDPOINTS = {
     PENDING_TASKS: (id: string) => `/teachers/${id}/pending-tasks`,
     // Timetable: periods config (same endpoint used by the website)
     TIMETABLE_PERIODS: '/timetable/periods',
+    // LMS Syllabus Blueprint & Daily Work Logger
+    LMS_ASSIGNED_SUBJECTS: '/teacher/lms/assigned-subjects',
+    LMS_BLUEPRINT: '/teacher/lms/blueprint',
+    LMS_CHAPTERS: '/teacher/lms/chapters',
+    LMS_TOPICS: '/teacher/lms/topics',
+    LMS_SUBTOPICS: '/teacher/lms/subtopics',
+    LMS_DAILY_LOGS: '/teacher/lms/daily-logs',
+    LMS_DASHBOARD_SUMMARY: '/teacher/lms/dashboard-summary',
   },
   PRINCIPAL: {
     // Old endpoints to prevent compiler errors on other principal files
@@ -237,6 +251,8 @@ export const ENDPOINTS = {
     ACCOUNT_PROFILE: '/account/profile',
     ACCOUNT_INSTITUTION: '/account/institution',
     ACCOUNT_SESSIONS: '/account/sessions',
+    LMS: '/institution/lms',
+    LMS_BLUEPRINT: '/teacher/lms/blueprint',
   },
   MESSAGES: {
     CONVERSATION: '/messages',

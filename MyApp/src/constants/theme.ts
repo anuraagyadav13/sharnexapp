@@ -9,6 +9,8 @@ export const COLORS = {
   warning: '#F59E0B',
   danger: '#EF4444',
   border: '#E5E7EB',
+  onPrimary: '#FFFFFF',
+  white: '#FFFFFF',
 };
 
 export const SIZES = {

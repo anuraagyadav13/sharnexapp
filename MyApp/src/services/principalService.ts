@@ -230,8 +230,10 @@ export interface InvoiceItem {
   studentId: string;
   studentName: string;
   studentGrade?: string;
+  className?: string;
   grade: string | null;
   baseAmount: number;
+  amountPaid?: number;
   totalAmount: number;
   currency: string;
   description: string;
@@ -378,6 +380,128 @@ export interface SessionItem {
   createdAt: string;
   expiresAt: string;
   isCurrent: boolean;
+}
+
+export interface LmsTeacherItem {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  assignedClassesCount: number | string;
+  totalLogs: number | string;
+  logsThisMonth: number | string;
+  lastLogDate: string | null;
+}
+
+export interface LmsClassItem {
+  id: string;
+  name: string;
+  section: string;
+  academic_year: string;
+}
+
+export interface LmsDailyLogItem {
+  id: string;
+  logDate: string;
+  actionType: string;
+  coverageTitle: string;
+  hoursSpent: number | string;
+  periodsCount: number | string;
+  notes: string;
+  homeworkAssigned?: string;
+  nextClassPlan?: string;
+  createdAt: string;
+  teacherName: string;
+  teacherId: string;
+  classId: string;
+  className: string;
+  section: string;
+  subjectName: string;
+  chapterTitle: string | null;
+  topicTitle: string | null;
+}
+
+export interface LmsPagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface LmsMatrixItem {
+  classSubjectId: string;
+  classId: string;
+  className: string;
+  section: string;
+  subjectName: string;
+  subjectCode?: string;
+  teacherName: string;
+  teacherId: string | null;
+  blueprintId?: string | null;
+  isLocked: boolean;
+  totalChapters: number;
+  completedChapters: number;
+  targetHours: number;
+  targetPeriods: number;
+  loggedHours?: number;
+  completionPercent: number;
+  pacingStatus: string;
+  pacingColor: string;
+}
+
+export interface LmsInstitutionData {
+  teachers: LmsTeacherItem[];
+  classes: LmsClassItem[];
+  logs: LmsDailyLogItem[];
+  pagination: LmsPagination;
+  matrix: LmsMatrixItem[];
+}
+
+export interface LmsSubtopicItem {
+  id: string;
+  subtopicNumber?: number;
+  title: string;
+  status: string;
+  sortOrder?: number;
+}
+
+export interface LmsTopicItem {
+  id: string;
+  topicNumber?: number;
+  title: string;
+  status: string;
+  sortOrder?: number;
+  subtopics?: LmsSubtopicItem[];
+}
+
+export interface LmsChapterItem {
+  id: string;
+  chapterNumber?: number;
+  title: string;
+  description?: string;
+  estimatedHours: number;
+  estimatedPeriods: number;
+  status: 'pending' | 'in_progress' | 'completed' | string;
+  isLocked: boolean;
+  sortOrder?: number;
+  topics?: LmsTopicItem[];
+}
+
+export interface LmsBlueprintTree {
+  blueprintId: string;
+  classSubjectId: string;
+  academicYear?: string;
+  chapters: LmsChapterItem[];
+}
+
+export interface LmsQueryParams {
+  page?: number;
+  limit?: number;
+  teacherId?: string;
+  classId?: string;
+  startDate?: string;
+  endDate?: string;
+  search?: string;
 }
 
 // --- Service Object ---
@@ -671,6 +795,47 @@ const principalService = {
 
   getSessions() {
     return apiClient.get<{ sessions: SessionItem[] }>(ENDPOINTS.PRINCIPAL.ACCOUNT_SESSIONS);
+  },
+
+  getInstitutionLMS(params?: LmsQueryParams) {
+    const query = new URLSearchParams();
+    if (params?.page) query.append('page', String(params.page));
+    if (params?.limit) query.append('limit', String(params.limit));
+    if (params?.teacherId && params.teacherId !== 'all') query.append('teacherId', params.teacherId);
+    if (params?.classId && params.classId !== 'all') query.append('classId', params.classId);
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    if (params?.search && params.search.trim()) query.append('search', params.search.trim());
+
+    const qs = query.toString();
+    const url = qs ? `${ENDPOINTS.PRINCIPAL.LMS}?${qs}` : ENDPOINTS.PRINCIPAL.LMS;
+    return apiClient.get<{ data: LmsInstitutionData }>(url);
+  },
+
+  toggleBlueprintLock(classSubjectId: string, isLocked: boolean) {
+    return apiClient.post<{ message: string; data?: any }>(ENDPOINTS.PRINCIPAL.LMS, {
+      classSubjectId,
+      isLocked,
+    });
+  },
+
+  toggleChapterLock(chapterId: string, isLocked: boolean) {
+    return apiClient.post<{ message: string; data?: any }>(ENDPOINTS.PRINCIPAL.LMS, {
+      chapterId,
+      isLocked,
+    });
+  },
+
+  sendTeacherReminderPing(teacherId: string) {
+    return apiClient.post<{ message: string; data?: any }>(ENDPOINTS.PRINCIPAL.LMS, {
+      pingTeacherId: teacherId,
+    });
+  },
+
+  getSyllabusBlueprintTree(classSubjectId: string) {
+    return apiClient.get<{ data: LmsBlueprintTree }>(
+      `${ENDPOINTS.PRINCIPAL.LMS_BLUEPRINT}?classSubjectId=${encodeURIComponent(classSubjectId)}`
+    );
   },
 };
 

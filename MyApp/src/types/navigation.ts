@@ -28,6 +28,7 @@ export type RootStackParamList = {
   OfficialResult: { resultId?: string; examId?: string };
   ResultManagement: undefined;
   Timetable: undefined;
+  StudentSyllabusLogs: undefined;
 
   // Teacher Screens
   TeacherDashboard: undefined;
@@ -80,6 +81,7 @@ export type RootStackParamList = {
   TeacherEquipmentDetail: { requestId: string };
   TeacherPerformance: undefined;
   TeacherStudyMaterial: undefined;
+  TeacherSyllabusBlueprint: undefined;
 
   // Principal Screens
   PrincipalDashboard: undefined;
@@ -98,6 +100,7 @@ export type RootStackParamList = {
   PrincipalViewStudent: { studentId: string };
   PrincipalCalendar: undefined;
   PrincipalTimetable: undefined;
+  PrincipalSyllabusLogs: undefined;
   PrincipalAnnouncements: undefined;
   PrincipalFees: undefined;
   PrincipalCreateInvoice: undefined;

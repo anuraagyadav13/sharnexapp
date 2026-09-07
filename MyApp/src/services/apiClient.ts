@@ -38,37 +38,11 @@ const normalizeResponse = (response: any): NormalizedResponse => {
   // Handle new backend format: { success: true, data: {...}, message: "" }
   if (response && typeof response === 'object' && 'success' in response) {
     return {
-      data: response.data || null,
+      data: response.data !== undefined ? response.data : null,
       message: response.message || null,
       success: Boolean(response.success)
     };
   }
-
-  // Handle legacy error format: { error: "message" }
-  // ======================================================
-  // TEMP FIX (2026-06-26)
-  // Backend now returns:
-  // {
-  //   data: {...},
-  //   message: "...",
-  //   error: null
-  // }
-  // instead of:
-  // {
-  //   success: true,
-  //   data: {...}
-  // }
-  //old code
-  // if (response && typeof response === 'object' && 'error' in response) {
-  //     return {
-  //       data: null,
-  //       message: response.error,
-  //       success: false
-  //     };
-  //   }
-  // Remove when API contracts are unified.
-
-  // ======================================================
 
   if (
     response &&
@@ -78,8 +52,17 @@ const normalizeResponse = (response: any): NormalizedResponse => {
   ) {
     return {
       success: response.error == null,
-      message: response.message ?? null,
+      message: response.message || (typeof response.error === 'string' ? response.error : null),
       data: response.data ?? null,
+    };
+  }
+
+  // Handle error-only format: { error: "message" }
+  if (response && typeof response === 'object' && 'error' in response && response.error != null) {
+    return {
+      data: null,
+      message: typeof response.error === 'string' ? response.error : (response.message ?? 'An error occurred'),
+      success: false,
     };
   }
 
@@ -89,7 +72,7 @@ const normalizeResponse = (response: any): NormalizedResponse => {
       if (key in response) {
         return {
           data: response[key],
-          message: null,
+          message: response.message ?? null,
           success: true
         };
       }
@@ -99,31 +82,49 @@ const normalizeResponse = (response: any): NormalizedResponse => {
   // Fallback: treat as raw data
   return {
     data: response,
-    message: null,
+    message: (response && typeof response === 'object' && response.message) ? response.message : null,
     success: true
   };
 };
 
 const createNormalizedResponseData = (rawData: any): any => {
+  if (rawData === null || typeof rawData !== 'object') {
+    return rawData;
+  }
   const normalized = normalizeResponse(rawData);
-  const target = (typeof normalized.data === 'object' && normalized.data !== null) ? normalized.data : {};
+
+  // If normalized.data is a valid object or array, proxy it while falling back to rawData.
+  // Otherwise proxy rawData so callers accessing .success/.message/.data still succeed.
+  const isDataAnObject = typeof normalized.data === 'object' && normalized.data !== null;
+  const target = isDataAnObject ? normalized.data : rawData;
 
   return new Proxy(target, {
     get(obj: any, prop: string | symbol) {
       if (prop === 'success') return normalized.success;
       if (prop === 'message') return normalized.message;
       if (prop === 'data') return normalized.data;
-      return Reflect.get(obj, prop);
+      const val = Reflect.get(obj, prop);
+      if (val !== undefined) return val;
+      if (isDataAnObject && rawData && typeof rawData === 'object' && prop in rawData) {
+        return rawData[prop];
+      }
+      return undefined;
     },
     has(obj: any, prop: string | symbol) {
       if (prop === 'success' || prop === 'message' || prop === 'data') {
         return true;
       }
-      return typeof obj === 'object' && obj !== null ? prop in obj : false;
+      if (typeof obj === 'object' && obj !== null && prop in obj) {
+        return true;
+      }
+      if (isDataAnObject && rawData && typeof rawData === 'object' && prop in rawData) {
+        return true;
+      }
+      return false;
     },
     ownKeys(obj: any) {
       const keys = typeof obj === 'object' && obj !== null ? Reflect.ownKeys(obj) : [];
-      return [...keys, 'success', 'message', 'data'];
+      return Array.from(new Set([...keys, 'success', 'message', 'data']));
     },
     getOwnPropertyDescriptor(obj: any, prop: string | symbol) {
       if (prop === 'success' || prop === 'message' || prop === 'data') {

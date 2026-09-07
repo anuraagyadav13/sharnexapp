@@ -1,10 +1,6 @@
 import React from 'react';
 import {
-  StatusBar,
   StyleSheet,
-  useColorScheme,
-  View,
-  ActivityIndicator,
   LogBox,
 } from 'react-native';
 
@@ -45,6 +41,7 @@ import AccountSettingsScreen from './src/screens/shared/AccountSettingsScreen';
 import TimetableScreen from './src/screens/student/TimetableScreen';
 import OfficialResultScreen from './src/screens/student/OfficialResultScreen';
 import ResultManagementScreen from './src/screens/student/ResultManagementScreen';
+import StudentSyllabusLogsScreen from './src/screens/student/StudentSyllabusLogsScreen';
 import TeacherAttendanceScreen from './src/screens/teacher/TeacherAttendanceScreen';
 import TeacherViewAttendanceScreen from './src/screens/teacher/TeacherViewAttendanceScreen';
 import TeacherMarkAttendanceScreen from './src/screens/teacher/TeacherMarkAttendanceScreen';
@@ -71,6 +68,7 @@ import TeacherAddEquipmentRequestScreen from './src/screens/teacher/TeacherAddEq
 import TeacherEquipmentDetailScreen from './src/screens/teacher/TeacherEquipmentDetailScreen';
 import TeacherPerformanceScreen from './src/screens/teacher/TeacherPerformanceScreen';
 import TeacherStudyMaterialScreen from './src/screens/teacher/TeacherStudyMaterialScreen';
+import TeacherSyllabusBlueprintScreen from './src/screens/teacher/TeacherSyllabusBlueprintScreen';
 import PrincipalDashboard from './src/screens/principal/PrincipalDashboard';
 import PrincipalClasses from './src/screens/principal/PrincipalClassesScreen';
 import PrincipalSubjects from './src/screens/principal/PrincipalSubjectsScreen';
@@ -89,6 +87,7 @@ import PrincipalAnnouncements from './src/screens/principal/PrincipalAnnouncemen
 import PrincipalFees from './src/screens/principal/PrincipalFeesScreen';
 import PrincipalCreateInvoice from './src/screens/principal/PrincipalCreateInvoiceScreen';
 import PrincipalRMS from './src/screens/principal/PrincipalRMSScreen';
+import PrincipalSyllabusLogsScreen from './src/screens/principal/PrincipalSyllabusLogsScreen';
 import PrincipalReviewExamScreen from './src/screens/principal/PrincipalReviewExamScreen';
 import PrincipalClassDetailScreen from './src/screens/principal/PrincipalClassDetailScreen';
 import PrincipalTeachersScreen from './src/screens/principal/PrincipalTeachersScreen';
@@ -100,7 +99,6 @@ import PrincipalEditSubject from './src/screens/principal/PrincipalEditSubjectSc
 import PrincipalAddClass from './src/screens/principal/PrincipalAddClassScreen';
 import PrincipalManageClass from './src/screens/principal/PrincipalManageClassScreen';
 import PrincipalEditClass from './src/screens/principal/PrincipalEditClassScreen';
-import LibraryScreen from './src/screens/library/LibraryScreen';
 import LibraryDashboardScreen from './src/screens/library/LibraryDashboardScreen';
 import LibraryBookCatalogScreen from './src/screens/library/LibraryBookCatalogScreen';
 import LibraryCirculationScreen from './src/screens/library/LibraryCirculationScreen';
@@ -214,6 +212,10 @@ function RootNavigator() {
                 component={OfficialResultScreen}
               />
               <Stack.Screen name="Timetable" component={TimetableScreen} />
+              <Stack.Screen
+                name="StudentSyllabusLogs"
+                component={StudentSyllabusLogsScreen}
+              />
               <Stack.Screen name="Messages" component={StudentMessagesScreen} />
             </>
           )}
@@ -327,6 +329,10 @@ function RootNavigator() {
                 component={TeacherStudyMaterialScreen}
               />
               <Stack.Screen
+                name="TeacherSyllabusBlueprint"
+                component={TeacherSyllabusBlueprintScreen}
+              />
+              <Stack.Screen
                 name="Announcements"
                 component={AnnouncementScreen}
               />
@@ -397,6 +403,10 @@ function RootNavigator() {
               <Stack.Screen name="PrincipalFees" component={PrincipalFees} />
               <Stack.Screen name="PrincipalCreateInvoice" component={PrincipalCreateInvoice} />
               <Stack.Screen name="PrincipalRMS" component={PrincipalRMS} />
+              <Stack.Screen
+                name="PrincipalSyllabusLogs"
+                component={PrincipalSyllabusLogsScreen}
+              />
               <Stack.Screen name="PrincipalReviewExam" component={PrincipalReviewExamScreen} />
               <Stack.Screen name="PrincipalClassDetail" component={PrincipalClassDetailScreen} />
               <Stack.Screen name="PrincipalTeachers" component={PrincipalTeachersScreen} />
@@ -472,7 +482,7 @@ function RootNavigator() {
 function ThemedApp() {
   const { isDarkMode } = useTheme();
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={styles.container}>
       <NavigationContainer theme={isDarkMode ? DarkNavigationTheme : undefined}>
         <RootNavigator />
       </NavigationContainer>

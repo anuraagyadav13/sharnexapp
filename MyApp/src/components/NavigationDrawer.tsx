@@ -42,6 +42,7 @@ const STUDENT_MENU: MenuItem[] = [
   { id: 'div1', label: '', icon: '', isDivider: true },
   { id: '4', label: 'Performance Trend', icon: 'trending-up-outline' },
   { id: 'timetable', label: 'Timetable', icon: 'calendar-clear-outline' },
+  { id: 'student-syllabus-logs', label: 'Syllabus & Daily Logs', icon: 'school-outline' },
   { id: '5', label: 'Study Material', icon: 'book-outline' },
   { id: '6', label: 'Attendance', icon: 'calendar-outline' },
   { id: '7', label: 'Announcements', icon: 'megaphone-outline' },
@@ -70,6 +71,7 @@ const PRINCIPAL_MENU: MenuItem[] = [
   { id: '5', label: 'Students details', icon: 'person-outline' },
   { id: '6', label: 'Academic Calendar', icon: 'calendar-outline' },
   { id: '7', label: 'Timetable', icon: 'time-outline' },
+  { id: 'syllabus-logs', label: 'Syllabus & Daily Logs', icon: 'school-outline' },
   { id: '11', label: 'Result Management', icon: 'reader-outline' },
   { id: '9', label: 'Announcements', icon: 'megaphone-outline' },
   { id: '10', label: 'Fees & Payments', icon: 'card-outline' },
@@ -93,6 +95,7 @@ const TEACHER_MENU: MenuItem[] = [
   { id: '8', label: 'Equipment', icon: 'hammer-outline' },
   { id: 'result-mgmt', label: 'Result Management', icon: 'reader-outline' },
   { id: 'my-attendance', label: 'My Attendance', icon: 'person-check-outline' },
+  { id: 'syllabus-blueprint', label: 'Syllabus Blueprint', icon: 'book-outline' },
   { id: 'div1', label: '', icon: '', isDivider: true },
   { id: '9', label: 'Messages', icon: 'chatbox-ellipses-outline' },
   { id: '10', label: 'Account Settings', icon: 'settings-outline' },
@@ -223,6 +226,8 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
         case 'Library': return currentRouteName === 'PrincipalLibrary' || currentRouteName === 'LibraryDashboard';
         case 'Bus Tracking': return currentRouteName === 'BusDashboard' || currentRouteName === 'FleetTracking' || currentRouteName === 'AddVehicle' || currentRouteName === 'RouteManagement' || currentRouteName === 'RouteConfiguration' || currentRouteName === 'Schedules' || currentRouteName === 'AddSchedule' || currentRouteName === 'DriverManagement' || currentRouteName === 'AddDriver' || currentRouteName === 'EnrollStudent';
         case 'Result Management': return currentRouteName === 'PrincipalRSM' || currentRouteName === 'PrincipalRMS' || currentRouteName === 'ResultManagement' || currentRouteName === 'TeacherResultManagement';
+        case 'Syllabus & Daily Logs': return currentRouteName === 'PrincipalSyllabusLogs' || currentRouteName === 'StudentSyllabusLogs';
+        case 'Syllabus Blueprint': return currentRouteName === 'TeacherSyllabusBlueprint';
         case 'Settings': return currentRouteName === 'AccountSettings';
         case 'Account Settings': return currentRouteName === 'AccountSettings';
         case 'Attendance': return currentRouteName === 'Attendance';
@@ -294,7 +299,12 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
         else if (label === 'Result Management') {
           if (role === 'principal') navigation.navigate('PrincipalRMS');
           else if (role === 'teacher') navigation.navigate('TeacherResultManagement');
-        } else if (label === 'Messages') navigation.navigate('Messages');
+        } else if (label === 'Syllabus & Daily Logs') {
+          if (role === 'principal') navigation.navigate('PrincipalSyllabusLogs');
+          else navigation.navigate('StudentSyllabusLogs');
+        }
+        else if (label === 'Syllabus Blueprint') navigation.navigate('TeacherSyllabusBlueprint');
+        else if (label === 'Messages') navigation.navigate('Messages');
         else if (label === 'Settings' || label === 'Account Settings') navigation.navigate('AccountSettings');
         else if (label === 'Logout') logout();
       }, 250);

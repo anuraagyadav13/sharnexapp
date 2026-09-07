@@ -529,6 +529,123 @@ const studentService = {
   contactSupport(data: { fullName: string; email: string; phone?: string; school?: string; message: string }) {
     return apiClient.post(ENDPOINTS.CONTACT, data);
   },
+
+  // ----------------------------------------------------
+  // Student LMS Syllabus & Daily Logs
+  // ----------------------------------------------------
+
+  getLmsEnrolledSubjects() {
+    return apiClient.get<{ data: StudentLmsEnrolledSubject[] }>(
+      ENDPOINTS.STUDENT.LMS_ENROLLED_SUBJECTS
+    );
+  },
+
+  getLmsBlueprint(classSubjectId: string) {
+    return apiClient.get<{ data: StudentLmsBlueprintTree }>(
+      `${ENDPOINTS.STUDENT.LMS_BLUEPRINT}?classSubjectId=${encodeURIComponent(classSubjectId)}`
+    );
+  },
+
+  getLmsDailyLogs(classSubjectId: string) {
+    return apiClient.get<{ data: StudentLmsDailyLog[] }>(
+      `${ENDPOINTS.STUDENT.LMS_DAILY_LOGS}?classSubjectId=${encodeURIComponent(classSubjectId)}`
+    );
+  },
+
+  getLmsRevisions() {
+    return apiClient.get<{ data: string[] }>(
+      ENDPOINTS.STUDENT.LMS_REVISION
+    );
+  },
+
+  markLogAsRevised(logId: string, isRevised: boolean = true) {
+    return apiClient.post<{ data: { success: boolean; logId: string; isRevised: boolean } }>(
+      ENDPOINTS.STUDENT.LMS_REVISION,
+      { logId, isRevised }
+    );
+  },
+
+  getLmsMissedClasses() {
+    return apiClient.get<{ data: any[] }>(
+      ENDPOINTS.STUDENT.LMS_MISSED_CLASSES
+    );
+  },
 };
+
+export interface StudentLmsEnrolledSubject {
+  classSubjectId: string;
+  subjectName: string;
+  subjectCode?: string | null;
+  code?: string | null;
+  teacherName?: string | null;
+  className?: string;
+  section?: string;
+  totalChapters: number;
+  completedChapters: number;
+  completionPercent: number;
+  targetHours: number;
+  targetPeriods: number;
+  loggedHours: number;
+}
+
+export interface StudentLmsSubtopic {
+  id: string;
+  subtopicNumber?: number;
+  subtopic_number?: number;
+  title: string;
+  status: string;
+  sortOrder?: number;
+}
+
+export interface StudentLmsTopic {
+  id: string;
+  topicNumber?: number;
+  topic_number?: number;
+  title: string;
+  status: string;
+  sortOrder?: number;
+  subtopics?: StudentLmsSubtopic[];
+}
+
+export interface StudentLmsChapter {
+  id: string;
+  chapterNumber?: number;
+  chapter_number?: number;
+  title: string;
+  description?: string | null;
+  estimatedHours: number;
+  estimated_hours?: number;
+  estimatedPeriods: number;
+  estimated_periods?: number;
+  status: string;
+  sortOrder?: number;
+  topics?: StudentLmsTopic[];
+}
+
+export interface StudentLmsBlueprintTree {
+  blueprintId?: string;
+  classSubjectId: string;
+  academicYear?: string;
+  isLocked?: boolean;
+  chapters: StudentLmsChapter[];
+}
+
+export interface StudentLmsDailyLog {
+  id: string;
+  logDate: string;
+  actionType: string;
+  coverageTitle: string;
+  hoursSpent: number;
+  periodsCount: number;
+  notes?: string | null;
+  homeworkAssigned?: string | null;
+  nextClassPlan?: string | null;
+  createdAt?: string;
+  teacherName?: string | null;
+  chapterTitle?: string | null;
+  chapterNumber?: number | null;
+  topicTitle?: string | null;
+  topicNumber?: number | null;
+}
 
 export default studentService;
