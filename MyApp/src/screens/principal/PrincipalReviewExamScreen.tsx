@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
+import { BRAND } from '../../constants/theme';
 import { useAuth } from '../../store/AuthContext';
 import { getCacheBustedUri } from '../../utils/image';
 import principalService, { RmsExamDetail } from '../../services/principalService';
@@ -185,7 +186,7 @@ export const PrincipalReviewExamScreen = ({ navigation, route }: any) => {
                 onPress={handleDelete}
                 activeOpacity={0.8}
               >
-                <Ionicons name="trash-outline" size={14} color="#EF4444" />
+                <Ionicons name="trash-outline" size={14} color={theme.danger} />
                 <Text style={styles.deleteBtnText}>Delete</Text>
               </TouchableOpacity>
             </View>
@@ -200,12 +201,12 @@ export const PrincipalReviewExamScreen = ({ navigation, route }: any) => {
 
       {isLoading ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#7C3AED" />
+          <ActivityIndicator size="large" color={BRAND.accentPurpleDark} />
           <Text style={styles.loadingText}>Loading exam overview...</Text>
         </View>
       ) : error ? (
         <View style={styles.errorBox}>
-          <Ionicons name="alert-circle" size={24} color="#EF4444" />
+          <Ionicons name="alert-circle" size={24} color={theme.danger} />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => loadExamDetail()}>
             <Text style={styles.retryBtnText}>Retry</Text>
@@ -279,7 +280,7 @@ export const PrincipalReviewExamScreen = ({ navigation, route }: any) => {
                   <View style={styles.classCardHeader}>
                     <View style={styles.classHeaderLeft}>
                       <View style={styles.capIconBox}>
-                        <Ionicons name="school-outline" size={18} color={isDarkMode ? '#CBD5E1' : '#475569'} />
+                        <Ionicons name="school-outline" size={18} color={theme.subtext} />
                       </View>
                       <View>
                         <Text style={styles.classNameTitle}>
@@ -395,17 +396,17 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 32,
       height: 32,
       borderRadius: 16,
-      backgroundColor: '#9F7AEA',
+      backgroundColor: theme.secondary,
       justifyContent: 'center',
       alignItems: 'center',
       marginLeft: 4,
-      shadowColor: '#1E293B',
+      shadowColor: theme.border,
       shadowOffset: { width: 0, height: 10 },
       shadowOpacity: 0.06,
       shadowRadius: 20,
       elevation: 6,
     },
-    avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+    avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
     headerAvatarImage: {
       width: 32,
       height: 32,
@@ -420,7 +421,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     breadcrumbText: {
       fontSize: 10,
       fontWeight: '800',
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
       letterSpacing: 0.5,
       marginBottom: 2,
     },
@@ -440,24 +441,24 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderRadius: 12,
     },
     statusBadgeActive: {
-      backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : '#D1FAE5',
+      backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)',
     },
     statusBadgeDraft: {
-      backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7',
+      backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)',
     },
     statusBadgeText: {
       fontSize: 10,
       fontWeight: '800',
     },
     statusTextActive: {
-      color: '#10B981',
+      color: theme.success,
     },
     statusTextDraft: {
-      color: '#F59E0B',
+      color: theme.warning,
     },
     headerSubtext: {
       fontSize: 11,
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
       marginTop: 2,
     },
     headerActionsRow: {
@@ -474,7 +475,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderRadius: 6,
       borderWidth: 1,
       borderColor: theme.border,
-      backgroundColor: isDarkMode ? '#0F172A' : '#FFFFFF',
+      backgroundColor: theme.surface,
     },
     editConfigBtnText: {
       fontSize: 11,
@@ -492,7 +493,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     deleteBtnText: {
       fontSize: 11,
       fontWeight: '600',
-      color: '#EF4444',
+      color: theme.danger,
     },
     centerContainer: {
       paddingVertical: 60,
@@ -502,31 +503,31 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     loadingText: {
       marginTop: 12,
       fontSize: 14,
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
     },
     errorBox: {
       padding: 20,
       borderRadius: 16,
-      backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.15)' : '#FEF2F2',
+      backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
       borderWidth: 1,
-      borderColor: isDarkMode ? '#991B1B' : '#FCA5A5',
+      borderColor: theme.danger,
       alignItems: 'center',
       margin: 20,
     },
     errorText: {
       fontSize: 14,
-      color: '#EF4444',
+      color: theme.danger,
       textAlign: 'center',
       marginVertical: 10,
     },
     retryBtn: {
-      backgroundColor: '#EF4444',
+      backgroundColor: theme.danger,
       paddingHorizontal: 16,
       paddingVertical: 8,
       borderRadius: 8,
     },
     retryBtnText: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontWeight: '600',
       fontSize: 13,
     },
@@ -544,12 +545,12 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     },
     statCard: {
       flex: 1,
-      backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
+      backgroundColor: theme.surface,
       borderRadius: 14,
       borderWidth: 1,
       borderColor: theme.border,
       padding: 12,
-      shadowColor: '#000',
+      shadowColor: theme.text,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.05,
       shadowRadius: 6,
@@ -564,7 +565,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     statLabel: {
       fontSize: 8,
       fontWeight: '800',
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
       letterSpacing: 0.5,
     },
     statVal: {
@@ -577,14 +578,14 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       fontWeight: '900',
     },
     statusReadyText: {
-      color: '#10B981',
+      color: theme.success,
     },
     statusPendingText: {
-      color: '#F59E0B',
+      color: theme.warning,
     },
     statSubtext: {
       fontSize: 10,
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
       marginTop: 2,
     },
     sectionContainer: {
@@ -597,7 +598,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       marginBottom: 12,
     },
     classMappingCard: {
-      backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
+      backgroundColor: theme.surface,
       borderRadius: 14,
       borderWidth: 1,
       borderColor: theme.border,
@@ -607,7 +608,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     classCardHeader: {
       paddingHorizontal: 16,
       paddingVertical: 12,
-      backgroundColor: isDarkMode ? 'rgba(15, 23, 42, 0.4)' : '#F8FAFC',
+      backgroundColor: isDarkMode ? theme.surface : theme.background,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
       flexDirection: 'row',
@@ -623,7 +624,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 32,
       height: 32,
       borderRadius: 8,
-      backgroundColor: isDarkMode ? '#0F172A' : '#FFFFFF',
+      backgroundColor: theme.surface,
       borderWidth: 1,
       borderColor: theme.border,
       justifyContent: 'center',
@@ -638,11 +639,11 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     subjCountSubtext: {
       fontSize: 9,
       fontWeight: '800',
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
       letterSpacing: 0.5,
     },
     automatedBadge: {
-      backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.15)' : '#D1FAE5',
+      backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)',
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: 16,
@@ -650,14 +651,14 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     automatedBadgeText: {
       fontSize: 10,
       fontWeight: '700',
-      color: '#10B981',
+      color: theme.success,
     },
     subjectGrid: {
       padding: 12,
       gap: 10,
     },
     subjCard: {
-      backgroundColor: isDarkMode ? 'rgba(15, 23, 42, 0.3)' : '#FAF9FF',
+      backgroundColor: isDarkMode ? theme.surface : theme.background,
       borderRadius: 10,
       borderWidth: 1,
       borderColor: theme.border,
@@ -680,7 +681,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       gap: 6,
     },
     officialBadge: {
-      backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.2)' : '#F3E8FF',
+      backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.2)' : theme.iconBackground,
       paddingHorizontal: 5,
       paddingVertical: 2,
       borderRadius: 4,
@@ -688,12 +689,12 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     officialBadgeText: {
       fontSize: 9,
       fontWeight: '900',
-      color: '#7C3AED',
+      color: BRAND.accentPurpleDark,
     },
     viewHistoryBtn: {
-      backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.15)' : '#F3E8FF',
+      backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.15)' : theme.iconBackground,
       borderWidth: 1,
-      borderColor: isDarkMode ? 'rgba(124, 58, 237, 0.4)' : '#DDD6FE',
+      borderColor: isDarkMode ? 'rgba(124, 58, 237, 0.4)' : theme.border,
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: 6,
@@ -701,7 +702,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     viewHistoryBtnText: {
       fontSize: 10,
       fontWeight: '600',
-      color: '#7C3AED',
+      color: BRAND.accentPurpleDark,
     },
     marksFooterRow: {
       flexDirection: 'row',
@@ -711,32 +712,32 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     marksLabel: {
       fontSize: 8,
       fontWeight: '800',
-      color: theme.subtext || '#94A3B8',
+      color: theme.subtext,
       letterSpacing: 0.5,
     },
     marksValue: {
       fontSize: 13,
       fontWeight: '800',
-      color: isDarkMode ? '#CBD5E1' : '#334155',
+      color: theme.subtext,
       marginTop: 1,
     },
     noSubjText: {
       fontSize: 12,
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
       fontStyle: 'italic',
     },
     emptyMappingCard: {
       padding: 20,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
+      backgroundColor: theme.surface,
       borderRadius: 14,
       borderWidth: 1,
       borderColor: theme.border,
     },
     emptyMappingText: {
       fontSize: 12,
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
     },
   });
 

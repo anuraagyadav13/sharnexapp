@@ -21,6 +21,7 @@ import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import Toast, { ToastType } from '../../components/Toast';
 import { useTheme } from '../../store/ThemeContext';
+import { BRAND } from '../../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PrincipalAddSubject'>;
 
@@ -112,7 +113,7 @@ const PrincipalAddSubjectScreen: React.FC<Props> = ({ navigation }) => {
 
           <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.formCard}>
             <View style={styles.cardHeader}>
-              <Ionicons name="book-outline" size={18} color="#5266EB" style={{ marginRight: 6 }} />
+              <Ionicons name="book-outline" size={18} color={theme.primary} style={{ marginRight: 6 }} />
               <Text style={styles.cardTitle}>Course Specifications</Text>
             </View>
 
@@ -153,7 +154,7 @@ const PrincipalAddSubjectScreen: React.FC<Props> = ({ navigation }) => {
                 disabled={isPublishing}
               >
                 {isPublishing ? (
-                  <ActivityIndicator color="#FFF" size="small" />
+                  <ActivityIndicator color={theme.onPrimary} size="small" />
                 ) : (
                   <Text style={styles.actionBtnPublishText}>Create Subject</Text>
                 )}
@@ -181,12 +182,12 @@ const getStyles = (theme: any) => StyleSheet.create({
   backBtnHeader: { padding: 4 },
   headerTitle: { fontSize: 16, fontWeight: '500', color: theme.primary, flex: 1, textAlign: 'center', marginHorizontal: 10 },
   headerRight: { flexDirection: 'row', alignItems: 'center' },
-  avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#A855F7', justifyContent: 'center', alignItems: 'center' },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: BRAND.accentPurple, justifyContent: 'center', alignItems: 'center' },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
   pageTitleWrapper: { marginTop: 20, marginBottom: 20 },
-  pageTitle: { fontSize: 24, fontWeight: '800', color: theme.isDarkMode ? theme.primary : '#5266EB', marginBottom: 4 },
+  pageTitle: { fontSize: 24, fontWeight: '800', color: theme.primary, marginBottom: 4 },
   pageSubtitle: { fontSize: 12, color: theme.subtext, fontWeight: '500' },
-  formCard: { backgroundColor: theme.surface, borderRadius: 24, padding: 24, shadowColor: '#1E293B', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.06, shadowRadius: 20, elevation: 6, borderWidth: 1, borderColor: theme.border },
+  formCard: { backgroundColor: theme.surface, borderRadius: 24, padding: 24, shadowColor: theme.text, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.06, shadowRadius: 20, elevation: 6, borderWidth: 1, borderColor: theme.border },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   cardTitle: { fontSize: 14, fontWeight: '800', color: theme.text },
   fieldContainer: { marginBottom: 20 },
@@ -194,10 +195,10 @@ const getStyles = (theme: any) => StyleSheet.create({
   textInput: { borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, fontSize: 14, color: theme.text, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border },
   textArea: { minHeight: 100, textAlignVertical: 'top' },
   actionRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginTop: 10 },
-  actionBtnCancel: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6', borderRadius: 14, paddingVertical: 16 },
+  actionBtnCancel: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.isDarkMode ? theme.border : theme.surface, borderRadius: 14, paddingVertical: 16 },
   actionBtnCancelText: { fontSize: 14, fontWeight: '700', color: theme.subtext },
   actionBtnPublish: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.primary, borderRadius: 14, paddingVertical: 16, shadowColor: theme.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
-  actionBtnPublishText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
+  actionBtnPublishText: { fontSize: 14, fontWeight: '700', color: theme.onPrimary },
 });
 
 export default PrincipalAddSubjectScreen;

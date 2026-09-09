@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
+import { BRAND } from '../../constants/theme';
 import { useAuth } from '../../store/AuthContext';
 import { getCacheBustedUri } from '../../utils/image';
 import principalService, {
@@ -372,7 +373,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
 
       {isLoading ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#7C3AED" />
+          <ActivityIndicator size="large" color={BRAND.accentPurpleDark} />
           <Text style={styles.loadingText}>Loading exam configuration...</Text>
         </View>
       ) : (
@@ -388,7 +389,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
                 <TextInput
                   style={styles.textInput}
                   placeholder="e.g., Annual Examination 2024"
-                  placeholderTextColor={theme.subtext || '#94A3B8'}
+                  placeholderTextColor={theme.placeholder}
                   value={examName}
                   onChangeText={setExamName}
                 />
@@ -415,7 +416,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
                 <TextInput
                   style={styles.textInput}
                   placeholder="2026"
-                  placeholderTextColor={theme.subtext || '#94A3B8'}
+                  placeholderTextColor={theme.placeholder}
                   value={academicYear}
                   onChangeText={setAcademicYear}
                   keyboardType="numeric"
@@ -454,7 +455,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
               <TextInput
                 style={[styles.textInput, styles.textArea]}
                 placeholder="Optional notes or context"
-                placeholderTextColor={theme.subtext || '#94A3B8'}
+                placeholderTextColor={theme.placeholder}
                 value={description}
                 onChangeText={setDescription}
                 multiline
@@ -472,7 +473,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
                 onPress={handleAddParticipatingClass}
                 activeOpacity={0.8}
               >
-                <Ionicons name="add" size={16} color="#7C3AED" />
+                <Ionicons name="add" size={16} color={BRAND.accentPurpleDark} />
                 <Text style={styles.addClassLinkText}>Add Participating Class</Text>
               </TouchableOpacity>
             </View>
@@ -492,7 +493,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
                     {/* Participating Class Header */}
                     <View style={styles.classBlockHeader}>
                       <View style={styles.classSelectGroup}>
-                        <Ionicons name="school-outline" size={20} color="#7C3AED" style={{ marginRight: 8 }} />
+                        <Ionicons name="school-outline" size={20} color={BRAND.accentPurpleDark} style={{ marginRight: 8 }} />
                         <View style={{ flex: 1 }}>
                           <Text style={styles.fieldLabel}>PARTICIPATING CLASS</Text>
                           <TouchableOpacity
@@ -514,7 +515,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
                         style={styles.deleteBlockBtn}
                         activeOpacity={0.7}
                       >
-                        <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                        <Ionicons name="trash-outline" size={18} color={theme.danger} />
                       </TouchableOpacity>
                     </View>
 
@@ -580,7 +581,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
                               style={styles.deleteSubjBtn}
                               activeOpacity={0.7}
                             >
-                              <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                              <Ionicons name="trash-outline" size={16} color={theme.danger} />
                             </TouchableOpacity>
                           </View>
                         );
@@ -593,7 +594,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
                           onPress={() => handleAddSubjectToClass(cIdx)}
                           activeOpacity={0.8}
                         >
-                          <Ionicons name="add" size={14} color="#7C3AED" />
+                          <Ionicons name="add" size={14} color={BRAND.accentPurpleDark} />
                           <Text style={styles.addSubjBtnText}>Add Subject to Class</Text>
                         </TouchableOpacity>
 
@@ -602,7 +603,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
                           onPress={() => handleSelectAllSubjectsForClass(cIdx)}
                           activeOpacity={0.8}
                         >
-                          <Ionicons name="checkmark-circle-outline" size={14} color="#10B981" />
+                          <Ionicons name="checkmark-circle-outline" size={14} color={theme.success} />
                           <Text style={styles.selectAllBtnText}>Select All Subjects</Text>
                         </TouchableOpacity>
                       </View>
@@ -631,13 +632,13 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
               activeOpacity={0.8}
             >
               {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <ActivityIndicator size="small" color={theme.onPrimary} />
               ) : (
                 <>
                   <Text style={styles.submitButtonText}>
                     {isEditMode ? 'Save Changes' : 'Create Exam Definition'}
                   </Text>
-                  <Ionicons name="checkmark" size={16} color="#FFFFFF" style={{ marginLeft: 6 }} />
+                  <Ionicons name="checkmark" size={16} color={theme.onPrimary} style={{ marginLeft: 6 }} />
                 </>
               )}
             </TouchableOpacity>
@@ -683,7 +684,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
                     }}
                   >
                     <Text style={styles.dropdownOptionText}>{opt}</Text>
-                    {examType === opt && <Ionicons name="checkmark" size={18} color="#7C3AED" />}
+                    {examType === opt && <Ionicons name="checkmark" size={18} color={BRAND.accentPurpleDark} />}
                   </TouchableOpacity>
                 ))}
 
@@ -707,7 +708,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
                       }}
                     >
                       <Text style={styles.dropdownOptionText}>{label}</Text>
-                      {status === opt && <Ionicons name="checkmark" size={18} color="#7C3AED" />}
+                      {status === opt && <Ionicons name="checkmark" size={18} color={BRAND.accentPurpleDark} />}
                     </TouchableOpacity>
                   );
                 })}
@@ -732,7 +733,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
                       <Text style={styles.dropdownOptionText}>
                         {cls.name} {cls.section ? `(${cls.section})` : ''}
                       </Text>
-                      {isSelected && <Ionicons name="checkmark" size={18} color="#7C3AED" />}
+                      {isSelected && <Ionicons name="checkmark" size={18} color={BRAND.accentPurpleDark} />}
                     </TouchableOpacity>
                   );
                 })}
@@ -758,7 +759,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
                       <Text style={styles.dropdownOptionText}>
                         {subj.name} {subj.code ? `(${subj.code})` : '(No Code)'}
                       </Text>
-                      {isSelected && <Ionicons name="checkmark" size={18} color="#7C3AED" />}
+                      {isSelected && <Ionicons name="checkmark" size={18} color={BRAND.accentPurpleDark} />}
                     </TouchableOpacity>
                   );
                 })}
@@ -799,17 +800,17 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 32,
       height: 32,
       borderRadius: 16,
-      backgroundColor: '#9F7AEA',
+      backgroundColor: theme.secondary,
       justifyContent: 'center',
       alignItems: 'center',
       marginLeft: 4,
-      shadowColor: '#1E293B',
+      shadowColor: theme.border,
       shadowOffset: { width: 0, height: 10 },
       shadowOpacity: 0.06,
       shadowRadius: 20,
       elevation: 6,
     },
-    avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+    avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
     headerAvatarImage: {
       width: 32,
       height: 32,
@@ -824,13 +825,13 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     breadcrumbText: {
       fontSize: 10,
       fontWeight: '800',
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
       letterSpacing: 0.5,
       marginBottom: 2,
     },
     headerSubtext: {
       fontSize: 12,
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
     },
     centerContainer: {
       paddingVertical: 60,
@@ -840,7 +841,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     loadingText: {
       marginTop: 12,
       fontSize: 14,
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
     },
     scrollBody: {
       flex: 1,
@@ -850,7 +851,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       paddingBottom: 40,
     },
     card: {
-      backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
+      backgroundColor: theme.surface,
       borderRadius: 14,
       borderWidth: 1,
       borderColor: theme.border,
@@ -878,12 +879,12 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     fieldLabel: {
       fontSize: 10,
       fontWeight: '800',
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
       letterSpacing: 0.5,
       marginBottom: 4,
     },
     textInput: {
-      backgroundColor: isDarkMode ? '#0F172A' : '#F8FAFC',
+      backgroundColor: isDarkMode ? theme.surface : theme.background,
       borderWidth: 1,
       borderColor: theme.border,
       borderRadius: 10,
@@ -897,7 +898,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       textAlignVertical: 'top',
     },
     selectBox: {
-      backgroundColor: isDarkMode ? '#0F172A' : '#F8FAFC',
+      backgroundColor: isDarkMode ? theme.surface : theme.background,
       borderWidth: 1,
       borderColor: theme.border,
       borderRadius: 10,
@@ -914,7 +915,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     },
     statusHintText: {
       fontSize: 11,
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
       marginTop: 4,
       fontStyle: 'italic',
     },
@@ -926,24 +927,24 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     addClassLinkText: {
       fontSize: 12,
       fontWeight: '700',
-      color: '#7C3AED',
+      color: BRAND.accentPurpleDark,
     },
     emptyClassBox: {
       padding: 20,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: isDarkMode ? '#0F172A' : '#F8FAFC',
+      backgroundColor: isDarkMode ? theme.surface : theme.background,
       borderRadius: 10,
       borderWidth: 1,
       borderColor: theme.border,
     },
     emptyClassText: {
       fontSize: 12,
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
       textAlign: 'center',
     },
     classBlockCard: {
-      backgroundColor: isDarkMode ? '#0F172A' : '#F8FAFC',
+      backgroundColor: isDarkMode ? theme.surface : theme.background,
       borderRadius: 12,
       borderWidth: 1,
       borderColor: theme.border,
@@ -965,10 +966,10 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     deleteBlockBtn: {
       padding: 6,
       borderRadius: 8,
-      backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.15)' : '#FEF2F2',
+      backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
     },
     subjectTableContainer: {
-      backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
+      backgroundColor: theme.surface,
       borderRadius: 10,
       borderWidth: 1,
       borderColor: theme.border,
@@ -985,7 +986,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     tableHeaderCell: {
       fontSize: 9,
       fontWeight: '800',
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
       letterSpacing: 0.5,
     },
     tableBodyRow: {
@@ -995,7 +996,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       marginBottom: 6,
     },
     tableSelectBox: {
-      backgroundColor: isDarkMode ? '#0F172A' : '#F8FAFC',
+      backgroundColor: isDarkMode ? theme.surface : theme.background,
       borderWidth: 1,
       borderColor: theme.border,
       borderRadius: 6,
@@ -1010,7 +1011,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       color: theme.text,
     },
     tableInput: {
-      backgroundColor: isDarkMode ? '#0F172A' : '#F8FAFC',
+      backgroundColor: isDarkMode ? theme.surface : theme.background,
       borderWidth: 1,
       borderColor: theme.border,
       borderRadius: 6,
@@ -1030,7 +1031,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       marginTop: 8,
       paddingTop: 6,
       borderTopWidth: 1,
-      borderTopColor: isDarkMode ? '#334155' : '#F1F5F9',
+      borderTopColor: theme.border,
     },
     addSubjBtn: {
       flexDirection: 'row',
@@ -1040,7 +1041,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     addSubjBtnText: {
       fontSize: 11,
       fontWeight: '700',
-      color: '#7C3AED',
+      color: BRAND.accentPurpleDark,
     },
     selectAllBtn: {
       flexDirection: 'row',
@@ -1050,7 +1051,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     selectAllBtnText: {
       fontSize: 11,
       fontWeight: '700',
-      color: '#10B981',
+      color: theme.success,
     },
     footerRow: {
       flexDirection: 'row',
@@ -1069,10 +1070,10 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     cancelButtonText: {
       fontSize: 13,
       fontWeight: '600',
-      color: isDarkMode ? '#CBD5E1' : '#475569',
+      color: theme.subtext,
     },
     submitButton: {
-      backgroundColor: '#7C3AED',
+      backgroundColor: BRAND.accentPurpleDark,
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 16,
@@ -1082,7 +1083,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     submitButtonText: {
       fontSize: 13,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: theme.onPrimary,
     },
     modalOverlay: {
       flex: 1,
@@ -1094,7 +1095,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     dropdownModalCard: {
       width: '100%',
       maxWidth: 440,
-      backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
+      backgroundColor: theme.surface,
       borderRadius: 16,
       borderWidth: 1,
       borderColor: theme.border,
@@ -1115,7 +1116,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       justifyContent: 'space-between',
     },
     dropdownOptionSelected: {
-      backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.2)' : '#F3E8FF',
+      backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.2)' : theme.iconBackground,
     },
     dropdownOptionText: {
       fontSize: 13,

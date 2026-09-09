@@ -37,8 +37,8 @@ try {
 }
 
 const PageSkeleton = () => {
-  const { theme } = useTheme();
-  const styles = getStyles(theme);
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.pageHeader}>
@@ -84,8 +84,8 @@ const StatCard = ({
   subtitle?: string;
   icon: string;
 }) => {
-  const { theme } = useTheme();
-  const styles = getStyles(theme);
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   return (
     <View style={styles.statCard}>
       <View style={styles.statCardTop}>
@@ -101,8 +101,8 @@ const StatCard = ({
 };
 
 const StudentCard = ({ item, index, delay, onEdit, onView, onDelete, isDeleting }: any) => {
-  const { theme } = useTheme();
-  const styles = getStyles(theme);
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   const photoUri = item.photoUrl || item.profilePhoto;
 
   return (
@@ -140,16 +140,16 @@ const StudentCard = ({ item, index, delay, onEdit, onView, onDelete, isDeleting 
             <Ionicons name="pencil-outline" size={16} color={theme.subtext} />
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionIconButton, { backgroundColor: '#EF444415' }]}
+            style={[styles.actionIconButton, { backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)' }]}
             onPress={onDelete}
             disabled={isDeleting}
             accessibilityLabel="Delete student"
             hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           >
             {isDeleting ? (
-              <ActivityIndicator size="small" color={theme.danger || '#EF4444'} />
+              <ActivityIndicator size="small" color={theme.danger} />
             ) : (
-              <Ionicons name="trash-outline" size={16} color={theme.danger || '#EF4444'} />
+              <Ionicons name="trash-outline" size={16} color={theme.danger} />
             )}
           </TouchableOpacity>
         </View>
@@ -166,7 +166,7 @@ const StudentCard = ({ item, index, delay, onEdit, onView, onDelete, isDeleting 
         <View style={styles.metricDivider} />
         <View style={styles.metricItem}>
           <Text style={styles.metricLabel}>ATTENDANCE</Text>
-          <Text style={[styles.metricVal, { color: item.attendanceRate ? '#10B981' : theme.text }]}>
+          <Text style={[styles.metricVal, { color: item.attendanceRate ? theme.success : theme.text }]}>
             {item.attendanceRate ? `${item.attendanceRate}%` : '-'}
           </Text>
         </View>
@@ -186,7 +186,7 @@ const StudentCard = ({ item, index, delay, onEdit, onView, onDelete, isDeleting 
 
 const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -550,7 +550,7 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
         <View style={styles.heroMain}>
           <View style={styles.heroHeaderRow}>
             <View style={styles.heroIconBox}>
-              <Ionicons name="school-outline" size={20} color="#FFF" />
+              <Ionicons name="school-outline" size={20} color={theme.onPrimary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.heroTitle} numberOfLines={1}>{currentClass?.name || 'Loading...'}</Text>
@@ -584,10 +584,10 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
       {/* Actions & Search */}
       <View style={styles.actionsWrapper}>
         <View style={styles.searchWrapper}>
-          <Ionicons name="search-outline" size={18} color="#94A3B8" />
+          <Ionicons name="search-outline" size={18} color={theme.placeholder} />
           <TextInput
             placeholder={`Search students in ${currentClass?.name || 'Class'}...`}
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={theme.placeholder}
             style={styles.searchInput}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -616,7 +616,7 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
             onPress={() => navigation.navigate('PrincipalAddStudent')}
             accessibilityLabel="Add new student"
           >
-            <Ionicons name="add" size={18} color="#FFF" />
+            <Ionicons name="add" size={18} color={theme.onPrimary} />
             <Text style={styles.primaryBtnText}>Add Students</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -696,7 +696,7 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
           )}
           ListHeaderComponent={renderHeader}
           ListEmptyComponent={renderEmptyState}
-          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.primary]} />}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           onScroll={() => Keyboard.dismiss()}
@@ -708,7 +708,7 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   container: { flex: 1 },
   scrollContent: { paddingBottom: 40 },
@@ -746,16 +746,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#8B5CF6',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#8B5CF6',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
   // Page Header
   pageHeader: { marginBottom: 14, paddingHorizontal: 20, marginTop: 16 },
@@ -772,7 +772,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 10,
     borderWidth: 1,
     borderColor: theme.border,
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
@@ -806,7 +806,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
     gap: 6,
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.02,
     shadowRadius: 4,
@@ -822,7 +822,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     elevation: 3,
   },
   classTabText: { fontSize: 12, fontWeight: '700', color: theme.text },
-  classTabTextActive: { color: '#FFF' },
+  classTabTextActive: { color: theme.onPrimary },
 
   // Class Hero Banner
   classHero: {
@@ -846,12 +846,12 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  heroTitle: { fontSize: 18, fontWeight: '800', color: '#FFF', letterSpacing: -0.3 },
+  heroTitle: { fontSize: 18, fontWeight: '800', color: theme.onPrimary, letterSpacing: -0.3 },
   heroTeacherName: { fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: '500', marginTop: 2 },
   heroDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.2)', marginVertical: 12 },
   heroStats: { flexDirection: 'row', justifyContent: 'space-between' },
   heroStatItem: { alignItems: 'center', flex: 1 },
-  heroStatVal: { fontSize: 15, fontWeight: '800', color: '#FFF', marginBottom: 2 },
+  heroStatVal: { fontSize: 15, fontWeight: '800', color: theme.onPrimary, marginBottom: 2 },
   heroStatLab: { fontSize: 9, fontWeight: '600', color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: 0.5 },
 
   // Actions & Search
@@ -890,7 +890,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 10,
     gap: 6,
   },
-  primaryBtnText: { fontSize: 12, fontWeight: '700', color: '#FFF' },
+  primaryBtnText: { fontSize: 12, fontWeight: '700', color: theme.onPrimary },
 
   // Student Card List
   listContainer: { paddingHorizontal: 20 },
@@ -901,7 +901,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: theme.border,
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
@@ -912,13 +912,13 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#8B5CF6',
+    backgroundColor: theme.primary,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   avatarImage: { width: 42, height: 42, borderRadius: 21 },
-  avatarTextMain: { fontSize: 16, fontWeight: '800', color: '#FFF' },
+  avatarTextMain: { fontSize: 16, fontWeight: '800', color: theme.onPrimary },
   studentMainInfo: { flex: 1, marginLeft: 12 },
   studentName: { fontSize: 15, fontWeight: '700', color: theme.text, marginBottom: 2 },
   rollBadge: { flexDirection: 'row', alignItems: 'center' },
@@ -938,8 +938,8 @@ const getStyles = (theme: any) => StyleSheet.create({
   metricLabel: { fontSize: 9, fontWeight: '800', color: theme.subtext, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
   metricVal: { fontSize: 14, fontWeight: '800', color: theme.text },
   metricSub: { fontSize: 9, color: theme.subtext, marginTop: 2, fontStyle: 'italic' },
-  perfPill: { backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  perfText: { fontSize: 10, fontWeight: '800', color: '#10B981' },
+  perfPill: { backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  perfText: { fontSize: 10, fontWeight: '800', color: theme.success },
 
   // Empty State
   emptyContainer: {

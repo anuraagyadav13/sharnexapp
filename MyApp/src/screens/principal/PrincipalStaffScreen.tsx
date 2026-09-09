@@ -34,8 +34,8 @@ import Toast, { ToastType } from '../../components/Toast';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const PageSkeleton = () => {
-  const { theme } = useTheme();
-  const styles = getStyles(theme);
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.pageHeader}>
@@ -55,8 +55,8 @@ const PageSkeleton = () => {
 };
 
 const StatCard = ({ title, value, color, icon }: { title: string, value: string | number, color: string, icon: string }) => {
-  const { theme } = useTheme();
-  const styles = getStyles(theme);
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   return (
     <View style={styles.statCard}>
       <View style={[styles.statIconCircle, { backgroundColor: `${color}15` }]}>
@@ -69,11 +69,11 @@ const StatCard = ({ title, value, color, icon }: { title: string, value: string 
 };
 
 const StaffCard = ({ item, index, delay, onToggleStatus, onEnrollFace }: any) => {
-  const { theme } = useTheme();
-  const styles = getStyles(theme);
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   const navigation = useNavigation<any>();
   const displayName = item.name || `${item.firstName || ''} ${item.lastName || ''}`.trim() || 'Staff Member';
-  const brandColor = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'][index % 5];
+  const brandColor = [theme.secondary, theme.primary, theme.success, theme.warning, theme.danger][index % 5];
 
   return (
     <Animated.View entering={FadeInUp.delay(delay).springify()} style={[styles.staffCard, !item.isActive && { opacity: 0.7 }]}>
@@ -93,7 +93,7 @@ const StaffCard = ({ item, index, delay, onToggleStatus, onEnrollFace }: any) =>
             <Ionicons name="pencil-outline" size={18} color={theme.primary} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => onToggleStatus(item.id, item.isActive)} style={styles.actionBtn}>
-            <Ionicons name={item.isActive ? "ban-outline" : "checkmark-circle-outline"} size={18} color={item.isActive ? "#EF4444" : "#10B981"} />
+            <Ionicons name={item.isActive ? "ban-outline" : "checkmark-circle-outline"} size={18} color={item.isActive ? theme.danger : theme.success} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => onEnrollFace(item.id, item.faceEnrolled)}
@@ -103,7 +103,7 @@ const StaffCard = ({ item, index, delay, onToggleStatus, onEnrollFace }: any) =>
             <Ionicons
               name={item.faceEnrolled ? 'scan-circle' : 'scan-circle-outline'}
               size={18}
-              color={item.faceEnrolled ? '#10B981' : theme.subtext}
+              color={item.faceEnrolled ? theme.success : theme.subtext}
             />
           </TouchableOpacity>
         </View>
@@ -111,10 +111,10 @@ const StaffCard = ({ item, index, delay, onToggleStatus, onEnrollFace }: any) =>
 
       <View style={styles.badgeRow}>
         <View style={styles.badge}><Text style={styles.badgeText}>{item.department || 'General'}</Text></View>
-        <View style={[styles.statusBadge, { backgroundColor: item.isActive ? '#E0F2FE' : '#FEE2E2' }]}><Text style={[styles.statusText, { color: item.isActive ? '#0284C7' : '#EF4444' }]}>{item.isActive ? 'Active' : 'Inactive'}</Text></View>
+        <View style={[styles.statusBadge, { backgroundColor: item.isActive ? (isDarkMode ? 'rgba(79,70,229,0.2)' : 'rgba(79,70,229,0.1)') : (isDarkMode ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.1)') }]}><Text style={[styles.statusText, { color: item.isActive ? theme.primary : theme.danger }]}>{item.isActive ? 'Active' : 'Inactive'}</Text></View>
         {item.faceEnrolled && (
-          <View style={[styles.statusBadge, { backgroundColor: '#DCFCE7' }]}>
-            <Text style={[styles.statusText, { color: '#059669' }]}>Face ✓</Text>
+          <View style={[styles.statusBadge, { backgroundColor: isDarkMode ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.1)' }]}>
+            <Text style={[styles.statusText, { color: theme.success }]}>Face ✓</Text>
           </View>
         )}
       </View>
@@ -135,7 +135,7 @@ const StaffCard = ({ item, index, delay, onToggleStatus, onEnrollFace }: any) =>
 
 const PrincipalStaffScreen = ({ navigation }: any) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -367,7 +367,7 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
               style={styles.actionBtnPrimary}
               onPress={() => navigation.navigate('PrincipalMarkStaffAttendance')}
             >
-              <Ionicons name="calendar-outline" size={16} color="#FFF" />
+              <Ionicons name="calendar-outline" size={16} color={theme.onPrimary} />
               <Text style={styles.actionBtnText}>Mark Attendance</Text>
             </TouchableOpacity>
 
@@ -375,15 +375,15 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
               style={styles.actionBtnPrimary}
               onPress={() => navigation.navigate('PrincipalAddStaff')}
             >
-              <Ionicons name="add-outline" size={18} color="#FFF" />
+              <Ionicons name="add-outline" size={18} color={theme.onPrimary} />
               <Text style={styles.actionBtnText}>Add New Staff</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.statsRow}>
-            <StatCard title="Total Teachers" value={stats.total} color="#8B5CF6" icon="account-group-outline" />
-            <StatCard title="Assigned Classes" value={classes.filter(c => c.teacher || c.teacherName || c.teacher_name).length} color="#10B981" icon="account-check-outline" />
-            <StatCard title="Total Students" value={classes.reduce((acc, curr) => acc + (curr.studentCount || 0), 0)} color="#3B82F6" icon="account-group-outline" />
+            <StatCard title="Total Teachers" value={stats.total} color={theme.secondary} icon="account-group-outline" />
+            <StatCard title="Assigned Classes" value={classes.filter(c => c.teacher || c.teacherName || c.teacher_name).length} color={theme.success} icon="account-check-outline" />
+            <StatCard title="Total Students" value={classes.reduce((acc, curr) => acc + (curr.studentCount || 0), 0)} color={theme.primary} icon="account-group-outline" />
           </View>
 
           <View style={styles.searchWrapper}>
@@ -411,7 +411,7 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
                     { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: statusFilter === f ? theme.primary : theme.border, backgroundColor: statusFilter === f ? theme.primary : theme.surface },
                   ]}
                 >
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: statusFilter === f ? '#FFF' : theme.subtext }}>
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: statusFilter === f ? theme.onPrimary : theme.subtext }}>
                     {f === 'ALL' ? 'All' : f === 'ACTIVE' ? 'Active' : f === 'INACTIVE' ? 'Inactive' : 'Face Enrolled'}
                   </Text>
                 </TouchableOpacity>
@@ -442,8 +442,8 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
                 <View key={cls.id} style={styles.assignmentCard}>
                   <View style={styles.assignmentHeader}>
                     <Text style={styles.className}>{cls.className || cls.name}</Text>
-                    <View style={[styles.assignedBadge, { backgroundColor: cls.teacher ? '#D1FAE5' : '#FEE2E2' }]}>
-                      <Text style={[styles.assignedText, { color: cls.teacher ? '#059669' : '#EF4444' }]}>
+                    <View style={[styles.assignedBadge, { backgroundColor: cls.teacher ? (isDarkMode ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.1)') : (isDarkMode ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.1)') }]}>
+                      <Text style={[styles.assignedText, { color: cls.teacher ? theme.success : theme.danger }]}>
                         {cls.teacher ? 'Assigned' : 'Vacant'}
                       </Text>
                     </View>
@@ -483,7 +483,7 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
                     style={styles.removeAssignmentBtn}
                     onPress={() => handleUpdateAssignment('')}
                   >
-                    <Ionicons name="person-remove-outline" size={20} color="#EF4444" />
+                    <Ionicons name="person-remove-outline" size={20} color={theme.danger} />
                     <Text style={styles.removeAssignmentText}>Remove Assignment</Text>
                   </TouchableOpacity>
 
@@ -532,7 +532,7 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   container: { flex: 1 },
   scrollContent: { paddingBottom: 40 },
@@ -559,10 +559,10 @@ const getStyles = (theme: any) => StyleSheet.create({
 
   quickActionRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginBottom: 20 },
   actionBtnPrimary: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: theme.primary, height: 42, borderRadius: 10, shadowColor: theme.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 4 },
-  actionBtnText: { color: '#FFF', fontSize: 11, fontWeight: '800' },
+  actionBtnText: { color: theme.onPrimary, fontSize: 11, fontWeight: '800' },
 
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 20 },
-  statCard: { alignItems: 'center', backgroundColor: theme.surface, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: theme.border, width: '31%' },
+  statCard: { alignItems: 'center', backgroundColor: theme.surface, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 8, shadowColor: theme.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: theme.border, width: '31%' },
   statIconCircle: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
   statValue: { fontSize: 16, fontWeight: '800', color: theme.text },
   statTitle: { fontSize: 8, fontWeight: '700', color: theme.subtext, textTransform: 'uppercase', textAlign: 'center' },
@@ -571,7 +571,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   searchInput: { flex: 1, marginLeft: 10, fontSize: 13, color: theme.text, fontWeight: '500' },
 
   listContainer: { paddingHorizontal: 20 },
-  staffCard: { backgroundColor: theme.surface, borderRadius: 20, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: theme.border, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.02, shadowRadius: 10, elevation: 2 },
+  staffCard: { backgroundColor: theme.surface, borderRadius: 20, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: theme.border, shadowColor: theme.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.02, shadowRadius: 10, elevation: 2 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   avatarBox: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 16, fontWeight: '800' },
@@ -584,8 +584,8 @@ const getStyles = (theme: any) => StyleSheet.create({
   badgeRow: { flexDirection: 'row', gap: 6, marginTop: 10 },
   badge: { backgroundColor: theme.background, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 5 },
   badgeText: { fontSize: 9, fontWeight: '700', color: theme.primary },
-  statusBadge: { backgroundColor: '#F0FDF4', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 5 },
-  statusText: { fontSize: 9, fontWeight: '700', color: '#10B981' },
+  statusBadge: { backgroundColor: isDarkMode ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.1)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 5 },
+  statusText: { fontSize: 9, fontWeight: '700', color: theme.success },
 
   contactFooter: { flexDirection: 'row', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: theme.border, gap: 15 },
   contactItem: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
@@ -597,14 +597,14 @@ const getStyles = (theme: any) => StyleSheet.create({
   assignmentCard: { backgroundColor: theme.surface, borderRadius: 20, padding: 16, width: 200, borderWidth: 1, borderColor: theme.border },
   assignmentHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   className: { fontSize: 13, fontWeight: '800', color: theme.text },
-  assignedBadge: { backgroundColor: '#D1FAE5', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  assignedText: { fontSize: 9, fontWeight: '700', color: '#059669' },
+  assignedBadge: { backgroundColor: isDarkMode ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  assignedText: { fontSize: 9, fontWeight: '700', color: theme.success },
   teacherName: { fontSize: 12, fontWeight: '700', color: theme.subtext, marginBottom: 12 },
   changeBtn: { borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 10, alignItems: 'center' },
   changeBtnText: { fontSize: 11, fontWeight: '700', color: theme.primary },
 
   assignOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  assignContent: { backgroundColor: theme.surface, width: '100%', maxWidth: 400, borderRadius: 24, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10, borderWidth: 1, borderColor: theme.border },
+  assignContent: { backgroundColor: theme.surface, width: '100%', maxWidth: 400, borderRadius: 24, padding: 24, shadowColor: theme.text, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10, borderWidth: 1, borderColor: theme.border },
   assignModalTitle: { fontSize: 20, fontWeight: '800', color: theme.text, marginBottom: 20 },
   assignField: { marginBottom: 18 },
   assignLabel: { fontSize: 12, fontWeight: '700', color: theme.subtext, marginBottom: 8 },
@@ -612,22 +612,22 @@ const getStyles = (theme: any) => StyleSheet.create({
   readOnlyText: { fontSize: 14, fontWeight: '600', color: theme.text },
   pickerBox: { backgroundColor: theme.surface, borderRadius: 12, borderWidth: 1, borderColor: theme.border, padding: 5 },
   teacherOption: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: theme.border },
-  teacherOptionActive: { backgroundColor: theme.isDarkMode ? '#312E81' : '#EEF2FF', borderColor: theme.primary },
+  teacherOptionActive: { backgroundColor: theme.isDarkMode ? theme.primary : theme.iconBackground, borderColor: theme.primary },
   teacherIndexBox: { width: 28, height: 28, borderRadius: 14, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   teacherIndexText: { fontSize: 11, fontWeight: '800', color: theme.subtext },
   teacherDetails: { flex: 1 },
   teacherNameText: { fontSize: 14, fontWeight: '700', color: theme.text, marginBottom: 2 },
   teacherNameTextActive: { color: theme.primary },
   teacherEmailText: { fontSize: 11, color: theme.subtext, fontWeight: '500' },
-  removeAssignmentBtn: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 12, marginBottom: 12, backgroundColor: '#FFF1F2', borderWidth: 1, borderColor: '#FECACA', gap: 10 },
-  removeAssignmentText: { fontSize: 14, fontWeight: '700', color: '#EF4444' },
+  removeAssignmentBtn: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 12, marginBottom: 12, backgroundColor: isDarkMode ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.08)', borderWidth: 1, borderColor: isDarkMode ? 'rgba(239,68,68,0.3)' : 'rgba(239,68,68,0.2)', gap: 10 },
+  removeAssignmentText: { fontSize: 14, fontWeight: '700', color: theme.danger },
   emptyTeachersBox: { padding: 30, alignItems: 'center', justifyContent: 'center' },
   emptyTeachersText: { fontSize: 14, color: theme.subtext, fontWeight: '500', fontStyle: 'italic' },
   assignFooter: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 15, marginTop: 15 },
   assignCancelBtn: { paddingHorizontal: 15, paddingVertical: 10 },
   assignCancelText: { fontSize: 15, fontWeight: '700', color: theme.subtext },
   assignSaveBtn: { backgroundColor: theme.primary, paddingHorizontal: 25, height: 44, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-  assignSaveText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
+  assignSaveText: { color: theme.onPrimary, fontSize: 15, fontWeight: '800' },
   headerAvatarImage: {
     width: 32,
     height: 32,
@@ -644,7 +644,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 4,

@@ -68,7 +68,7 @@ const SubjectCard = ({ item, index, delay, onDelete }: any) => {
   const navigation = useNavigation<any>();
   const { theme, isDarkMode } = useTheme();
   const styles = getStyles(theme);
-  const colors = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#6366F1'];
+  const colors = [theme.secondary, theme.primary, theme.success, theme.warning, theme.danger, theme.secondary, theme.primary];
   const brandColor = colors[index % colors.length];
 
   return (
@@ -88,10 +88,10 @@ const SubjectCard = ({ item, index, delay, onDelete }: any) => {
             initialData: item
           })}
         >
-          <Ionicons name="pencil-outline" size={18} color={isDarkMode ? '#818CF8' : '#6366F1'} />
+          <Ionicons name="pencil-outline" size={18} color={theme.primary} />
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.circleActionBtn, { borderColor: isDarkMode ? '#EF444430' : '#FEE2E2' }]} onPress={() => onDelete(item.id)}>
-          <Ionicons name="trash-outline" size={18} color="#EF4444" />
+        <TouchableOpacity style={[styles.circleActionBtn, { borderColor: isDarkMode ? 'rgba(239,68,68,0.3)' : 'rgba(239,68,68,0.2)' }]} onPress={() => onDelete(item.id)}>
+          <Ionicons name="trash-outline" size={18} color={theme.danger} />
         </TouchableOpacity>
       </View>
     </Animated.View>
@@ -107,11 +107,6 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [subjects, setSubjects] = useState<any[]>([]);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newSubjectForm, setNewSubjectForm] = useState({
-    name: '',
-    code: '',
-  });
   const [toast, setToast] = useState<{ visible: boolean; message: string; type: ToastType; onUndo?: () => void }>({
     visible: false,
     message: '',
@@ -129,13 +124,8 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
       const data = res.data.data || res.data || [];
       setSubjects(Array.isArray(data) ? data : data.subjects || []);
     } catch (error) {
-      setSubjects([
-        { id: '1', name: 'Mathematics', code: 'MATH-10' },
-        { id: '2', name: 'Physics', code: 'PHY-10' },
-        { id: '3', name: 'Chemistry', code: 'CHEM-10' },
-        { id: '4', name: 'Biology', code: 'BIO-10' },
-        { id: '5', name: 'Computer Science', code: 'CS-10' },
-      ]);
+      setSubjects([]);
+      showToast('Failed to load subjects. Pull to refresh and try again.', 'error');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -149,29 +139,6 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
   const onRefresh = () => {
     setIsRefreshing(true);
     fetchData();
-  };
-
-  const handleAddSubject = async () => {
-    if (!newSubjectForm.name) {
-      showToast('Subject name is required', 'warning');
-      return;
-    }
-    try {
-      setIsLoading(true);
-      await apiClient.post(ENDPOINTS.PRINCIPAL.SUBJECTS, {
-        name: newSubjectForm.name,
-        code: newSubjectForm.code,
-      });
-      setIsAddModalOpen(false);
-      setNewSubjectForm({ name: '', code: '' });
-      onRefresh();
-      showToast('Subject added to inventory', 'success');
-    } catch (error) {
-      console.error('Add subject error:', error);
-      showToast('Failed to create subject', 'error');
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleDelete = (id: string) => {
@@ -232,7 +199,7 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
           style={styles.container}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.primary]} />}
         >
           <View style={styles.pageHeader}>
             <View style={styles.titleRow}>
@@ -244,7 +211,7 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
                 style={styles.addNewBtn}
                 onPress={() => navigation.navigate('PrincipalAddSubject')}
               >
-                <Ionicons name="add" size={18} color="#FFF" />
+                <Ionicons name="add" size={18} color={theme.onPrimary} />
                 <Text style={styles.addNewBtnText}>Add Subject</Text>
               </TouchableOpacity>
             </View>
@@ -252,17 +219,17 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
 
           {/* Stats Row - Student Pattern */}
           <View style={styles.statsRow}>
-            <StatCard title="Subjects" value={subjects.length} color="#8B5CF6" icon="book-open-variant" />
-            {/* <StatCard title="Electives" value="4" color="#F59E0B" icon="bookmark-check-outline" />
-            <StatCard title="Core Units" value={subjects.length - 4} color="#3B82F6" icon="book-education-outline" /> */}
+            <StatCard title="Subjects" value={subjects.length} color={theme.primary} icon="book-open-variant" />
+            {/* <StatCard title="Electives" value="4" color={theme.warning} icon="bookmark-check-outline" />
+            <StatCard title="Core Units" value={subjects.length - 4} color={theme.primary} icon="book-education-outline" /> */}
           </View>
 
           {/* Search Bar - Student Pattern */}
           <View style={styles.searchWrapper}>
-            <Ionicons name="search-outline" size={20} color="#94A3B8" />
+            <Ionicons name="search-outline" size={20} color={theme.placeholder} />
             <TextInput
               placeholder="Find subjects by name or code..."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={theme.placeholder}
               style={styles.searchInput}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -303,19 +270,19 @@ const getStyles = (theme: any) => StyleSheet.create({
   headerTitle: { fontSize: 16, fontWeight: '500', color: theme.primary, flex: 1, textAlign: 'center', marginHorizontal: 10 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   iconBtnHeader: { padding: 4 },
-  avatarHeader: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center' },
-  avatarTextHeader: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarHeader: { width: 34, height: 34, borderRadius: 17, backgroundColor: theme.primary, alignItems: 'center', justifyContent: 'center' },
+  avatarTextHeader: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
   pageHeader: { marginBottom: 20, paddingHorizontal: 20, marginTop: 10 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  screenTitle: { fontSize: 24, fontWeight: '800', color: theme.isDarkMode ? theme.primary : '#3B82F6', marginBottom: 4 },
+  screenTitle: { fontSize: 24, fontWeight: '800', color: theme.primary, marginBottom: 4 },
   screenSubtitle: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
   addNewBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: theme.primary, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, shadowColor: theme.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
-  addNewBtnText: { color: '#FFF', fontSize: 12, fontWeight: '800' },
+  addNewBtnText: { color: theme.onPrimary, fontSize: 12, fontWeight: '800' },
 
   // Stats
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 10 },
-  statCard: { alignItems: 'center', backgroundColor: theme.surface, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: theme.border, width: '31%', minHeight: 110 },
+  statCard: { alignItems: 'center', backgroundColor: theme.surface, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 8, shadowColor: theme.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: theme.border, width: '31%', minHeight: 110 },
   statIconCircle: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
   statValue: { fontSize: 18, fontWeight: '800', color: theme.text, marginTop: 2 },
   statTitle: { fontSize: 9, fontWeight: '700', color: theme.subtext, marginTop: 6, textAlign: 'center', width: '100%', textTransform: 'uppercase' },
@@ -326,13 +293,13 @@ const getStyles = (theme: any) => StyleSheet.create({
 
   // Cards
   listContainer: { paddingHorizontal: 20 },
-  subjectCard: { backgroundColor: theme.surface, borderRadius: 24, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: theme.border, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2, flexDirection: 'row', alignItems: 'center' },
+  subjectCard: { backgroundColor: theme.surface, borderRadius: 24, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: theme.border, shadowColor: theme.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2, flexDirection: 'row', alignItems: 'center' },
   iconWrapper: { width: 50, height: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   subjectMainInfo: { flex: 1, marginLeft: 15 },
   subjectName: { fontSize: 16, fontWeight: '700', color: theme.text },
   subjectCode: { fontSize: 12, color: theme.subtext, marginTop: 2, fontWeight: '600' },
   cardActions: { flexDirection: 'row', gap: 8 },
-  circleActionBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: theme.isDarkMode ? '#334155' : '#F8FAFC', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.border },
+  circleActionBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: theme.isDarkMode ? theme.surface : theme.background, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.border },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: theme.background },
@@ -344,8 +311,8 @@ const getStyles = (theme: any) => StyleSheet.create({
   inputSection: { marginBottom: 20 },
   inputLabel: { fontSize: 10, fontWeight: '800', color: theme.subtext, letterSpacing: 0.5, marginBottom: 8 },
   premiumInput: { backgroundColor: theme.surface, borderRadius: 12, paddingHorizontal: 16, height: 50, fontSize: 14, color: theme.text, fontWeight: '600', borderWidth: 1, borderColor: theme.border },
-  primarySubmitBtn: { backgroundColor: '#4F46E5', height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 10, shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
-  primarySubmitBtnText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+  primarySubmitBtn: { backgroundColor: theme.primary, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 10, shadowColor: theme.primary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
+  primarySubmitBtnText: { color: theme.onPrimary, fontSize: 16, fontWeight: '800' },
 });
 
 export default PrincipalSubjectsScreen;

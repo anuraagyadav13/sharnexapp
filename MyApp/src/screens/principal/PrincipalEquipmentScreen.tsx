@@ -42,7 +42,7 @@ interface ModalState {
 
 const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'NEED_CLARIFICATION' | 'RECEIVED'>('SUBMITTED');
   const [isLoading, setIsLoading] = useState(true);
@@ -104,13 +104,13 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
     const p = priority?.toUpperCase();
     switch (p) {
       case 'HIGH':
-        return { bg: '#FEF2F2', text: '#EF4444' };
+        return { bg: isDarkMode ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.1)', text: theme.danger };
       case 'MEDIUM':
-        return { bg: '#FFF7ED', text: '#EA580C' };
+        return { bg: isDarkMode ? 'rgba(245,158,11,0.2)' : 'rgba(245,158,11,0.1)', text: theme.warning };
       case 'LOW':
-        return { bg: '#EFF6FF', text: '#3B82F6' };
+        return { bg: isDarkMode ? 'rgba(79,70,229,0.2)' : 'rgba(79,70,229,0.1)', text: theme.primary };
       default:
-        return { bg: '#F3F4F6', text: '#6B7280' };
+        return { bg: isDarkMode ? theme.border : theme.background, text: theme.subtext };
     }
   }, []);
 
@@ -245,7 +245,7 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
                 style={[styles.actionBtn, styles.rejectBtn]}
                 onPress={() => handleActionPress(item.id, 'reject')}
               >
-                <Ionicons name="close-circle-outline" size={16} color="#FFF" style={{ marginRight: 4 }} />
+                <Ionicons name="close-circle-outline" size={16} color={theme.onPrimary} style={{ marginRight: 4 }} />
                 <Text style={styles.actionBtnText}>Reject</Text>
               </TouchableOpacity>
 
@@ -253,13 +253,13 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
                 style={[styles.actionBtn, styles.approveBtn]}
                 onPress={() => handleActionPress(item.id, 'approve')}
               >
-                <Ionicons name="checkmark-circle-outline" size={16} color="#FFF" style={{ marginRight: 4 }} />
+                <Ionicons name="checkmark-circle-outline" size={16} color={theme.onPrimary} style={{ marginRight: 4 }} />
                 <Text style={styles.actionBtnText}>Approve</Text>
               </TouchableOpacity>
             </View>
           ) : (
-            <View style={{ marginTop: 12, padding: 8, backgroundColor: '#F3F4F6', borderRadius: 8, alignItems: 'center' }}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: '#6B7280' }}>
+            <View style={{ marginTop: 12, padding: 8, backgroundColor: isDarkMode ? theme.border : theme.background, borderRadius: 8, alignItems: 'center' }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: theme.subtext }}>
                 STATUS: {item.status}
               </Text>
             </View>
@@ -269,6 +269,31 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
     },
     [getPriorityStyles, formatDate, handleActionPress]
   );
+
+  if (isLoading) {
+    return (
+      <View style={styles.loaderContainer}>
+        <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
+        <ActivityIndicator size="large" color={theme.primary} />
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View style={styles.errorContainer}>
+        <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
+        <Ionicons name="alert-circle-outline" size={64} color={theme.danger} />
+        <Text style={styles.errorTitle}>Failed to load equipment requests</Text>
+        <Text style={styles.errorSubtitle}>
+          An error occurred while fetching equipment requests. Please try again.
+        </Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={() => loadData()}>
+          <Text style={styles.retryBtnText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.safeContainer}>
@@ -317,7 +342,7 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
                 }}
                 onPress={() => setSelectedTab(tab.status as any)}
               >
-                <Text style={{ fontSize: 12, fontWeight: '700', color: isActive ? '#FFF' : theme.text }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: isActive ? theme.onPrimary : theme.text }}>
                   {tab.label}
                 </Text>
               </TouchableOpacity>
@@ -336,7 +361,7 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={() => loadData(true)}
-            colors={['#4F46E5']}
+            colors={[theme.primary]}
           />
         }
         ListEmptyComponent={
@@ -373,7 +398,7 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
             <TextInput
               style={[styles.modalInput, remarkError ? styles.modalInputError : null]}
               placeholder="Add a remark..."
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={theme.placeholder}
               multiline
               numberOfLines={3}
               value={remarkInput}
@@ -392,7 +417,7 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
               <TouchableOpacity
                 style={[
                   styles.modalConfirmBtn,
-                  { backgroundColor: modalState.action === 'approve' ? '#10B981' : '#EF4444' },
+                  { backgroundColor: modalState.action === 'approve' ? theme.success : theme.danger },
                 ]}
                 onPress={handleConfirmAction}
               >
@@ -477,7 +502,7 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
                         handleActionPress(selectedDetail.id, 'reject');
                       }}
                     >
-                      <Ionicons name="close-circle-outline" size={20} color="#FFF" style={{ marginRight: 6 }} />
+                      <Ionicons name="close-circle-outline" size={20} color={theme.onPrimary} style={{ marginRight: 6 }} />
                       <Text style={[styles.actionBtnText, { fontSize: 16 }]}>Reject</Text>
                     </TouchableOpacity>
 
@@ -488,7 +513,7 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
                         handleActionPress(selectedDetail.id, 'approve');
                       }}
                     >
-                      <Ionicons name="checkmark-circle-outline" size={20} color="#FFF" style={{ marginRight: 6 }} />
+                      <Ionicons name="checkmark-circle-outline" size={20} color={theme.onPrimary} style={{ marginRight: 6 }} />
                       <Text style={[styles.actionBtnText, { fontSize: 16 }]}>Approve</Text>
                     </TouchableOpacity>
                   </View>
@@ -507,7 +532,7 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create({
   safeContainer: {
     flex: 1,
     backgroundColor: theme.background,
@@ -546,7 +571,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 8,
   },
   retryBtnText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -576,7 +601,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -650,21 +675,21 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.text,
   },
   remarkBox: {
-    backgroundColor: theme.isDarkMode ? '#B4530920' : '#FEF3C7',
+    backgroundColor: isDarkMode ? 'rgba(245,158,11,0.2)' : 'rgba(245,158,11,0.1)',
     padding: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.isDarkMode ? '#B4530940' : '#FDE68A',
+    borderColor: isDarkMode ? 'rgba(245,158,11,0.3)' : 'rgba(245,158,11,0.2)',
   },
   remarkLabel: {
     fontSize: 11,
-    color: theme.isDarkMode ? '#FBBF24' : '#D97706',
+    color: theme.warning,
     fontWeight: '600',
     marginBottom: 2,
   },
   remarkValue: {
     fontSize: 12,
-    color: theme.isDarkMode ? '#FBBF24' : '#78350F',
+    color: theme.warning,
   },
   dateMeta: {
     flexDirection: 'row',
@@ -692,15 +717,15 @@ const getStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
   },
   rejectBtn: {
-    backgroundColor: '#EF4444',
+    backgroundColor: theme.danger,
     marginRight: 8,
   },
   approveBtn: {
-    backgroundColor: '#10B981',
+    backgroundColor: theme.success,
     marginLeft: 8,
   },
   actionBtnText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -766,10 +791,10 @@ const getStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.background,
   },
   modalInputError: {
-    borderColor: '#EF4444',
+    borderColor: theme.danger,
   },
   errorText: {
-    color: '#EF4444',
+    color: theme.danger,
     fontSize: 12,
     fontWeight: '600',
     marginBottom: 12,
@@ -804,7 +829,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginLeft: 6,
   },
   modalConfirmBtnText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -812,17 +837,17 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#9F7AEA', // Soft purple
+    backgroundColor: theme.secondary,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 4,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
   headerAvatarImage: {
     width: 32,
     height: 32,

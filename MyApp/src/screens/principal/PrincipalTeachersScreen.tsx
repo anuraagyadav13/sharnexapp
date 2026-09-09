@@ -15,6 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useAuth } from '../../store/AuthContext';
 import principalService, { TeacherItem } from '../../services/principalService';
+import { useTheme } from '../../store/ThemeContext';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 type PrincipalTeachersNavigationProp = NativeStackNavigationProp<
@@ -30,6 +31,8 @@ type TabType = 'All' | 'Active' | 'Verified';
 
 const PrincipalTeachersScreen: React.FC<Props> = ({ navigation }) => {
   const { authState } = useAuth();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
   const institutionId = authState.user?.institutionId || '';
 
   const [isLoading, setIsLoading] = useState(true);
@@ -103,8 +106,8 @@ const PrincipalTeachersScreen: React.FC<Props> = ({ navigation }) => {
       const firstLetter = item.name ? item.name.charAt(0).toUpperCase() : 'T';
 
       // Badge style configurations
-      const roleColor = item.role === 'LIBRARY_ADMIN' ? '#8B5CF6' : '#3B82F6';
-      const roleBg = item.role === 'LIBRARY_ADMIN' ? '#F5F3FF' : '#EFF6FF';
+      const roleColor = item.role === 'LIBRARY_ADMIN' ? theme.secondary : theme.primary;
+      const roleBg = item.role === 'LIBRARY_ADMIN' ? (isDarkMode ? 'rgba(139, 92, 246, 0.2)' : theme.iconBackground) : (isDarkMode ? 'rgba(59, 130, 246, 0.2)' : theme.iconBackground);
 
       return (
         <View style={styles.teacherCard}>
@@ -123,13 +126,13 @@ const PrincipalTeachersScreen: React.FC<Props> = ({ navigation }) => {
                 <View
                   style={[
                     styles.verifyBadge,
-                    { backgroundColor: item.isVerified ? '#ECFDF5' : '#F3F4F6' },
+                    { backgroundColor: item.isVerified ? (isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)') : (isDarkMode ? 'rgba(107, 114, 128, 0.2)' : theme.border) },
                   ]}
                 >
                   <Text
                     style={[
                       styles.verifyText,
-                      { color: item.isVerified ? '#059669' : '#6B7280' },
+                      { color: item.isVerified ? theme.success : theme.subtext },
                     ]}
                   >
                     {item.isVerified ? 'Verified' : 'Unverified'}
@@ -143,15 +146,15 @@ const PrincipalTeachersScreen: React.FC<Props> = ({ navigation }) => {
 
           <View style={styles.cardBody}>
             <View style={styles.detailRow}>
-              <Ionicons name="mail-outline" size={16} color="#6B7280" style={styles.rowIcon} />
+              <Ionicons name="mail-outline" size={16} color={theme.subtext} style={styles.rowIcon} />
               <Text style={styles.detailText}>{item.email}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Ionicons name="call-outline" size={16} color="#6B7280" style={styles.rowIcon} />
+              <Ionicons name="call-outline" size={16} color={theme.subtext} style={styles.rowIcon} />
               <Text style={styles.detailText}>{item.phone || 'N/A'}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Ionicons name="book-outline" size={16} color="#6B7280" style={styles.rowIcon} />
+              <Ionicons name="book-outline" size={16} color={theme.subtext} style={styles.rowIcon} />
               <Text style={styles.detailText}>
                 {item.assignedClassesCount || 0} classes assigned
               </Text>
@@ -171,7 +174,7 @@ const PrincipalTeachersScreen: React.FC<Props> = ({ navigation }) => {
     return (
       <View style={styles.loaderContainer}>
         <StatusBar barStyle="dark-content" />
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -180,7 +183,7 @@ const PrincipalTeachersScreen: React.FC<Props> = ({ navigation }) => {
     return (
       <View style={styles.errorContainer}>
         <StatusBar barStyle="dark-content" />
-        <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+        <Ionicons name="alert-circle-outline" size={64} color={theme.danger} />
         <Text style={styles.errorTitle}>Failed to load teachers</Text>
         <Text style={styles.errorSubtitle}>
           An error occurred while fetching the staff list. Please try again.
@@ -194,12 +197,12 @@ const PrincipalTeachersScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F6" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
 
       {/* Header */}
       <View style={styles.appHeader}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#1F2937" />
+          <Ionicons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.appHeaderTitle}>Teachers</Text>
         <View style={{ width: 32 }} />
@@ -207,17 +210,17 @@ const PrincipalTeachersScreen: React.FC<Props> = ({ navigation }) => {
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
+        <Ionicons name="search" size={20} color={theme.placeholder} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search by name or email..."
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={theme.placeholder}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+            <Ionicons name="close-circle" size={18} color={theme.placeholder} />
           </TouchableOpacity>
         )}
       </View>
@@ -247,12 +250,12 @@ const PrincipalTeachersScreen: React.FC<Props> = ({ navigation }) => {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={() => loadData(true)}
-            colors={['#4F46E5']}
+            colors={[theme.primary]}
           />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="people-outline" size={64} color="#9CA3AF" />
+            <Ionicons name="people-outline" size={64} color={theme.placeholder} />
             <Text style={styles.emptyTitle}>No teachers found</Text>
             <Text style={styles.emptySubtitle}>
               Try adjusting your search query or tab filters.
@@ -264,45 +267,45 @@ const PrincipalTeachersScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create({
   safeContainer: {
     flex: 1,
-    backgroundColor: '#FAF9F6',
+    backgroundColor: theme.background,
   },
   loaderContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FAF9F6',
+    backgroundColor: theme.background,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
-    backgroundColor: '#FAF9F6',
+    backgroundColor: theme.background,
   },
   errorTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: theme.text,
     marginTop: 16,
     marginBottom: 8,
   },
   errorSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.subtext,
     textAlign: 'center',
     marginBottom: 24,
   },
   retryBtn: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.primary,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
   },
   retryBtnText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -312,9 +315,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FAF9F6',
+    backgroundColor: theme.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.border,
   },
   headerBtn: {
     padding: 4,
@@ -322,18 +325,18 @@ const styles = StyleSheet.create({
   appHeaderTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1F2937',
+    color: theme.text,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: theme.surface,
     marginHorizontal: 16,
     marginVertical: 12,
     paddingHorizontal: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     height: 48,
   },
   searchIcon: {
@@ -342,13 +345,13 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#1F2937',
+    color: theme.text,
   },
   tabsRow: {
     flexDirection: 'row',
     marginHorizontal: 16,
     marginBottom: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.border,
     borderRadius: 12,
     padding: 4,
   },
@@ -359,8 +362,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   tabActive: {
-    backgroundColor: '#FFF',
-    shadowColor: '#000',
+    backgroundColor: theme.surface,
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 1,
@@ -369,20 +372,20 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B7280',
+    color: theme.subtext,
   },
   tabTextActive: {
-    color: '#4F46E5',
+    color: theme.primary,
   },
   listContent: {
     padding: 16,
   },
   teacherCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -396,7 +399,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#6366F1',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -404,7 +407,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#FFF',
+    color: theme.onPrimary,
   },
   headerInfo: {
     flex: 1,
@@ -412,7 +415,7 @@ const styles = StyleSheet.create({
   teacherName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1F2937',
+    color: theme.text,
     marginBottom: 4,
   },
   badgeRow: {
@@ -440,7 +443,7 @@ const styles = StyleSheet.create({
   },
   cardDivider: {
     height: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.border,
     marginVertical: 12,
   },
   cardBody: {
@@ -457,18 +460,18 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 13,
-    color: '#4B5563',
+    color: theme.subtext,
     fontWeight: '500',
   },
   cardFooter: {
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: theme.border,
     paddingTop: 12,
     alignItems: 'flex-end',
   },
   joinedText: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: theme.placeholder,
     fontWeight: '500',
   },
   emptyContainer: {
@@ -480,13 +483,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#374151',
+    color: theme.text,
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.subtext,
     textAlign: 'center',
   },
 });

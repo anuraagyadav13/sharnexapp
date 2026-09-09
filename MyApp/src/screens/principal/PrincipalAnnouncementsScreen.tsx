@@ -41,7 +41,7 @@ const STATUSES = ['published', 'draft'];
 
 const PrincipalAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const { authState } = useAuth();
   const institutionId = authState.user?.institutionId || '';
 
@@ -123,11 +123,11 @@ const PrincipalAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
   const getPriorityStyles = useCallback((priority: string) => {
     const p = priority?.toLowerCase();
     if (p === 'urgent') {
-      return { bg: isDarkMode ? '#EF444420' : '#FEF2F2', text: '#EF4444' }; // red
+      return { bg: isDarkMode ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.1)', text: theme.danger }; // red
     } else if (p === 'high') {
-      return { bg: isDarkMode ? '#EA580C20' : '#FFF7ED', text: '#EA580C' }; // orange
+      return { bg: isDarkMode ? 'rgba(245,158,11,0.2)' : 'rgba(245,158,11,0.1)', text: theme.warning }; // orange
     } else {
-      return { bg: isDarkMode ? '#374151' : '#F3F4F6', text: theme.subtext }; // grey
+      return { bg: isDarkMode ? theme.border : theme.background, text: theme.subtext }; // grey
     }
   }, [isDarkMode, theme]);
 
@@ -257,7 +257,7 @@ const PrincipalAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
                 </Text>
               </View>
               <TouchableOpacity onPress={() => handleDeleteAnnouncement(item.id)} style={styles.deleteBtn}>
-                <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                <Ionicons name="trash-outline" size={18} color={theme.danger} />
               </TouchableOpacity>
             </View>
           </View>
@@ -270,7 +270,7 @@ const PrincipalAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
 
           <View style={styles.cardFooter}>
             <View style={styles.creatorMeta}>
-              <Ionicons name="person-outline" size={14} color="#6B7280" style={{ marginRight: 4 }} />
+              <Ionicons name="person-outline" size={14} color={theme.subtext} style={{ marginRight: 4 }} />
               <Text style={styles.creatorText} numberOfLines={1}>
                 {item.creatorName || 'Admin'}
               </Text>
@@ -301,7 +301,7 @@ const PrincipalAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.bannerDesc}>Broadcast an update, notice, or event to classes or everyone.</Text>
           </View>
           <TouchableOpacity style={styles.bannerBtn} onPress={() => setCreateModalOpen(true)}>
-            <Ionicons name="add-circle-outline" size={20} color="#FFF" style={{ marginRight: 6 }} />
+            <Ionicons name="add-circle-outline" size={20} color={theme.onPrimary} style={{ marginRight: 6 }} />
             <Text style={styles.bannerBtnText}>Create New</Text>
           </TouchableOpacity>
         </View>
@@ -351,7 +351,7 @@ const PrincipalAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
     return (
       <View style={styles.errorContainer}>
         <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
-        <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+        <Ionicons name="alert-circle-outline" size={64} color={theme.danger} />
         <Text style={styles.errorTitle}>Failed to load announcements</Text>
         <Text style={styles.errorSubtitle}>
           An error occurred while fetching the announcements list. Please try again.
@@ -399,7 +399,7 @@ const PrincipalAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={() => loadData(true)}
-            colors={['#4F46E5']}
+            colors={[theme.primary]}
           />
         }
         ListEmptyComponent={
@@ -436,7 +436,7 @@ const PrincipalAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
                 <TextInput
                   style={styles.formInput}
                   placeholder="e.g., Annual Sports Meet 2026"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={theme.placeholder}
                   value={form.title}
                   onChangeText={(val) => setForm(f => ({ ...f, title: val }))}
                 />
@@ -448,7 +448,7 @@ const PrincipalAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
                 <TextInput
                   style={[styles.formInput, styles.formInputMultiline]}
                   placeholder="Write the detailed announcement message here..."
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={theme.placeholder}
                   value={form.content}
                   onChangeText={(val) => setForm(f => ({ ...f, content: val }))}
                   multiline
@@ -534,7 +534,7 @@ const PrincipalAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
                 <TextInput
                   style={styles.formInput}
                   placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={theme.placeholder}
                   value={form.expiryDate}
                   onChangeText={(val) => setForm(f => ({ ...f, expiryDate: val }))}
                 />
@@ -555,7 +555,7 @@ const PrincipalAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
                   disabled={isCreating}
                 >
                   {isCreating ? (
-                    <ActivityIndicator size="small" color="#FFF" />
+                    <ActivityIndicator size="small" color={theme.onPrimary} />
                   ) : (
                     <Text style={styles.modalBtnCreateText}>Create</Text>
                   )}
@@ -571,7 +571,7 @@ const PrincipalAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create({
   mainContainer: {
     flex: 1,
     backgroundColor: theme.background,
@@ -609,7 +609,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 8,
   },
   retryBtnText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -685,7 +685,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     elevation: 3,
   },
   bannerBtnText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -721,7 +721,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginRight: 6,
   },
   filterTabTextActive: {
-    color: '#FFF',
+    color: theme.onPrimary,
   },
   countBadge: {
     paddingVertical: 1,
@@ -729,7 +729,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 6,
   },
   countBadgeActive: {
-    backgroundColor: theme.isDarkMode ? '#312E81' : '#312E81',
+    backgroundColor: theme.primary,
   },
   countBadgeInactive: {
     backgroundColor: theme.border,
@@ -739,7 +739,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '700',
   },
   countBadgeTextActive: {
-    color: '#C7D2FE',
+    color: theme.onPrimary,
   },
   countBadgeTextInactive: {
     color: theme.subtext,
@@ -750,7 +750,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.03,
     shadowRadius: 10,
@@ -770,7 +770,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.text,
   },
   draftBadge: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: isDarkMode ? 'rgba(245,158,11,0.2)' : 'rgba(245,158,11,0.1)',
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 4,
@@ -778,7 +778,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   draftBadgeText: {
     fontSize: 8,
     fontWeight: '700',
-    color: '#D97706',
+    color: theme.warning,
   },
   categoryText: {
     fontSize: 11,
@@ -973,23 +973,23 @@ const getStyles = (theme: any) => StyleSheet.create({
   modalBtnCreateText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFF',
+    color: theme.onPrimary,
   },
   avatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#9F7AEA', // Soft purple
+    backgroundColor: theme.secondary, // Soft purple
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 4,
-    shadowColor: '#1E293B',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
   headerAvatarImage: {
     width: 32,
     height: 32,

@@ -15,6 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
+import { BRAND } from '../../constants/theme';
 import principalService from '../../services/principalService';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'PrincipalCreateInvoice'>;
@@ -205,16 +206,16 @@ const PrincipalCreateInvoiceScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={s.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
 
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-          <Ionicons name="arrow-back" size={22} color="#0F172A" />
+          <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Create New Invoice</Text>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="close" size={22} color="#64748B" />
+          <Ionicons name="close" size={22} color={theme.subtext} />
         </TouchableOpacity>
       </View>
 
@@ -224,17 +225,17 @@ const PrincipalCreateInvoiceScreen: React.FC<Props> = ({ navigation }) => {
         <Text style={s.label}>Class <Text style={s.required}>*</Text></Text>
         <TouchableOpacity style={s.selectBox} onPress={() => setClassDropdownOpen(!classDropdownOpen)}>
           <View style={s.selectIconBox}>
-            <Ionicons name="school" size={16} color="#7C3AED" />
+            <Ionicons name="school" size={16} color={BRAND.accentPurpleDark} />
           </View>
-          <Text style={[s.selectText, !selectedClassId && { color: '#94A3B8' }]}>
+          <Text style={[s.selectText, !selectedClassId && { color: theme.placeholder }]}>
             {selectedClassId ? getClassName(selectedClassId) : 'Select a class'}
           </Text>
-          <Ionicons name="chevron-down" size={16} color="#94A3B8" />
+          <Ionicons name="chevron-down" size={16} color={theme.placeholder} />
         </TouchableOpacity>
         {classDropdownOpen && (
           <View style={s.dropdown}>
             {isLoadingClasses ? (
-              <ActivityIndicator size="small" color="#7C3AED" style={{ padding: 16 }} />
+              <ActivityIndicator size="small" color={BRAND.accentPurpleDark} style={{ padding: 16 }} />
             ) : classes.length === 0 ? (
               <Text style={s.dropdownEmpty}>No classes found</Text>
             ) : (
@@ -244,10 +245,10 @@ const PrincipalCreateInvoiceScreen: React.FC<Props> = ({ navigation }) => {
                   style={[s.dropdownItem, selectedClassId === c.id && s.dropdownItemActive]}
                   onPress={() => { setSelectedClassId(c.id); setClassDropdownOpen(false); }}
                 >
-                  <Text style={[s.dropdownText, selectedClassId === c.id && { color: '#7C3AED', fontWeight: '700' }]}>
+                  <Text style={[s.dropdownText, selectedClassId === c.id && { color: BRAND.accentPurpleDark, fontWeight: '700' }]}>
                     {c.name}{c.section ? ` ${c.section}` : ''}{c.grade ? ` (Grade ${c.grade})` : ''}
                   </Text>
-                  {selectedClassId === c.id && <Ionicons name="checkmark" size={16} color="#7C3AED" />}
+                  {selectedClassId === c.id && <Ionicons name="checkmark" size={16} color={BRAND.accentPurpleDark} />}
                 </TouchableOpacity>
               ))
             )}
@@ -259,18 +260,18 @@ const PrincipalCreateInvoiceScreen: React.FC<Props> = ({ navigation }) => {
         <View style={s.studentsBox}>
           {!selectedClassId ? (
             <View style={s.studentsPlaceholder}>
-              <Ionicons name="people" size={24} color="#CBD5E1" />
+              <Ionicons name="people" size={24} color={theme.placeholder} />
               <Text style={s.studentsPlaceholderText}>Select a class first to view students</Text>
             </View>
           ) : isLoadingStudents ? (
-            <ActivityIndicator size="small" color="#7C3AED" style={{ padding: 20 }} />
+            <ActivityIndicator size="small" color={BRAND.accentPurpleDark} style={{ padding: 20 }} />
           ) : students.length === 0 ? (
             <Text style={s.studentsPlaceholderText}>No students found in this class</Text>
           ) : (
             <>
               <TouchableOpacity style={s.selectAllRow} onPress={selectAllStudents}>
                 <View style={[s.checkbox, selectedStudentIds.length === students.length && s.checkboxChecked]}>
-                  {selectedStudentIds.length === students.length && <Ionicons name="checkmark" size={12} color="#FFF" />}
+                  {selectedStudentIds.length === students.length && <Ionicons name="checkmark" size={12} color={theme.onPrimary} />}
                 </View>
                 <Text style={s.selectAllText}>
                   Select All ({selectedStudentIds.length}/{students.length})
@@ -281,7 +282,7 @@ const PrincipalCreateInvoiceScreen: React.FC<Props> = ({ navigation }) => {
                 return (
                   <TouchableOpacity key={stu.id} style={s.studentItem} onPress={() => toggleStudent(stu.id)}>
                     <View style={[s.checkbox, selected && s.checkboxChecked]}>
-                      {selected && <Ionicons name="checkmark" size={12} color="#FFF" />}
+                      {selected && <Ionicons name="checkmark" size={12} color={theme.onPrimary} />}
                     </View>
                     <Text style={s.studentItemText}>{stu.name || `${stu.firstName} ${stu.lastName}`}</Text>
                   </TouchableOpacity>
@@ -303,25 +304,25 @@ const PrincipalCreateInvoiceScreen: React.FC<Props> = ({ navigation }) => {
               <TextInput
                 style={[s.feeInput, { flex: 2 }]}
                 placeholder="e.g., Tuition Fee"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={theme.placeholder}
                 value={item.description}
                 onChangeText={v => updateFeeItem(item.id, 'description', v)}
               />
               <TextInput
                 style={[s.feeInput, { flex: 1, marginLeft: 10 }]}
                 placeholder="0"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={theme.placeholder}
                 keyboardType="numeric"
                 value={item.amount}
                 onChangeText={v => updateFeeItem(item.id, 'amount', v)}
               />
               <TouchableOpacity style={s.feeRemoveBtn} onPress={() => removeFeeItem(item.id)}>
-                <Ionicons name="trash-outline" size={16} color="#CBD5E1" />
+                <Ionicons name="trash-outline" size={16} color={theme.placeholder} />
               </TouchableOpacity>
             </View>
           ))}
           <TouchableOpacity style={s.addFeeBtn} onPress={addFeeItem}>
-            <Ionicons name="add" size={14} color="#7C3AED" />
+            <Ionicons name="add" size={14} color={BRAND.accentPurpleDark} />
             <Text style={s.addFeeText}>Add Fee Item</Text>
           </TouchableOpacity>
         </View>
@@ -333,7 +334,7 @@ const PrincipalCreateInvoiceScreen: React.FC<Props> = ({ navigation }) => {
             <TextInput
               style={s.dateInput}
               placeholder="dd-mm-yyyy"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={theme.placeholder}
               value={dueDate}
               onChangeText={setDueDate}
             />
@@ -341,10 +342,10 @@ const PrincipalCreateInvoiceScreen: React.FC<Props> = ({ navigation }) => {
           <View style={{ flex: 1 }}>
             <Text style={s.label}>Month <Text style={s.required}>*</Text></Text>
             <TouchableOpacity style={s.selectBox} onPress={() => setMonthDropdownOpen(!monthDropdownOpen)}>
-              <Text style={[s.selectText, !month && { color: '#94A3B8' }]}>
+              <Text style={[s.selectText, !month && { color: theme.placeholder }]}>
                 {month || 'Select month'}
               </Text>
-              <Ionicons name="chevron-down" size={16} color="#94A3B8" />
+              <Ionicons name="chevron-down" size={16} color={theme.placeholder} />
             </TouchableOpacity>
             {monthDropdownOpen && (
               <View style={[s.dropdown, { maxHeight: 200 }]}>
@@ -355,7 +356,7 @@ const PrincipalCreateInvoiceScreen: React.FC<Props> = ({ navigation }) => {
                       style={[s.dropdownItem, month === m && s.dropdownItemActive]}
                       onPress={() => { setMonth(m); setMonthDropdownOpen(false); }}
                     >
-                      <Text style={[s.dropdownText, month === m && { color: '#7C3AED', fontWeight: '700' }]}>{m}</Text>
+                      <Text style={[s.dropdownText, month === m && { color: BRAND.accentPurpleDark, fontWeight: '700' }]}>{m}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -380,7 +381,7 @@ const PrincipalCreateInvoiceScreen: React.FC<Props> = ({ navigation }) => {
         </TouchableOpacity>
         <TouchableOpacity style={[s.submitBtn, isSubmitting && { opacity: 0.6 }]} onPress={handleSubmit} disabled={isSubmitting}>
           {isSubmitting ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
+            <ActivityIndicator size="small" color={theme.onPrimary} />
           ) : (
             <Text style={s.submitBtnText}>Review & Preview</Text>
           )}
@@ -392,112 +393,112 @@ const PrincipalCreateInvoiceScreen: React.FC<Props> = ({ navigation }) => {
 
 const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   container: {
-    flex: 1, backgroundColor: '#FFFFFF',
+    flex: 1, backgroundColor: theme.surface,
     paddingTop: Platform.OS === 'ios' ? 50 : 30,
   },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: '#F1F5F9',
+    borderBottomWidth: 1, borderBottomColor: theme.border,
   },
   backBtn: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: theme.text },
 
-  label: { fontSize: 13, fontWeight: '700', color: '#334155', marginBottom: 8 },
-  required: { color: '#EF4444' },
+  label: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 8 },
+  required: { color: theme.danger },
 
   selectBox: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 14,
-    paddingHorizontal: 14, paddingVertical: 12, backgroundColor: '#FFFFFF',
+    borderWidth: 1, borderColor: theme.border, borderRadius: 14,
+    paddingHorizontal: 14, paddingVertical: 12, backgroundColor: theme.surface,
   },
   selectIconBox: {
-    width: 32, height: 32, borderRadius: 10, backgroundColor: '#F3E8FF',
+    width: 32, height: 32, borderRadius: 10, backgroundColor: theme.iconBackground,
     justifyContent: 'center', alignItems: 'center',
   },
-  selectText: { flex: 1, fontSize: 14, color: '#0F172A', fontWeight: '500' },
+  selectText: { flex: 1, fontSize: 14, color: theme.text, fontWeight: '500' },
 
   dropdown: {
-    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0',
+    backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border,
     borderRadius: 14, marginTop: 4, overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4,
+    shadowColor: theme.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4,
   },
   dropdownItem: { paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  dropdownItemActive: { backgroundColor: '#F5F3FF' },
-  dropdownText: { fontSize: 13, color: '#334155', fontWeight: '500' },
-  dropdownEmpty: { padding: 16, fontSize: 13, color: '#94A3B8', textAlign: 'center' },
+  dropdownItemActive: { backgroundColor: theme.iconBackground },
+  dropdownText: { fontSize: 13, color: theme.text, fontWeight: '500' },
+  dropdownEmpty: { padding: 16, fontSize: 13, color: theme.placeholder, textAlign: 'center' },
 
   studentsBox: {
-    borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 14,
-    backgroundColor: '#FAFAFA', overflow: 'hidden', maxHeight: 240,
+    borderWidth: 1, borderColor: theme.border, borderRadius: 14,
+    backgroundColor: isDarkMode ? theme.surface : theme.background, overflow: 'hidden', maxHeight: 240,
   },
   studentsPlaceholder: { padding: 24, alignItems: 'center', gap: 8 },
-  studentsPlaceholderText: { fontSize: 13, color: '#94A3B8', textAlign: 'center' },
+  studentsPlaceholderText: { fontSize: 13, color: theme.placeholder, textAlign: 'center' },
   selectAllRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F1F5F9',
-    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: theme.border,
+    backgroundColor: isDarkMode ? theme.surface : theme.background,
   },
-  selectAllText: { fontSize: 12, fontWeight: '700', color: '#7C3AED' },
+  selectAllText: { fontSize: 12, fontWeight: '700', color: BRAND.accentPurpleDark },
   studentItem: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingHorizontal: 14, paddingVertical: 10,
-    borderBottomWidth: 1, borderBottomColor: '#F8FAFC',
+    borderBottomWidth: 1, borderBottomColor: theme.border,
   },
-  studentItemText: { fontSize: 13, color: '#334155', fontWeight: '500' },
+  studentItemText: { fontSize: 13, color: theme.text, fontWeight: '500' },
 
   checkbox: {
-    width: 20, height: 20, borderRadius: 5, borderWidth: 2, borderColor: '#CBD5E1',
+    width: 20, height: 20, borderRadius: 5, borderWidth: 2, borderColor: theme.border,
     justifyContent: 'center', alignItems: 'center',
   },
-  checkboxChecked: { backgroundColor: '#7C3AED', borderColor: '#7C3AED' },
+  checkboxChecked: { backgroundColor: BRAND.accentPurpleDark, borderColor: BRAND.accentPurpleDark },
 
   feeItemsBox: {
-    borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 14,
-    backgroundColor: '#FFFFFF', padding: 14,
+    borderWidth: 1, borderColor: theme.border, borderRadius: 14,
+    backgroundColor: theme.surface, padding: 14,
   },
   feeItemsHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  feeColLabel: { fontSize: 10, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5, textTransform: 'uppercase' },
+  feeColLabel: { fontSize: 10, fontWeight: '800', color: theme.placeholder, letterSpacing: 0.5, textTransform: 'uppercase' },
   feeItemRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   feeInput: {
-    borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#0F172A',
-    backgroundColor: '#F8FAFC',
+    borderWidth: 1, borderColor: theme.border, borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: theme.text,
+    backgroundColor: isDarkMode ? theme.surface : theme.background,
   },
   feeRemoveBtn: { marginLeft: 8, padding: 6 },
   addFeeBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4,
   },
-  addFeeText: { fontSize: 13, fontWeight: '700', color: '#7C3AED' },
+  addFeeText: { fontSize: 13, fontWeight: '700', color: BRAND.accentPurpleDark },
 
   dateInput: {
-    borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 14,
-    paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: '#0F172A',
-    backgroundColor: '#FFFFFF',
+    borderWidth: 1, borderColor: theme.border, borderRadius: 14,
+    paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: theme.text,
+    backgroundColor: theme.surface,
   },
 
   totalRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginTop: 20, padding: 16, backgroundColor: '#F5F3FF', borderRadius: 14,
+    marginTop: 20, padding: 16, backgroundColor: theme.iconBackground, borderRadius: 14,
   },
-  totalLabel: { fontSize: 14, fontWeight: '700', color: '#334155' },
-  totalValue: { fontSize: 20, fontWeight: '800', color: '#7C3AED' },
+  totalLabel: { fontSize: 14, fontWeight: '700', color: theme.text },
+  totalValue: { fontSize: 20, fontWeight: '800', color: BRAND.accentPurpleDark },
 
   footer: {
     flexDirection: 'row', gap: 12, padding: 16,
-    borderTopWidth: 1, borderTopColor: '#F1F5F9', backgroundColor: '#FFFFFF',
+    borderTopWidth: 1, borderTopColor: theme.border, backgroundColor: theme.surface,
   },
   cancelBtn: {
-    flex: 1, paddingVertical: 14, borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0',
-    alignItems: 'center', backgroundColor: '#FFFFFF',
+    flex: 1, paddingVertical: 14, borderRadius: 14, borderWidth: 1, borderColor: theme.border,
+    alignItems: 'center', backgroundColor: theme.surface,
   },
-  cancelBtnText: { fontSize: 14, fontWeight: '700', color: '#64748B' },
+  cancelBtnText: { fontSize: 14, fontWeight: '700', color: theme.subtext },
   submitBtn: {
     flex: 1, paddingVertical: 14, borderRadius: 14, alignItems: 'center',
-    backgroundColor: '#7C3AED',
-    shadowColor: '#7C3AED', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
+    backgroundColor: BRAND.accentPurpleDark,
+    shadowColor: BRAND.accentPurpleDark, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
   },
-  submitBtnText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
+  submitBtnText: { fontSize: 14, fontWeight: '800', color: theme.onPrimary },
 });
 
 export default PrincipalCreateInvoiceScreen;

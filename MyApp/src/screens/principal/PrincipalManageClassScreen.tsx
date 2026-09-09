@@ -192,7 +192,7 @@ const PromoteModal = ({
                 // ── STEP 1: Select class + roll strategy ──
                 <>
                   <Text style={styles.inputLabel}>
-                    Target Class <Text style={{ color: '#EF4444' }}>*</Text>
+                    Target Class <Text style={{ color: theme.danger }}>*</Text>
                   </Text>
 
                   {/* Fake Select */}
@@ -210,7 +210,7 @@ const PromoteModal = ({
                   {/* Same-year warning */}
                   {isSameYear && (
                     <View style={styles.warningBox}>
-                      <Ionicons name="warning-outline" size={18} color="#F59E0B" style={{ marginRight: 8, marginTop: 1 }} />
+                      <Ionicons name="warning-outline" size={18} color={theme.warning} style={{ marginRight: 8, marginTop: 1 }} />
                       <Text style={styles.warningText}>
                         <Text style={styles.warningBold}>Same academic year. </Text>
                         You are moving students to a class in the same academic year ({currentYear}). This is a lateral transfer, not a year-end promotion.
@@ -261,7 +261,7 @@ const PromoteModal = ({
                 // ── STEP 2: Confirm ──
                 <>
                   <View style={styles.confirmWarningBox}>
-                    <Ionicons name="warning-outline" size={20} color="#F59E0B" style={{ marginRight: 10, marginTop: 1 }} />
+                    <Ionicons name="warning-outline" size={20} color={theme.warning} style={{ marginRight: 10, marginTop: 1 }} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.confirmWarningTitle}>Are you sure?</Text>
                       <Text style={styles.confirmWarningText}>
@@ -285,7 +285,7 @@ const PromoteModal = ({
                       activeOpacity={0.85}
                     >
                       {isPromoting ? (
-                        <ActivityIndicator size="small" color="#FFF" />
+                        <ActivityIndicator size="small" color={theme.onPrimary} />
                       ) : (
                         <Text style={styles.primaryBtnText}>Yes, Promote Class</Text>
                       )}
@@ -323,7 +323,6 @@ const PrincipalManageClassScreen = ({ navigation, route }: any) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [classDetails, setClassDetails] = useState<any>(null);
-  const [subjects, setSubjects] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [allClasses, setAllClasses] = useState<any[]>([]);
   const [promoteVisible, setPromoteVisible] = useState(false);
@@ -405,7 +404,7 @@ const PrincipalManageClassScreen = ({ navigation, route }: any) => {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={onRefresh}
-            colors={['#4F46E5']}
+            colors={[theme.primary]}
             tintColor={theme.primary}
           />
         }
@@ -428,23 +427,23 @@ const PrincipalManageClassScreen = ({ navigation, route }: any) => {
 
             {/* Badge row */}
             <View style={styles.badgeRow}>
-              <View style={[styles.infoBadge, { backgroundColor: isDarkMode ? '#6366F120' : '#EEF2FF' }]}>
-                <Text style={[styles.badgeLabel, { color: '#6366F1' }]}>
+              <View style={[styles.infoBadge, { backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.2)' : theme.iconBackground }]}>
+                <Text style={[styles.badgeLabel, { color: theme.primary }]}>
                   Section: {classDetails?.section || 'F'}
                 </Text>
               </View>
-              <View style={[styles.infoBadge, { backgroundColor: isDarkMode ? '#8B5CF620' : '#F5F3FF' }]}>
-                <Text style={[styles.badgeLabel, { color: '#8B5CF6' }]}>
+              <View style={[styles.infoBadge, { backgroundColor: isDarkMode ? 'rgba(139, 92, 246, 0.2)' : theme.iconBackground }]}>
+                <Text style={[styles.badgeLabel, { color: theme.secondary }]}>
                   Grade: {classDetails?.grade || '—'}
                 </Text>
               </View>
-              <View style={[styles.infoBadge, { backgroundColor: isDarkMode ? '#10B98120' : '#ECFDF5' }]}>
-                <Text style={[styles.badgeLabel, { color: '#10B981' }]}>
+              <View style={[styles.infoBadge, { backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)' }]}>
+                <Text style={[styles.badgeLabel, { color: theme.success }]}>
                   Students: {students.length}
                 </Text>
               </View>
-              <View style={[styles.infoBadge, { backgroundColor: isDarkMode ? '#F59E0B20' : '#FFFBEB' }]}>
-                <Text style={[styles.badgeLabel, { color: '#F59E0B' }]}>
+              <View style={[styles.infoBadge, { backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)' }]}>
+                <Text style={[styles.badgeLabel, { color: theme.warning }]}>
                   Teacher: {classDetails?.teacher_name ? '1' : '0'}
                 </Text>
               </View>
@@ -456,7 +455,7 @@ const PrincipalManageClassScreen = ({ navigation, route }: any) => {
               activeOpacity={0.85}
               onPress={() => setPromoteVisible(true)}
             >
-              <Ionicons name="arrow-up-circle-outline" size={20} color="#FFF" />
+              <Ionicons name="arrow-up-circle-outline" size={20} color={theme.onPrimary} />
               <Text style={styles.promoteCtaText}>Promote Entire Class</Text>
             </TouchableOpacity>
 
@@ -589,13 +588,13 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       alignItems: 'center',
       justifyContent: 'center',
       gap: 10,
-      backgroundColor: '#4F46E5',
+      backgroundColor: theme.primary,
       borderRadius: 14,
       paddingVertical: 15,
       marginBottom: 28,
     },
     promoteCtaText: {
-      color: '#FFF',
+      color: theme.onPrimary,
       fontSize: 15,
       fontWeight: '700',
     },
@@ -659,7 +658,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       paddingHorizontal: 0,
     },
     modalCard: {
-      backgroundColor: isDarkMode ? '#1E2535' : '#FFFFFF',
+      backgroundColor: theme.surface,
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
       padding: 24,
@@ -688,7 +687,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      backgroundColor: isDarkMode ? '#2A3245' : '#F1F5F9',
+      backgroundColor: isDarkMode ? theme.surface : theme.background,
       borderRadius: 12,
       borderWidth: 1,
       borderColor: theme.border,
@@ -706,22 +705,22 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     warningBox: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      backgroundColor: isDarkMode ? '#2D1F00' : '#FFFBEB',
+      backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.1)',
       borderRadius: 12,
       borderWidth: 1,
-      borderColor: '#F59E0B55',
+      borderColor: isDarkMode ? 'rgba(245, 158, 11, 0.4)' : theme.warning,
       padding: 14,
       marginBottom: 6,
     },
     warningText: {
       fontSize: 13,
-      color: '#F59E0B',
+      color: theme.warning,
       flex: 1,
       lineHeight: 19,
     },
     warningBold: {
       fontWeight: '800',
-      color: '#F59E0B',
+      color: theme.warning,
     },
 
     // ── Radio buttons ──
@@ -741,13 +740,13 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       justifyContent: 'center',
     },
     radioOuterActive: {
-      borderColor: '#4F46E5',
+      borderColor: theme.primary,
     },
     radioInner: {
       width: 10,
       height: 10,
       borderRadius: 5,
-      backgroundColor: '#4F46E5',
+      backgroundColor: theme.primary,
     },
     radioLabel: {
       fontSize: 14,
@@ -766,7 +765,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       paddingHorizontal: 24,
       paddingVertical: 12,
       borderRadius: 12,
-      backgroundColor: isDarkMode ? '#2A3245' : '#F1F5F9',
+      backgroundColor: isDarkMode ? theme.surface : theme.background,
       borderWidth: 1,
       borderColor: theme.border,
     },
@@ -780,33 +779,33 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       paddingHorizontal: 20,
       paddingVertical: 13,
       borderRadius: 12,
-      backgroundColor: '#4F46E5',
+      backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
     },
     primaryBtnDisabled: {
-      backgroundColor: isDarkMode ? '#3730A3AA' : '#C7D2FE',
+      backgroundColor: isDarkMode ? 'rgba(79, 70, 229, 0.3)' : 'rgba(79, 70, 229, 0.1)',
     },
     primaryBtnText: {
       fontSize: 15,
       fontWeight: '700',
-      color: '#FFF',
+      color: theme.onPrimary,
     },
 
     // ── Confirm warning box ──
     confirmWarningBox: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      backgroundColor: isDarkMode ? '#2D1F00' : '#FFFBEB',
+      backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.1)',
       borderRadius: 14,
       borderWidth: 1,
-      borderColor: '#F59E0B55',
+      borderColor: isDarkMode ? 'rgba(245, 158, 11, 0.4)' : theme.warning,
       padding: 16,
     },
     confirmWarningTitle: {
       fontSize: 14,
       fontWeight: '800',
-      color: '#F59E0B',
+      color: theme.warning,
       marginBottom: 6,
     },
     confirmWarningText: {
@@ -823,7 +822,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       paddingHorizontal: 24,
     },
     pickerDropdown: {
-      backgroundColor: isDarkMode ? '#1E2535' : '#FFFFFF',
+      backgroundColor: theme.surface,
       borderRadius: 16,
       overflow: 'hidden',
       maxHeight: SCREEN_WIDTH * 1.1,
@@ -831,7 +830,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderColor: theme.border,
     },
     pickerYearHeader: {
-      backgroundColor: isDarkMode ? '#2A3245' : '#E2E8F0',
+      backgroundColor: isDarkMode ? theme.surface : theme.border,
       paddingHorizontal: 16,
       paddingVertical: 8,
     },
@@ -851,7 +850,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       paddingLeft: 24,
     },
     pickerItemSelected: {
-      backgroundColor: isDarkMode ? '#1E3A5F' : '#EFF6FF',
+      backgroundColor: isDarkMode ? 'rgba(79, 70, 229, 0.2)' : theme.iconBackground,
     },
     pickerItemText: {
       fontSize: 14,
@@ -859,7 +858,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     },
     pickerItemTextSelected: {
       fontWeight: '700',
-      color: '#4F46E5',
+      color: theme.primary,
     },
   });
 

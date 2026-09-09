@@ -83,7 +83,7 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
   if (isLoading) {
     return (
       <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -125,7 +125,7 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
             <Text style={styles.backNavText}>Back to Students</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleDeleteStudent}>
-            <Ionicons name="trash-outline" size={20} color="#EF4444" />
+            <Ionicons name="trash-outline" size={20} color={theme.danger} />
           </TouchableOpacity>
         </View>
 
@@ -153,7 +153,7 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
         {/* Personal Information */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="person" size={18} color="#6366F1" />
+            <Ionicons name="person" size={18} color={theme.primary} />
             <Text style={styles.sectionTitle}>Personal Information</Text>
           </View>
           <View style={styles.gridRow}>
@@ -169,7 +169,7 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
         {/* Contact Information */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="mail" size={18} color="#6366F1" />
+            <Ionicons name="mail" size={18} color={theme.primary} />
             <Text style={styles.sectionTitle}>Contact Information</Text>
           </View>
           <View style={styles.gridRow}>
@@ -184,7 +184,7 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
         {/* Parent / Guardian Information */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="people" size={18} color="#6366F1" />
+            <Ionicons name="people" size={18} color={theme.primary} />
             <Text style={styles.sectionTitle}>Parent / Guardian Information</Text>
           </View>
           <View style={styles.gridRow}>
@@ -200,7 +200,7 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
         {/* Emergency Contact */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="warning" size={18} color="#6366F1" />
+            <Ionicons name="warning" size={18} color={theme.primary} />
             <Text style={styles.sectionTitle}>Emergency Contact</Text>
           </View>
           <View style={styles.gridRow}>
@@ -216,7 +216,7 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
         {/* Academic Information */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="school" size={18} color="#6366F1" />
+            <Ionicons name="school" size={18} color={theme.primary} />
             <Text style={styles.sectionTitle}>Academic Information</Text>
           </View>
           <View style={styles.gridRow}>
@@ -232,7 +232,7 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
         {/* Attendance Details */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="calendar-outline" size={18} color="#6366F1" />
+            <Ionicons name="calendar-outline" size={18} color={theme.primary} />
             <Text style={styles.sectionTitle}>Attendance Details</Text>
           </View>
           <View style={styles.gridRow}>
@@ -258,7 +258,7 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
         {/* Performance & Grades */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="trending-up" size={18} color="#6366F1" />
+            <Ionicons name="trending-up" size={18} color={theme.primary} />
             <Text style={styles.sectionTitle}>Performance & Grades</Text>
           </View>
           <View style={styles.gridRow}>
@@ -279,7 +279,7 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
         {/* Fee & Payment Status */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="cash-outline" size={18} color="#6366F1" />
+            <Ionicons name="cash-outline" size={18} color={theme.primary} />
             <Text style={styles.sectionTitle}>Fee & Payment Status</Text>
           </View>
           <View style={styles.gridRow}>
@@ -311,23 +311,23 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     backNavText: { color: theme.primary, fontSize: 14, fontWeight: '600', marginLeft: 6 },
 
     heroCard: {
-      backgroundColor: '#8B5CF6',
+      backgroundColor: theme.primary,
       borderRadius: 16,
       padding: 24,
       flexDirection: 'row',
       alignItems: 'center',
       marginBottom: 24,
-      shadowColor: '#8B5CF6', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
+      shadowColor: theme.primary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
     },
     heroAvatar: {
-      width: 64, height: 64, borderRadius: 32, backgroundColor: '#A78BFA',
+      width: 64, height: 64, borderRadius: 32, backgroundColor: theme.secondary,
       alignItems: 'center', justifyContent: 'center', marginRight: 20,
-      borderWidth: 2, borderColor: '#C4B5FD',
+      borderWidth: 2, borderColor: theme.border,
     },
-    heroAvatarText: { fontSize: 28, fontWeight: 'bold', color: '#FFF' },
+    heroAvatarText: { fontSize: 28, fontWeight: 'bold', color: theme.onPrimary },
     heroInfo: { flex: 1 },
-    heroName: { fontSize: 24, fontWeight: 'bold', color: '#FFF', marginBottom: 4 },
-    heroEmail: { fontSize: 13, color: '#DDD6FE', marginBottom: 12 },
+    heroName: { fontSize: 24, fontWeight: 'bold', color: theme.onPrimary, marginBottom: 4 },
+    heroEmail: { fontSize: 13, color: theme.onPrimary, marginBottom: 12 },
     heroBadges: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     badge: { 
       paddingHorizontal: 10, paddingVertical: 4, 
@@ -335,7 +335,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
       flexDirection: 'row', alignItems: 'center'
     },
-    badgeText: { fontSize: 11, fontWeight: '600', color: '#FFF' },
+    badgeText: { fontSize: 11, fontWeight: '600', color: theme.onPrimary },
 
     sectionCard: {
       backgroundColor: theme.surface,
@@ -343,7 +343,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       padding: 20,
       marginBottom: 16,
       borderWidth: 1, borderColor: theme.border,
-      shadowColor: '#64748B', shadowOffset: { width: 0, height: 2 }, shadowOpacity: isDarkMode ? 0.2 : 0.05, shadowRadius: 4, elevation: 2,
+      shadowColor: theme.text, shadowOffset: { width: 0, height: 2 }, shadowOpacity: isDarkMode ? 0.2 : 0.05, shadowRadius: 4, elevation: 2,
     },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: theme.border },
     sectionTitle: { fontSize: 16, fontWeight: '700', color: theme.text, marginLeft: 8 },

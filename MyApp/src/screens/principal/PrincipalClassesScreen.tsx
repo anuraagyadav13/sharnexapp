@@ -14,6 +14,7 @@ import {
   TextInput,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
+import { BRAND } from '../../constants/theme';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useAuth } from '../../store/AuthContext';
@@ -233,7 +234,7 @@ const PrincipalClassesScreen: React.FC<Props> = ({ navigation }) => {
                   handleDeleteClass(item.id, item.name || 'this class');
                 }}
               >
-                <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                <Ionicons name="trash-outline" size={18} color={theme.danger} />
               </TouchableOpacity>
             </View>
           </View>
@@ -287,7 +288,7 @@ const PrincipalClassesScreen: React.FC<Props> = ({ navigation }) => {
     return (
       <View style={styles.errorContainer}>
         <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
-        <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+        <Ionicons name="alert-circle-outline" size={64} color={theme.danger} />
         <Text style={styles.errorTitle}>Failed to load classes</Text>
         <Text style={styles.errorSubtitle}>
           An error occurred while fetching the class list. Please try again.
@@ -344,7 +345,7 @@ const PrincipalClassesScreen: React.FC<Props> = ({ navigation }) => {
               activeOpacity={0.8}
               onPress={() => navigation.navigate('PrincipalAddClass')}
             >
-              <Ionicons name="add-circle-outline" size={20} color="#FFF" />
+              <Ionicons name="add-circle-outline" size={20} color={theme.onPrimary} />
               <Text style={styles.addClassButtonText}>Add New Class</Text>
             </TouchableOpacity>
 
@@ -396,7 +397,7 @@ const PrincipalClassesScreen: React.FC<Props> = ({ navigation }) => {
         activeOpacity={0.8}
         onPress={() => navigation.navigate('PrincipalAddClass')}
       >
-        <Ionicons name="add" size={28} color="#FFF" />
+        <Ionicons name="add" size={28} color={theme.onPrimary} />
       </TouchableOpacity>
 
       <NavigationDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} role="principal" />
@@ -443,7 +444,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 8,
   },
   retryBtnText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -488,7 +489,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     gap: 8,
   },
   addClassButtonText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -534,14 +535,14 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.subtext,
   },
   filterPillTextActive: {
-    color: '#FFF',
+    color: theme.onPrimary,
   },
   classCard: {
     backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -650,17 +651,17 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#9F7AEA', // Soft purple
+    backgroundColor: theme.secondary, // Soft purple
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 4,
-    shadowColor: '#1E293B',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
   headerAvatarImage: {
     width: 32,
     height: 32,

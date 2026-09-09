@@ -16,6 +16,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { BRAND } from '../../constants/theme';
 import { getApiErrorMessage } from '../../services/apiClient';
 import principalService from '../../services/principalService';
 import { COUNTRIES } from '../../constants/countries';
@@ -43,7 +44,7 @@ const PrincipalEditStudentScreen = ({ navigation, route }: any) => {
 
     const FormField = ({ label, value, onChangeText, placeholder, keyboardType, required, onPress, countryCode, onCountryCodePress, editable = true, style }: any) => (
         <View style={[styles.field, style]}>
-            <Text style={styles.label}>{label.toUpperCase()} {required && <Text style={{ color: '#EF4444' }}>*</Text>}</Text>
+            <Text style={styles.label}>{label.toUpperCase()} {required && <Text style={{ color: theme.danger }}>*</Text>}</Text>
             <View style={{ flexDirection: 'row', opacity: editable ? 1 : 0.6 }}>
                 {countryCode && (
                     <TouchableOpacity
@@ -249,7 +250,7 @@ const PrincipalEditStudentScreen = ({ navigation, route }: any) => {
     if (isLoading) {
         return (
             <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center' }]}>
-                <ActivityIndicator size="large" color="#8B5CF6" />
+                <ActivityIndicator size="large" color={theme.primary} />
             </View>
         );
     }
@@ -375,7 +376,7 @@ const PrincipalEditStudentScreen = ({ navigation, route }: any) => {
                             onPress={handleSubmit}
                             disabled={isSubmitting}
                         >
-                            {isSubmitting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primarySubmitText}>Save Changes</Text>}
+                            {isSubmitting ? <ActivityIndicator color={theme.onPrimary} /> : <Text style={styles.primarySubmitText}>Save Changes</Text>}
                         </TouchableOpacity>
                     </View>
 
@@ -426,8 +427,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
         },
         headerTitle: { fontSize: 18, fontWeight: '700', color: theme.text, flex: 1, textAlign: 'center', marginHorizontal: 10 },
         headerRight: { flexDirection: 'row', alignItems: 'center' },
-        avatarHeader: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center', shadowColor: '#8B5CF6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
-        avatarTextHeader: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+        avatarHeader: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.primary, alignItems: 'center', justifyContent: 'center', shadowColor: theme.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
+        avatarTextHeader: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
         pageHeader: { marginBottom: 20, paddingHorizontal: 20, marginTop: 4 },
         screenTitle: { fontSize: 24, fontWeight: '800', color: theme.text, marginBottom: 4, letterSpacing: -0.5 },
@@ -442,7 +443,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
         label: { fontSize: 10, fontWeight: '800', color: theme.subtext, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
         premiumInput: { backgroundColor: theme.surface, borderRadius: 12, paddingHorizontal: 14, height: 46, fontSize: 14, color: theme.text, fontWeight: '500', borderWidth: 1, borderColor: theme.border },
         premiumInputText: { fontSize: 14, color: theme.text, fontWeight: '500' },
-        immutableInput: { backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9', borderRadius: 12, paddingHorizontal: 14, height: 46, fontSize: 14, color: theme.subtext, fontWeight: '500', borderWidth: 1, borderColor: theme.border },
+        immutableInput: { backgroundColor: isDarkMode ? theme.surface : theme.background, borderRadius: 12, paddingHorizontal: 14, height: 46, fontSize: 14, color: theme.subtext, fontWeight: '500', borderWidth: 1, borderColor: theme.border },
         countryCodePicker: { width: 70, height: 46, backgroundColor: theme.surface, borderRadius: 12, borderWidth: 1, borderColor: theme.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
         countryCodeText: { fontSize: 13, fontWeight: '600', color: theme.text, marginRight: 4 },
         inputRow: { flexDirection: 'row' },
@@ -451,8 +452,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
         footerActions: { flexDirection: 'row', paddingHorizontal: 20, marginTop: 10, paddingTop: 20, borderTopWidth: 1, borderTopColor: theme.border },
         cancelBtn: { flex: 1, height: 46, borderRadius: 12, borderWidth: 1, borderColor: theme.border, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.surface },
         cancelBtnText: { color: theme.text, fontWeight: '700', fontSize: 13 },
-        primarySubmitBtn: { flex: 1.5, backgroundColor: '#3B82F6', height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center', shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
-        primarySubmitText: { color: '#FFF', fontWeight: '800', fontSize: 13 },
+        primarySubmitBtn: { flex: 1.5, backgroundColor: theme.primary, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center', shadowColor: theme.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
+        primarySubmitText: { color: theme.onPrimary, fontWeight: '800', fontSize: 13 },
 
     });
 

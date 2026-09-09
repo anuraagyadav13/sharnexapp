@@ -338,12 +338,12 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleRow}>
                   <View
-                    style={[styles.sectionIcon, { backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.15)' : '#EEF2FF' }]}
+                    style={[styles.sectionIcon, { backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.15)' : theme.iconBackground }]}
                   >
                     <MaterialCommunityIcons
                       name="account-outline"
                       size={20}
-                      color="#6366F1"
+                      color={theme.primary}
                     />
                   </View>
                   <Text style={styles.sectionTitle}>Identity & Contact</Text>
@@ -466,12 +466,12 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleRow}>
                   <View
-                    style={[styles.sectionIcon, { backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.15)' : '#F0FDF4' }]}
+                    style={[styles.sectionIcon, { backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.08)' }]}
                   >
                     <MaterialCommunityIcons
                       name="bank-outline"
                       size={20}
-                      color="#10B981"
+                      color={theme.success}
                     />
                   </View>
                   <Text style={styles.sectionTitle}>
@@ -587,12 +587,12 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleRow}>
                   <View
-                    style={[styles.sectionIcon, { backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.15)' : '#EEF2FF' }]}
+                    style={[styles.sectionIcon, { backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.15)' : theme.iconBackground }]}
                   >
                     <MaterialCommunityIcons
                       name="face-recognition"
                       size={20}
-                      color="#6366F1"
+                      color={theme.primary}
                     />
                   </View>
                   <Text style={styles.sectionTitle}>Biometric Enrollment</Text>
@@ -610,7 +610,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
                     <MaterialCommunityIcons
                       name="face-recognition"
                       size={80}
-                      color="#6366F1"
+                      color={theme.primary}
                     />
                   )}
                 </View>
@@ -622,7 +622,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
                   style={styles.enrollBtn}
                   onPress={handleLaunchCamera}
                 >
-                  <Ionicons name="camera-outline" size={22} color="#FFF" />
+                  <Ionicons name="camera-outline" size={22} color={theme.onPrimary} />
                   <Text style={styles.enrollBtnText}>
                     {photo ? 'Retake Photo' : 'Launch Camera'}
                   </Text>
@@ -657,7 +657,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
-                    <ActivityIndicator color="#FFF" size="small" />
+                    <ActivityIndicator color={theme.onPrimary} size="small" />
                   ) : (
                     <>
                       <Text style={styles.primarySubmitBtnText}>
@@ -666,7 +666,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
                       <Ionicons
                         name="checkmark-circle"
                         size={20}
-                        color="#FFF"
+                        color={theme.onPrimary}
                       />
                     </>
                   )}
@@ -696,6 +696,8 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
         visible={selectionConfig.visible}
         title={selectionConfig.title}
         options={selectionConfig.options}
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
         onSelect={handleSelectOption}
         onClose={() =>
           setSelectionConfig(prev => ({ ...prev, visible: false }))
@@ -730,7 +732,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       backgroundColor: theme.surface,
       alignItems: 'center',
       justifyContent: 'center',
-      shadowColor: '#000',
+      shadowColor: theme.text,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: isDarkMode ? 0.3 : 0.05,
       shadowRadius: 5,
@@ -769,7 +771,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       position: 'absolute',
       height: '100%',
       width: SCREEN_WIDTH / 3 - 16,
-      backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.2)' : '#EEF2FF',
+      backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.2)' : theme.iconBackground,
       borderRadius: 12,
       top: 4,
       left: 4,
@@ -860,18 +862,18 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     footerRow: { flexDirection: 'row', gap: 10, marginTop: 15 },
     primaryNextBtn: {
       flex: 1,
-      backgroundColor: '#4F46E5',
+      backgroundColor: theme.primary,
       borderRadius: 12,
       height: 48,
       alignItems: 'center',
       justifyContent: 'center',
-      shadowColor: '#4F46E5',
+      shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.2,
       shadowRadius: 6,
       elevation: 4,
     },
-    primaryNextBtnText: { color: '#FFF', fontSize: 14, fontWeight: '800' },
+    primaryNextBtnText: { color: theme.onPrimary, fontSize: 14, fontWeight: '800' },
     outlineBackBtn: {
       width: 90,
       borderRadius: 12,
@@ -897,13 +899,13 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 140,
       height: 140,
       borderRadius: 70,
-      backgroundColor: isDarkMode ? '#1E1B4B' : '#FAFBFF',
+      backgroundColor: isDarkMode ? theme.surface : theme.background,
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 20,
       borderStyle: 'dashed',
       borderWidth: 2,
-      borderColor: '#6366F1',
+      borderColor: theme.primary,
       overflow: 'hidden',
     },
     capturedPhoto: { width: '100%', height: '100%' },
@@ -917,7 +919,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       fontWeight: '500',
     },
     enrollBtn: {
-      backgroundColor: '#6366F1',
+      backgroundColor: theme.primary,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
@@ -925,13 +927,13 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       paddingHorizontal: 24,
       borderRadius: 12,
     },
-    enrollBtnText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+    enrollBtnText: { color: theme.onPrimary, fontSize: 14, fontWeight: '700' },
 
     legalNotice: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
-      backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC',
+      backgroundColor: isDarkMode ? theme.surface : theme.background,
       padding: 12,
       borderRadius: 12,
       marginBottom: 20,
@@ -946,20 +948,20 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
 
     primarySubmitBtn: {
       flex: 1,
-      backgroundColor: '#4F46E5',
+      backgroundColor: theme.primary,
       borderRadius: 12,
       height: 48,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       gap: 8,
-      shadowColor: '#4F46E5',
+      shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.2,
       shadowRadius: 6,
       elevation: 4,
     },
-    primarySubmitBtnText: { color: '#FFF', fontSize: 14, fontWeight: '800' },
+    primarySubmitBtnText: { color: theme.onPrimary, fontSize: 14, fontWeight: '800' },
   });
 
 export default PrincipalAddStaffScreen;

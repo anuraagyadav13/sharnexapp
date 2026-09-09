@@ -358,7 +358,7 @@ const PrincipalEditStaffScreen: React.FC<Props> = ({ navigation, route }) => {
                 onPress={() => setActiveTab('bank')}
               >
                 <Text style={styles.nextButtonText}>Financial Details</Text>
-                <Ionicons name="arrow-forward" size={18} color="#FFF" />
+                <Ionicons name="arrow-forward" size={18} color={theme.onPrimary} />
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -460,7 +460,7 @@ const PrincipalEditStaffScreen: React.FC<Props> = ({ navigation, route }) => {
                 onPress={() => setActiveTab('face')}
               >
                 <Text style={styles.nextButtonText}>Biometrics</Text>
-                <Ionicons name="arrow-forward" size={18} color="#FFF" />
+                <Ionicons name="arrow-forward" size={18} color={theme.onPrimary} />
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -486,7 +486,7 @@ const PrincipalEditStaffScreen: React.FC<Props> = ({ navigation, route }) => {
                   : 'Capture facial data to enable attendance tracking via smart cameras.'}
               </Text>
               <TouchableOpacity style={styles.updateFaceBtn} onPress={handleLaunchCamera}>
-                <Ionicons name="camera-outline" size={18} color="#FFF" />
+                <Ionicons name="camera-outline" size={18} color={theme.onPrimary} />
                 <Text style={styles.updateFaceText}>
                   {photo ? 'Retake Face Photo' : 'Capture Face Photo'}
                 </Text>
@@ -506,11 +506,11 @@ const PrincipalEditStaffScreen: React.FC<Props> = ({ navigation, route }) => {
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
-                  <ActivityIndicator color="#FFF" size="small" />
+                  <ActivityIndicator color={theme.onPrimary} size="small" />
                 ) : (
                   <>
                     <Text style={styles.submitButtonText}>Save All Changes</Text>
-                    <Ionicons name="checkmark-circle" size={18} color="#FFF" />
+                    <Ionicons name="checkmark-circle" size={18} color={theme.onPrimary} />
                   </>
                 )}
               </TouchableOpacity>
@@ -574,7 +574,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       justifyContent: 'center',
       gap: 6,
     },
-    activeTabItem: { backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.2)' : '#EEF2FF' },
+    activeTabItem: { backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.2)' : theme.iconBackground },
     tabLabel: { fontSize: 11, fontWeight: '600', color: theme.subtext },
     activeTabLabel: { color: theme.primary },
 
@@ -628,7 +628,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     },
 
     nextButton: {
-      backgroundColor: '#6366F1',
+      backgroundColor: theme.primary,
       borderRadius: 12,
       height: 50,
       flexDirection: 'row',
@@ -636,13 +636,13 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       justifyContent: 'center',
       flex: 1,
       gap: 8,
-      shadowColor: '#6366F1',
+      shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.2,
       shadowRadius: 8,
       elevation: 4,
     },
-    nextButtonText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+    nextButtonText: { color: theme.onPrimary, fontSize: 14, fontWeight: '700' },
 
     footerButtons: { flexDirection: 'row', gap: 15, marginTop: 30, alignItems: 'center' },
     prevButton: {
@@ -658,20 +658,20 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     prevButtonText: { color: theme.subtext, fontSize: 14, fontWeight: '600' },
     submitButton: {
       flex: 2,
-      backgroundColor: '#6366F1',
+      backgroundColor: theme.primary,
       borderRadius: 12,
       height: 50,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       gap: 8,
-      shadowColor: '#6366F1',
+      shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.2,
       shadowRadius: 8,
       elevation: 4,
     },
-    submitButtonText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+    submitButtonText: { color: theme.onPrimary, fontSize: 14, fontWeight: '700' },
 
     biometricCard: {
       backgroundColor: theme.surface,
@@ -686,15 +686,15 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 100,
       height: 100,
       borderRadius: 50,
-      backgroundColor: isDarkMode ? '#1E1B4B' : '#EEF2FF',
+      backgroundColor: isDarkMode ? theme.surface : theme.iconBackground,
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 20,
     },
-    biometricStatus: { fontSize: 18, fontWeight: '700', color: '#10B981', marginBottom: 10 },
+    biometricStatus: { fontSize: 18, fontWeight: '700', color: theme.success, marginBottom: 10 },
     biometricDesc: { fontSize: 14, color: theme.subtext, textAlign: 'center', lineHeight: 22, marginBottom: 25 },
     updateFaceBtn: {
-      backgroundColor: '#6366F1',
+      backgroundColor: theme.primary,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
@@ -702,7 +702,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       paddingHorizontal: 20,
       borderRadius: 12,
     },
-    updateFaceText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
+    updateFaceText: { color: theme.onPrimary, fontSize: 14, fontWeight: '600' },
 
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
     modalContent: { backgroundColor: theme.surface, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 20, maxHeight: '80%' },

@@ -894,7 +894,7 @@ const PrincipalSyllabusLogsScreen: React.FC<Props> = ({ navigation }) => {
                               style={styles.inspectTreeBtn}
                               onPress={() => handleInspectBlueprint(item)}
                             >
-                              <Text style={styles.inspectTreeBtnText}>Inspect Tree</Text>
+                              <Text style={styles.inspectTreeBtnText}>Inspect Blueprint</Text>
                             </TouchableOpacity>
                           </View>
                         </TouchableOpacity>
@@ -2584,7 +2584,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       paddingVertical: 10,
       borderRadius: 14,
       elevation: 6,
-      shadowColor: '#000',
+      shadowColor: theme.text,
       shadowOffset: { width: 0, height: 3 },
       shadowOpacity: 0.3,
       shadowRadius: 5,

@@ -21,6 +21,7 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { BRAND } from '../../constants/theme';
 import apiClient from '../../services/apiClient';
 import principalService from '../../services/principalService';
 import { ENDPOINTS } from '../../constants/api';
@@ -84,7 +85,7 @@ const PrincipalAddStudentScreen = ({ navigation }: any) => {
     <View style={styles.field}>
       <Text style={styles.label}>
         {label.toUpperCase()}{' '}
-        {required && <Text style={{ color: '#EF4444' }}>*</Text>}
+        {required && <Text style={{ color: theme.danger }}>*</Text>}
       </Text>
       <View style={{ flexDirection: 'row', gap: 12 }}>
         {countryCode && (
@@ -370,7 +371,7 @@ const PrincipalAddStudentScreen = ({ navigation }: any) => {
                 <Ionicons
                   name="cloud-upload-outline"
                   size={32}
-                  color="#94A3B8"
+                  color={theme.placeholder}
                 />
                 <Text style={styles.photoUploadText}>
                   Drag and drop a photo here, or click to browse
@@ -599,8 +600,8 @@ const PrincipalAddStudentScreen = ({ navigation }: any) => {
               <Switch
                 value={formData.sendWelcomeEmail}
                 onValueChange={v => updateForm('sendWelcomeEmail', v)}
-                trackColor={{ false: '#E2E8F0', true: '#3B82F6' }}
-                thumbColor="#FFF"
+                trackColor={{ false: theme.border, true: theme.primary }}
+                thumbColor={theme.onPrimary}
               />
             </View>
           </View>
@@ -625,7 +626,7 @@ const PrincipalAddStudentScreen = ({ navigation }: any) => {
               disabled={isSubmitting}
             >
               {isSubmitting ? (
-                <ActivityIndicator color="#FFF" />
+                <ActivityIndicator color={theme.onPrimary} />
               ) : (
                 <Text style={styles.primarySubmitText}>Register Student</Text>
               )}
@@ -653,6 +654,8 @@ const PrincipalAddStudentScreen = ({ navigation }: any) => {
         visible={selectionConfig.visible}
         title={selectionConfig.title}
         options={selectionConfig.options}
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
         onSelect={handleSelectOption}
         onClose={() =>
           setSelectionConfig(prev => ({ ...prev, visible: false }))
@@ -694,16 +697,16 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 36,
       height: 36,
       borderRadius: 18,
-      backgroundColor: '#8B5CF6',
+      backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
-      shadowColor: '#8B5CF6',
+      shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.2,
       shadowRadius: 8,
       elevation: 4,
     },
-    avatarTextHeader: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+    avatarTextHeader: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
     pageHeader: { marginBottom: 20, paddingHorizontal: 20, marginTop: 4 },
     screenTitle: {
@@ -797,7 +800,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderRadius: 8,
       borderWidth: 1,
       borderColor: theme.border,
-      shadowColor: '#000',
+      shadowColor: theme.text,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.02,
       shadowRadius: 4,
@@ -860,18 +863,18 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     cancelBtnText: { color: theme.text, fontWeight: '700', fontSize: 13 },
     primarySubmitBtn: {
       flex: 1.5,
-      backgroundColor: '#3B82F6',
+      backgroundColor: theme.primary,
       height: 46,
       borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
-      shadowColor: '#3B82F6',
+      shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.2,
       shadowRadius: 8,
       elevation: 4,
     },
-    primarySubmitText: { color: '#FFF', fontWeight: '800', fontSize: 13 },
+    primarySubmitText: { color: theme.onPrimary, fontWeight: '800', fontSize: 13 },
   });
 
 export default PrincipalAddStudentScreen;

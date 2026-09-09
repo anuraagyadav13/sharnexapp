@@ -13,6 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
+import { COLORS } from '../../constants/theme';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useAuth } from '../../store/AuthContext';
@@ -46,21 +47,29 @@ const getMonday = (date: Date): string => {
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-const getSubjectColors = (subject?: string, isDarkMode?: boolean) => {
+const getSubjectColors = (subject?: string, isDarkMode?: boolean, theme?: any) => {
   const norm = typeof subject === 'string' ? subject.toLowerCase().trim() : '';
+  const primary = theme?.primary || COLORS.primary;
+  const secondary = theme?.secondary || COLORS.secondary;
+  const warning = theme?.warning || COLORS.warning;
+  const danger = theme?.danger || COLORS.danger;
+  const success = theme?.success || COLORS.success;
+  const subtext = theme?.subtext || COLORS.textSecondary;
+  const iconBg = theme?.iconBackground || COLORS.background;
+
   if (norm.includes('science') || norm.includes('chem') || norm.includes('bio') || norm.includes('phys'))
-    return { iconBg: isDarkMode ? '#7C2D12' : '#FFEDD5', iconColor: isDarkMode ? '#FF8A65' : '#C2410C', barColor: '#C2410C' };
+    return { iconBg: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)', iconColor: warning, barColor: warning };
   if (norm.includes('math'))
-    return { iconBg: isDarkMode ? '#831843' : '#FCE7F3', iconColor: isDarkMode ? '#F472B6' : '#DB2777', barColor: '#DB2777' };
+    return { iconBg: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)', iconColor: danger, barColor: danger };
   if (norm.includes('english') || norm.includes('lit'))
-    return { iconBg: isDarkMode ? '#0C4A6E' : '#E0F2FE', iconColor: isDarkMode ? '#38BDF8' : '#0369A1', barColor: '#0369A1' };
+    return { iconBg: isDarkMode ? 'rgba(59, 130, 246, 0.2)' : iconBg, iconColor: primary, barColor: primary };
   if (norm.includes('computer') || norm.includes('it') || norm.includes('code'))
-    return { iconBg: isDarkMode ? '#1E293B' : '#E2E8F0', iconColor: isDarkMode ? '#94A3B8' : '#334155', barColor: '#334155' };
+    return { iconBg: isDarkMode ? 'rgba(107, 114, 128, 0.2)' : 'rgba(107, 114, 128, 0.1)', iconColor: subtext, barColor: subtext };
   if (norm.includes('hindi') || norm.includes('lang'))
-    return { iconBg: isDarkMode ? '#134E4A' : '#CCFBF1', iconColor: isDarkMode ? '#2DD4BF' : '#0F766E', barColor: '#0F766E' };
+    return { iconBg: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)', iconColor: success, barColor: success };
   if (norm.includes('social') || norm.includes('hist') || norm.includes('geo'))
-    return { iconBg: isDarkMode ? '#365314' : '#ECFDF5', iconColor: isDarkMode ? '#4ADE80' : '#15803D', barColor: '#15803D' };
-  return { iconBg: isDarkMode ? '#581C87' : '#F3E8FF', iconColor: isDarkMode ? '#C084FC' : '#7E22CE', barColor: '#7E22CE' };
+    return { iconBg: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)', iconColor: success, barColor: success };
+  return { iconBg: isDarkMode ? 'rgba(139, 92, 246, 0.2)' : iconBg, iconColor: secondary, barColor: secondary };
 };
 
 const getSubjectIcon = (subject?: string) => {
@@ -337,11 +346,11 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
                           <Text style={styles.dayTimeEndText}>{breakEnd}</Text>
                         </View>
                         <View style={styles.dayTimelineDotCol}>
-                          <View style={[styles.timelineDot, { backgroundColor: isDarkMode ? '#FBBF24' : '#D97706' }]} />
+                          <View style={[styles.timelineDot, { backgroundColor: theme.warning }]} />
                         </View>
                         <View style={styles.dayContentCol}>
                           <View style={styles.lunchDivider}>
-                            <Ionicons name="cafe-outline" size={16} color={isDarkMode ? '#FBBF24' : '#D97706'} />
+                            <Ionicons name="cafe-outline" size={16} color={theme.warning} />
                             <Text style={styles.lunchText}>
                               LUNCH BREAK{' '}
                               <Text style={{ fontWeight: '400', fontSize: 10 }}>
@@ -361,15 +370,15 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
                   const subjectName = slot?.subject || 'Free Period';
                   const teacherName = slot?.teacher?.name || '';
                   const colors = isFree
-                    ? { iconBg: isDarkMode ? '#1E293B' : '#F1F5F9', iconColor: theme.subtext, barColor: theme.border }
-                    : getSubjectColors(subjectName, isDarkMode);
+                    ? { iconBg: isDarkMode ? theme.surface : theme.border, iconColor: theme.subtext, barColor: theme.border }
+                    : getSubjectColors(subjectName, isDarkMode, theme);
                   const iconName = getSubjectIcon(subjectName);
                   const dotColor = isAbsent
-                    ? '#EF4444'
+                    ? theme.danger
                     : substitutionName
-                    ? '#F59E0B'
+                    ? theme.warning
                     : isFree
-                    ? (isDarkMode ? '#475569' : '#CBD5E1')
+                    ? (theme.placeholder)
                     : colors.barColor;
 
                   return (
@@ -387,7 +396,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
                             styles.dayCard,
                             {
                               backgroundColor: theme.surface,
-                              borderColor: isAbsent ? '#EF4444' : substitutionName ? '#F59E0B' : theme.border,
+                              borderColor: isAbsent ? theme.danger : substitutionName ? theme.warning : theme.border,
                               borderStyle: isFree ? 'dashed' : 'solid',
                             },
                           ]}
@@ -436,7 +445,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
                                 <MaterialCommunityIcons
                                   name="swap-horizontal"
                                   size={12}
-                                  color={isDarkMode ? '#FBBF24' : '#D97706'}
+                                  color={theme.warning}
                                   style={{ marginRight: 4 }}
                                 />
                                 <Text style={styles.substituteText} numberOfLines={1}>
@@ -467,11 +476,11 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
                           <Text style={styles.dayTimeEndText}>{breakEnd}</Text>
                         </View>
                         <View style={styles.dayTimelineDotCol}>
-                          <View style={[styles.timelineDot, { backgroundColor: isDarkMode ? '#FBBF24' : '#D97706' }]} />
+                          <View style={[styles.timelineDot, { backgroundColor: theme.warning }]} />
                         </View>
                         <View style={styles.dayContentCol}>
                           <View style={styles.lunchDivider}>
-                            <Ionicons name="cafe-outline" size={16} color={isDarkMode ? '#FBBF24' : '#D97706'} />
+                            <Ionicons name="cafe-outline" size={16} color={theme.warning} />
                             <Text style={styles.lunchText}>
                               LUNCH BREAK{' '}
                               <Text style={{ fontWeight: '400', fontSize: 10 }}>
@@ -491,15 +500,15 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
                   const subjectName = slot.subject || 'Free Period';
                   const teacherName = slot.teacher?.name || '';
                   const colors = isFree
-                    ? { iconBg: isDarkMode ? '#1E293B' : '#F1F5F9', iconColor: theme.subtext, barColor: theme.border }
-                    : getSubjectColors(subjectName, isDarkMode);
+                    ? { iconBg: isDarkMode ? theme.surface : theme.border, iconColor: theme.subtext, barColor: theme.border }
+                    : getSubjectColors(subjectName, isDarkMode, theme);
                   const iconName = getSubjectIcon(subjectName);
                   const dotColor = isAbsent
-                    ? '#EF4444'
+                    ? theme.danger
                     : substitutionName
-                    ? '#F59E0B'
+                    ? theme.warning
                     : isFree
-                    ? (isDarkMode ? '#475569' : '#CBD5E1')
+                    ? (theme.placeholder)
                     : colors.barColor;
 
                   return (
@@ -517,7 +526,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
                             styles.dayCard,
                             {
                               backgroundColor: theme.surface,
-                              borderColor: isAbsent ? '#EF4444' : substitutionName ? '#F59E0B' : theme.border,
+                              borderColor: isAbsent ? theme.danger : substitutionName ? theme.warning : theme.border,
                               borderStyle: isFree ? 'dashed' : 'solid',
                             },
                           ]}
@@ -564,7 +573,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
                                 <MaterialCommunityIcons
                                   name="swap-horizontal"
                                   size={12}
-                                  color={isDarkMode ? '#FBBF24' : '#D97706'}
+                                  color={theme.warning}
                                   style={{ marginRight: 4 }}
                                 />
                                 <Text style={styles.substituteText} numberOfLines={1}>
@@ -675,7 +684,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
                         <Text style={styles.timeText}>{breakStart}</Text>
                       </View>
                       <View style={styles.gridLunchContent}>
-                        <Ionicons name="cafe-outline" size={14} color={isDarkMode ? '#FBBF24' : '#D97706'} style={{ marginRight: 6 }} />
+                        <Ionicons name="cafe-outline" size={14} color={theme.warning} style={{ marginRight: 6 }} />
                         <Text style={styles.gridLunchText}>
                           LUNCH BREAK ({breakStart} - {breakEnd})
                         </Text>
@@ -704,7 +713,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
                       const isFree = !slot || !hasTeacher || slot.subject === 'Free Period';
                       const subjectName = slot?.subject || 'Free Period';
                       const teacherName = slot?.teacher?.name || '';
-                      const colors = getSubjectColors(subjectName, isDarkMode);
+                      const colors = getSubjectColors(subjectName, isDarkMode, theme);
 
                       if (isFree) {
                         return (
@@ -724,7 +733,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
                               styles.gridCard,
                               {
                                 backgroundColor: theme.surface,
-                                borderColor: isAbsent ? '#EF4444' : substitutionName ? '#F59E0B' : theme.border,
+                                borderColor: isAbsent ? theme.danger : substitutionName ? theme.warning : theme.border,
                               },
                             ]}
                           >
@@ -744,7 +753,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
                             </View>
                             {substitutionName && (
                               <View style={styles.compactSubBadge}>
-                                <MaterialCommunityIcons name="swap-horizontal" size={10} color={isDarkMode ? '#FBBF24' : '#D97706'} />
+                                <MaterialCommunityIcons name="swap-horizontal" size={10} color={theme.warning} />
                                 <Text style={styles.compactSubText} numberOfLines={1}>
                                   {substitutionName}
                                 </Text>
@@ -778,14 +787,14 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
       <View style={styles.errorContainer}>
         <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
         <View style={styles.errorBadge}>
-          <Ionicons name="alert-circle-outline" size={40} color="#EF4444" />
+          <Ionicons name="alert-circle-outline" size={40} color={theme.danger} />
         </View>
         <Text style={styles.errorTitle}>Failed to load timetable</Text>
         <Text style={styles.errorSubtitle}>
           An error occurred while fetching timetable data. Please try again.
         </Text>
         <TouchableOpacity style={styles.retryBtn} onPress={loadInitialData}>
-          <Ionicons name="refresh-outline" size={18} color="#FFF" style={{ marginRight: 8 }} />
+          <Ionicons name="refresh-outline" size={18} color={theme.onPrimary} style={{ marginRight: 8 }} />
           <Text style={styles.retryBtnText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -821,7 +830,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => setViewMode('week')}
           accessibilityLabel="Switch to week view"
         >
-          <Ionicons name="calendar-outline" size={14} color={viewMode === 'week' ? '#FFF' : theme.subtext} style={{ marginRight: 6 }} />
+          <Ionicons name="calendar-outline" size={14} color={viewMode === 'week' ? theme.onPrimary : theme.subtext} style={{ marginRight: 6 }} />
           <Text style={[styles.toggleBtnText, viewMode === 'week' && styles.toggleBtnTextActive]}>Week View</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -829,7 +838,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => setViewMode('day')}
           accessibilityLabel="Switch to day view"
         >
-          <Ionicons name="today-outline" size={14} color={viewMode === 'day' ? '#FFF' : theme.subtext} style={{ marginRight: 6 }} />
+          <Ionicons name="today-outline" size={14} color={viewMode === 'day' ? theme.onPrimary : theme.subtext} style={{ marginRight: 6 }} />
           <Text style={[styles.toggleBtnText, viewMode === 'day' && styles.toggleBtnTextActive]}>Day View</Text>
         </TouchableOpacity>
       </View>
@@ -974,7 +983,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: isDarkMode ? '#EF444420' : '#FEE2E2',
+    backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -1000,7 +1009,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderRadius: 12,
   },
   retryBtnText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -1053,7 +1062,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     color: theme.subtext,
   },
   toggleBtnTextActive: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontWeight: '700',
   },
 
@@ -1073,7 +1082,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: theme.border,
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 3,
@@ -1094,7 +1103,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     color: theme.subtext,
   },
   classPillTextActive: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontWeight: '800',
   },
 
@@ -1114,7 +1123,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: theme.border,
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
@@ -1151,12 +1160,12 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   todayBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: isDarkMode ? '#3B82F620' : '#EFF6FF',
+    backgroundColor: isDarkMode ? 'rgba(59, 130, 246, 0.2)' : theme.iconBackground,
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: isDarkMode ? '#3B82F640' : '#BFDBFE',
+    borderColor: isDarkMode ? 'rgba(59, 130, 246, 0.4)' : theme.border,
   },
   todayBtnText: {
     fontSize: 12,
@@ -1184,7 +1193,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     alignItems: 'center',
   },
   skeletonLine: {
-    backgroundColor: isDarkMode ? '#334155' : '#E2E8F0',
+    backgroundColor: isDarkMode ? theme.surface : theme.border,
     borderRadius: 4,
   },
 
@@ -1210,7 +1219,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderColor: theme.border,
   },
   dayHeaderToday: {
-    backgroundColor: isDarkMode ? '#1E293B' : '#EFF6FF',
+    backgroundColor: isDarkMode ? theme.surface : theme.iconBackground,
     borderColor: theme.primary,
   },
   dayDateText: {
@@ -1232,7 +1241,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     marginLeft: 'auto',
   },
   todayBadgeText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.5,
@@ -1337,18 +1346,18 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: isDarkMode ? '#F59E0B15' : '#FFFBEB',
+    backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)',
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: isDarkMode ? '#78350F40' : '#FDE68A',
+    borderColor: isDarkMode ? 'rgba(245, 158, 11, 0.4)' : theme.warning,
     marginTop: 4,
   },
   lunchText: {
     fontSize: 12,
     fontWeight: '800',
-    color: isDarkMode ? '#FBBF24' : '#D97706',
+    color: theme.warning,
   },
 
   // Grid (Week View)
@@ -1383,7 +1392,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     marginHorizontal: 4,
   },
   dayHeaderCellToday: {
-    backgroundColor: isDarkMode ? '#1E293B' : '#EFF6FF',
+    backgroundColor: isDarkMode ? theme.surface : theme.iconBackground,
     borderColor: theme.primary,
   },
   dayHeaderTextGrid: {
@@ -1465,7 +1474,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     flex: 1,
   },
   compactAbsentBadge: {
-    backgroundColor: isDarkMode ? '#EF444430' : '#FEE2E2',
+    backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
     paddingHorizontal: 4,
     paddingVertical: 1,
     borderRadius: 3,
@@ -1474,13 +1483,13 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   compactAbsentText: {
     fontSize: 8,
     fontWeight: '900',
-    color: '#EF4444',
+    color: theme.danger,
   },
   compactSubBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
-    backgroundColor: isDarkMode ? '#F59E0B20' : '#FFFBEB',
+    backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)',
     paddingHorizontal: 4,
     paddingVertical: 2,
     borderRadius: 4,
@@ -1489,7 +1498,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   compactSubText: {
     fontSize: 9,
     fontWeight: '700',
-    color: isDarkMode ? '#FBBF24' : '#D97706',
+    color: theme.warning,
   },
   freePeriodCard: {
     borderRadius: 10,
@@ -1515,12 +1524,12 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   },
   gridLunchContent: {
     flex: 1,
-    backgroundColor: isDarkMode ? '#F59E0B15' : '#FFFBEB',
+    backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)',
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: isDarkMode ? '#78350F40' : '#FDE68A',
+    borderColor: isDarkMode ? 'rgba(245, 158, 11, 0.4)' : theme.warning,
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: 4,
@@ -1528,7 +1537,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   gridLunchText: {
     fontSize: 11,
     fontWeight: '800',
-    color: isDarkMode ? '#FBBF24' : '#D97706',
+    color: theme.warning,
     letterSpacing: 0.5,
   },
 
@@ -1539,7 +1548,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     marginTop: 2,
   },
   absentBadge: {
-    backgroundColor: isDarkMode ? '#EF444425' : '#FEE2E2',
+    backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
     paddingVertical: 2,
     paddingHorizontal: 6,
     borderRadius: 4,
@@ -1548,20 +1557,20 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   absentText: {
     fontSize: 9,
     fontWeight: '800',
-    color: '#EF4444',
+    color: theme.danger,
   },
   substituteRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 6,
-    backgroundColor: isDarkMode ? '#F59E0B15' : '#FFFBEB',
+    backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)',
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 6,
   },
   substituteText: {
     fontSize: 11,
-    color: isDarkMode ? '#FBBF24' : '#D97706',
+    color: theme.warning,
     fontWeight: '700',
   },
   emptyDayContainer: {
@@ -1605,17 +1614,17 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#9F7AEA',
+    backgroundColor: theme.secondary,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 4,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
   headerAvatarImage: {
     width: 32,
     height: 32,
