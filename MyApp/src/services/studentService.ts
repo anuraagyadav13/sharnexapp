@@ -210,6 +210,16 @@ const studentService = {
     );
   },
 
+  // File Upload (Multipart)
+  uploadFile(formData: FormData) {
+    return apiClient.post(ENDPOINTS.UPLOAD, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      transformRequest: (data) => data,
+    });
+  },
+
   // Grades
   getGrades() {
     return apiClient.get(ENDPOINTS.STUDENT.GRADES);

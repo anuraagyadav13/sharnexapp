@@ -50,6 +50,7 @@ const STUDENT_MENU: MenuItem[] = [
   // { id: '8', label: 'Grades & Reports', icon: 'document-text-outline' },
   { id: 'result-mgmt', label: 'Official Result', icon: 'reader-outline' },
   { id: '9', label: 'Fees Portal', icon: 'receipt-outline' },
+  { id: 'library', label: 'Library', icon: 'book-outline' },
   { id: 'div2', label: '', icon: '', isDivider: true },
   { id: '10', label: 'Messages', icon: 'chatbox-ellipses-outline' },
   { id: '11', label: 'Account Settings', icon: 'settings-outline' },
@@ -222,8 +223,8 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
         case 'Fees & Payments': return currentRouteName === 'PrincipalFees' || currentRouteName === 'Fees';
         case 'Equipment': return currentRouteName === 'TeacherEquipment';
         case 'Equipment Requests': return currentRouteName === 'PrincipalEquipment';
-        case 'Library Management': return currentRouteName === 'PrincipalLibrary';
-        case 'Library': return currentRouteName === 'PrincipalLibrary' || currentRouteName === 'LibraryDashboard';
+        case 'Library Management': return role === 'student' ? currentRouteName === 'StudentLibrary' : currentRouteName === 'PrincipalLibrary';
+        case 'Library': return currentRouteName === 'StudentLibrary' || currentRouteName === 'PrincipalLibrary' || currentRouteName === 'LibraryDashboard';
         case 'Bus Tracking': return currentRouteName === 'BusDashboard' || currentRouteName === 'FleetTracking' || currentRouteName === 'AddVehicle' || currentRouteName === 'RouteManagement' || currentRouteName === 'RouteConfiguration' || currentRouteName === 'Schedules' || currentRouteName === 'AddSchedule' || currentRouteName === 'DriverManagement' || currentRouteName === 'AddDriver' || currentRouteName === 'EnrollStudent';
         case 'Result Management': return currentRouteName === 'PrincipalRSM' || currentRouteName === 'PrincipalRMS' || currentRouteName === 'ResultManagement' || currentRouteName === 'TeacherResultManagement';
         case 'Syllabus & Daily Logs': return currentRouteName === 'PrincipalSyllabusLogs' || currentRouteName === 'StudentSyllabusLogs';
@@ -292,7 +293,8 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
         else if (label === 'Equipment') navigation.navigate('TeacherEquipment');
         else if (label === 'Equipment Requests') navigation.navigate('PrincipalEquipment');
         else if (label === 'Library Management' || label === 'Library') {
-          if (role === 'principal') navigation.navigate('PrincipalLibrary');
+          if (role === 'student') navigation.navigate('StudentLibrary');
+          else if (role === 'principal') navigation.navigate('PrincipalLibrary');
           else navigation.navigate('LibraryDashboard');
         }
         else if (label === 'Bus Tracking') navigation.navigate('BusDashboard');

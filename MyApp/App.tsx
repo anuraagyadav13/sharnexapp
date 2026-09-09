@@ -27,7 +27,6 @@ import AssignmentDetailsScreen from './src/screens/student/AssignmentDetailsScre
 import AssignmentSubmitScreen from './src/screens/student/AssignmentSubmitScreen';
 import AssignmentGradeScreen from './src/screens/student/AssignmentGradeScreen';
 import QuizzesScreen from './src/screens/student/QuizzesScreen';
-import QuizDetailsScreen from './src/screens/student/QuizDetailsScreen';
 import StartQuizScreen from './src/screens/student/StartQuizScreen';
 import QuizResultScreen from './src/screens/student/QuizResultScreen';
 import ViewQuizDetailScreen from './src/screens/student/ViewQuizDetailScreen';
@@ -42,6 +41,7 @@ import TimetableScreen from './src/screens/student/TimetableScreen';
 import OfficialResultScreen from './src/screens/student/OfficialResultScreen';
 import ResultManagementScreen from './src/screens/student/ResultManagementScreen';
 import StudentSyllabusLogsScreen from './src/screens/student/StudentSyllabusLogsScreen';
+import LibraryScreen from './src/screens/student/LibraryScreen';
 import TeacherAttendanceScreen from './src/screens/teacher/TeacherAttendanceScreen';
 import TeacherViewAttendanceScreen from './src/screens/teacher/TeacherViewAttendanceScreen';
 import TeacherMarkAttendanceScreen from './src/screens/teacher/TeacherMarkAttendanceScreen';
@@ -171,7 +171,6 @@ function RootNavigator() {
                 component={StudentDashboard}
               />
               <Stack.Screen name="Quizzes" component={QuizzesScreen} />
-              <Stack.Screen name="QuizDetails" component={QuizDetailsScreen} />
               <Stack.Screen name="StartQuiz" component={StartQuizScreen} />
               <Stack.Screen name="QuizResult" component={QuizResultScreen} />
               <Stack.Screen
@@ -215,6 +214,10 @@ function RootNavigator() {
               <Stack.Screen
                 name="StudentSyllabusLogs"
                 component={StudentSyllabusLogsScreen}
+              />
+              <Stack.Screen
+                name="StudentLibrary"
+                component={LibraryScreen}
               />
               <Stack.Screen name="Messages" component={StudentMessagesScreen} />
             </>

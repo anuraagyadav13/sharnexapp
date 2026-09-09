@@ -1,17 +1,17 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   ScrollView,
   View,
   Text,
+  TextInput,
   StyleSheet,
   StatusBar,
   Platform,
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  Share,
   Alert,
-  Image,
+  Modal,
 } from 'react-native';
 
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -23,8 +23,14 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
 import { StudentHeader } from '../../components/StudentHeader';
 import { useTheme } from '../../store/ThemeContext';
+import { COLORS } from '../../constants/theme';
 import studentService from '../../services/studentService';
 import Skeleton from '../../components/common/Skeleton';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { generatePDF } from 'react-native-html-to-pdf';
+import RNPrint from 'react-native-print';
+import Share from 'react-native-share';
+import { toFileUri, toRawFilePath } from '../../utils/fileUtils';
 
 // ─── TypeScript Interfaces ────────────────────────────────────────────────────
 
@@ -67,7 +73,10 @@ interface AttendanceData {
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 
-type AttendanceScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Attendance'>;
+type AttendanceScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'Attendance'
+>;
 
 interface Props {
   navigation: AttendanceScreenNavigationProp;
@@ -80,7 +89,11 @@ const formatDate = (dateVal: string | undefined | null): string => {
   try {
     const d = new Date(dateVal);
     if (isNaN(d.getTime())) return '----';
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return d.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   } catch {
     return '----';
   }
@@ -95,20 +108,158 @@ const getDayName = (dateStr: string | undefined | null): string => {
   }
 };
 
-const getCalendarStatus = (status: string): 'present' | 'absent' | 'late' | 'excused' | 'none' => {
+const getCalendarStatus = (
+  status: string,
+): 'present' | 'absent' | 'late' | 'excused' | 'none' => {
   switch (status?.toLowerCase()) {
-    case 'present': return 'present';
-    case 'absent': return 'absent';
-    case 'late': return 'late';
-    case 'excused': return 'excused';
-    default: return 'none';
+    case 'present':
+      return 'present';
+    case 'absent':
+      return 'absent';
+    case 'late':
+      return 'late';
+    case 'excused':
+      return 'excused';
+    default:
+      return 'none';
   }
 };
+
+// ─── HTML Report Generator ────────────────────────────────────────────────────
+
+function generateAttendanceHTML(
+  studentName: string,
+  className: string,
+  academicYear: string,
+  stats: AttendanceStatistics | undefined,
+  records: AttendanceRecord[],
+): string {
+  const summaryRows = `
+    <tr><td>Attendance Rate</td><td style="font-weight:700;">${
+      stats?.attendancePercentage?.toFixed(1) ?? '0.0'
+    }%</td></tr>
+    <tr><td>Total Days</td><td style="font-weight:700;">${
+      stats?.totalDays ?? 0
+    }</td></tr>
+    <tr><td>Days Present</td><td style="font-weight:700;">${
+      stats?.presentDays ?? 0
+    }</td></tr>
+    <tr><td>Days Absent</td><td style="font-weight:700;">${
+      stats?.absentDays ?? 0
+    }</td></tr>
+    <tr><td>Days Late</td><td style="font-weight:700;">${
+      stats?.lateDays ?? 0
+    }</td></tr>
+    <tr><td>Days Excused</td><td style="font-weight:700;">${
+      stats?.excusedDays ?? 0
+    }</td></tr>
+    <tr><td>Class Average</td><td style="font-weight:700;">${
+      stats?.classAverage?.toFixed(1) ?? '0.0'
+    }%</td></tr>
+  `;
+
+  const recordRows = records
+    .map(r => {
+      const d = new Date(r.date);
+      const formatted = isNaN(d.getTime())
+        ? r.date
+        : d.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          });
+      const day = isNaN(d.getTime())
+        ? ''
+        : d.toLocaleDateString('en-US', { weekday: 'short' });
+      const st = (r.status || '').toUpperCase();
+      const stColor =
+        st === 'PRESENT'
+          ? COLORS.success
+          : st === 'ABSENT'
+          ? COLORS.danger
+          : st === 'LATE'
+          ? COLORS.warning
+          : COLORS.primary;
+      return `
+        <tr>
+          <td>${formatted}</td>
+          <td>${day}</td>
+          <td><span style="color:${stColor};font-weight:700;">${st}</span></td>
+          <td>${r.notes || '—'}</td>
+        </tr>
+      `;
+    })
+    .join('');
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;color:#0f172a;padding:32px;background:#fff;}
+  .header{text-align:center;margin-bottom:24px;border-bottom:2px solid #4F46E5;padding-bottom:16px;}
+  .title{font-size:22px;font-weight:800;color:#1e1b4b;margin-bottom:4px;}
+  .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px;padding:12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;}
+  .meta-item{font-size:12px;}
+  .meta-label{font-weight:700;color:#64748b;}
+  .section-title{font-size:14px;font-weight:700;color:#1e1b4b;margin:20px 0 10px;text-transform:uppercase;}
+  table{width:100%;border-collapse:collapse;margin-bottom:20px;}
+  th,td{padding:8px 10px;border:1px solid #e2e8f0;text-align:left;font-size:11px;}
+  th{background:#4F46E5;color:#ffffff;font-weight:700;}
+  tr:nth-child(even){background:#f8fafc;}
+  .footer{text-align:center;font-size:10px;color:#94a3b8;margin-top:30px;border-top:1px solid #e2e8f0;padding-top:12px;}
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">OFFICIAL ATTENDANCE REPORT</div>
+    <div style="font-size:11px;color:#64748b;">Sharnex Academic Management Platform</div>
+  </div>
+
+  <div class="meta-grid">
+    <div class="meta-item"><span class="meta-label">Student:</span> ${studentName}</div>
+    <div class="meta-item"><span class="meta-label">Class:</span> ${
+      className || 'N/A'
+    }</div>
+    <div class="meta-item"><span class="meta-label">Academic Year:</span> ${
+      academicYear || 'Current'
+    }</div>
+    <div class="meta-item"><span class="meta-label">Generated Date:</span> ${new Date().toLocaleDateString(
+      'en-US',
+      { year: 'numeric', month: 'long', day: 'numeric' },
+    )}</div>
+  </div>
+
+  <div class="section-title">Attendance Summary</div>
+  <table>
+    <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+    <tbody>${summaryRows}</tbody>
+  </table>
+
+  <div class="section-title">Attendance Records (${records.length})</div>
+  <table>
+    <thead><tr><th>Date</th><th>Day</th><th>Status</th><th>Remarks</th></tr></thead>
+    <tbody>${
+      recordRows ||
+      '<tr><td colspan="4" style="text-align:center;">No records available</td></tr>'
+    }</tbody>
+  </table>
+
+  <div class="footer">
+    Issued automatically by Sharnex Academic System &bull; Official Student Record
+  </div>
+</body>
+</html>`;
+}
 
 // ─── Loading Skeleton ─────────────────────────────────────────────────────────
 
 const PageSkeleton: React.FC<{ styles: any }> = ({ styles }) => (
-  <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+  <ScrollView
+    contentContainerStyle={styles.scrollContent}
+    showsVerticalScrollIndicator={false}
+  >
     <View style={styles.pageTitleWrapper}>
       <Skeleton width="40%" height={24} style={{ marginBottom: 8 }} />
       <Skeleton width="60%" height={16} />
@@ -116,7 +267,9 @@ const PageSkeleton: React.FC<{ styles: any }> = ({ styles }) => (
     <View style={styles.card}>
       <Skeleton width="50%" height={20} style={{ marginBottom: 15 }} />
       <View style={styles.statsRow}>
-        {[0, 1, 2].map(i => <Skeleton key={i} width="31%" height={80} borderRadius={8} />)}
+        {[0, 1, 2].map(i => (
+          <Skeleton key={i} width="31%" height={80} borderRadius={8} />
+        ))}
       </View>
     </View>
     <View style={styles.card}>
@@ -159,16 +312,66 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
+  // Goal State
+  const [targetAttendance, setTargetAttendance] = useState(95);
+  const [isEditingGoal, setIsEditingGoal] = useState(false);
+  const [goalInput, setGoalInput] = useState('95');
+
+  // Filter & Search State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState<
+    'all' | 'present' | 'absent' | 'late' | 'excused'
+  >('all');
 
   // Data state
-  const [attendanceData, setAttendanceData] = useState<AttendanceData | null>(null);
+  const [attendanceData, setAttendanceData] = useState<AttendanceData | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Calendar navigation state
   const now = new Date();
   const [calYear, setCalYear] = useState<number>(now.getFullYear());
-  const [calMonth, setCalMonth] = useState<number>(now.getMonth()); // 0-indexed
+  const [calMonth, setCalMonth] = useState<number>(now.getMonth());
+
+  // Load persisted goal
+  useEffect(() => {
+    const loadTarget = async () => {
+      try {
+        const saved = await AsyncStorage.getItem('@student_attendance_target');
+        if (saved) {
+          const val = Number(saved);
+          if (!isNaN(val) && val >= 50 && val <= 100) {
+            setTargetAttendance(val);
+            setGoalInput(val.toString());
+          }
+        }
+      } catch {}
+    };
+    loadTarget();
+  }, []);
+
+  const handleSaveGoal = async () => {
+    const num = Number(goalInput.trim());
+    if (isNaN(num) || num < 50 || num > 100) {
+      Alert.alert(
+        'Invalid Target',
+        'Please enter a target attendance between 50% and 100%.',
+      );
+      return;
+    }
+    const clamped = Math.max(50, Math.min(100, Math.round(num)));
+    setTargetAttendance(clamped);
+    setGoalInput(clamped.toString());
+    setIsEditingGoal(false);
+    try {
+      await AsyncStorage.setItem(
+        '@student_attendance_target',
+        clamped.toString(),
+      );
+    } catch {}
+  };
 
   // ─── Fetch ──────────────────────────────────────────────────────────────────
 
@@ -183,9 +386,7 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
 
       const meRes = await studentService.getMe();
       const meData = meRes.normalized?.data;
-      // Attendance endpoint uses the top-level user ID (matches JWT), not student.id
       const studentId: string = meData?.id ?? meData?.student?.id ?? '';
-
 
       if (!studentId) {
         throw new Error('Could not resolve studentId from /auth/me');
@@ -193,10 +394,10 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
 
       const res = await studentService.getAttendance(studentId);
       const payload = res.normalized?.data as AttendanceData;
-      console.log('[Attendance] statistics:', JSON.stringify(payload?.statistics));
       setAttendanceData(payload);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load attendance.';
+      const message =
+        err instanceof Error ? err.message : 'Failed to load attendance.';
       console.error('[Attendance] fetch failed:', message);
       setError(message);
     } finally {
@@ -205,81 +406,121 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
     }
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchAttendance();
   }, [fetchAttendance]);
 
-  const handleGenerateReport = useCallback(async () => {
-    setIsGeneratingReport(true);
-    try {
-      // Resolve studentId the same way fetchAttendance does
-      const meRes = await studentService.getMe();
-      const meData = meRes.normalized?.data;
-      const studentId: string = meData?.id ?? meData?.student?.id ?? '';
+  // ─── PDF Print / Share ──────────────────────────────────────────────────────
 
-      if (!studentId) {
-        throw new Error('Could not resolve student ID. Please try again.');
+  const handleGenerateReport = useCallback(
+    async (action: 'print' | 'share') => {
+      setIsGeneratingReport(true);
+      try {
+        const meRes = await studentService.getMe();
+        const meData = meRes.normalized?.data;
+        const studentName = meData?.name || authState.user?.name || 'Student';
+        const className =
+          meData?.student?.class || meData?.student?.className || '';
+        const academicYear =
+          attendanceData?.statistics?.academicYear?.year ||
+          `${new Date().getFullYear()}`;
+
+        const html = generateAttendanceHTML(
+          studentName,
+          className,
+          academicYear,
+          attendanceData?.statistics,
+          attendanceData?.records ?? [],
+        );
+
+        const file = await generatePDF({
+          html,
+          fileName: `Attendance_Report_${studentName.replace(/\s+/g, '_')}`,
+        });
+
+        if (!file?.filePath) {
+          throw new Error('PDF generation did not return a valid file path');
+        }
+
+        if (action === 'print') {
+          await RNPrint.print({ filePath: toRawFilePath(file.filePath) });
+        } else {
+          await Share.open({
+            url: toFileUri(file.filePath),
+            type: 'application/pdf',
+            title: 'Attendance Report',
+          });
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (
+          msg.includes('User did not share') ||
+          msg.includes('dismiss') ||
+          msg.includes('cancel')
+        ) {
+          return;
+        }
+        console.error('[AttendanceScreen] PDF error:', err);
+        if (action === 'print') {
+          Alert.alert('Print Error', 'Could not open print preview. Please try again.');
+        } else {
+          Alert.alert(
+            'Share Error',
+            'Could not generate or share the attendance report. Please try again.',
+          );
+        }
+      } finally {
+        setIsGeneratingReport(false);
       }
-
-      const res = await studentService.getAttendanceReport(studentId);
-      const report = res.normalized?.data || res.data || {};
-
-      // Format the JSON data into a readable text report for native Share
-      const stats = attendanceData?.statistics;
-      const studentName = report.student?.name || meData?.name || 'Student';
-      const className = report.student?.class || report.student?.className || '';
-
-      const lines: string[] = [
-        '📋 ATTENDANCE REPORT',
-        '═══════════════════════════════',
-        `Student : ${studentName}`,
-        className ? `Class   : ${className}` : '',
-        '',
-        '📊 Summary',
-        `Attendance   : ${stats?.attendancePercentage?.toFixed(1) ?? '–'}%`,
-        `Total Days   : ${stats?.totalDays ?? '–'}`,
-        `Present      : ${stats?.presentDays ?? '–'}`,
-        `Absent       : ${stats?.absentDays ?? '–'}`,
-        `Late         : ${stats?.lateDays ?? '–'}`,
-        `Excused      : ${stats?.excusedDays ?? '–'}`,
-        '',
-        '📅 Academic Year',
-        `Present      : ${stats?.academicYear?.presentDays ?? '–'}`,
-        `Absent       : ${stats?.academicYear?.absentDays ?? '–'}`,
-        `Percentage   : ${stats?.academicYear?.presentPercentage?.toFixed(1) ?? '–'}%`,
-        '',
-        `Generated on ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`,
-      ].filter(l => l !== undefined);
-
-      await Share.share({
-        message: lines.join('\n'),
-        title: 'Attendance Report',
-      });
-    } catch (err: any) {
-      const msg = err?.message || 'Failed to generate report.';
-      if (msg !== 'Share was not shared') {
-        // 'Share was not shared' = user dismissed the sheet — not an error
-        Alert.alert('Report Error', msg);
-      }
-    } finally {
-      setIsGeneratingReport(false);
-    }
-  }, [attendanceData]);
+    },
+    [attendanceData, authState.user],
+  );
 
   // ─── Derived data ────────────────────────────────────────────────────────────
 
   const stats = attendanceData?.statistics;
   const records = attendanceData?.records ?? [];
-  const visibleRecords = showAllRecords ? records : records.slice(0, 7);
+
+  // Filtered records based on search query and status filter
+  const filteredRecords = useMemo(() => {
+    return records.filter(r => {
+      if (
+        filterStatus !== 'all' &&
+        (r.status || '').toLowerCase() !== filterStatus
+      ) {
+        return false;
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.trim().toLowerCase();
+        const dateStr = formatDate(r.date).toLowerCase();
+        const dayStr = getDayName(r.date).toLowerCase();
+        const notesStr = (r.notes || '').toLowerCase();
+        const statusStr = (r.status || '').toLowerCase();
+        return (
+          dateStr.includes(q) ||
+          dayStr.includes(q) ||
+          notesStr.includes(q) ||
+          statusStr.includes(q)
+        );
+      }
+      return true;
+    });
+  }, [records, filterStatus, searchQuery]);
+
+  const visibleRecords = showAllRecords
+    ? filteredRecords
+    : filteredRecords.slice(0, 7);
 
   // ─── Calendar logic ──────────────────────────────────────────────────────────
 
   const calendarData = useMemo(() => {
-    const firstDay = new Date(calYear, calMonth, 1).getDay(); // 0=Sun
+    const firstDay = new Date(calYear, calMonth, 1).getDay();
     const totalDays = new Date(calYear, calMonth + 1, 0).getDate();
 
-    // Build record lookup map for current calendar month
-    const recordMap: Record<string, 'present' | 'absent' | 'late' | 'excused' | 'none'> = {};
+    const recordMap: Record<
+      string,
+      'present' | 'absent' | 'late' | 'excused' | 'none'
+    > = {};
     records.forEach(r => {
       const d = new Date(r.date);
       if (d.getFullYear() === calYear && d.getMonth() === calMonth) {
@@ -288,7 +529,6 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
       }
     });
 
-    // Cells: nulls for leading empty days + actual days
     const cells: (number | null)[] = [
       ...Array(firstDay).fill(null),
       ...Array.from({ length: totalDays }, (_, i) => i + 1),
@@ -300,8 +540,14 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
   const navigateMonth = (dir: 1 | -1) => {
     setCalMonth(prev => {
       const next = prev + dir;
-      if (next < 0) { setCalYear(y => y - 1); return 11; }
-      if (next > 11) { setCalYear(y => y + 1); return 0; }
+      if (next < 0) {
+        setCalYear(y => y - 1);
+        return 11;
+      }
+      if (next > 11) {
+        setCalYear(y => y + 1);
+        return 0;
+      }
       return next;
     });
   };
@@ -315,18 +561,19 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
 
   if (!isLoading && error) {
     return (
-      <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center', gap: 16, padding: 32 }]}>
-        <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
-        <Ionicons name="cloud-offline-outline" size={52} color="#EF4444" />
-        <Text style={{ fontSize: 16, fontWeight: '700', color: theme.text, textAlign: 'center' }}>
-          Failed to Load Attendance
-        </Text>
-        <Text style={{ fontSize: 13, color: theme.subtext, textAlign: 'center' }}>{error}</Text>
+      <View style={styles.errorContainer}>
+        <StatusBar
+          barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+          backgroundColor={theme.background}
+        />
+        <Ionicons name="cloud-offline-outline" size={52} color={theme.danger} />
+        <Text style={styles.errorTitle}>Failed to Load Attendance</Text>
+        <Text style={styles.errorSub}>{error}</Text>
         <TouchableOpacity
-          style={{ backgroundColor: theme.primary, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 10 }}
+          style={styles.retryBtn}
           onPress={() => fetchAttendance()}
         >
-          <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 14 }}>Retry</Text>
+          <Text style={styles.retryBtnText}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
@@ -336,10 +583,12 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor={theme.surface}
+      />
 
-      {/* ── Global Header ── */}
-      <StudentHeader 
+      <StudentHeader
         title="Attendance"
         navigation={navigation}
         onMenuPress={() => setDrawerOpen(true)}
@@ -355,104 +604,232 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={() => fetchAttendance(true)}
-              colors={['#4F46E5']}
-              tintColor="#4F46E5"
+              colors={[theme.primary]}
+              tintColor={theme.primary}
             />
           }
         >
           {/* ── Page Title ── */}
-          <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
+          <Animated.View
+            entering={FadeIn.duration(400)}
+            style={styles.pageTitleWrapper}
+          >
             <Text style={styles.pageTitle}>Attendance</Text>
-            <Text style={styles.pageSubtitle}>Track your daily attendance and punctuality</Text>
+            <Text style={styles.pageSubtitle}>
+              Track your daily attendance and punctuality
+            </Text>
           </Animated.View>
 
           {/* ── Card 1: Summary Stats (5-box grid) ── */}
-          <Animated.View entering={FadeInUp.delay(80).springify()} style={styles.card}>
-            <Text style={[styles.cardHeader, { marginBottom: 14 }]}>Attendance Summary</Text>
+          <Animated.View
+            entering={FadeInUp.delay(80).springify()}
+            style={styles.card}
+          >
+            <Text style={[styles.cardHeader, { marginBottom: 14 }]}>
+              Attendance Summary
+            </Text>
 
             {/* Row 1 */}
             <View style={styles.statsRow}>
-              <View style={[styles.statBox, { borderLeftColor: '#4F46E5' }]}>
-                <Ionicons name="checkmark-circle-outline" size={16} color="#4F46E5" style={{ marginBottom: 4 }} />
+              <View style={[styles.statBox, { borderLeftColor: theme.primary }]}>
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={16}
+                  color={theme.primary}
+                  style={{ marginBottom: 4 }}
+                />
                 <Text style={styles.statBoxTitle}>Attendance</Text>
-                <Text style={[styles.statBoxVal, { color: '#4F46E5' }]}>
+                <Text style={[styles.statBoxVal, { color: theme.primary }]}>
                   {stats?.attendancePercentage?.toFixed(1) ?? '0.0'}%
                 </Text>
               </View>
 
-              <View style={[styles.statBox, styles.statBoxMid, { borderLeftColor: '#10B981' }]}>
-                <Ionicons name="person-outline" size={16} color="#10B981" style={{ marginBottom: 4 }} />
+              <View
+                style={[
+                  styles.statBox,
+                  styles.statBoxMid,
+                  { borderLeftColor: theme.success },
+                ]}
+              >
+                <Ionicons
+                  name="person-outline"
+                  size={16}
+                  color={theme.success}
+                  style={{ marginBottom: 4 }}
+                />
                 <Text style={styles.statBoxTitle}>Present</Text>
-                <Text style={[styles.statBoxVal, { color: '#10B981' }]}>{stats?.presentDays ?? 0}</Text>
+                <Text style={[styles.statBoxVal, { color: theme.success }]}>
+                  {stats?.presentDays ?? 0}
+                </Text>
               </View>
 
-              <View style={[styles.statBox, { borderLeftColor: '#EF4444' }]}>
-                <Ionicons name="close-circle-outline" size={16} color="#EF4444" style={{ marginBottom: 4 }} />
+              <View style={[styles.statBox, { borderLeftColor: theme.danger }]}>
+                <Ionicons
+                  name="close-circle-outline"
+                  size={16}
+                  color={theme.danger}
+                  style={{ marginBottom: 4 }}
+                />
                 <Text style={styles.statBoxTitle}>Absent</Text>
-                <Text style={[styles.statBoxVal, { color: '#EF4444' }]}>{stats?.absentDays ?? 0}</Text>
+                <Text style={[styles.statBoxVal, { color: theme.danger }]}>
+                  {stats?.absentDays ?? 0}
+                </Text>
               </View>
             </View>
 
             {/* Row 2 */}
             <View style={[styles.statsRow, { marginTop: 10 }]}>
-              <View style={[styles.statBox, { borderLeftColor: '#F59E0B', flex: 1 }]}>
-                <Ionicons name="time-outline" size={16} color="#F59E0B" style={{ marginBottom: 4 }} />
+              <View
+                style={[
+                  styles.statBox,
+                  { borderLeftColor: theme.warning, flex: 1 },
+                ]}
+              >
+                <Ionicons
+                  name="time-outline"
+                  size={16}
+                  color={theme.warning}
+                  style={{ marginBottom: 4 }}
+                />
                 <Text style={styles.statBoxTitle}>Late</Text>
-                <Text style={[styles.statBoxVal, { color: '#F59E0B' }]}>{stats?.lateDays ?? 0}</Text>
+                <Text style={[styles.statBoxVal, { color: theme.warning }]}>
+                  {stats?.lateDays ?? 0}
+                </Text>
               </View>
 
-              <View style={[styles.statBox, styles.statBoxMid, { borderLeftColor: '#3B82F6', flex: 1 }]}>
-                <Ionicons name="shield-checkmark-outline" size={16} color="#3B82F6" style={{ marginBottom: 4 }} />
+              <View
+                style={[
+                  styles.statBox,
+                  styles.statBoxMid,
+                  { borderLeftColor: theme.primary, flex: 1 },
+                ]}
+              >
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  size={16}
+                  color={theme.primary}
+                  style={{ marginBottom: 4 }}
+                />
                 <Text style={styles.statBoxTitle}>Excused</Text>
-                <Text style={[styles.statBoxVal, { color: '#3B82F6' }]}>{stats?.excusedDays ?? 0}</Text>
+                <Text style={[styles.statBoxVal, { color: theme.primary }]}>
+                  {stats?.excusedDays ?? 0}
+                </Text>
               </View>
 
-              <View style={[styles.statBox, { borderLeftColor: '#8B5CF6', flex: 1 }]}>
-                <Ionicons name="calendar-outline" size={16} color="#8B5CF6" style={{ marginBottom: 4 }} />
+              <View
+                style={[
+                  styles.statBox,
+                  { borderLeftColor: theme.secondary, flex: 1 },
+                ]}
+              >
+                <Ionicons
+                  name="calendar-outline"
+                  size={16}
+                  color={theme.secondary}
+                  style={{ marginBottom: 4 }}
+                />
                 <Text style={styles.statBoxTitle}>Total Days</Text>
-                <Text style={[styles.statBoxVal, { color: '#8B5CF6' }]}>{stats?.totalDays ?? 0}</Text>
+                <Text style={[styles.statBoxVal, { color: theme.secondary }]}>
+                  {stats?.totalDays ?? 0}
+                </Text>
               </View>
             </View>
           </Animated.View>
 
           {/* ── Card 2: Monthly Performance ── */}
-          <Animated.View entering={FadeInUp.delay(140).springify()} style={styles.card}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-              <Ionicons name="trending-up-outline" size={18} color="#111827" style={{ marginRight: 6 }} />
+          <Animated.View
+            entering={FadeInUp.delay(140).springify()}
+            style={styles.card}
+          >
+            <View style={styles.sectionHeaderRow}>
+              <Ionicons
+                name="trending-up-outline"
+                size={18}
+                color={theme.text}
+                style={{ marginRight: 6 }}
+              />
               <Text style={styles.cardHeader}>Monthly Performance</Text>
             </View>
 
             <View style={styles.statsRow}>
-              <View style={[styles.monthBox, { borderColor: '#E0E7FF', backgroundColor: '#EEF2FF' }]}>
+              <View
+                style={[
+                  styles.monthBox,
+                  {
+                    borderColor: theme.border,
+                    backgroundColor: theme.iconBackground,
+                  },
+                ]}
+              >
                 <Text style={styles.monthBoxLabel}>Current Month</Text>
-                <Text style={[styles.monthBoxVal, { color: '#4F46E5' }]}>
+                <Text style={[styles.monthBoxVal, { color: theme.primary }]}>
                   {stats?.currentMonthPercentage?.toFixed(1) ?? '0.0'}%
                 </Text>
               </View>
 
-              <View style={[styles.monthBox, { borderColor: '#D1FAE5', backgroundColor: '#ECFDF5', marginHorizontal: 8 }]}>
+              <View
+                style={[
+                  styles.monthBox,
+                  {
+                    borderColor: theme.border,
+                    backgroundColor: isDarkMode
+                      ? 'rgba(16, 185, 129, 0.15)'
+                      : 'rgba(16, 185, 129, 0.1)',
+                    marginHorizontal: 8,
+                  },
+                ]}
+              >
                 <Text style={styles.monthBoxLabel}>Last Month</Text>
-                <Text style={[styles.monthBoxVal, { color: '#10B981' }]}>
+                <Text style={[styles.monthBoxVal, { color: theme.success }]}>
                   {stats?.lastMonthPercentage?.toFixed(1) ?? '0.0'}%
                 </Text>
               </View>
 
-              <View style={[styles.monthBox, {
-                borderColor: (stats?.monthlyChange ?? 0) >= 0 ? '#D1FAE5' : '#FEE2E2',
-                backgroundColor: (stats?.monthlyChange ?? 0) >= 0 ? '#ECFDF5' : '#FEF2F2',
-              }]}>
+              <View
+                style={[
+                  styles.monthBox,
+                  {
+                    borderColor: theme.border,
+                    backgroundColor:
+                      (stats?.monthlyChange ?? 0) >= 0
+                        ? isDarkMode
+                          ? 'rgba(16, 185, 129, 0.15)'
+                          : 'rgba(16, 185, 129, 0.1)'
+                        : isDarkMode
+                        ? 'rgba(239, 68, 68, 0.15)'
+                        : 'rgba(239, 68, 68, 0.1)',
+                  },
+                ]}
+              >
                 <Text style={styles.monthBoxLabel}>Change</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                <View style={styles.changeRow}>
                   <Ionicons
-                    name={(stats?.monthlyChange ?? 0) >= 0 ? 'trending-up' : 'trending-down'}
+                    name={
+                      (stats?.monthlyChange ?? 0) >= 0
+                        ? 'trending-up'
+                        : 'trending-down'
+                    }
                     size={14}
-                    color={(stats?.monthlyChange ?? 0) >= 0 ? '#10B981' : '#EF4444'}
+                    color={
+                      (stats?.monthlyChange ?? 0) >= 0
+                        ? theme.success
+                        : theme.danger
+                    }
                     style={{ marginRight: 2 }}
                   />
-                  <Text style={[styles.monthBoxVal, {
-                    color: (stats?.monthlyChange ?? 0) >= 0 ? '#10B981' : '#EF4444',
-                  }]}>
-                    {(stats?.monthlyChange ?? 0) >= 0 ? '+' : ''}{stats?.monthlyChange?.toFixed(1) ?? '0.0'}%
+                  <Text
+                    style={[
+                      styles.monthBoxVal,
+                      {
+                        color:
+                          (stats?.monthlyChange ?? 0) >= 0
+                            ? theme.success
+                            : theme.danger,
+                      },
+                    ]}
+                  >
+                    {(stats?.monthlyChange ?? 0) >= 0 ? '+' : ''}
+                    {stats?.monthlyChange?.toFixed(1) ?? '0.0'}%
                   </Text>
                 </View>
               </View>
@@ -460,18 +837,32 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
           </Animated.View>
 
           {/* ── Card 3: Calendar ── */}
-          <Animated.View entering={FadeInUp.delay(180).springify()} style={styles.card}>
+          <Animated.View
+            entering={FadeInUp.delay(180).springify()}
+            style={styles.card}
+          >
             <View style={styles.cardRowBetween}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Ionicons name="calendar-outline" size={18} color="#111827" style={{ marginRight: 6 }} />
+              <View style={styles.sectionHeaderRow}>
+                <Ionicons
+                  name="calendar-outline"
+                  size={18}
+                  color={theme.text}
+                  style={{ marginRight: 6 }}
+                />
                 <Text style={styles.cardHeader}>{calMonthLabel}</Text>
               </View>
               <View style={styles.calArrows}>
-                <TouchableOpacity style={styles.calBtn} onPress={() => navigateMonth(-1)}>
-                  <Ionicons name="chevron-back" size={14} color="#111827" />
+                <TouchableOpacity
+                  style={styles.calBtn}
+                  onPress={() => navigateMonth(-1)}
+                >
+                  <Ionicons name="chevron-back" size={14} color={theme.text} />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.calBtn} onPress={() => navigateMonth(1)}>
-                  <Ionicons name="chevron-forward" size={14} color="#111827" />
+                <TouchableOpacity
+                  style={styles.calBtn}
+                  onPress={() => navigateMonth(1)}
+                >
+                  <Ionicons name="chevron-forward" size={14} color={theme.text} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -479,7 +870,9 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
             {/* Days header */}
             <View style={styles.calDaysHeader}>
               {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => (
-                <Text key={d} style={styles.calDayText}>{d}</Text>
+                <Text key={d} style={styles.calDayText}>
+                  {d}
+                </Text>
               ))}
             </View>
 
@@ -487,7 +880,12 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.calGrid}>
               {calendarData.cells.map((day, index) => {
                 if (day === null) {
-                  return <View key={`empty-${index}`} style={{ width: '14.28%', aspectRatio: 1 }} />;
+                  return (
+                    <View
+                      key={`empty-${index}`}
+                      style={{ width: '14.28%', aspectRatio: 1 }}
+                    />
+                  );
                 }
                 const status = calendarData.recordMap[day.toString()] ?? 'none';
                 const isToday =
@@ -507,14 +905,20 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
                       isToday && status === 'none' && styles.calCellToday,
                     ]}
                   >
-                    <Text style={[
-                      styles.calCellText,
-                      status === 'present' && styles.calCellTextPresent,
-                      status === 'absent' && styles.calCellTextAbsent,
-                      status === 'late' && styles.calCellTextLate,
-                      status === 'excused' && styles.calCellTextExcused,
-                      isToday && status === 'none' && { color: '#4F46E5', fontWeight: '800' },
-                    ]}>
+                    <Text
+                      style={[
+                        styles.calCellText,
+                        status === 'present' && styles.calCellTextPresent,
+                        status === 'absent' && styles.calCellTextAbsent,
+                        status === 'late' && styles.calCellTextLate,
+                        status === 'excused' && styles.calCellTextExcused,
+                        isToday &&
+                          status === 'none' && {
+                            color: theme.primary,
+                            fontWeight: '800',
+                          },
+                      ]}
+                    >
                       {day}
                     </Text>
                   </View>
@@ -527,10 +931,30 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
             {/* Legend */}
             <View style={styles.calLegend}>
               {[
-                { color: '#D1FAE5', label: 'Present' },
-                { color: '#FEE2E2', label: 'Absent' },
-                { color: '#FEF3C7', label: 'Late' },
-                { color: '#DBEAFE', label: 'Excused' },
+                {
+                  color: isDarkMode
+                    ? 'rgba(16, 185, 129, 0.3)'
+                    : 'rgba(16, 185, 129, 0.2)',
+                  label: 'Present',
+                },
+                {
+                  color: isDarkMode
+                    ? 'rgba(239, 68, 68, 0.3)'
+                    : 'rgba(239, 68, 68, 0.2)',
+                  label: 'Absent',
+                },
+                {
+                  color: isDarkMode
+                    ? 'rgba(245, 158, 11, 0.3)'
+                    : 'rgba(245, 158, 11, 0.2)',
+                  label: 'Late',
+                },
+                {
+                  color: isDarkMode
+                    ? 'rgba(59, 130, 246, 0.3)'
+                    : 'rgba(59, 130, 246, 0.2)',
+                  label: 'Excused',
+                },
               ].map(({ color, label }) => (
                 <View key={label} style={styles.legendItem}>
                   <View style={[styles.legendBox, { backgroundColor: color }]} />
@@ -542,27 +966,47 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* ── Card 4: Academic Year Summary ── */}
           {stats?.academicYear && (
-            <Animated.View entering={FadeInUp.delay(220).springify()} style={styles.card}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
-                <Ionicons name="school-outline" size={18} color={theme.text} style={{ marginRight: 6 }} />
+            <Animated.View
+              entering={FadeInUp.delay(220).springify()}
+              style={styles.card}
+            >
+              <View style={styles.sectionHeaderRow}>
+                <Ionicons
+                  name="school-outline"
+                  size={18}
+                  color={theme.text}
+                  style={{ marginRight: 6 }}
+                />
                 <Text style={styles.cardHeader}>Academic Year</Text>
                 <View style={styles.yearBadge}>
-                  <Text style={styles.yearBadgeText}>{stats.academicYear.year}</Text>
+                  <Text style={styles.yearBadgeText}>
+                    {stats.academicYear.year}
+                  </Text>
                 </View>
               </View>
 
               <View style={styles.statsRow}>
-                <View style={[styles.statBox, { borderLeftColor: '#10B981' }]}>
+                <View style={[styles.statBox, { borderLeftColor: theme.success }]}>
                   <Text style={styles.statBoxTitle}>Present</Text>
-                  <Text style={[styles.statBoxVal, { color: '#10B981' }]}>{stats.academicYear.presentDays}</Text>
+                  <Text style={[styles.statBoxVal, { color: theme.success }]}>
+                    {stats.academicYear.presentDays}
+                  </Text>
                 </View>
-                <View style={[styles.statBox, styles.statBoxMid, { borderLeftColor: '#EF4444' }]}>
+                <View
+                  style={[
+                    styles.statBox,
+                    styles.statBoxMid,
+                    { borderLeftColor: theme.danger },
+                  ]}
+                >
                   <Text style={styles.statBoxTitle}>Absent</Text>
-                  <Text style={[styles.statBoxVal, { color: '#EF4444' }]}>{stats.academicYear.absentDays}</Text>
+                  <Text style={[styles.statBoxVal, { color: theme.danger }]}>
+                    {stats.academicYear.absentDays}
+                  </Text>
                 </View>
-                <View style={[styles.statBox, { borderLeftColor: '#4F46E5' }]}>
+                <View style={[styles.statBox, { borderLeftColor: theme.primary }]}>
                   <Text style={styles.statBoxTitle}>Attendance</Text>
-                  <Text style={[styles.statBoxVal, { color: '#4F46E5' }]}>
+                  <Text style={[styles.statBoxVal, { color: theme.primary }]}>
                     {stats.academicYear.presentPercentage?.toFixed(1)}%
                   </Text>
                 </View>
@@ -571,102 +1015,276 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
           )}
 
           {/* ── Card 5: Attendance Comparison ── */}
-          <Animated.View entering={FadeInUp.delay(260).springify()} style={styles.card}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-              <Ionicons name="people-outline" size={18} color={theme.text} style={{ marginRight: 6 }} />
+          <Animated.View
+            entering={FadeInUp.delay(260).springify()}
+            style={styles.card}
+          >
+            <View style={styles.sectionHeaderRow}>
+              <Ionicons
+                name="people-outline"
+                size={18}
+                color={theme.text}
+                style={{ marginRight: 6 }}
+              />
               <Text style={styles.cardHeader}>Attendance Comparison</Text>
             </View>
 
             <View style={styles.statsRow}>
-              <View style={[styles.compBox, { borderColor: '#E0E7FF' }]}>
+              <View style={[styles.compBox, { borderColor: theme.border }]}>
                 <Text style={styles.compLabel}>You</Text>
-                <Text style={[styles.compVal, { color: '#4F46E5' }]}>
+                <Text style={[styles.compVal, { color: theme.primary }]}>
                   {stats?.attendancePercentage?.toFixed(1) ?? '0.0'}%
                 </Text>
                 <Ionicons
                   name={
-                    (stats?.attendancePercentage ?? 0) >= (stats?.classAverage ?? 0)
+                    (stats?.attendancePercentage ?? 0) >=
+                    (stats?.classAverage ?? 0)
                       ? 'checkmark-circle'
                       : 'warning'
                   }
                   size={20}
                   color={
-                    (stats?.attendancePercentage ?? 0) >= (stats?.classAverage ?? 0)
-                      ? '#10B981'
-                      : '#F59E0B'
+                    (stats?.attendancePercentage ?? 0) >=
+                    (stats?.classAverage ?? 0)
+                      ? theme.success
+                      : theme.warning
                   }
                   style={{ marginTop: 6 }}
                 />
               </View>
 
-              <View style={[styles.compBox, { borderColor: '#D1FAE5', marginHorizontal: 12 }]}>
+              <View
+                style={[
+                  styles.compBox,
+                  { borderColor: theme.border, marginHorizontal: 12 },
+                ]}
+              >
                 <Text style={styles.compLabel}>Class Avg</Text>
-                <Text style={[styles.compVal, { color: '#10B981' }]}>
+                <Text style={[styles.compVal, { color: theme.success }]}>
                   {stats?.classAverage?.toFixed(1) ?? '0.0'}%
                 </Text>
               </View>
 
-              <View style={[styles.compBox, { borderColor: '#FEF3C7' }]}>
-                <Text style={styles.compLabel}>Goal</Text>
-                <Text style={[styles.compVal, { color: '#F59E0B' }]}>95.0%</Text>
-              </View>
+              <TouchableOpacity
+                style={[styles.compBox, { borderColor: theme.border }]}
+                activeOpacity={0.7}
+                onPress={() => setIsEditingGoal(true)}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={styles.compLabel}>Goal</Text>
+                  <Ionicons
+                    name="pencil"
+                    size={11}
+                    color={theme.subtext}
+                    style={{ marginLeft: 3 }}
+                  />
+                </View>
+                <Text style={[styles.compVal, { color: theme.warning }]}>
+                  {targetAttendance.toFixed(1)}%
+                </Text>
+              </TouchableOpacity>
             </View>
 
-            {(stats?.attendancePercentage ?? 0) < (stats?.classAverage ?? 0) && (
+            {(stats?.attendancePercentage ?? 0) <
+              (stats?.classAverage ?? 0) && (
               <View style={styles.warningBanner}>
-                <Ionicons name="warning-outline" size={14} color="#B45309" style={{ marginRight: 6 }} />
+                <Ionicons
+                  name="warning-outline"
+                  size={14}
+                  color={theme.warning}
+                  style={{ marginRight: 6 }}
+                />
                 <Text style={styles.warningText}>
                   Your attendance is below the class average by{' '}
-                  {((stats?.classAverage ?? 0) - (stats?.attendancePercentage ?? 0)).toFixed(1)}%
+                  {(
+                    (stats?.classAverage ?? 0) -
+                    (stats?.attendancePercentage ?? 0)
+                  ).toFixed(1)}
+                  %
                 </Text>
               </View>
             )}
           </Animated.View>
 
           {/* ── Card 6: Goal Progress ── */}
-          <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.card}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-              <Ionicons name="disc-outline" size={20} color="#111827" style={{ marginRight: 6 }} />
-              <Text style={styles.cardHeader}>Academic Goal Progress</Text>
+          <Animated.View
+            entering={FadeInUp.delay(300).springify()}
+            style={styles.card}
+          >
+            <View style={styles.cardRowBetween}>
+              <View style={styles.sectionHeaderRow}>
+                <Ionicons
+                  name="disc-outline"
+                  size={20}
+                  color={theme.text}
+                  style={{ marginRight: 6 }}
+                />
+                <Text style={styles.cardHeader}>Academic Goal Progress</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.editGoalBtn}
+                onPress={() => setIsEditingGoal(true)}
+              >
+                <Ionicons name="pencil-outline" size={13} color={theme.primary} />
+                <Text style={styles.editGoalBtnText}>Set Goal</Text>
+              </TouchableOpacity>
             </View>
 
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-              <Text style={styles.targetTitle}>Target: 95% Attendance</Text>
-              <Text style={styles.targetPercent}>{stats?.attendancePercentage?.toFixed(1) ?? '0.0'}%</Text>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                marginBottom: 10,
+              }}
+            >
+              <Text style={styles.targetTitle}>
+                Target: {targetAttendance}% Attendance
+              </Text>
+              <Text style={styles.targetPercent}>
+                {stats?.attendancePercentage?.toFixed(1) ?? '0.0'}%
+              </Text>
             </View>
 
             <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: `${Math.min(100, stats?.attendancePercentage ?? 0)}%` }]} />
-              {/* Class average marker */}
-              <View style={[styles.progressMarker, { left: `${Math.min(100, stats?.classAverage ?? 0)}%` as any }]} />
+              <View
+                style={[
+                  styles.progressBarFill,
+                  {
+                    width: `${Math.min(
+                      100,
+                      stats?.attendancePercentage ?? 0,
+                    )}%`,
+                  },
+                ]}
+              />
+              {/* Target goal indicator marker */}
+              <View
+                style={[
+                  styles.progressMarker,
+                  { left: `${Math.min(100, targetAttendance)}%` as any },
+                ]}
+              />
             </View>
 
             <View style={styles.progressMetrics}>
-              <Text style={styles.metricText}>Current: {stats?.attendancePercentage?.toFixed(1) ?? '0.0'}%</Text>
-              <Text style={styles.metricText}>Class: {stats?.classAverage?.toFixed(1) ?? '0.0'}%</Text>
               <Text style={styles.metricText}>
-                Need: +{Math.max(0, 95 - (stats?.attendancePercentage ?? 0)).toFixed(1)}%
+                Current: {stats?.attendancePercentage?.toFixed(1) ?? '0.0'}%
+              </Text>
+              <Text style={styles.metricText}>
+                Class: {stats?.classAverage?.toFixed(1) ?? '0.0'}%
+              </Text>
+              <Text style={styles.metricText}>
+                Need: +
+                {Math.max(
+                  0,
+                  targetAttendance - (stats?.attendancePercentage ?? 0),
+                ).toFixed(1)}
+                %
               </Text>
             </View>
           </Animated.View>
 
-          {/* ── Card 7: Attendance History ── */}
-          <Animated.View entering={FadeInUp.delay(340).springify()} style={styles.card}>
+          {/* ── Card 7: Attendance History with Search & Status Filters ── */}
+          <Animated.View
+            entering={FadeInUp.delay(340).springify()}
+            style={styles.card}
+          >
             <View style={styles.cardRowBetween}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Ionicons name="time-outline" size={18} color="#111827" style={{ marginRight: 6 }} />
+              <View style={styles.sectionHeaderRow}>
+                <Ionicons
+                  name="time-outline"
+                  size={18}
+                  color={theme.text}
+                  style={{ marginRight: 6 }}
+                />
                 <Text style={styles.cardHeader}>
                   {showAllRecords ? 'Full Attendance History' : 'Recent Records'}
                 </Text>
               </View>
-              {records.length > 7 && (
-                <TouchableOpacity style={styles.viewAllBtn} onPress={() => setShowAllRecords(v => !v)}>
-                  <Text style={styles.viewAllText}>{showAllRecords ? 'Show less' : 'View all'}</Text>
+              {filteredRecords.length > 7 && (
+                <TouchableOpacity
+                  style={styles.viewAllBtn}
+                  onPress={() => setShowAllRecords(v => !v)}
+                >
+                  <Text style={styles.viewAllText}>
+                    {showAllRecords ? 'Show less' : 'View all'}
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
 
-            {/* Table */}
+            {/* Search Input Bar */}
+            <View style={styles.searchBarContainer}>
+              <Ionicons
+                name="search-outline"
+                size={16}
+                color={theme.subtext}
+                style={{ marginRight: 8 }}
+              />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search date, day, or remark..."
+                placeholderTextColor={theme.placeholder}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Ionicons
+                    name="close-circle"
+                    size={16}
+                    color={theme.subtext}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Status Filter Tabs */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterPillsScroll}
+            >
+              {(
+                [
+                  'all',
+                  'present',
+                  'absent',
+                  'late',
+                  'excused',
+                ] as const
+              ).map(statusKey => {
+                const isActive = filterStatus === statusKey;
+                const count =
+                  statusKey === 'all'
+                    ? records.length
+                    : records.filter(
+                        r => (r.status || '').toLowerCase() === statusKey,
+                      ).length;
+                return (
+                  <TouchableOpacity
+                    key={statusKey}
+                    style={[
+                      styles.filterPill,
+                      isActive && styles.filterPillActive,
+                    ]}
+                    onPress={() => setFilterStatus(statusKey)}
+                  >
+                    <Text
+                      style={[
+                        styles.filterPillText,
+                        isActive && styles.filterPillTextActive,
+                      ]}
+                    >
+                      {statusKey.charAt(0).toUpperCase() + statusKey.slice(1)} (
+                      {count})
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Records Table */}
             <View style={styles.table}>
               <View style={styles.tableHeaderRow}>
                 <Text style={[styles.thText, { flex: 1.6 }]}>Date</Text>
@@ -676,20 +1294,29 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
               </View>
 
               {visibleRecords.length === 0 ? (
-                <Text style={styles.emptyText}>No attendance records found.</Text>
+                <Text style={styles.emptyText}>
+                  No attendance records match your filter.
+                </Text>
               ) : (
                 visibleRecords.map((row, idx) => {
                   const { pill, text } = getStatusStyle(row.status);
                   return (
                     <View key={row.id ?? idx} style={styles.tableRow}>
-                      <Text style={[styles.tdTextBold, { flex: 1.6 }]}>{formatDate(row.date)}</Text>
-                      <Text style={[styles.tdText, { flex: 0.9 }]}>{getDayName(row.date)}</Text>
+                      <Text style={[styles.tdTextBold, { flex: 1.6 }]}>
+                        {formatDate(row.date)}
+                      </Text>
+                      <Text style={[styles.tdText, { flex: 0.9 }]}>
+                        {getDayName(row.date)}
+                      </Text>
                       <View style={[{ flex: 1.2 }, styles.tdPillWrap]}>
                         <View style={pill}>
                           <Text style={text}>{row.status}</Text>
                         </View>
                       </View>
-                      <Text style={[styles.tdText, { flex: 1.3 }]} numberOfLines={1}>
+                      <Text
+                        style={[styles.tdText, { flex: 1.3 }]}
+                        numberOfLines={1}
+                      >
                         {row.notes ?? '----'}
                       </Text>
                     </View>
@@ -699,36 +1326,121 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           </Animated.View>
 
-          {/* ── Card 8: Download Report ── */}
-          <Animated.View entering={FadeInUp.delay(380).springify()} style={[styles.card, { marginBottom: 32 }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-              <Ionicons name="document-text-outline" size={18} color="#111827" style={{ marginRight: 6 }} />
-              <Text style={styles.cardHeader}>Download Report</Text>
+          {/* ── Card 8: Official PDF Report (Print & Share) ── */}
+          <Animated.View
+            entering={FadeInUp.delay(380).springify()}
+            style={[styles.card, { marginBottom: 32 }]}
+          >
+            <View style={styles.sectionHeaderRow}>
+              <Ionicons
+                name="document-text-outline"
+                size={18}
+                color={theme.text}
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.cardHeader}>Generate PDF Report</Text>
             </View>
-            <Text style={{ fontSize: 12, color: '#6B7280', marginBottom: 16 }}>
-              Generate a detailed attendance report for your academic records.
+            <Text style={styles.pdfReportDesc}>
+              Generate a formatted PDF attendance summary and full records
+              table for official school verification.
             </Text>
-            <TouchableOpacity
-              style={[styles.pdfButton, isGeneratingReport && { opacity: 0.7 }]}
-              activeOpacity={0.85}
-              onPress={handleGenerateReport}
-              disabled={isGeneratingReport}
-            >
-              {isGeneratingReport ? (
-                <ActivityIndicator size="small" color="#FFF" style={{ marginRight: 8 }} />
-              ) : (
-                <Ionicons name="download-outline" size={16} color="#FFF" style={{ marginRight: 8 }} />
-              )}
-              <Text style={styles.pdfButtonText}>
-                {isGeneratingReport ? 'Generating...' : 'Generate PDF Report'}
-              </Text>
 
-            </TouchableOpacity>
+            <View style={styles.pdfActionRow}>
+              <ScaleButton
+                style={[
+                  styles.pdfActionButton,
+                  { backgroundColor: theme.primary },
+                  isGeneratingReport && { opacity: 0.6 },
+                ]}
+                activeOpacity={0.85}
+                scaleTo={0.96}
+                disabled={isGeneratingReport}
+                onPress={() => handleGenerateReport('print')}
+              >
+                {isGeneratingReport ? (
+                  <ActivityIndicator size="small" color={theme.onPrimary} />
+                ) : (
+                  <>
+                    <Ionicons
+                      name="print-outline"
+                      size={16}
+                      color={theme.onPrimary}
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text style={styles.pdfActionText}>Print Report</Text>
+                  </>
+                )}
+              </ScaleButton>
 
+              <ScaleButton
+                style={[
+                  styles.pdfActionButton,
+                  { backgroundColor: theme.success },
+                  isGeneratingReport && { opacity: 0.6 },
+                ]}
+                activeOpacity={0.85}
+                scaleTo={0.96}
+                disabled={isGeneratingReport}
+                onPress={() => handleGenerateReport('share')}
+              >
+                {isGeneratingReport ? (
+                  <ActivityIndicator size="small" color={theme.onPrimary} />
+                ) : (
+                  <>
+                    <Ionicons
+                      name="share-outline"
+                      size={16}
+                      color={theme.onPrimary}
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text style={styles.pdfActionText}>Save / Share PDF</Text>
+                  </>
+                )}
+              </ScaleButton>
+            </View>
           </Animated.View>
-
         </ScrollView>
       )}
+
+      {/* ── Edit Goal Modal ── */}
+      <Modal
+        visible={isEditingGoal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsEditingGoal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Set Attendance Goal</Text>
+            <Text style={styles.modalSubtitle}>
+              Target percentage between 50% and 100%:
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              keyboardType="numeric"
+              maxLength={3}
+              value={goalInput}
+              onChangeText={setGoalInput}
+              placeholder="e.g. 95"
+              placeholderTextColor={theme.placeholder}
+            />
+            <View style={styles.modalBtnRow}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalCancelBtn]}
+                onPress={() => setIsEditingGoal(false)}
+              >
+                <Text style={styles.modalCancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalSaveBtn]}
+                onPress={handleSaveGoal}
+              >
+                <Text style={styles.modalSaveBtnText}>Save Goal</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* ── Navigation Drawer ── */}
       <NavigationDrawer
@@ -742,188 +1454,498 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: theme.background },
-  scrollContent: { paddingBottom: 20 },
+const getStyles = (theme: any, isDarkMode: boolean) =>
+  StyleSheet.create({
+    mainContainer: { flex: 1, backgroundColor: theme.background },
+    scrollContent: { paddingBottom: 20 },
 
-  globalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 16,
-    backgroundColor: theme.surface,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 8,
-    zIndex: 10,
-  },
-  menuHandle: { paddingRight: 4, paddingVertical: 10 },
-  headerTitle: { fontSize: 18, fontWeight: '500', color: theme.primary, flex: 1, textAlign: 'center' },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 20 },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: theme.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 4,
-    elevation: 6,
-  },
-  avatarText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 },
+    errorContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 16,
+      padding: 32,
+      backgroundColor: theme.background,
+    },
+    errorTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: theme.text,
+      textAlign: 'center',
+    },
+    errorSub: {
+      fontSize: 13,
+      color: theme.subtext,
+      textAlign: 'center',
+    },
+    retryBtn: {
+      backgroundColor: theme.primary,
+      paddingHorizontal: 28,
+      paddingVertical: 12,
+      borderRadius: 10,
+    },
+    retryBtnText: {
+      color: theme.onPrimary,
+      fontWeight: '700',
+      fontSize: 14,
+    },
 
-  pageTitleWrapper: { marginBottom: 16, paddingHorizontal: 20, marginTop: 16 },
-  pageTitle: { fontSize: 24, fontWeight: '800', color: theme.primary, marginBottom: 4 },
-  pageSubtitle: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
+    pageTitleWrapper: {
+      marginBottom: 16,
+      paddingHorizontal: 20,
+      marginTop: 16,
+    },
+    pageTitle: {
+      fontSize: 24,
+      fontWeight: '800',
+      color: theme.primary,
+      marginBottom: 4,
+    },
+    pageSubtitle: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
 
-  // ── Cards ──
-  card: {
-    backgroundColor: theme.surface,
-    borderRadius: 14,
-    padding: 16,
-    marginHorizontal: 16,
-    marginTop: 14,
-    borderWidth: 1,
-    borderColor: theme.border,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-  },
-  cardHeader: { fontSize: 14, fontWeight: '700', color: theme.text },
-  cardSubheader: { fontSize: 11, color: theme.subtext, marginTop: 2 },
-  cardRowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+    // ── Cards ──
+    card: {
+      backgroundColor: theme.surface,
+      borderRadius: 14,
+      padding: 16,
+      marginHorizontal: 16,
+      marginTop: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      elevation: 2,
+    },
+    cardHeader: { fontSize: 14, fontWeight: '700', color: theme.text },
+    cardSubheader: { fontSize: 11, color: theme.subtext, marginTop: 2 },
+    cardRowBetween: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 14,
+    },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
 
-  // ── Stat Boxes ──
-  statsRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  statBox: {
-    flex: 1, backgroundColor: isDarkMode ? '#1E293B' : '#FAFAFA',
-    borderWidth: 1, borderColor: theme.border,
-    borderLeftWidth: 4, borderRadius: 8,
-    paddingVertical: 10, paddingHorizontal: 8,
-  },
-  statBoxMid: { marginHorizontal: 8 },
-  statBoxTitle: { fontSize: 10, fontWeight: '700', color: theme.text, marginBottom: 2 },
-  statBoxVal: { fontSize: 18, fontWeight: '800', color: theme.text, marginTop: 2 },
+    // ── Stat Boxes ──
+    statsRow: { flexDirection: 'row', justifyContent: 'space-between' },
+    statBox: {
+      flex: 1,
+      backgroundColor: isDarkMode ? theme.cardNested : theme.iconBackground,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderLeftWidth: 4,
+      borderRadius: 8,
+      paddingVertical: 10,
+      paddingHorizontal: 8,
+    },
+    statBoxMid: { marginHorizontal: 8 },
+    statBoxTitle: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: theme.text,
+      marginBottom: 2,
+    },
+    statBoxVal: { fontSize: 18, fontWeight: '800', marginTop: 2 },
 
-  // ── Monthly boxes ──
-  monthBox: {
-    flex: 1, borderRadius: 10, borderWidth: 1,
-    paddingVertical: 12, paddingHorizontal: 10,
-  },
-  monthBoxLabel: { fontSize: 10, fontWeight: '600', color: theme.subtext, marginBottom: 4 },
-  monthBoxVal: { fontSize: 18, fontWeight: '800' },
+    // ── Monthly boxes ──
+    monthBox: {
+      flex: 1,
+      borderRadius: 10,
+      borderWidth: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 10,
+    },
+    monthBoxLabel: {
+      fontSize: 10,
+      fontWeight: '600',
+      color: theme.subtext,
+      marginBottom: 4,
+    },
+    monthBoxVal: { fontSize: 18, fontWeight: '800' },
+    changeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 4,
+    },
 
-  // ── Calendar ──
-  calArrows: { flexDirection: 'row', gap: 6 },
-  calBtn: { padding: 5, borderRadius: 6, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface },
-  calDaysHeader: { flexDirection: 'row', marginBottom: 10, paddingHorizontal: 2 },
-  calDayText: { width: '14.28%', textAlign: 'center', fontSize: 9, fontWeight: '600', color: theme.subtext },
-  calGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  calCell: {
-    width: '14.28%', aspectRatio: 1,
-    justifyContent: 'center', alignItems: 'center',
-    marginBottom: 4, borderRadius: 6,
-  },
-  calCellPresent: { backgroundColor: isDarkMode ? '#064E3B' : '#D1FAE5' },
-  calCellAbsent: { backgroundColor: isDarkMode ? '#7F1D1D30' : '#FEE2E2', borderWidth: 1, borderColor: '#FCA5A5' },
-  calCellLate: { backgroundColor: isDarkMode ? '#78350F30' : '#FEF3C7', borderWidth: 1, borderColor: '#D97706' },
-  calCellExcused: { backgroundColor: isDarkMode ? '#1E3A8A30' : '#DBEAFE', borderWidth: 1, borderColor: '#3B82F6' },
-  calCellToday: { borderWidth: 2, borderColor: theme.primary },
-  calCellText: { fontSize: 11, fontWeight: '600', color: theme.text },
-  calCellTextPresent: { color: isDarkMode ? '#34D399' : '#059669' },
-  calCellTextAbsent: { color: isDarkMode ? '#FCA5A5' : '#DC2626' },
-  calCellTextLate: { color: isDarkMode ? '#F59E0B' : '#D97706' },
-  calCellTextExcused: { color: isDarkMode ? '#93C5FD' : '#2563EB' },
-  calDivider: { height: 1, backgroundColor: theme.border, marginVertical: 10 },
-  calLegend: { flexDirection: 'row', justifyContent: 'space-around' },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  legendBox: { width: 10, height: 10, borderRadius: 3 },
-  legendText: { fontSize: 10, fontWeight: '600', color: theme.text },
+    // ── Calendar ──
+    calArrows: { flexDirection: 'row', gap: 6 },
+    calBtn: {
+      padding: 5,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.surface,
+    },
+    calDaysHeader: {
+      flexDirection: 'row',
+      marginBottom: 10,
+      paddingHorizontal: 2,
+    },
+    calDayText: {
+      width: '14.28%',
+      textAlign: 'center',
+      fontSize: 9,
+      fontWeight: '600',
+      color: theme.subtext,
+    },
+    calGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+    calCell: {
+      width: '14.28%',
+      aspectRatio: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 4,
+      borderRadius: 6,
+    },
+    calCellPresent: {
+      backgroundColor: isDarkMode
+        ? 'rgba(16, 185, 129, 0.25)'
+        : 'rgba(16, 185, 129, 0.15)',
+    },
+    calCellAbsent: {
+      backgroundColor: isDarkMode
+        ? 'rgba(239, 68, 68, 0.25)'
+        : 'rgba(239, 68, 68, 0.15)',
+      borderWidth: 1,
+      borderColor: theme.danger,
+    },
+    calCellLate: {
+      backgroundColor: isDarkMode
+        ? 'rgba(245, 158, 11, 0.25)'
+        : 'rgba(245, 158, 11, 0.15)',
+      borderWidth: 1,
+      borderColor: theme.warning,
+    },
+    calCellExcused: {
+      backgroundColor: isDarkMode
+        ? 'rgba(59, 130, 246, 0.25)'
+        : 'rgba(59, 130, 246, 0.15)',
+      borderWidth: 1,
+      borderColor: theme.primary,
+    },
+    calCellToday: { borderWidth: 2, borderColor: theme.primary },
+    calCellText: { fontSize: 11, fontWeight: '600', color: theme.text },
+    calCellTextPresent: { color: theme.success },
+    calCellTextAbsent: { color: theme.danger },
+    calCellTextLate: { color: theme.warning },
+    calCellTextExcused: { color: theme.primary },
+    calDivider: {
+      height: 1,
+      backgroundColor: theme.border,
+      marginVertical: 10,
+    },
+    calLegend: { flexDirection: 'row', justifyContent: 'space-around' },
+    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    legendBox: { width: 10, height: 10, borderRadius: 3 },
+    legendText: { fontSize: 10, fontWeight: '600', color: theme.text },
 
-  // ── Academic Year badge ──
-  yearBadge: {
-    marginLeft: 10, backgroundColor: isDarkMode ? '#1E3A8A30' : '#EEF2FF',
-    paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20,
-  },
-  yearBadgeText: { fontSize: 11, fontWeight: '700', color: theme.primary },
+    // ── Academic Year badge ──
+    yearBadge: {
+      marginLeft: 10,
+      backgroundColor: isDarkMode ? theme.cardNested : theme.iconBackground,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 20,
+    },
+    yearBadgeText: { fontSize: 11, fontWeight: '700', color: theme.primary },
 
-  // ── Comparison boxes ──
-  compBox: {
-    flex: 1, borderWidth: 1, borderRadius: 10,
-    paddingVertical: 12, paddingHorizontal: 10,
-    alignItems: 'center',
-  },
-  compLabel: { fontSize: 11, fontWeight: '600', color: theme.subtext, marginBottom: 4 },
-  compVal: { fontSize: 20, fontWeight: '800' },
+    // ── Comparison boxes ──
+    compBox: {
+      flex: 1,
+      borderWidth: 1,
+      borderRadius: 10,
+      paddingVertical: 12,
+      paddingHorizontal: 10,
+      alignItems: 'center',
+      backgroundColor: isDarkMode ? theme.cardNested : theme.iconBackground,
+    },
+    compLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: theme.subtext,
+      marginBottom: 4,
+    },
+    compVal: { fontSize: 20, fontWeight: '800' },
 
-  // ── Warning banner ──
-  warningBanner: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: isDarkMode ? '#78350F30' : '#FFFBEB', borderRadius: 8,
-    paddingHorizontal: 12, paddingVertical: 8, marginTop: 12,
-    borderWidth: 1, borderColor: isDarkMode ? '#D97706' : '#FDE68A',
-  },
-  warningText: { fontSize: 11, color: isDarkMode ? '#F59E0B' : '#92400E', fontWeight: '500', flex: 1 },
+    // ── Warning banner ──
+    warningBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: isDarkMode
+        ? 'rgba(245, 158, 11, 0.15)'
+        : 'rgba(245, 158, 11, 0.1)',
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: theme.warning,
+    },
+    warningText: {
+      fontSize: 11,
+      color: theme.warning,
+      fontWeight: '500',
+      flex: 1,
+    },
 
-  // ── Progress bar ──
-  targetTitle: { fontSize: 12, fontWeight: '700', color: theme.text },
-  targetPercent: { fontSize: 14, fontWeight: '800', color: theme.primary },
-  progressBarBg: {
-    height: 8, backgroundColor: isDarkMode ? '#334155' : '#E2E8F0', borderRadius: 4,
-    width: '100%', overflow: 'hidden', marginBottom: 10,
-    position: 'relative',
-  },
-  progressBarFill: { height: '100%', borderRadius: 4, backgroundColor: theme.primary },
-  progressMarker: {
-    position: 'absolute', top: 0, bottom: 0, width: 2,
-    backgroundColor: '#10B981',
-  },
-  progressMetrics: { flexDirection: 'row', justifyContent: 'space-between' },
-  metricText: { fontSize: 10, color: theme.subtext, fontWeight: '500' },
+    // ── Progress bar ──
+    targetTitle: { fontSize: 12, fontWeight: '700', color: theme.text },
+    targetPercent: { fontSize: 14, fontWeight: '800', color: theme.primary },
+    progressBarBg: {
+      height: 8,
+      backgroundColor: isDarkMode ? theme.border : theme.iconBackground,
+      borderRadius: 4,
+      width: '100%',
+      overflow: 'hidden',
+      marginBottom: 10,
+      position: 'relative',
+    },
+    progressBarFill: {
+      height: '100%',
+      borderRadius: 4,
+      backgroundColor: theme.primary,
+    },
+    progressMarker: {
+      position: 'absolute',
+      top: 0,
+      bottom: 0,
+      width: 3,
+      backgroundColor: theme.success,
+    },
+    progressMetrics: { flexDirection: 'row', justifyContent: 'space-between' },
+    metricText: { fontSize: 10, color: theme.subtext, fontWeight: '500' },
+    editGoalBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: isDarkMode ? theme.cardNested : theme.iconBackground,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+    },
+    editGoalBtnText: {
+      fontSize: 11,
+      color: theme.primary,
+      fontWeight: '600',
+      marginLeft: 4,
+    },
 
-  // ── Table ──
-  viewAllBtn: { backgroundColor: isDarkMode ? '#334155' : '#F3F4F6', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 4 },
-  viewAllText: { fontSize: 10, fontWeight: '600', color: theme.text },
-  table: { marginTop: 4 },
-  tableHeaderRow: {
-    flexDirection: 'row', backgroundColor: isDarkMode ? '#1E293B' : '#F3F4F6',
-    paddingVertical: 9, paddingHorizontal: 8, borderRadius: 6, marginBottom: 4,
-  },
-  thText: { fontSize: 9, fontWeight: '700', color: theme.text },
-  tableRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 10, paddingHorizontal: 8,
-    borderBottomWidth: 1, borderBottomColor: theme.border,
-  },
-  tdText: { fontSize: 10, color: theme.subtext, fontWeight: '500' },
-  tdTextBold: { fontSize: 10, color: theme.text, fontWeight: '700' },
-  tdPillWrap: { alignItems: 'flex-start' },
+    // ── Search & Filter Bar ──
+    searchBarContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: isDarkMode ? theme.background : theme.iconBackground,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: Platform.OS === 'ios' ? 8 : 4,
+      borderWidth: 1,
+      borderColor: theme.border,
+      marginBottom: 10,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 12,
+      color: theme.text,
+      paddingVertical: 0,
+    },
+    filterPillsScroll: {
+      flexDirection: 'row',
+      gap: 6,
+      paddingBottom: 10,
+    },
+    filterPill: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 14,
+      backgroundColor: isDarkMode ? theme.cardNested : theme.iconBackground,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    filterPillActive: {
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
+    },
+    filterPillText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: theme.subtext,
+    },
+    filterPillTextActive: {
+      color: theme.onPrimary,
+      fontWeight: '700',
+    },
 
-  // Status pills
-  statusPresent: { backgroundColor: isDarkMode ? '#064E3B' : '#D1FAE5', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 12 },
-  statusAbsent: { backgroundColor: isDarkMode ? '#7F1D1D30' : '#FEE2E2', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 12 },
-  statusLate: { backgroundColor: isDarkMode ? '#78350F30' : '#FEF3C7', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 12 },
-  statusExcused: { backgroundColor: isDarkMode ? '#1E3A8A30' : '#DBEAFE', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 12 },
-  statusTextPresent: { fontSize: 9, color: isDarkMode ? '#34D399' : '#059669', fontWeight: '700' },
-  statusTextAbsent: { fontSize: 9, color: isDarkMode ? '#FCA5A5' : '#DC2626', fontWeight: '700' },
-  statusTextLate: { fontSize: 9, color: isDarkMode ? '#F59E0B' : '#D97706', fontWeight: '700' },
-  statusTextExcused: { fontSize: 9, color: isDarkMode ? '#93C5FD' : '#2563EB', fontWeight: '700' },
+    // ── Table ──
+    viewAllBtn: {
+      backgroundColor: isDarkMode ? theme.cardNested : theme.iconBackground,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 4,
+    },
+    viewAllText: { fontSize: 10, fontWeight: '600', color: theme.text },
+    table: { marginTop: 4 },
+    tableHeaderRow: {
+      flexDirection: 'row',
+      backgroundColor: isDarkMode ? theme.cardNested : theme.iconBackground,
+      paddingVertical: 9,
+      paddingHorizontal: 8,
+      borderRadius: 6,
+      marginBottom: 4,
+    },
+    thText: { fontSize: 9, fontWeight: '700', color: theme.text },
+    tableRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 10,
+      paddingHorizontal: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    tdText: { fontSize: 10, color: theme.subtext, fontWeight: '500' },
+    tdTextBold: { fontSize: 10, color: theme.text, fontWeight: '700' },
+    tdPillWrap: { alignItems: 'flex-start' },
 
-  // ── PDF button ──
-  pdfButton: {
-    backgroundColor: theme.primary, borderRadius: 10,
-    paddingVertical: 13, flexDirection: 'row',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  pdfButtonText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
+    // Status pills
+    statusPresent: {
+      backgroundColor: isDarkMode
+        ? 'rgba(16, 185, 129, 0.25)'
+        : 'rgba(16, 185, 129, 0.15)',
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      borderRadius: 12,
+    },
+    statusAbsent: {
+      backgroundColor: isDarkMode
+        ? 'rgba(239, 68, 68, 0.25)'
+        : 'rgba(239, 68, 68, 0.15)',
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      borderRadius: 12,
+    },
+    statusLate: {
+      backgroundColor: isDarkMode
+        ? 'rgba(245, 158, 11, 0.25)'
+        : 'rgba(245, 158, 11, 0.15)',
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      borderRadius: 12,
+    },
+    statusExcused: {
+      backgroundColor: isDarkMode
+        ? 'rgba(59, 130, 246, 0.25)'
+        : 'rgba(59, 130, 246, 0.15)',
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      borderRadius: 12,
+    },
+    statusTextPresent: { fontSize: 9, color: theme.success, fontWeight: '700' },
+    statusTextAbsent: { fontSize: 9, color: theme.danger, fontWeight: '700' },
+    statusTextLate: { fontSize: 9, color: theme.warning, fontWeight: '700' },
+    statusTextExcused: { fontSize: 9, color: theme.primary, fontWeight: '700' },
 
-  emptyText: { textAlign: 'center', color: theme.subtext, marginTop: 20, fontSize: 13 },
-});
+    // ── PDF button ──
+    pdfReportDesc: {
+      fontSize: 12,
+      color: theme.subtext,
+      marginBottom: 14,
+      lineHeight: 18,
+    },
+    pdfActionRow: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    pdfActionButton: {
+      flex: 1,
+      borderRadius: 10,
+      paddingVertical: 12,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 2,
+    },
+    pdfActionText: {
+      color: theme.onPrimary,
+      fontWeight: '700',
+      fontSize: 13,
+    },
+
+    emptyText: {
+      textAlign: 'center',
+      color: theme.subtext,
+      marginTop: 20,
+      fontSize: 13,
+    },
+
+    // ── Goal Modal ──
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 24,
+    },
+    modalContent: {
+      width: '100%',
+      maxWidth: 320,
+      backgroundColor: theme.surface,
+      borderRadius: 14,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: theme.border,
+      elevation: 5,
+    },
+    modalTitle: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: theme.text,
+      marginBottom: 6,
+    },
+    modalSubtitle: {
+      fontSize: 13,
+      color: theme.subtext,
+      marginBottom: 16,
+    },
+    modalInput: {
+      backgroundColor: isDarkMode ? theme.background : theme.iconBackground,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: theme.border,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 16,
+      fontWeight: '700',
+      color: theme.text,
+      marginBottom: 18,
+      textAlign: 'center',
+    },
+    modalBtnRow: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: 10,
+    },
+    modalBtn: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 8,
+    },
+    modalCancelBtn: {
+      backgroundColor: isDarkMode ? theme.cardNested : theme.iconBackground,
+    },
+    modalCancelBtnText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.subtext,
+    },
+    modalSaveBtn: {
+      backgroundColor: theme.primary,
+    },
+    modalSaveBtnText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: theme.onPrimary,
+    },
+  });
 
 export default AttendanceScreen;

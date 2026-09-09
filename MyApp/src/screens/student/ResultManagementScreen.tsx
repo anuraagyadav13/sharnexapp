@@ -29,6 +29,7 @@ import studentService from '../../services/studentService';
 import { generatePDF } from 'react-native-html-to-pdf';
 import RNPrint from 'react-native-print';
 import Share from 'react-native-share';
+import { toFileUri, toRawFilePath } from '../../utils/fileUtils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -354,27 +355,39 @@ const ResultManagementScreen: React.FC<Props> = ({ navigation }) => {
         const file = await generatePDF({
           html: html,
           fileName: `Transcript_${allData.student.rollNumber || 'Student'}`,
-          directory: 'Documents',
         });
 
-        if (!file.filePath) {
-          throw new Error('Failed to create PDF file');
+        if (!file?.filePath) {
+          throw new Error('PDF generation did not return a valid file path');
         }
 
         if (action === 'print') {
-          await RNPrint.print({ filePath: file.filePath });
+          await RNPrint.print({ filePath: toRawFilePath(file.filePath) });
         } else {
           await Share.open({
-            url: `file://${file.filePath}`,
+            url: toFileUri(file.filePath),
             type: 'application/pdf',
             title: 'Save or Share Academic Transcript',
           });
         }
       } catch (err: unknown) {
-        const msg =
-          err instanceof Error ? err.message : 'Failed to generate PDF';
-        Alert.alert('PDF Error', msg);
+        const msg = err instanceof Error ? err.message : String(err);
+        if (
+          msg.includes('User did not share') ||
+          msg.includes('dismiss') ||
+          msg.includes('cancel')
+        ) {
+          return;
+        }
         console.error('[ResultManagement] PDF error:', err);
+        if (action === 'print') {
+          Alert.alert('Print Error', 'Could not open print preview. Please try again.');
+        } else {
+          Alert.alert(
+            'Share Error',
+            'Could not generate or share the academic transcript. Please try again.',
+          );
+        }
       } finally {
         setIsPrinting(false);
       }

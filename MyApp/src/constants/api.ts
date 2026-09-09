@@ -58,6 +58,7 @@ const resolveBaseUrl = (): string => {
 export const API_BASE_URL = resolveBaseUrl();
 export const ENDPOINTS = {
   CONTACT: '/contact',
+  UPLOAD: '/upload',
   AUTH: {
     LOGIN: '/auth/login',
     REGISTER: '/auth/register',

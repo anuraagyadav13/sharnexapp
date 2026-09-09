@@ -46,6 +46,7 @@ export interface LibraryIssue {
   studentRollNumber?: string;
   bookId: string;
   bookTitle?: string;
+  author?: string;
   isbn?: string;
   copyNumber?: string;
   issueDate: string;
@@ -93,7 +94,7 @@ const libraryService = {
     let url = `/library/books?limit=${query?.limit || 50}&offset=${query?.offset || 0}`;
     if (query?.search) url += `&search=${encodeURIComponent(query.search)}`;
     if (query?.categoryId && query.categoryId !== 'all') url += `&categoryId=${query.categoryId}`;
-    return apiClient.get<{ data: { items: LibraryBookItem[]; pagination: { total: number } } }>(url);
+    return apiClient.get<{ data: { items?: LibraryBookItem[]; books?: LibraryBookItem[]; pagination: { total: number; limit?: number; offset?: number } } }>(url);
   },
 
   createBook(payload: LibraryBookPayload) {
@@ -187,6 +188,11 @@ const libraryService = {
 
   deleteCategory(categoryId: string) {
     return apiClient.delete<{ message: string }>(`/library/categories/${categoryId}`);
+  },
+
+  // --- STUDENT ---
+  getStudentPortfolio() {
+    return apiClient.get<{ data: { activeIssues: LibraryIssue[]; history: LibraryIssue[] } }>('/library/student');
   },
 
   // --- DASHBOARD ---

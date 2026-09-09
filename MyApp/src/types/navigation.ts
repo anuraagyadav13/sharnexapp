@@ -12,7 +12,6 @@ export type RootStackParamList = {
   AssignmentSubmit: { assignmentId: string };
   AssignmentGrade: { assignmentId: string };
   Quizzes: undefined;
-  QuizDetails: { quizId: string };
   StartQuiz: { quizId: string };
   QuizResult: { quizId: string, timestamp?: number };
   ViewQuizDetail: { quizId: string };
@@ -29,6 +28,7 @@ export type RootStackParamList = {
   ResultManagement: undefined;
   Timetable: undefined;
   StudentSyllabusLogs: undefined;
+  StudentLibrary: undefined;
 
   // Teacher Screens
   TeacherDashboard: undefined;
