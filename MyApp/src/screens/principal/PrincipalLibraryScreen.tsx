@@ -21,6 +21,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
+import { getCacheBustedUri } from '../../utils/image';
+
 import apiClient from '../../services/apiClient';
 import principalService, {
   LibraryDashboardStats,
@@ -31,6 +33,7 @@ import principalService, {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { Camera, useCameraPermission, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
 
 const { width } = Dimensions.get('window');
 
@@ -120,7 +123,26 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
   // Barcode scanning states
   const [isScanning, setIsScanning] = useState(false);
   const [scannedBarcode, setScannedBarcode] = useState('');
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [isScanProcessing, setIsScanProcessing] = useState(false);
+
+  // vision-camera permission + device
+  const { hasPermission, requestPermission } = useCameraPermission();
+  const cameraDevice = useCameraDevice('back');
+
+  const codeScanner = useCodeScanner({
+    codeTypes: ['qr', 'ean-13', 'ean-8', 'code-128', 'code-39', 'code-93', 'pdf-417', 'data-matrix', 'itf', 'codabar', 'upc-a', 'upc-e'],
+    onCodeScanned: (codes) => {
+      if (isScanProcessing) return;
+      const code = codes[0];
+      if (code?.value) {
+        setIsScanProcessing(true);
+        setScannedBarcode(code.value);
+        handleBarcodeScan(code.value).finally(() => {
+          setTimeout(() => setIsScanProcessing(false), 2000);
+        });
+      }
+    },
+  });
 
   // Book Details Modal states
   const [selectedBookDetails, setSelectedBookDetails] = useState<any | null>(null);
@@ -197,10 +219,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
     try {
       const res = await principalService.getClasses();
       const resAny = res as any;
-      // Diagnostic log — matches PrincipalClassesScreen pattern; remove once classes populate correctly
-      console.log('[PrincipalLibrary] getClasses raw res.data:', JSON.stringify(resAny.data));
       const data = resAny.data?.classes ?? (Array.isArray(resAny.data) ? resAny.data : (resAny.data?.data ?? []));
-      console.log('[PrincipalLibrary] classesList resolved:', JSON.stringify(data));
       setClassesList(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('[PrincipalLibrary] Failed to load classes:', err);
@@ -264,13 +283,13 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
     const s = status?.toUpperCase();
     switch (s) {
       case 'RETURNED':
-        return { bg: isDarkMode ? '#10B98120' : '#ECFDF5', text: '#10B981' }; // green
+        return { bg: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)', text: theme.success }; // green
       case 'ISSUED':
-        return { bg: isDarkMode ? '#3B82F620' : '#EFF6FF', text: '#3B82F6' }; // blue
+        return { bg: isDarkMode ? 'rgba(59, 130, 246, 0.2)' : theme.iconBackground, text: theme.primary }; // blue
       case 'OVERDUE':
-        return { bg: isDarkMode ? '#EF444420' : '#FEF2F2', text: '#EF4444' }; // red
+        return { bg: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)', text: theme.danger }; // red
       default:
-        return { bg: isDarkMode ? '#374151' : '#F3F4F6', text: theme.subtext }; // grey
+        return { bg: isDarkMode ? theme.surface : theme.border, text: theme.subtext }; // grey
     }
   }, [isDarkMode, theme]);
 
@@ -374,7 +393,6 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
       const response = await apiClient.get('/library/analytics');
       setAnalyticsData(response.data?.data || response.data || null);
     } catch (error) {
-      console.log('[PrincipalLibrary] Analytics fetch error:', error);
       setAnalyticsData(null);
       setAnalyticsError(true);
     } finally {
@@ -532,7 +550,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
                 onPress={fetchAnalytics}
                 style={{ marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: theme.primary, borderRadius: 8 }}
               >
-                <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '700' }}>Retry</Text>
+                <Text style={{ color: theme.onPrimary, fontSize: 13, fontWeight: '700' }}>Retry</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -567,7 +585,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
                   <View style={{
                     height: 80,
                     width: 12,
-                    backgroundColor: isDarkMode ? '#1E293B' : '#E5E7EB',
+                    backgroundColor: isDarkMode ? theme.surface : theme.border,
                     borderRadius: 6,
                     justifyContent: 'flex-end',
                     overflow: 'hidden'
@@ -635,13 +653,13 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
             </View>
             {item.status === 'OVERDUE' && (
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                <Ionicons name="alert-circle-outline" size={14} color="#EF4444" style={{ marginRight: 4 }} />
+                <Ionicons name="alert-circle-outline" size={14} color={theme.danger} style={{ marginRight: 4 }} />
                 <Text style={[styles.fineText, { marginTop: 0 }]}>Overdue</Text>
                 <TouchableOpacity
                   onPress={() => fetchStudentFines(item.studentId, item.studentName)}
-                  style={{ marginLeft: 10, paddingVertical: 2, paddingHorizontal: 8, backgroundColor: isDarkMode ? '#3B82F630' : '#EFF6FF', borderRadius: 4 }}
+                  style={{ marginLeft: 10, paddingVertical: 2, paddingHorizontal: 8, backgroundColor: isDarkMode ? 'rgba(59, 130, 246, 0.2)' : theme.iconBackground, borderRadius: 4 }}
                 >
-                  <Text style={{ fontSize: 10, fontWeight: '700', color: isDarkMode ? '#818CF8' : '#3B82F6' }}>View Fine</Text>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: theme.primary }}>View Fine</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -663,18 +681,18 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
           {item.status !== 'RETURNED' && !isBulkMode && (
             <View style={styles.cardActions}>
               <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: '#10B981' }]}
+                style={[styles.actionButton, { backgroundColor: theme.success }]}
                 onPress={() => handleReturnBook(item.id, item.bookTitle)}
               >
-                <Ionicons name="checkmark-circle-outline" size={16} color="#FFF" />
+                <Ionicons name="checkmark-circle-outline" size={16} color={theme.onPrimary} />
                 <Text style={styles.actionButtonText}>Return</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: '#F59E0B' }]}
+                style={[styles.actionButton, { backgroundColor: theme.warning }]}
                 onPress={() => handleRenewBook(item.id, item.bookTitle)}
               >
-                <Ionicons name="refresh-outline" size={16} color="#FFF" />
+                <Ionicons name="refresh-outline" size={16} color={theme.onPrimary} />
                 <Text style={styles.actionButtonText}>Renew</Text>
               </TouchableOpacity>
             </View>
@@ -717,13 +735,13 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Active Issues</Text>
-            <Text style={[styles.statVal, { color: isDarkMode ? '#818CF8' : '#3B82F6' }]}>
+            <Text style={[styles.statVal, { color: theme.primary }]}>
               {dashboard.activeIssues || 0}
             </Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Overdue</Text>
-            <Text style={[styles.statVal, { color: '#EF4444' }]}>
+            <Text style={[styles.statVal, { color: theme.danger }]}>
               {dashboard.overdueCount || 0}
             </Text>
           </View>
@@ -773,33 +791,33 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
             <View style={styles.exportButtons}>
               <TouchableOpacity style={styles.exportBtn} onPress={() => handleExport('csv')}>
-                <Ionicons name="document-text-outline" size={16} color="#FFF" />
+                <Ionicons name="document-text-outline" size={16} color={theme.onPrimary} />
                 <Text style={styles.exportBtnText}>CSV</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.exportBtn} onPress={() => handleExport('pdf')}>
-                <Ionicons name="document-outline" size={16} color="#FFF" />
+                <Ionicons name="document-outline" size={16} color={theme.onPrimary} />
                 <Text style={styles.exportBtnText}>PDF</Text>
               </TouchableOpacity>
             </View>
 
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TouchableOpacity
-                style={[styles.exportBtn, { backgroundColor: isBulkMode ? theme.primary : '#6B7280' }]}
+                style={[styles.exportBtn, { backgroundColor: isBulkMode ? theme.primary : theme.subtext }]}
                 onPress={() => {
                   setIsBulkMode(!isBulkMode);
                   setSelectedIssues([]);
                 }}
               >
-                <Ionicons name="checkbox-outline" size={16} color="#FFF" />
+                <Ionicons name="checkbox-outline" size={16} color={theme.onPrimary} />
                 <Text style={styles.exportBtnText}>{isBulkMode ? "Cancel Bulk" : "Bulk Mode"}</Text>
               </TouchableOpacity>
 
               {isBulkMode && (
                 <TouchableOpacity
-                  style={[styles.exportBtn, { backgroundColor: '#10B981' }]}
+                  style={[styles.exportBtn, { backgroundColor: theme.success }]}
                   onPress={handleBulkReturn}
                 >
-                  <Ionicons name="checkmark-circle-outline" size={16} color="#FFF" />
+                  <Ionicons name="checkmark-circle-outline" size={16} color={theme.onPrimary} />
                   <Text style={styles.exportBtnText}>Return Sel</Text>
                 </TouchableOpacity>
               )}
@@ -820,12 +838,12 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Simulated scanner initialization
+  // Request camera permission when scanner modal opens
   useEffect(() => {
-    if (isScanning) {
-      setHasCameraPermission(true);
+    if (isScanning && !hasPermission) {
+      requestPermission();
     }
-  }, [isScanning]);
+  }, [isScanning, hasPermission, requestPermission]);
 
 
 
@@ -985,7 +1003,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
     return (
       <View style={styles.errorContainer}>
         <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
-        <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+        <Ionicons name="alert-circle-outline" size={64} color={theme.danger} />
         <Text style={styles.errorTitle}>Failed to load library data</Text>
         <Text style={styles.errorSubtitle}>
           An error occurred while fetching library dashboard and issues. Please try again.
@@ -1034,7 +1052,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
           <View style={{ flex: 1 }}>
             {/* Search and Category Filter */}
             <View style={{ paddingHorizontal: 16, paddingVertical: 12, backgroundColor: theme.surface, borderBottomWidth: 1, borderBottomColor: theme.border }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDarkMode ? '#334155' : '#F3F4F6', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDarkMode ? theme.surface : theme.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 12 }}>
                 <Ionicons name="search-outline" size={18} color={theme.subtext} />
                 <TextInput
                   placeholder="Search books by title, author, isbn..."
@@ -1049,7 +1067,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
                   style={[styles.categoryPill, selectedCategoryId === 'all' && { backgroundColor: theme.primary, borderColor: theme.primary }]}
                   onPress={() => setSelectedCategoryId('all')}
                 >
-                  <Text style={[styles.categoryNameText, selectedCategoryId === 'all' && { color: '#FFF' }]}>All</Text>
+                  <Text style={[styles.categoryNameText, selectedCategoryId === 'all' && { color: theme.onPrimary }]}>All</Text>
                 </TouchableOpacity>
                 {categories.map((cat) => {
                   const isActive = selectedCategoryId === cat.id;
@@ -1059,7 +1077,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
                       style={[styles.categoryPill, isActive && { backgroundColor: theme.primary, borderColor: theme.primary }]}
                       onPress={() => setSelectedCategoryId(cat.id)}
                     >
-                      <Text style={[styles.categoryNameText, isActive && { color: '#FFF' }]}>{cat.name}</Text>
+                      <Text style={[styles.categoryNameText, isActive && { color: theme.onPrimary }]}>{cat.name}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -1088,15 +1106,15 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
                 >
                   <View style={styles.cardHeader}>
                     <Text style={styles.bookTitleText}>{item.title}</Text>
-                    <View style={{ backgroundColor: isDarkMode ? '#4F46E530' : '#EEF2FF', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: isDarkMode ? '#818CF8' : '#4F46E5' }}>ISBN: {item.isbn}</Text>
+                    <View style={{ backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.2)' : theme.iconBackground, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: theme.primary }}>ISBN: {item.isbn}</Text>
                     </View>
                   </View>
                   <Text style={{ fontSize: 13, color: theme.subtext, marginBottom: 4 }}>Author: {item.author}</Text>
                   <Text style={{ fontSize: 12, color: theme.subtext, marginBottom: 8 }}>Category: {item.categoryName || item.category_name || item.category?.name || 'General'}</Text>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: isDarkMode ? '#334155' : '#F9FAFB', padding: 8, borderRadius: 8 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: isDarkMode ? theme.surface : theme.background, padding: 8, borderRadius: 8 }}>
                     <Text style={{ fontSize: 11, color: theme.subtext }}>Total Copies: {item.totalCopies ?? item.total_copies ?? 0}</Text>
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#10B981' }}>Available: {item.availableCopies ?? item.available_copies ?? 0}</Text>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: theme.success }}>Available: {item.availableCopies ?? item.available_copies ?? 0}</Text>
                   </View>
                 </TouchableOpacity>
               )}
@@ -1124,8 +1142,8 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
               >
                 <View style={styles.cardHeader}>
                   <Text style={styles.bookTitleText}>{item.name}</Text>
-                  <View style={{ backgroundColor: isDarkMode ? '#10B98120' : '#ECFDF5', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
-                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#10B981' }}>{item.book_count || 0} Books</Text>
+                  <View style={{ backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: theme.success }}>{item.book_count || 0} Books</Text>
                   </View>
                 </View>
                 <Text style={{ fontSize: 13, color: theme.subtext, marginTop: 4 }}>{item.description || 'No description provided.'}</Text>
@@ -1147,7 +1165,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
         return (
           <View style={{ flex: 1 }}>
             <View style={{ paddingHorizontal: 16, paddingVertical: 12, backgroundColor: theme.surface, borderBottomWidth: 1, borderBottomColor: theme.border }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDarkMode ? '#334155' : '#F3F4F6', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDarkMode ? theme.surface : theme.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 }}>
                 <Ionicons name="search-outline" size={18} color={theme.subtext} />
                 <TextInput
                   placeholder="Search staff by name or email..."
@@ -1165,8 +1183,8 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
               renderItem={({ item }) => (
                 <View style={[styles.issueCard, { marginHorizontal: 0 }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isDarkMode ? '#4F46E530' : '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
-                      <Text style={{ fontSize: 16, fontWeight: 'bold', color: isDarkMode ? '#818CF8' : '#4F46E5' }}>{item.name?.charAt(0)}</Text>
+                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isDarkMode ? 'rgba(79, 70, 229, 0.2)' : theme.iconBackground, alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ fontSize: 16, fontWeight: 'bold', color: theme.primary }}>{item.name?.charAt(0)}</Text>
                     </View>
                     <View style={{ marginLeft: 12 }}>
                       <Text style={{ fontSize: 15, fontWeight: '700', color: theme.text }}>{item.name}</Text>
@@ -1223,8 +1241,9 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
             onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
           >
             {authState.user?.photoUrl ? (
-              <Image source={{ uri: authState.user.photoUrl }} style={styles.headerAvatarImage} />
+              <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.headerAvatarImage} />
             ) : (
+
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
               </View>
@@ -1273,7 +1292,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
           accessibilityLabel="Issue Book"
           accessibilityRole="button"
         >
-          <Ionicons name="add" size={24} color="#FFF" />
+          <Ionicons name="add" size={24} color={theme.onPrimary} />
           <Text style={styles.fabText}>Issue Book</Text>
         </TouchableOpacity>
       )}
@@ -1416,67 +1435,79 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
 
       {/* Barcode Scanner Modal */}
       <Modal visible={isScanning} animationType="slide" onRequestClose={() => setIsScanning(false)}>
-        <View style={{ flex: 1, backgroundColor: isDarkMode ? '#0F172A' : '#F8FAFC', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <View style={{ flex: 1, backgroundColor: isDarkMode ? theme.surface : theme.background }}>
           {/* Header */}
-          <View style={{ position: 'absolute', top: 40, left: 20, right: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ color: theme.text, fontSize: 18, fontWeight: '700' }}>Simulated Barcode Scanner</Text>
-            <TouchableOpacity onPress={() => setIsScanning(false)} style={{ backgroundColor: isDarkMode ? '#1E293B' : '#E2E8F0', padding: 8, borderRadius: 20 }}>
+          <View style={{ position: 'absolute', top: 40, left: 20, right: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
+            <Text style={{ color: theme.text, fontSize: 18, fontWeight: '700' }}>Barcode Lookup</Text>
+            <TouchableOpacity onPress={() => setIsScanning(false)} style={{ backgroundColor: isDarkMode ? theme.surface : theme.border, padding: 8, borderRadius: 20 }}>
               <Ionicons name="close" size={24} color={theme.text} />
             </TouchableOpacity>
           </View>
 
-          {/* Viewfinder simulation card */}
-          <View style={{
-            width: width - 40,
-            height: 240,
-            borderWidth: 2,
-            borderColor: theme.primary,
-            borderRadius: 16,
-            backgroundColor: isDarkMode ? '#1E293B' : '#EDF2F7',
-            justifyContent: 'center',
-            alignItems: 'center',
-            position: 'relative',
-            overflow: 'hidden',
-            marginBottom: 24,
-            elevation: 4,
-            shadowColor: theme.primary,
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.1,
-            shadowRadius: 10
-          }}>
-            {/* Viewfinder Corners */}
-            <View style={{ position: 'absolute', top: 20, left: 20, width: 24, height: 24, borderTopWidth: 4, borderLeftWidth: 4, borderColor: theme.primary }} />
-            <View style={{ position: 'absolute', top: 20, right: 20, width: 24, height: 24, borderTopWidth: 4, borderRightWidth: 4, borderColor: theme.primary }} />
-            <View style={{ position: 'absolute', bottom: 20, left: 20, width: 24, height: 24, borderBottomWidth: 4, borderLeftWidth: 4, borderColor: theme.primary }} />
-            <View style={{ position: 'absolute', bottom: 20, right: 20, width: 24, height: 24, borderBottomWidth: 4, borderRightWidth: 4, borderColor: theme.primary }} />
-
-            {/* Laser scanning line simulation */}
-            <View style={{
-              width: '80%',
-              height: 2,
-              backgroundColor: '#EF4444',
-              position: 'absolute',
-              top: '50%',
-              shadowColor: '#EF4444',
-              shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: 0.8,
-              shadowRadius: 4
-            }} />
-
-            <Ionicons name="camera-outline" size={48} color={theme.subtext} style={{ opacity: 0.4 }} />
-            <Text style={{ color: theme.subtext, fontSize: 13, marginTop: 12, fontWeight: '600' }}>[ Camera Preview Feed ]</Text>
-          </View>
+          {/* Camera View or Fallback */}
+          {hasPermission && cameraDevice ? (
+            <View style={{ width: '100%', height: 340, marginTop: 90, position: 'relative', overflow: 'hidden' }}>
+              <Camera
+                style={{ flex: 1 }}
+                device={cameraDevice}
+                isActive={isScanning}
+                codeScanner={codeScanner}
+              />
+              {/* Scanning overlay corners */}
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', pointerEvents: 'none' }}>
+                <View style={{ width: 220, height: 140, position: 'relative' }}>
+                  <View style={{ position: 'absolute', top: 0, left: 0, width: 28, height: 28, borderTopWidth: 4, borderLeftWidth: 4, borderColor: theme.primary }} />
+                  <View style={{ position: 'absolute', top: 0, right: 0, width: 28, height: 28, borderTopWidth: 4, borderRightWidth: 4, borderColor: theme.primary }} />
+                  <View style={{ position: 'absolute', bottom: 0, left: 0, width: 28, height: 28, borderBottomWidth: 4, borderLeftWidth: 4, borderColor: theme.primary }} />
+                  <View style={{ position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderBottomWidth: 4, borderRightWidth: 4, borderColor: theme.primary }} />
+                  <View style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 2, backgroundColor: theme.danger, opacity: 0.8 }} />
+                </View>
+              </View>
+              {isScanProcessing && (
+                <View style={{ position: 'absolute', bottom: 12, left: 0, right: 0, alignItems: 'center' }}>
+                  <View style={{ backgroundColor: `${theme.text}99`, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                    <ActivityIndicator size="small" color={theme.primary} />
+                    <Text style={{ color: theme.onPrimary, fontWeight: '700', fontSize: 13 }}>Looking up barcode...</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          ) : (
+            <View style={{ width: '100%', height: 240, marginTop: 100, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 }}>
+              {!hasPermission ? (
+                <>
+                  <Ionicons name="camera-off-outline" size={56} color={theme.subtext} style={{ opacity: 0.5, marginBottom: 16 }} />
+                  <Text style={{ color: theme.text, fontWeight: '700', fontSize: 15, marginBottom: 8, textAlign: 'center' }}>Camera Access Required</Text>
+                  <Text style={{ color: theme.subtext, fontSize: 13, textAlign: 'center', marginBottom: 20 }}>
+                    Allow camera access to scan barcodes and ISBN codes directly.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={requestPermission}
+                    style={{ backgroundColor: theme.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10 }}
+                  >
+                    <Text style={{ color: theme.onPrimary, fontWeight: '700' }}>Grant Camera Access</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="hardware-chip-outline" size={56} color={theme.subtext} style={{ opacity: 0.5, marginBottom: 16 }} />
+                  <Text style={{ color: theme.text, fontWeight: '700', fontSize: 15, marginBottom: 8, textAlign: 'center' }}>No Camera Available</Text>
+                  <Text style={{ color: theme.subtext, fontSize: 13, textAlign: 'center' }}>No back camera was detected on this device. Use manual entry below.</Text>
+                </>
+              )}
+            </View>
+          )}
 
           {/* Manual Entry bar */}
-          <View style={{ width: '100%', gap: 12 }}>
-            <Text style={{ color: theme.text, fontSize: 14, fontWeight: '700' }}>Enter Barcode manually:</Text>
+          <View style={{ padding: 20, gap: 12, marginTop: hasPermission && cameraDevice ? 0 : 0 }}>
+            <Text style={{ color: theme.text, fontSize: 14, fontWeight: '700' }}>Enter ISBN or Barcode manually:</Text>
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TextInput
                 placeholder="Type ISBN or barcode..."
                 placeholderTextColor={theme.placeholder}
                 style={{
                   flex: 1,
-                  backgroundColor: isDarkMode ? '#1E293B' : '#FFF',
+                  backgroundColor: theme.surface,
                   borderColor: theme.border,
                   borderWidth: 1,
                   borderRadius: 12,
@@ -1487,13 +1518,14 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
                 }}
                 value={scannedBarcode}
                 onChangeText={setScannedBarcode}
+                keyboardType="number-pad"
               />
               <TouchableOpacity
                 onPress={() => {
                   if (scannedBarcode.trim()) {
                     handleBarcodeScan(scannedBarcode.trim());
                   } else {
-                    showToast('Please type a barcode', 'warning');
+                    showToast('Please type a barcode or ISBN', 'warning');
                   }
                 }}
                 style={{
@@ -1504,30 +1536,8 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
                   alignItems: 'center'
                 }}
               >
-                <Text style={{ color: '#FFF', fontWeight: '700' }}>Submit</Text>
+                <Text style={{ color: theme.onPrimary, fontWeight: '700' }}>Submit</Text>
               </TouchableOpacity>
-            </View>
-
-            {/* Mock simulator helpers */}
-            <Text style={{ color: theme.subtext, fontSize: 12, marginTop: 16, fontWeight: '600' }}>Simulator Quick Scan Demos:</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {['9780134685991', '9780321125217', '9780201633610'].map((code) => (
-                <TouchableOpacity
-                  key={code}
-                  onPress={() => {
-                    setScannedBarcode(code);
-                    handleBarcodeScan(code);
-                  }}
-                  style={{
-                    backgroundColor: isDarkMode ? '#334155' : '#E2E8F0',
-                    paddingHorizontal: 12,
-                    paddingVertical: 8,
-                    borderRadius: 8
-                  }}
-                >
-                  <Text style={{ color: theme.text, fontSize: 11, fontWeight: '700' }}>Scan: {code}</Text>
-                </TouchableOpacity>
-              ))}
             </View>
           </View>
         </View>
@@ -1571,7 +1581,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: theme.border, paddingBottom: 8 }}>
                     <Text style={{ color: theme.subtext }}>Available Copies</Text>
-                    <Text style={{ color: '#10B981', fontWeight: '700' }}>{selectedBookDetails.availableCopies ?? selectedBookDetails.available_copies ?? 0}</Text>
+                    <Text style={{ color: theme.success, fontWeight: '700' }}>{selectedBookDetails.availableCopies ?? selectedBookDetails.available_copies ?? 0}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: theme.border, paddingBottom: 8 }}>
                     <Text style={{ color: theme.subtext }}>Publisher</Text>
@@ -1614,14 +1624,14 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
                 <View key={fine.id} style={[styles.modalItemBtn, { flexDirection: 'column', alignItems: 'stretch' }]}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text style={styles.modalItemText}>{fine.bookTitle || 'Book Fine'}</Text>
-                    <Text style={{ color: '#EF4444', fontWeight: '700', fontSize: 14 }}>₹{fine.amount}</Text>
+                    <Text style={{ color: theme.danger, fontWeight: '700', fontSize: 14 }}>₹{fine.amount}</Text>
                   </View>
                   <Text style={styles.modalItemSubText}>Reason: {fine.reason || 'Overdue Book'}</Text>
                   <Text style={styles.modalItemSubText}>Status: {fine.status || 'UNPAID'}</Text>
 
                   {fine.status !== 'PAID' && (
                     <TouchableOpacity
-                      style={[styles.modalConfirmBtn, { paddingVertical: 8, marginTop: 10, backgroundColor: '#10B981' }]}
+                      style={[styles.modalConfirmBtn, { paddingVertical: 8, marginTop: 10, backgroundColor: theme.success }]}
                       onPress={async () => {
                         try {
                           setIsLoading(true);
@@ -1696,7 +1706,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderRadius: 8,
   },
   retryBtnText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -1736,7 +1746,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -1769,17 +1779,17 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   categoryPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: isDarkMode ? '#6366F120' : '#EEF2FF',
+    backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.2)' : theme.iconBackground,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
     marginRight: 10,
     borderWidth: 1,
-    borderColor: isDarkMode ? '#6366F140' : '#E0E7FF',
+    borderColor: isDarkMode ? 'rgba(99, 102, 241, 0.4)' : theme.border,
   },
   categoryNameText: {
     fontSize: 12,
-    color: isDarkMode ? '#818CF8' : '#4F46E5',
+    color: theme.primary,
     fontWeight: '600',
     marginRight: 6,
   },
@@ -1791,7 +1801,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   },
   categoryCountText: {
     fontSize: 10,
-    color: '#FFF',
+    color: theme.onPrimary,
     fontWeight: '700',
   },
   issueCard: {
@@ -1800,7 +1810,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     marginBottom: 16,
     borderRadius: 16,
     padding: 16,
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -1849,7 +1859,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: isDarkMode ? '#334155' : '#F9FAFB',
+    backgroundColor: isDarkMode ? theme.surface : theme.background,
     padding: 10,
     borderRadius: 10,
   },
@@ -1868,7 +1878,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     color: theme.text,
   },
   overdueValText: {
-    color: '#EF4444',
+    color: theme.danger,
   },
   emptyContainer: {
     paddingVertical: 80,
@@ -1892,17 +1902,17 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#9F7AEA', // Soft purple
+    backgroundColor: theme.secondary,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 4,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
   headerAvatarImage: {
     width: 32,
     height: 32,
@@ -1927,7 +1937,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     elevation: 5,
   },
   fabText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 14,
     fontWeight: '700',
     marginLeft: 6,
@@ -1950,7 +1960,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     maxHeight: '80%',
     borderWidth: 1,
     borderColor: theme.border,
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
     shadowRadius: 20,
@@ -1987,7 +1997,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: isDarkMode ? '#334155' : '#F9FAFB',
+    backgroundColor: isDarkMode ? theme.surface : theme.background,
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 12,
@@ -2026,7 +2036,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: isDarkMode ? '#334155' : '#F9FAFB',
+    backgroundColor: isDarkMode ? theme.surface : theme.background,
     borderWidth: 1,
     borderColor: theme.border,
     borderRadius: 12,
@@ -2051,7 +2061,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     elevation: 3,
   },
   modalConfirmBtnText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -2090,7 +2100,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderRadius: 6,
   },
   actionButtonText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -2140,12 +2150,12 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     gap: 4,
   },
   exportBtnText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 11,
     fontWeight: '700',
   },
   fineText: {
-    color: '#EF4444',
+    color: theme.danger,
     fontSize: 12,
     fontWeight: '700',
     marginTop: 4,

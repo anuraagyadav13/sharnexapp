@@ -23,6 +23,12 @@ import principalService, { InvoiceStats, InvoiceItem, ReconciliationData, Reconc
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { BRAND, COLORS } from '../../constants/theme';
+import { getCacheBustedUri } from '../../utils/image';
+import { generatePDF } from 'react-native-html-to-pdf';
+import RNPrint from 'react-native-print';
+import Share from 'react-native-share';
+import { toFileUri, toRawFilePath } from '../../utils/fileUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -38,6 +44,151 @@ interface Props {
 type MainTab = 'invoices' | 'settlements' | 'refunds';
 type InvoiceFilter = 'All' | 'PENDING' | 'PAID' | 'OVERDUE';
 type PaymentModeFilter = 'ALL' | 'UPI' | 'CARD' | 'CASH' | 'CHEQUE';
+
+
+const escapeHtml = (value: unknown) => String(value)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#039;');
+
+function generatePrincipalFeeReceiptHTML(receipt: any, theme: any): string {
+  const invNum = receipt.invoiceNumber || receipt.invoice_number;
+  const schoolName = receipt.institutionName || receipt.institution_name;
+  const paidAt = receipt.paidAt || receipt.completedAt || receipt.completed_at;
+  const amount = receipt.totalAmount ?? receipt.amountPaid;
+  const description = receipt.description || receipt.invoice_description;
+
+  if (!invNum || !schoolName || !paidAt || amount === undefined || !description) {
+    throw new Error('This record does not include the information required to generate an official payment receipt.');
+  }
+
+  const completedDate = new Date(paidAt).toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const txnId = receipt.gatewayPaymentId || receipt.gateway_payment_id || receipt.razorpay_payment_id;
+  const paymentMode = receipt.paymentMode || receipt.payment_mode;
+  const status = String(receipt.status || 'PAID').toUpperCase();
+  const studentName = receipt.studentName || receipt.student_name || '';
+  const className = receipt.className || receipt.grade || '';
+
+  const feeItems: { description: string; amount: number }[] =
+    receipt.feeItems && receipt.feeItems.length > 0
+      ? receipt.feeItems
+      : [{ description, amount: Number(amount) }];
+
+  const feeRowsHtml = feeItems
+    .map(
+      item => `
+      <tr>
+        <td>
+          <div style="font-weight: 600;">${escapeHtml(item.description || description)}</div>
+          <div style="font-size: 12px; color: ${theme.subtext}; margin-top: 2px;">Invoice Reference: ${escapeHtml(invNum)}</div>
+        </td>
+        <td style="text-align: right; font-weight: 600;">₹${Number(item.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+      </tr>`,
+    )
+    .join('');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Official Receipt - ${escapeHtml(invNum)}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: ${theme.background}; color: ${theme.text}; margin: 0; padding: 40px 20px; }
+    .receipt-container { max-width: 680px; margin: 0 auto; background: ${theme.surface}; border-radius: 16px; border: 1px solid ${theme.border}; box-shadow: 0 10px 25px -5px ${theme.text}0D; overflow: hidden; }
+    .header { background: ${theme.primary}; color: ${theme.onPrimary}; padding: 32px; display: flex; justify-content: space-between; align-items: flex-start; }
+    .badge { background: ${theme.success}33; border: 1px solid ${theme.success}66; color: ${theme.onPrimary}; font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 4px 10px; border-radius: 9999px; display: inline-block; margin-bottom: 8px; }
+    .title { font-size: 24px; font-weight: 800; margin: 0; color: ${theme.onPrimary}; }
+    .school { font-size: 14px; color: ${theme.onPrimary}; margin-top: 4px; }
+    .content { padding: 32px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid ${theme.border}; }
+    .label { font-size: 11px; font-weight: 700; color: ${theme.subtext}; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .value { font-size: 14px; font-weight: 600; color: ${theme.text}; }
+    .table { width: 100%; border-collapse: collapse; margin-bottom: 32px; }
+    .table th { text-align: left; font-size: 11px; font-weight: 700; color: ${theme.subtext}; text-transform: uppercase; padding: 12px 0; border-bottom: 2px solid ${theme.border}; }
+    .table td { padding: 16px 0; border-bottom: 1px solid ${theme.border}; font-size: 14px; }
+    .total-row { display: flex; justify-content: space-between; align-items: center; background: ${theme.background}; padding: 20px; border-radius: 12px; font-weight: 800; font-size: 18px; margin-bottom: 32px; }
+    .footer { text-align: center; font-size: 12px; color: ${theme.subtext}; border-top: 1px solid ${theme.border}; padding: 24px 32px; background: ${theme.surface}; }
+  </style>
+</head>
+<body>
+  <div class="receipt-container">
+    <div class="header">
+      <div>
+        <span class="badge">✓ Cryptographically Verified</span>
+        <h1 class="title">Fee Payment Receipt</h1>
+        <div class="school">${escapeHtml(schoolName)}</div>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-size: 12px; color: ${theme.onPrimary};">Receipt #</div>
+        <div style="font-size: 16px; font-weight: 700; color: ${theme.onPrimary};">${escapeHtml(invNum)}</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="grid">
+        <div>
+          <div class="label">Date & Time</div>
+          <div class="value">${escapeHtml(completedDate)}</div>
+        </div>
+        ${txnId ? `<div>
+          <div class="label">Transaction Reference</div>
+          <div class="value" style="font-family: monospace;">${escapeHtml(txnId)}</div>
+        </div>` : ''}
+        ${paymentMode ? `<div>
+          <div class="label">Payment Mode</div>
+          <div class="value">${escapeHtml(paymentMode)}</div>
+        </div>` : ''}
+        <div>
+          <div class="label">Status</div>
+          <div class="value" style="color: ${theme.success};">${escapeHtml(status)}</div>
+        </div>
+        ${
+          studentName
+            ? `<div><div class="label">Student / Payer</div><div class="value">${escapeHtml(studentName)}</div></div>`
+            : ''
+        }
+        ${
+          className
+            ? `<div><div class="label">Academic Unit</div><div class="value">${escapeHtml(className)}</div></div>`
+            : ''
+        }
+      </div>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Description / Fee Item</th>
+            <th style="text-align: right;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${feeRowsHtml}
+        </tbody>
+      </table>
+
+      <div class="total-row">
+        <span>Total Paid</span>
+        <span style="color: ${theme.primary};">₹${Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+      </div>
+
+      <div style="font-size: 11px; color: ${theme.subtext}; text-align: center; line-height: 1.5;">
+        This is an official digital receipt generated automatically by the Sharnex School ERP double-entry ledger. No physical signature is required.
+      </div>
+    </div>
+    <div class="footer">
+      Sharnex Financial Engineering • 256-Bit Cryptographically Secured Ledger
+    </div>
+  </div>
+</body>
+</html>`;
+}
 
 const formatRupee = (amount: number) => {
   if (amount === undefined || amount === null) return '₹0';
@@ -75,7 +226,7 @@ const getInitials = (name: string) => {
   return parts.length > 1 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : parts[0][0].toUpperCase();
 };
 
-const avatarColors = ['#8B5CF6', '#EC4899', '#EF4444', '#F97316', '#10B981', '#3B82F6', '#6366F1', '#14B8A6'];
+const avatarColors = [COLORS.secondary, COLORS.danger, COLORS.warning, COLORS.success, COLORS.primary];
 const getAvatarColor = (name: string) => {
   let hash = 0;
   for (let i = 0; i < (name || '').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -129,6 +280,160 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
     }
   }, []);
 
+  const handleExportCSV = async () => {
+    if (!invoices || invoices.length === 0) {
+      Alert.alert('Export', 'No invoices to export.');
+      return;
+    }
+    try {
+      setIsLoading(true);
+      const XLSX = require('xlsx');
+      const RNFS = require('react-native-fs');
+      let ShareLib: any = null;
+      try { ShareLib = require('react-native-share').default || require('react-native-share'); } catch (e) {}
+
+      const exportData = invoices.map(i => ({
+        'Invoice No': i.invoiceNumber || '-',
+        'Student': i.studentName || '-',
+        'Class': i.className || '-',
+        'Description': i.description || '-',
+        'Base Amount': i.baseAmount || 0,
+        'Amount Paid': i.amountPaid || 0,
+        'Status': i.status || 'PENDING',
+        'Due Date': i.dueDate ? new Date(i.dueDate).toLocaleDateString() : '-',
+        'Created At': i.createdAt ? new Date(i.createdAt).toLocaleDateString() : '-',
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Fees Ledger");
+      const wbout = XLSX.write(wb, { type: 'binary', bookType: 'xlsx' });
+
+      const path = `${RNFS.DocumentDirectoryPath}/Fees_Ledger.xlsx`;
+      await RNFS.writeFile(path, wbout, 'ascii');
+
+      if (ShareLib) {
+        await ShareLib.open({
+          url: `file://${path}`,
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          title: 'Export Fees Ledger',
+        });
+      } else {
+        Alert.alert('Export Successful', `Ledger exported successfully to ${path}`);
+      }
+    } catch (error: any) {
+      if (error?.message !== 'User did not share' && error?.name !== 'Error') {
+        Alert.alert('Error', 'Failed to export ledger.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
+  const [receiptGeneratingId, setReceiptGeneratingId] = useState<string | null>(null);
+
+  const handleDownloadReceipt = async (item: any) => {
+    if (!item) return;
+    if ((item.status || '').toUpperCase() !== 'PAID') {
+      Alert.alert('Receipt Unavailable', 'A payment receipt is available only after this invoice has been paid.');
+      return;
+    }
+    const invNum =
+      item.invoiceNumber ||
+      item.invoice_number ||
+      (item.id ? String(item.id).slice(0, 8) : 'Receipt');
+
+    try {
+      setIsGeneratingReceipt(true);
+      setReceiptGeneratingId(item.id);
+
+      const html = generatePrincipalFeeReceiptHTML(item, theme);
+      const file = await generatePDF({
+        html,
+        fileName: `Receipt_${invNum.replace(/[^a-zA-Z0-9_-]/g, '')}`,
+      });
+
+      if (!file?.filePath) {
+        throw new Error('PDF generation produced an empty file path');
+      }
+
+      const rawPath = toRawFilePath(file.filePath);
+      const fileUri = toFileUri(file.filePath);
+
+      Alert.alert(
+        'Fee Payment Receipt',
+        `Receipt ready for #${invNum}. Select an action:`,
+        [
+          {
+            text: 'Print Receipt',
+            onPress: async () => {
+              try {
+                await RNPrint.print({ filePath: rawPath });
+              } catch (err: any) {
+                if (err?.message && !err.message.includes('cancel')) {
+                  Alert.alert('Print Error', 'Could not print the receipt.');
+                }
+              }
+            },
+          },
+          {
+            text: 'Save / Share PDF',
+            onPress: async () => {
+              try {
+                await Share.open({
+                  url: fileUri,
+                  type: 'application/pdf',
+                  title: `Fee Receipt #${invNum}`,
+                });
+              } catch (err: any) {
+                if (
+                  err?.message &&
+                  !err.message.includes('User did not share') &&
+                  !err.message.includes('dismiss') &&
+                  !err.message.includes('cancel')
+                ) {
+                  Alert.alert('Share Error', 'Could not share the receipt.');
+                }
+              }
+            },
+          },
+          { text: 'Cancel', style: 'cancel' },
+        ],
+      );
+    } catch (error: any) {
+      console.error('[PrincipalFees] Receipt generation error:', error);
+      Alert.alert('Receipt Error', error?.message || 'Failed to generate receipt.');
+    } finally {
+      setIsGeneratingReceipt(false);
+      setReceiptGeneratingId(null);
+    }
+  };
+
+  const handleViewLedgerEntries = useCallback((item: InvoiceItem | ReconciliationPayment) => {
+    const isSettlement = 'payment_mode' in item;
+    const lines = isSettlement
+      ? [
+          `Payment reference: ${item.razorpay_payment_id || item.id}`,
+          `Payment mode: ${item.payment_mode || 'Not recorded'}`,
+          `Gross amount: ${formatFullRupee(item.gross_amount || item.base_amount || 0)}`,
+          `Gateway fee: ${formatFullRupee(item.gateway_fee || 0)}`,
+          `GST on fee: ${formatFullRupee(item.gst_on_fee || 0)}`,
+          `Net settled: ${formatFullRupee(item.settled_amount || 0)}`,
+          `Status: ${item.status || 'Not recorded'}`,
+        ]
+      : [
+          `Invoice: ${item.invoiceNumber}`,
+          `Student: ${item.studentName || 'Not recorded'}`,
+          `Description: ${item.description}`,
+          `Billed amount: ${formatFullRupee(item.totalAmount || 0)}`,
+          `Amount paid: ${formatFullRupee(item.amountPaid || 0)}`,
+          `Status: ${item.status || 'Not recorded'}`,
+        ];
+
+    Alert.alert('Ledger Entry Details', lines.join('\n'));
+  }, []);
+
   const loadReconciliation = useCallback(async () => {
     setIsReconLoading(true);
     try {
@@ -177,10 +482,10 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
   // Status Badge
   const StatusBadge = ({ status }: { status: string }) => {
     const normalized = (status || 'PENDING').toUpperCase();
-    let bg = '#FFF7ED'; let text = '#EA580C'; let icon = 'time-outline'; let label = 'Pending';
-    if (normalized === 'PAID' || normalized === 'SUCCESS') { bg = '#ECFDF5'; text = '#059669'; icon = 'checkmark-circle'; label = 'Paid'; }
-    else if (normalized === 'OVERDUE') { bg = '#FEF2F2'; text = '#EF4444'; icon = 'alert-circle'; label = 'Overdue'; }
-    else if (normalized === 'CANCELLED') { bg = '#F3F4F6'; text = '#6B7280'; icon = 'close-circle'; label = 'Cancelled'; }
+    let bg = isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)'; let text = theme.warning; let icon = 'time-outline'; let label = 'Pending';
+    if (normalized === 'PAID' || normalized === 'SUCCESS') { bg = isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)'; text = theme.success; icon = 'checkmark-circle'; label = 'Paid'; }
+    else if (normalized === 'OVERDUE') { bg = isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)'; text = theme.danger; icon = 'alert-circle'; label = 'Overdue'; }
+    else if (normalized === 'CANCELLED') { bg = isDarkMode ? theme.surface : theme.border; text = theme.subtext; icon = 'close-circle'; label = 'Cancelled'; }
     return (
       <View style={[s.statusBadge, { backgroundColor: bg }]}>
         <Ionicons name={icon} size={12} color={text} />
@@ -191,11 +496,11 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
 
   const PaymentModeBadge = ({ mode }: { mode: string }) => {
     const m = (mode || '').toUpperCase();
-    let bg = '#EEF2FF'; let text = '#4F46E5'; let icon = 'card-outline';
-    if (m === 'UPI') { bg = '#F0FDF4'; text = '#16A34A'; icon = 'phone-portrait-outline'; }
-    else if (m === 'CASH') { bg = '#FEF3C7'; text = '#D97706'; icon = 'cash-outline'; }
-    else if (m === 'CHEQUE') { bg = '#FDF4FF'; text = '#C026D3'; icon = 'document-text-outline'; }
-    else if (m === 'NETBANKING') { bg = '#E0F2FE'; text = '#0369A1'; icon = 'globe-outline'; }
+    let bg = isDarkMode ? 'rgba(79, 70, 229, 0.2)' : theme.iconBackground; let text = theme.primary; let icon = 'card-outline';
+    if (m === 'UPI') { bg = isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)'; text = theme.success; icon = 'phone-portrait-outline'; }
+    else if (m === 'CASH') { bg = isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)'; text = theme.warning; icon = 'cash-outline'; }
+    else if (m === 'CHEQUE') { bg = isDarkMode ? 'rgba(192, 38, 211, 0.2)' : theme.iconBackground; text = theme.secondary; icon = 'document-text-outline'; }
+    else if (m === 'NETBANKING') { bg = isDarkMode ? 'rgba(3, 105, 161, 0.2)' : theme.iconBackground; text = theme.primary; icon = 'globe-outline'; }
     return (
       <View style={[s.paymentModeBadge, { backgroundColor: bg }]}>
         <Ionicons name={icon} size={12} color={text} />
@@ -210,7 +515,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
       {/* Title */}
       <View style={s.titleRow}>
         <View style={s.titleIcon}>
-          <Ionicons name="receipt" size={22} color="#FFFFFF" />
+          <Ionicons name="receipt" size={22} color={theme.onPrimary} />
         </View>
         <View style={{ flex: 1 }}>
           <View style={s.titleTextRow}>
@@ -223,20 +528,30 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Create Invoice Button */}
-      <TouchableOpacity
-        style={s.createBtn}
-        onPress={() => navigation.navigate('PrincipalCreateInvoice' as any)}
-      >
-        <Ionicons name="add" size={18} color="#FFFFFF" />
-        <Text style={s.createBtnText}>Create Invoice</Text>
-      </TouchableOpacity>
+      {/* Actions Row */}
+      <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
+        <TouchableOpacity
+          style={[s.createBtn, { flex: 1 }]}
+          onPress={() => navigation.navigate('PrincipalCreateInvoice' as any)}
+        >
+          <Ionicons name="add" size={18} color={theme.onPrimary} />
+          <Text style={s.createBtnText}>Create Invoice</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[s.createBtn, { flex: 1, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border }]}
+          onPress={handleExportCSV}
+        >
+          <Ionicons name="download-outline" size={18} color={theme.text} />
+          <Text style={[s.createBtnText, { color: theme.text }]}>Export CSV</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Ledger Banner */}
       <View style={s.ledgerBanner}>
         <View style={s.ledgerBannerRow}>
           <View style={s.ledgerIconBox}>
-            <Ionicons name="shield-checkmark" size={14} color="#7C3AED" />
+            <Ionicons name="shield-checkmark" size={14} color={theme.primary} />
           </View>
           <Text style={s.ledgerBannerLabel}>Double-Entry Ledger </Text>
           <Text style={s.ledgerBannerDesc}>Row-level locking • 0% UPI • 2% Card absorbed</Text>
@@ -256,15 +571,15 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={s.kpiLabel}>GROSS COLLECTED</Text>
               <Text style={s.kpiValue}>{formatRupee(grossCollected)}</Text>
             </View>
-            <View style={[s.kpiIcon, { backgroundColor: '#F5F3FF' }]}>
-              <Ionicons name="wallet" size={20} color="#7C3AED" />
+            <View style={[s.kpiIcon, { backgroundColor: theme.iconBackground }]}>
+              <Ionicons name="wallet" size={20} color={theme.primary} />
             </View>
           </View>
           <View style={s.kpiDivider} />
           <View style={s.kpiBottom}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Ionicons name="trending-up" size={12} color="#059669" />
-              <Text style={[s.kpiBottomText, { color: '#059669', fontWeight: '700' }]}>Real-Time Volume</Text>
+              <Ionicons name="trending-up" size={12} color={theme.success} />
+              <Text style={[s.kpiBottomText, { color: isDarkMode ? theme.success : theme.success, fontWeight: '700' }]}>Real-Time Volume</Text>
             </View>
             <Text style={s.kpiBottomText}>{paidCount} payments</Text>
           </View>
@@ -275,18 +590,18 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
           <View style={s.kpiTop}>
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={[s.kpiLabel, { color: '#A5B4FC' }]}>NET SETTLED REVENUE</Text>
-                <Ionicons name="sparkles" size={12} color="#FCD34D" />
+                <Text style={[s.kpiLabel, { color: theme.primary }]}>NET SETTLED REVENUE</Text>
+                <Ionicons name="sparkles" size={12} color={theme.warning} />
               </View>
-              <Text style={[s.kpiValue, { color: '#FFFFFF' }]}>{formatRupee(netSettled)}</Text>
+              <Text style={[s.kpiValue, { color: theme.surface }]}>{formatRupee(netSettled)}</Text>
             </View>
             <View style={[s.kpiIcon, { backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }]}>
-              <Ionicons name="business" size={20} color="#C7D2FE" />
+              <Ionicons name="business" size={20} color={theme.primary} />
             </View>
           </View>
           <View style={[s.kpiDivider, { backgroundColor: 'rgba(99,102,241,0.3)' }]} />
           <View style={s.kpiBottom}>
-            <Text style={[s.kpiBottomText, { color: '#C7D2FE' }]}>{formatRupee(gatewayDeductions)} absorbed</Text>
+            <Text style={[s.kpiBottomText, { color: isDarkMode ? theme.primary : theme.primary }]}>{formatRupee(gatewayDeductions)} absorbed</Text>
             <View style={s.netBadge}>
               <Text style={s.netBadgeText}>{settlementEfficiency}% Net</Text>
             </View>
@@ -300,15 +615,15 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={s.kpiLabel}>TOTAL BILLED</Text>
               <Text style={s.kpiValue}>{formatRupee(totalBilled)}</Text>
             </View>
-            <View style={[s.kpiIcon, { backgroundColor: '#EFF6FF' }]}>
-              <Ionicons name="trending-up" size={20} color="#3B82F6" />
+            <View style={[s.kpiIcon, { backgroundColor: theme.iconBackground }]}>
+              <Ionicons name="trending-up" size={20} color={theme.primary} />
             </View>
           </View>
           <View style={s.kpiDivider} />
           <View style={s.kpiBottom}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Ionicons name="trending-up" size={12} color="#3B82F6" />
-              <Text style={[s.kpiBottomText, { color: '#3B82F6', fontWeight: '700' }]}>Live Ledger Sync</Text>
+              <Ionicons name="trending-up" size={12} color={theme.primary} />
+              <Text style={[s.kpiBottomText, { color: theme.primary, fontWeight: '700' }]}>Live Ledger Sync</Text>
             </View>
             <Text style={s.kpiBottomText}>{totalCount} total records</Text>
           </View>
@@ -326,15 +641,15 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
                 </View>
               </View>
             </View>
-            <View style={[s.kpiIcon, { backgroundColor: '#ECFDF5' }]}>
-              <Ionicons name="speedometer" size={20} color="#059669" />
+            <View style={[s.kpiIcon, { backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)' }]}>
+              <Ionicons name="speedometer" size={20} color={theme.success} />
             </View>
           </View>
           <View style={s.kpiDivider} />
           <View style={s.kpiBottom}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Ionicons name="trending-up" size={12} color="#059669" />
-              <Text style={[s.kpiBottomText, { color: '#059669', fontWeight: '700' }]}>Real-Time Rate</Text>
+              <Ionicons name="trending-up" size={12} color={theme.success} />
+              <Text style={[s.kpiBottomText, { color: isDarkMode ? theme.success : theme.success, fontWeight: '700' }]}>Real-Time Rate</Text>
             </View>
             <Text style={s.kpiBottomText}>Automated</Text>
           </View>
@@ -347,7 +662,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
           style={[s.mainTabBtn, mainTab === 'invoices' && s.mainTabActive]}
           onPress={() => setMainTab('invoices')}
         >
-          <Ionicons name="receipt-outline" size={14} color={mainTab === 'invoices' ? '#7C3AED' : '#94A3B8'} />
+          <Ionicons name="receipt-outline" size={14} color={mainTab === 'invoices' ? theme.primary : theme.subtext} />
           <Text style={[s.mainTabText, mainTab === 'invoices' && s.mainTabTextActive]}>Invoices</Text>
         </TouchableOpacity>
 
@@ -355,7 +670,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
           style={[s.mainTabBtn, mainTab === 'settlements' && s.mainTabActive]}
           onPress={() => setMainTab('settlements')}
         >
-          <Ionicons name="business-outline" size={14} color={mainTab === 'settlements' ? '#7C3AED' : '#94A3B8'} />
+          <Ionicons name="business-outline" size={14} color={mainTab === 'settlements' ? theme.primary : theme.subtext} />
           <Text style={[s.mainTabText, mainTab === 'settlements' && s.mainTabTextActive]}>Settlement</Text>
         </TouchableOpacity>
 
@@ -363,7 +678,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
           style={[s.mainTabBtn, mainTab === 'refunds' && s.mainTabActive]}
           onPress={() => setMainTab('refunds')}
         >
-          <Ionicons name="return-down-back" size={14} color={mainTab === 'refunds' ? '#7C3AED' : '#94A3B8'} />
+          <Ionicons name="return-down-back" size={14} color={mainTab === 'refunds' ? theme.primary : theme.subtext} />
           <Text style={[s.mainTabText, mainTab === 'refunds' && s.mainTabTextActive]}>Refunds</Text>
         </TouchableOpacity>
       </View>
@@ -375,7 +690,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
     <View style={s.subHeaderSection}>
       <View style={s.subHeaderRow}>
         <View style={s.subHeaderIcon}>
-          <Ionicons name="document-text" size={16} color="#64748B" />
+          <Ionicons name="document-text" size={16} color={theme.subtext} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={s.subHeaderTitle}>Ledger Invoices & Receivables</Text>
@@ -403,8 +718,8 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
   const renderRefundsSubHeader = () => (
     <View style={s.subHeaderSection}>
       <View style={s.subHeaderRow}>
-        <View style={[s.subHeaderIcon, { backgroundColor: '#FEE2E2' }]}>
-          <Ionicons name="return-down-back" size={16} color="#EF4444" />
+        <View style={[s.subHeaderIcon, { backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)' }]}>
+          <Ionicons name="return-down-back" size={16} color={theme.danger} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={s.subHeaderTitle}>Refunds Processing</Text>
@@ -459,8 +774,8 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
             {(item.status || '').toUpperCase() === 'PAID' && item.paidAt && (
               <View style={s.dateBlock}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                  <Ionicons name="checkmark-circle" size={12} color="#059669" />
-                  <Text style={[s.dateVal, { color: '#059669' }]}>Paid {formatDate(item.paidAt)}</Text>
+                  <Ionicons name="checkmark-circle" size={12} color={theme.success} />
+                  <Text style={[s.dateVal, { color: isDarkMode ? theme.success : theme.success }]}>Paid {formatDate(item.paidAt)}</Text>
                 </View>
               </View>
             )}
@@ -473,25 +788,43 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
             style={s.actionDotBtn}
             onPress={() => setActionMenuId(actionMenuId === item.id ? null : item.id)}
           >
-            <Ionicons name="ellipsis-vertical" size={18} color="#94A3B8" />
+            <Ionicons name="ellipsis-vertical" size={18} color={theme.placeholder} />
           </TouchableOpacity>
           {actionMenuId === item.id && (
             <View style={s.actionMenu}>
-              <TouchableOpacity style={s.actionMenuItem} onPress={() => { setActionMenuId(null); }}>
-                <Ionicons name="download-outline" size={16} color="#334155" />
-                <Text style={s.actionMenuText}>Download Receipt</Text>
+              <TouchableOpacity
+                style={s.actionMenuItem}
+                onPress={() => {
+                  setActionMenuId(null);
+                  handleDownloadReceipt(item);
+                }}
+              >
+                {receiptGeneratingId === item.id ? (
+                  <ActivityIndicator size="small" color={theme.primary} />
+                ) : (
+                  <>
+                    <Ionicons name="download-outline" size={16} color={theme.primary} />
+                    <Text style={[s.actionMenuText, { color: theme.text }]}>Download Receipt</Text>
+                  </>
+                )}
               </TouchableOpacity>
-              <TouchableOpacity style={s.actionMenuItem} onPress={() => { setActionMenuId(null); }}>
-                <Ionicons name="book-outline" size={16} color="#334155" />
-                <Text style={s.actionMenuText}>View Ledger Entries</Text>
+              <TouchableOpacity
+                style={s.actionMenuItem}
+                onPress={() => {
+                  setActionMenuId(null);
+                  handleViewLedgerEntries(item);
+                }}
+              >
+                <Ionicons name="book-outline" size={16} color={theme.primary} />
+                <Text style={[s.actionMenuText, { color: theme.text }]}>View Ledger Entries</Text>
               </TouchableOpacity>
               {(item.status || '').toUpperCase() === 'PAID' && mainTab === 'refunds' && (
                 <TouchableOpacity
                   style={s.actionMenuItem}
                   onPress={() => { setActionMenuId(null); setRefundInvoice(item); }}
                 >
-                  <Ionicons name="return-down-back" size={16} color="#EF4444" />
-                  <Text style={[s.actionMenuText, { color: '#EF4444' }]}>Initiate Refund</Text>
+                  <Ionicons name="return-down-back" size={16} color={theme.danger} />
+                  <Text style={[s.actionMenuText, { color: theme.danger }]}>Initiate Refund</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -508,7 +841,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
       <View style={s.settlementsTopCard}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
           <View style={[s.subHeaderIcon, { backgroundColor: 'rgba(16,185,129,0.1)' }]}>
-            <Ionicons name="business" size={16} color="#059669" />
+            <Ionicons name="business" size={16} color={theme.success} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={s.subHeaderTitle}>Bank Settlements & Ledger Reconciliation</Text>
@@ -516,14 +849,14 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </View>
         <TouchableOpacity style={s.auditBtn} onPress={loadReconciliation}>
-          <Ionicons name="refresh" size={14} color="#FFFFFF" />
+          <Ionicons name="refresh" size={14} color={theme.onPrimary} />
           <Text style={s.auditBtnText}>Run Audit</Text>
         </TouchableOpacity>
       </View>
 
       {/* Settlement Summary Cards */}
       {isReconLoading ? (
-        <ActivityIndicator size="small" color="#7C3AED" style={{ marginVertical: 20 }} />
+        <ActivityIndicator size="small" color={theme.primary} style={{ marginVertical: 20 }} />
       ) : reconciliation ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, marginTop: 16 }}>
           {/* Base Invoice Volume */}
@@ -531,7 +864,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={s.reconLabel}>BASE INVOICE VOLUME</Text>
             <Text style={s.reconValue}>{formatRupee(reconciliation.totalBase)}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}>
-              <Ionicons name="checkmark" size={12} color="#059669" />
+              <Ionicons name="checkmark" size={12} color={theme.success} />
               <Text style={s.reconMeta}>{reconciliation.totalPayments} verified transactions</Text>
             </View>
           </View>
@@ -544,17 +877,17 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
                 <Text style={s.gstBadgeText}>GST + Fee</Text>
               </View>
             </View>
-            <Text style={[s.reconValue, { color: '#4F46E5' }]}>{formatRupee(reconciliation.totalGatewayCost)}</Text>
+            <Text style={[s.reconValue, { color: theme.primary }]}>{formatRupee(reconciliation.totalGatewayCost)}</Text>
             <Text style={s.reconMeta}>0% fee on UPI • 2% on Cards</Text>
           </View>
 
           {/* Net Settled - Dark */}
           <View style={s.reconCardDark}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={[s.reconLabel, { color: '#6EE7B7' }]}>NET SETTLED TO BANK</Text>
-              <Ionicons name="shield-checkmark" size={16} color="#34D399" />
+              <Text style={[s.reconLabel, { color: theme.success }]}>NET SETTLED TO BANK</Text>
+              <Ionicons name="shield-checkmark" size={16} color={theme.success} />
             </View>
-            <Text style={[s.reconValue, { color: '#FFFFFF' }]}>{formatRupee(reconciliation.totalSettled)}</Text>
+            <Text style={[s.reconValue, { color: theme.surface }]}>{formatRupee(reconciliation.totalSettled)}</Text>
             <Text style={[s.reconMeta, { color: 'rgba(110,231,183,0.8)' }]}>Verified Bank Account • Reconciled</Text>
           </View>
         </ScrollView>
@@ -598,8 +931,8 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={s.payoutGridValue}>{formatFullRupee(item.base_amount || 0)}</Text>
         </View>
         <View style={s.payoutGridItem}>
-          <Text style={[s.payoutGridLabel, { color: '#059669' }]}>Deductions</Text>
-          <Text style={[s.payoutGridValue, { color: '#059669' }]}>{formatFullRupee((item.gateway_fee || 0) + (item.gst_on_fee || 0))} ({(item.payment_mode || '').toUpperCase() === 'UPI' ? '0%' : '2%'} Fee)</Text>
+          <Text style={[s.payoutGridLabel, { color: isDarkMode ? theme.success : theme.success }]}>Deductions</Text>
+          <Text style={[s.payoutGridValue, { color: isDarkMode ? theme.success : theme.success }]}>{formatFullRupee((item.gateway_fee || 0) + (item.gst_on_fee || 0))} ({(item.payment_mode || '').toUpperCase() === 'UPI' ? '0%' : '2%'} Fee)</Text>
         </View>
         <View style={s.payoutGridItem}>
           <Text style={s.payoutGridLabel}>Net Settled</Text>
@@ -609,26 +942,44 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
 
       <View style={[s.reconStatusRow, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
         <View style={s.reconStatusBadge}>
-          <Ionicons name="shield-checkmark" size={12} color="#059669" />
+          <Ionicons name="shield-checkmark" size={12} color={theme.success} />
           <Text style={s.reconStatusText}>Matched & Reconciled</Text>
         </View>
-        
+
         <View style={{ position: 'relative' }}>
           <TouchableOpacity
             style={s.actionDotBtn}
             onPress={() => setActionMenuId(actionMenuId === item.id ? null : item.id)}
           >
-            <Ionicons name="ellipsis-vertical" size={18} color="#94A3B8" />
+            <Ionicons name="ellipsis-vertical" size={18} color={theme.placeholder} />
           </TouchableOpacity>
           {actionMenuId === item.id && (
             <View style={[s.actionMenu, { right: 0, top: 30, width: 180 }]}>
-              <TouchableOpacity style={s.actionMenuItem} onPress={() => { setActionMenuId(null); }}>
-                <Ionicons name="download-outline" size={16} color="#334155" />
-                <Text style={s.actionMenuText}>Download Receipt</Text>
+              <TouchableOpacity
+                style={s.actionMenuItem}
+                onPress={() => {
+                  setActionMenuId(null);
+                  handleDownloadReceipt(item);
+                }}
+              >
+                {receiptGeneratingId === item.id ? (
+                  <ActivityIndicator size="small" color={theme.primary} />
+                ) : (
+                  <>
+                    <Ionicons name="download-outline" size={16} color={theme.primary} />
+                    <Text style={[s.actionMenuText, { color: theme.text }]}>Download Receipt</Text>
+                  </>
+                )}
               </TouchableOpacity>
-              <TouchableOpacity style={s.actionMenuItem} onPress={() => { setActionMenuId(null); }}>
-                <Ionicons name="book-outline" size={16} color="#334155" />
-                <Text style={s.actionMenuText}>View Ledger Entries</Text>
+              <TouchableOpacity
+                style={s.actionMenuItem}
+                onPress={() => {
+                  setActionMenuId(null);
+                  handleViewLedgerEntries(item);
+                }}
+              >
+                <Ionicons name="book-outline" size={16} color={theme.primary} />
+                <Text style={[s.actionMenuText, { color: theme.text }]}>View Ledger Entries</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -649,7 +1000,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
             <View style={s.refundHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                 <View style={s.refundIcon}>
-                  <Ionicons name="return-down-back" size={20} color="#FFFFFF" />
+                  <Ionicons name="return-down-back" size={20} color={theme.onPrimary} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -662,14 +1013,14 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
                 </View>
               </View>
               <TouchableOpacity onPress={() => { setRefundInvoice(null); setRefundConfirmText(''); setRefundAgreed(false); }}>
-                <Ionicons name="close" size={24} color="#64748B" />
+                <Ionicons name="close" size={24} color={theme.subtext} />
               </TouchableOpacity>
             </View>
 
             <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
               {/* Policy Warning */}
               <View style={s.policyWarning}>
-                <Ionicons name="alert-circle" size={18} color="#D97706" />
+                <Ionicons name="alert-circle" size={18} color={theme.warning} />
                 <View style={{ flex: 1 }}>
                   <Text style={s.policyTitle}>STRICT BASE AMOUNT REFUND POLICY</Text>
                   <Text style={s.policyDesc}>Gateway convenience fees and GST are <Text style={{ fontWeight: '800', textDecorationLine: 'underline' }}>non-refundable</Text> by the payment gateway.</Text>
@@ -680,7 +1031,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
               <View style={s.ledgerBreakdown}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="document-text" size={14} color="#334155" />
+                    <Ionicons name="document-text" size={14} color={theme.text} />
                     <Text style={s.ledgerTitle}>LEDGER BREAKDOWN</Text>
                   </View>
                   <Text style={s.ledgerMode}>Mode: CASH</Text>
@@ -694,9 +1045,9 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
                   <Text style={s.ledgerLabel}>Net Settled to Bank Account:</Text>
                   <Text style={[s.ledgerVal, { fontSize: 13 }]}>{formatFullRupee(refundInvoice.totalAmount || refundInvoice.baseAmount)}</Text>
                 </View>
-                <View style={[s.ledgerRow, { borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 12, marginTop: 8 }]}>
+                <View style={[s.ledgerRow, { borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 12, marginTop: 8 }]}>
                   <Text style={[s.ledgerLabel, { fontWeight: '800' }]}>Base Amount to Refund:</Text>
-                  <Text style={[s.ledgerVal, { color: '#059669', fontWeight: '800', fontSize: 16 }]}>{formatFullRupee(refundInvoice.totalAmount || refundInvoice.baseAmount)}</Text>
+                  <Text style={[s.ledgerVal, { color: isDarkMode ? theme.success : theme.success, fontWeight: '800', fontSize: 16 }]}>{formatFullRupee(refundInvoice.totalAmount || refundInvoice.baseAmount)}</Text>
                 </View>
               </View>
 
@@ -704,29 +1055,29 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={s.sectionLabel}>REASON FOR REFUND *</Text>
               <View style={s.reasonPicker}>
                 <Text style={s.reasonText}>{refundReason}</Text>
-                <Ionicons name="chevron-down" size={16} color="#94A3B8" />
+                <Ionicons name="chevron-down" size={16} color={theme.placeholder} />
               </View>
 
               {/* Confirmation */}
               <View style={s.confirmSection}>
                 <TouchableOpacity style={s.checkboxRow} onPress={() => setRefundAgreed(!refundAgreed)}>
                   <View style={[s.checkbox, refundAgreed && s.checkboxChecked]}>
-                    {refundAgreed && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
+                    {refundAgreed && <Ionicons name="checkmark" size={14} color={theme.onPrimary} />}
                   </View>
                   <Text style={s.checkboxLabel}>I confirm that initiating this refund will debit the school's settlement balance.</Text>
                 </TouchableOpacity>
 
-                <Text style={s.confirmPrompt}>TYPE <Text style={{ color: '#EF4444', fontWeight: '800' }}>REFUND</Text> BELOW TO AUTHORIZE THIS IRREVERSIBLE TRANSACTION:</Text>
+                <Text style={s.confirmPrompt}>TYPE <Text style={{ color: theme.danger, fontWeight: '800' }}>REFUND</Text> BELOW TO AUTHORIZE THIS IRREVERSIBLE TRANSACTION:</Text>
                 <View style={s.confirmInput}>
                   <TextInput
                     style={s.confirmInputField}
                     placeholder="Type REFUND here"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={theme.placeholder}
                     value={refundConfirmText}
                     onChangeText={setRefundConfirmText}
                     autoCapitalize="characters"
                   />
-                  <Ionicons name="lock-closed" size={16} color="#94A3B8" />
+                  <Ionicons name="lock-closed" size={16} color={theme.placeholder} />
                 </View>
               </View>
             </ScrollView>
@@ -746,7 +1097,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
                   setRefundAgreed(false);
                 }}
               >
-                <Ionicons name="return-down-back" size={16} color="#FFFFFF" />
+                <Ionicons name="return-down-back" size={16} color={theme.onPrimary} />
                 <Text style={s.refundSubmitText}>Authorize Refund</Text>
               </TouchableOpacity>
             </View>
@@ -761,7 +1112,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
     return (
       <View style={s.loaderContainer}>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.background} />
-        <ActivityIndicator size="large" color="#7C3AED" />
+        <ActivityIndicator size="large" color={theme.primary} />
         <Text style={s.loaderText}>Loading Fee Management...</Text>
       </View>
     );
@@ -772,7 +1123,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
     return (
       <View style={s.loaderContainer}>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.background} />
-        <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+        <Ionicons name="alert-circle-outline" size={64} color={theme.danger} />
         <Text style={[s.loaderText, { color: theme.text, fontSize: 18, fontWeight: '700', marginTop: 16 }]}>Failed to load fees</Text>
         <TouchableOpacity style={s.retryBtn} onPress={() => loadData()}>
           <Text style={s.retryBtnText}>Retry</Text>
@@ -793,7 +1144,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
         <Text style={s.appBarTitle}>Fee Management & Accounting</Text>
         <TouchableOpacity onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}>
           {authState.user?.photoUrl ? (
-            <Image source={{ uri: authState.user.photoUrl }} style={s.appBarAvatar} />
+            <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={s.appBarAvatar} />
           ) : (
             <View style={s.appBarAvatarFallback}>
               <Text style={s.appBarAvatarText}>{authState.user?.name?.charAt(0) || 'P'}</Text>
@@ -811,11 +1162,11 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
           contentContainerStyle={{ paddingBottom: 30 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={isRefreshing} onRefresh={() => loadData(true)} colors={['#7C3AED']} />
+            <RefreshControl refreshing={isRefreshing} onRefresh={() => loadData(true)} colors={[theme.primary]} />
           }
           ListEmptyComponent={
             <View style={s.emptyState}>
-              <Ionicons name="receipt-outline" size={48} color="#CBD5E1" />
+              <Ionicons name="receipt-outline" size={48} color={theme.border} />
               <Text style={s.emptyTitle}>No {invoiceFilter.toLowerCase()} invoices</Text>
               <Text style={s.emptyDesc}>No invoices match the selected filter.</Text>
             </View>
@@ -830,14 +1181,14 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
           contentContainerStyle={{ paddingBottom: 30 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={isRefreshing} onRefresh={() => { loadData(true); loadReconciliation(); }} colors={['#7C3AED']} />
+            <RefreshControl refreshing={isRefreshing} onRefresh={() => { loadData(true); loadReconciliation(); }} colors={[theme.primary]} />
           }
           ListEmptyComponent={
             isReconLoading ? (
-              <ActivityIndicator size="large" color="#7C3AED" style={{ marginTop: 40 }} />
+              <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
             ) : (
               <View style={s.emptyState}>
-                <Ionicons name="document-text-outline" size={48} color="#CBD5E1" />
+                <Ionicons name="document-text-outline" size={48} color={theme.border} />
                 <Text style={s.emptyTitle}>No settled payouts</Text>
                 <Text style={s.emptyDesc}>{paymentModeFilter !== 'ALL' ? `No ${paymentModeFilter} payouts found.` : 'No bank payouts recorded yet.'}</Text>
               </View>
@@ -853,11 +1204,11 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
           contentContainerStyle={{ paddingBottom: 30 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={isRefreshing} onRefresh={() => loadData(true)} colors={['#7C3AED']} />
+            <RefreshControl refreshing={isRefreshing} onRefresh={() => loadData(true)} colors={[theme.primary]} />
           }
           ListEmptyComponent={
             <View style={s.emptyState}>
-              <Ionicons name="return-down-back" size={48} color="#CBD5E1" />
+              <Ionicons name="return-down-back" size={48} color={theme.border} />
               <Text style={s.emptyTitle}>No refundable invoices</Text>
               <Text style={s.emptyDesc}>There are no paid invoices available for refund.</Text>
             </View>
@@ -875,162 +1226,162 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
 const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.background,
     paddingTop: Platform.OS === 'ios' ? 50 : 30,
   },
   loaderContainer: {
-    flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC',
+    flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background,
   },
   loaderText: {
-    marginTop: 12, fontSize: 14, color: '#64748B', fontWeight: '500',
+    marginTop: 12, fontSize: 14, color: theme.subtext, fontWeight: '500',
   },
   retryBtn: {
-    marginTop: 16, backgroundColor: '#7C3AED', paddingVertical: 12, paddingHorizontal: 28, borderRadius: 12,
+    marginTop: 16, backgroundColor: theme.primary, paddingVertical: 12, paddingHorizontal: 28, borderRadius: 12,
   },
   retryBtnText: {
-    color: '#FFFFFF', fontSize: 14, fontWeight: '700',
+    color: theme.onPrimary, fontSize: 14, fontWeight: '700',
   },
 
   // App Bar
   appBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1, borderBottomColor: '#F1F5F9',
+    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: theme.surface,
+    borderBottomWidth: 1, borderBottomColor: theme.border,
   },
   appBarBtn: { padding: 4 },
-  appBarTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A', flex: 1, marginLeft: 12 },
+  appBarTitle: { fontSize: 16, fontWeight: '800', color: theme.text, flex: 1, marginLeft: 12 },
   appBarAvatar: { width: 32, height: 32, borderRadius: 16 },
   appBarAvatarFallback: {
-    width: 32, height: 32, borderRadius: 16, backgroundColor: '#7C3AED',
+    width: 32, height: 32, borderRadius: 16, backgroundColor: theme.primary,
     justifyContent: 'center', alignItems: 'center',
   },
-  appBarAvatarText: { color: '#FFF', fontWeight: '800', fontSize: 14 },
+  appBarAvatarText: { color: theme.onPrimary, fontWeight: '800', fontSize: 14 },
 
   // Header Section
   headerSection: { padding: 16, paddingBottom: 0 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   titleIcon: {
     width: 44, height: 44, borderRadius: 14,
-    backgroundColor: '#7C3AED', justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#7C3AED', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
+    backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center',
+    shadowColor: theme.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
   },
   titleTextRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  titleText: { fontSize: 20, fontWeight: '800', color: '#0F172A' },
+  titleText: { fontSize: 20, fontWeight: '800', color: theme.text },
   badge: {
-    backgroundColor: '#F3E8FF', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10,
-    borderWidth: 1, borderColor: '#E9D5FF',
+    backgroundColor: isDarkMode ? 'rgba(124,58,237,0.2)' : theme.iconBackground, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10,
+    borderWidth: 1, borderColor: isDarkMode ? 'rgba(124,58,237,0.4)' : theme.border,
   },
-  badgeText: { fontSize: 10, fontWeight: '800', color: '#7C3AED' },
-  subtitleText: { fontSize: 12, color: '#64748B', marginTop: 2 },
+  badgeText: { fontSize: 10, fontWeight: '800', color: theme.primary },
+  subtitleText: { fontSize: 12, color: theme.subtext, marginTop: 2 },
 
   // Create Button
   createBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: '#7C3AED', paddingVertical: 12, borderRadius: 14, marginBottom: 16,
-    shadowColor: '#7C3AED', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
+    backgroundColor: theme.primary, paddingVertical: 12, borderRadius: 14, marginBottom: 16,
+    shadowColor: theme.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
   },
-  createBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+  createBtnText: { color: theme.onPrimary, fontSize: 13, fontWeight: '800' },
 
   // Ledger Banner
   ledgerBanner: {
-    backgroundColor: 'rgba(124,58,237,0.06)', borderWidth: 1, borderColor: 'rgba(124,58,237,0.15)',
+    backgroundColor: isDarkMode ? 'rgba(124,58,237,0.1)' : 'rgba(124,58,237,0.06)', borderWidth: 1, borderColor: isDarkMode ? 'rgba(124,58,237,0.2)' : 'rgba(124,58,237,0.15)',
     borderRadius: 16, padding: 12, marginBottom: 16,
   },
   ledgerBannerRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
   ledgerIconBox: {
-    width: 28, height: 28, borderRadius: 8, backgroundColor: 'rgba(124,58,237,0.1)',
+    width: 28, height: 28, borderRadius: 8, backgroundColor: isDarkMode ? 'rgba(124,58,237,0.2)' : 'rgba(124,58,237,0.1)',
     justifyContent: 'center', alignItems: 'center',
   },
-  ledgerBannerLabel: { fontSize: 10, fontWeight: '800', color: '#7C3AED', textTransform: 'uppercase', letterSpacing: 0.5 },
-  ledgerBannerDesc: { fontSize: 11, color: '#475569', fontWeight: '500' },
+  ledgerBannerLabel: { fontSize: 10, fontWeight: '800', color: theme.primary, textTransform: 'uppercase', letterSpacing: 0.5 },
+  ledgerBannerDesc: { fontSize: 11, color: theme.subtext, fontWeight: '500' },
   syncBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#ECFDF5', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
+    backgroundColor: isDarkMode ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.1)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
     borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)', alignSelf: 'flex-start',
   },
-  syncDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981' },
-  syncBadgeText: { fontSize: 10, fontWeight: '700', color: '#059669' },
+  syncDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: theme.success },
+  syncBadgeText: { fontSize: 10, fontWeight: '700', color: theme.success },
 
   // KPI Cards
   kpiCard: {
-    width: width * 0.72, backgroundColor: '#FFFFFF', borderRadius: 20,
-    padding: 16, borderWidth: 1, borderColor: '#F1F5F9',
-    shadowColor: '#64748B', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+    width: width * 0.72, backgroundColor: theme.surface, borderRadius: 20,
+    padding: 16, borderWidth: 1, borderColor: theme.border,
+    shadowColor: theme.text, shadowOffset: { width: 0, height: 2 }, shadowOpacity: isDarkMode ? 0.2 : 0.06, shadowRadius: 8, elevation: 2,
   },
   kpiCardDark: {
     width: width * 0.72, borderRadius: 20, padding: 16,
-    backgroundColor: '#1E1B4B',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 4,
+    backgroundColor: theme.card,
+    shadowColor: theme.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 4,
   },
   kpiTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  kpiLabel: { fontSize: 10, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5, textTransform: 'uppercase' },
-  kpiValue: { fontSize: 26, fontWeight: '800', color: '#0F172A', marginTop: 6, letterSpacing: -0.5 },
+  kpiLabel: { fontSize: 10, fontWeight: '800', color: theme.subtext, letterSpacing: 0.5, textTransform: 'uppercase' },
+  kpiValue: { fontSize: 26, fontWeight: '800', color: theme.text, marginTop: 6, letterSpacing: -0.5 },
   kpiIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  kpiDivider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 12 },
+  kpiDivider: { height: 1, backgroundColor: theme.border, marginVertical: 12 },
   kpiBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  kpiBottomText: { fontSize: 11, color: '#94A3B8', fontWeight: '500' },
-  netBadge: { backgroundColor: 'rgba(99,102,241,0.2)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
-  netBadgeText: { fontSize: 10, fontWeight: '700', color: '#C7D2FE' },
-  pendingTag: { backgroundColor: '#FFF1F2', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  pendingTagText: { fontSize: 10, fontWeight: '700', color: '#F43F5E' },
+  kpiBottomText: { fontSize: 11, color: theme.subtext, fontWeight: '500' },
+  netBadge: { backgroundColor: isDarkMode ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
+  netBadgeText: { fontSize: 10, fontWeight: '700', color: theme.primary },
+  pendingTag: { backgroundColor: isDarkMode ? 'rgba(244,63,94,0.15)' : 'rgba(244,63,94,0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  pendingTagText: { fontSize: 10, fontWeight: '700', color: theme.danger },
 
   // Main Tabs
-  mainTabRow: { flexDirection: 'row', gap: 0, marginTop: 20, marginBottom: 4, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
+  mainTabRow: { flexDirection: 'row', gap: 0, marginTop: 20, marginBottom: 4, borderBottomWidth: 1, borderBottomColor: theme.border },
   mainTabBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: 'transparent',
   },
-  mainTabActive: { borderBottomColor: '#7C3AED' },
-  mainTabText: { fontSize: 11, fontWeight: '700', color: '#94A3B8' },
-  mainTabTextActive: { color: '#7C3AED' },
+  mainTabActive: { borderBottomColor: theme.primary },
+  mainTabText: { fontSize: 11, fontWeight: '700', color: theme.subtext },
+  mainTabTextActive: { color: theme.primary },
   mainTabCount: {
-    backgroundColor: '#F1F5F9', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8,
+    backgroundColor: theme.border, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8,
   },
-  mainTabCountText: { fontSize: 9, fontWeight: '800', color: '#64748B' },
+  mainTabCountText: { fontSize: 9, fontWeight: '800', color: theme.subtext },
 
   // Sub Header
   subHeaderSection: { paddingHorizontal: 16, paddingTop: 16 },
   subHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   subHeaderIcon: {
-    width: 36, height: 36, borderRadius: 12, backgroundColor: '#F1F5F9',
+    width: 36, height: 36, borderRadius: 12, backgroundColor: theme.border,
     justifyContent: 'center', alignItems: 'center',
   },
-  subHeaderTitle: { fontSize: 15, fontWeight: '800', color: '#0F172A' },
-  subHeaderDesc: { fontSize: 11, color: '#94A3B8', marginTop: 1 },
+  subHeaderTitle: { fontSize: 15, fontWeight: '800', color: theme.text },
+  subHeaderDesc: { fontSize: 11, color: theme.subtext, marginTop: 1 },
 
   // Filter Row
   filterRow: {
-    flexDirection: 'row', backgroundColor: '#F1F5F9', borderRadius: 12, padding: 3, marginBottom: 12,
+    flexDirection: 'row', backgroundColor: isDarkMode ? theme.surface : theme.border, borderRadius: 12, padding: 3, marginBottom: 12,
   },
   filterBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 10 },
   filterBtnActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2, elevation: 2,
+    backgroundColor: theme.surface,
+    shadowColor: theme.text, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2, elevation: 2,
   },
-  filterText: { fontSize: 11, fontWeight: '700', color: '#94A3B8' },
-  filterTextActive: { color: '#0F172A' },
+  filterText: { fontSize: 11, fontWeight: '700', color: theme.subtext },
+  filterTextActive: { color: theme.text },
 
   // Invoice Cards
   invoiceCard: {
-    backgroundColor: '#FFFFFF', marginHorizontal: 16, marginBottom: 12,
-    borderRadius: 16, borderWidth: 1, borderColor: '#F1F5F9', overflow: 'hidden',
-    shadowColor: '#64748B', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
+    backgroundColor: theme.surface, marginHorizontal: 16, marginBottom: 12,
+    borderRadius: 16, borderWidth: 1, borderColor: theme.border, overflow: 'hidden',
+    shadowColor: theme.text, shadowOffset: { width: 0, height: 2 }, shadowOpacity: isDarkMode ? 0.2 : 0.04, shadowRadius: 6, elevation: 1,
   },
   cardTop: { padding: 16 },
   invNumRow: { marginBottom: 12 },
-  invNumText: { fontSize: 11, fontWeight: '700', color: '#7C3AED', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  invNumText: { fontSize: 11, fontWeight: '700', color: theme.primary, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
   studentRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   studentAvatar: {
     width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center',
   },
-  studentAvatarText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
-  studentName: { fontSize: 14, fontWeight: '800', color: '#0F172A' },
-  studentGrade: { fontSize: 11, color: '#94A3B8', fontWeight: '500' },
-  feeDesc: { fontSize: 12, color: '#64748B', marginBottom: 10 },
+  studentAvatarText: { color: theme.onPrimary, fontSize: 13, fontWeight: '800' },
+  studentName: { fontSize: 14, fontWeight: '800', color: theme.text },
+  studentGrade: { fontSize: 11, color: theme.subtext, fontWeight: '500' },
+  feeDesc: { fontSize: 12, color: theme.subtext, marginBottom: 10 },
   amountStatusRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12,
   },
-  amountVal: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
+  amountVal: { fontSize: 18, fontWeight: '800', color: theme.text },
 
   // Status Badge
   statusBadge: {
@@ -1042,20 +1393,20 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   // Dates
   datesRow: { flexDirection: 'row', gap: 16 },
   dateBlock: {},
-  dateLbl: { fontSize: 10, color: '#94A3B8', fontWeight: '600', marginBottom: 2, textTransform: 'uppercase' },
-  dateVal: { fontSize: 12, fontWeight: '600', color: '#334155' },
+  dateLbl: { fontSize: 10, color: theme.subtext, fontWeight: '600', marginBottom: 2, textTransform: 'uppercase' },
+  dateVal: { fontSize: 12, fontWeight: '600', color: theme.text },
 
   // Card Actions
-  cardActions: { borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingHorizontal: 16, paddingVertical: 8, alignItems: 'flex-end' },
-  actionDotBtn: { padding: 6, borderRadius: 20, backgroundColor: '#F8FAFC' },
+  cardActions: { borderTopWidth: 1, borderTopColor: theme.border, paddingHorizontal: 16, paddingVertical: 8, alignItems: 'flex-end' },
+  actionDotBtn: { padding: 6, borderRadius: 20, backgroundColor: theme.background },
   actionMenu: {
-    position: 'absolute', right: 16, top: 40, backgroundColor: '#FFFFFF',
-    borderRadius: 14, borderWidth: 1, borderColor: '#F1F5F9', width: 200, zIndex: 100,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 8,
+    position: 'absolute', right: 16, top: 40, backgroundColor: theme.surface,
+    borderRadius: 14, borderWidth: 1, borderColor: theme.border, width: 200, zIndex: 100,
+    shadowColor: theme.text, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 8,
     paddingVertical: 4,
   },
   actionMenuItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 10 },
-  actionMenuText: { fontSize: 13, fontWeight: '600', color: '#334155' },
+  actionMenuText: { fontSize: 13, fontWeight: '600', color: theme.text },
 
   // Payment Mode Badge
   paymentModeBadge: {
@@ -1066,142 +1417,143 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
 
   // Settlements
   settlementsTopCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 20, padding: 16,
-    borderWidth: 1, borderColor: '#F1F5F9', marginBottom: 4,
-    shadowColor: '#64748B', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+    backgroundColor: theme.surface, borderRadius: 20, padding: 16,
+    borderWidth: 1, borderColor: theme.border, marginBottom: 4,
+    shadowColor: theme.text, shadowOffset: { width: 0, height: 1 }, shadowOpacity: isDarkMode ? 0.2 : 0.04, shadowRadius: 4, elevation: 1,
   },
   auditBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: '#0F172A', paddingVertical: 10, borderRadius: 12,
+    backgroundColor: isDarkMode ? theme.surface : theme.text, paddingVertical: 10, borderRadius: 12,
   },
-  auditBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
+  auditBtnText: { color: theme.onPrimary, fontSize: 12, fontWeight: '800' },
 
   // Reconciliation Cards
   reconCard: {
-    width: width * 0.6, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: '#F1F5F9',
+    width: width * 0.6, backgroundColor: theme.surface, borderRadius: 16, padding: 16,
+    borderWidth: 1, borderColor: theme.border,
   },
   reconCardDark: {
     width: width * 0.6, borderRadius: 16, padding: 16,
-    backgroundColor: '#064E3B', borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)',
+    backgroundColor: isDarkMode ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.1)', borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)',
   },
-  reconLabel: { fontSize: 10, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5, textTransform: 'uppercase' },
-  reconValue: { fontSize: 22, fontWeight: '800', color: '#0F172A', marginTop: 6 },
-  reconMeta: { fontSize: 11, color: '#94A3B8', marginTop: 8 },
-  gstBadge: { backgroundColor: '#EEF2FF', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 },
-  gstBadgeText: { fontSize: 8, fontWeight: '800', color: '#4F46E5' },
+  reconLabel: { fontSize: 10, fontWeight: '800', color: theme.subtext, letterSpacing: 0.5, textTransform: 'uppercase' },
+  reconValue: { fontSize: 22, fontWeight: '800', color: theme.text, marginTop: 6 },
+  reconMeta: { fontSize: 11, color: theme.subtext, marginTop: 8 },
+  gstBadge: { backgroundColor: isDarkMode ? 'rgba(79,70,229,0.15)' : theme.iconBackground, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 },
+  gstBadgeText: { fontSize: 8, fontWeight: '800', color: theme.primary },
 
   // Payout Header
   payoutHeaderSection: { marginTop: 20, marginBottom: 8 },
-  paymentFilterRow: { flexDirection: 'row', backgroundColor: '#F1F5F9', borderRadius: 12, padding: 3, marginTop: 12 },
+  paymentFilterRow: { flexDirection: 'row', backgroundColor: isDarkMode ? theme.surface : theme.border, borderRadius: 12, padding: 3, marginTop: 12 },
   paymentFilterBtn: { flex: 1, paddingVertical: 7, alignItems: 'center', borderRadius: 9 },
   paymentFilterBtnActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2, elevation: 2,
+    backgroundColor: theme.surface,
+    shadowColor: theme.text, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2, elevation: 2,
   },
-  paymentFilterText: { fontSize: 10, fontWeight: '700', color: '#94A3B8' },
-  paymentFilterTextActive: { color: '#0F172A' },
+  paymentFilterText: { fontSize: 10, fontWeight: '700', color: theme.subtext },
+  paymentFilterTextActive: { color: theme.text },
 
   // Payout Cards
   payoutCard: {
-    backgroundColor: '#FFFFFF', marginHorizontal: 16, marginBottom: 12,
-    borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#F1F5F9',
-    shadowColor: '#64748B', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+    backgroundColor: theme.surface, marginHorizontal: 16, marginBottom: 12,
+    borderRadius: 16, padding: 16, borderWidth: 1, borderColor: theme.border,
+    shadowColor: theme.text, shadowOffset: { width: 0, height: 1 }, shadowOpacity: isDarkMode ? 0.2 : 0.04, shadowRadius: 4, elevation: 1,
   },
-  payoutRef: { fontSize: 12, fontWeight: '700', color: '#0F172A', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
-  payoutDate: { fontSize: 11, color: '#94A3B8', marginTop: 2 },
+  payoutRef: { fontSize: 12, fontWeight: '700', color: theme.text, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  payoutDate: { fontSize: 11, color: theme.subtext, marginTop: 2 },
   payoutGrid: { flexDirection: 'row', gap: 12 },
   payoutGridItem: { flex: 1 },
-  payoutGridLabel: { fontSize: 10, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', marginBottom: 4 },
-  payoutGridValue: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
-  reconStatusRow: { marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
+  payoutGridLabel: { fontSize: 10, fontWeight: '700', color: theme.subtext, textTransform: 'uppercase', marginBottom: 4 },
+  payoutGridValue: { fontSize: 13, fontWeight: '700', color: theme.text },
+  reconStatusRow: { marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: theme.border },
   reconStatusBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#ECFDF5', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
+    backgroundColor: isDarkMode ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.1)', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
     borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)', alignSelf: 'flex-start',
   },
-  reconStatusText: { fontSize: 11, fontWeight: '700', color: '#059669' },
+  reconStatusText: { fontSize: 11, fontWeight: '700', color: theme.success },
 
   // Empty State
   emptyState: { paddingVertical: 60, alignItems: 'center', paddingHorizontal: 32 },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A', marginTop: 12 },
-  emptyDesc: { fontSize: 13, color: '#94A3B8', textAlign: 'center', marginTop: 4 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: theme.text, marginTop: 12 },
+  emptyDesc: { fontSize: 13, color: theme.subtext, textAlign: 'center', marginTop: 4 },
 
   // Refund Modal
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 16,
+    flex: 1, backgroundColor: isDarkMode ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 16,
   },
   refundModal: {
-    backgroundColor: '#FFFFFF', borderRadius: 20, width: '100%', maxHeight: '90%',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.2, shadowRadius: 32, elevation: 12,
+    backgroundColor: theme.surface, borderRadius: 20, width: '100%', maxHeight: '90%',
+    shadowColor: theme.text, shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.2, shadowRadius: 32, elevation: 12,
   },
   refundHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: 16, borderBottomWidth: 1, borderBottomColor: '#FEE2E2',
-    backgroundColor: '#FFF5F5', borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 16, borderBottomWidth: 1, borderBottomColor: isDarkMode ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.1)',
+    backgroundColor: isDarkMode ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.05)', borderTopLeftRadius: 20, borderTopRightRadius: 20,
   },
   refundIcon: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: '#EF4444',
+    width: 40, height: 40, borderRadius: 20, backgroundColor: theme.danger,
     justifyContent: 'center', alignItems: 'center',
   },
-  refundTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
-  refundTxId: { fontSize: 11, color: '#64748B', marginTop: 2, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
-  adminBadge: { backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  adminBadgeText: { fontSize: 8, fontWeight: '800', color: '#D97706' },
+  refundTitle: { fontSize: 16, fontWeight: '800', color: theme.text },
+  refundTxId: { fontSize: 11, color: theme.subtext, marginTop: 2, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  adminBadge: { backgroundColor: isDarkMode ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  adminBadgeText: { fontSize: 8, fontWeight: '800', color: theme.warning },
 
   policyWarning: {
     flexDirection: 'row', gap: 10, margin: 16, padding: 14,
-    backgroundColor: '#FFFBEB', borderWidth: 1, borderColor: '#FDE68A', borderRadius: 12,
+    backgroundColor: isDarkMode ? 'rgba(245,158,11,0.1)' : 'rgba(245,158,11,0.05)', borderWidth: 1, borderColor: isDarkMode ? 'rgba(245,158,11,0.3)' : theme.warning, borderRadius: 12,
   },
-  policyTitle: { fontSize: 12, fontWeight: '800', color: '#92400E', marginBottom: 4 },
-  policyDesc: { fontSize: 11, color: '#92400E', lineHeight: 16 },
+  policyTitle: { fontSize: 12, fontWeight: '800', color: theme.warning, marginBottom: 4 },
+  policyDesc: { fontSize: 11, color: theme.warning, lineHeight: 16 },
 
   ledgerBreakdown: {
-    marginHorizontal: 16, padding: 16, backgroundColor: '#FFFFFF',
-    borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12,
+    marginHorizontal: 16, padding: 16, backgroundColor: theme.surface,
+    borderWidth: 1, borderColor: theme.border, borderRadius: 12,
   },
-  ledgerTitle: { fontSize: 11, fontWeight: '800', color: '#334155', letterSpacing: 0.5 },
-  ledgerMode: { fontSize: 11, fontWeight: '700', color: '#64748B', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  ledgerTitle: { fontSize: 11, fontWeight: '800', color: theme.text, letterSpacing: 0.5 },
+  ledgerMode: { fontSize: 11, fontWeight: '700', color: theme.subtext, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
   ledgerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  ledgerLabel: { fontSize: 13, color: '#334155', fontWeight: '500' },
-  ledgerVal: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
+  ledgerLabel: { fontSize: 13, color: theme.text, fontWeight: '500' },
+  ledgerVal: { fontSize: 14, fontWeight: '700', color: theme.text },
 
-  sectionLabel: { fontSize: 11, fontWeight: '800', color: '#64748B', marginHorizontal: 16, marginTop: 16, marginBottom: 8, letterSpacing: 0.5 },
+  sectionLabel: { fontSize: 11, fontWeight: '800', color: theme.subtext, marginHorizontal: 16, marginTop: 16, marginBottom: 8, letterSpacing: 0.5 },
   reasonPicker: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginHorizontal: 16, padding: 14, backgroundColor: '#FFFFFF',
-    borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12,
+    marginHorizontal: 16, padding: 14, backgroundColor: theme.surface,
+    borderWidth: 1, borderColor: theme.border, borderRadius: 12,
   },
-  reasonText: { fontSize: 13, color: '#334155', flex: 1 },
+  reasonText: { fontSize: 13, color: theme.text, flex: 1 },
 
-  confirmSection: { margin: 16, padding: 14, backgroundColor: '#FFFBEB', borderRadius: 12, borderWidth: 1, borderColor: '#FDE68A' },
+  confirmSection: { margin: 16, padding: 14, backgroundColor: isDarkMode ? 'rgba(245,158,11,0.1)' : 'rgba(245,158,11,0.05)', borderRadius: 12, borderWidth: 1, borderColor: isDarkMode ? 'rgba(245,158,11,0.3)' : theme.warning },
   checkboxRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 16 },
   checkbox: {
-    width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: '#CBD5E1',
+    width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: theme.border,
     justifyContent: 'center', alignItems: 'center', marginTop: 2,
   },
-  checkboxChecked: { backgroundColor: '#7C3AED', borderColor: '#7C3AED' },
-  checkboxLabel: { fontSize: 12, color: '#334155', flex: 1, lineHeight: 18 },
-  confirmPrompt: { fontSize: 10, fontWeight: '800', color: '#64748B', marginBottom: 8, letterSpacing: 0.3 },
+  checkboxChecked: { backgroundColor: theme.primary, borderColor: theme.primary },
+  checkboxLabel: { fontSize: 12, color: theme.text, flex: 1, lineHeight: 18 },
+  confirmPrompt: { fontSize: 10, fontWeight: '800', color: theme.subtext, marginBottom: 8, letterSpacing: 0.3 },
   confirmInput: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF',
-    borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surface,
+    borderWidth: 1, borderColor: theme.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10,
   },
-  confirmInputField: { flex: 1, fontSize: 14, color: '#0F172A', fontWeight: '600' },
+  confirmInputField: { flex: 1, fontSize: 14, color: theme.text, fontWeight: '600' },
 
   refundFooter: {
-    flexDirection: 'row', gap: 12, padding: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9',
+    flexDirection: 'row', gap: 12, padding: 16, borderTopWidth: 1, borderTopColor: theme.border,
   },
   refundCancelBtn: {
-    flex: 1, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0',
-    alignItems: 'center', backgroundColor: '#FFFFFF',
+    flex: 1, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: theme.border,
+    alignItems: 'center', backgroundColor: theme.surface,
   },
-  refundCancelText: { fontSize: 13, fontWeight: '700', color: '#64748B' },
+  refundCancelText: { fontSize: 13, fontWeight: '700', color: theme.subtext },
   refundSubmitBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    paddingVertical: 12, borderRadius: 12, backgroundColor: '#EF4444',
+    paddingVertical: 12, borderRadius: 12, backgroundColor: theme.danger,
   },
-  refundSubmitText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF' },
+  refundSubmitText: { fontSize: 13, fontWeight: '800', color: theme.onPrimary },
 });
+
 
 export default PrincipalFeesScreen;

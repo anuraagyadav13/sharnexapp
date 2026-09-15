@@ -29,7 +29,7 @@ interface Props {
 
 const AssignmentGradeScreen: React.FC<Props> = ({ navigation, route }) => {
   const { theme, isDarkMode, toggleDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const { authState } = useAuth();
   const assignmentId = route?.params?.assignmentId;
   const [gradeData, setGradeData] = useState<any>(null);
@@ -193,7 +193,7 @@ const AssignmentGradeScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   
   globalHeader: {
@@ -224,11 +224,11 @@ const getStyles = (theme: any) => StyleSheet.create({
   avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
 
   scrollContent: {
-    paddingBottom: 40, 
+    paddingBottom: 40,
   },
 
   heroSection: {
-    backgroundColor: theme.primary, 
+    backgroundColor: theme.primary,
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 32,
@@ -278,12 +278,12 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#34D399', 
-    backgroundColor: theme.isDarkMode ? '#065F4630' : '#ECFDF5', 
+    backgroundColor: isDarkMode ? '#065F4630' : '#ECFDF5', 
   },
   gradedBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: theme.isDarkMode ? '#34D399' : '#00C48C',
+    color: isDarkMode ? '#34D399' : '#00C48C',
     marginLeft: 6,
   },
   submittedDateContainer: {
@@ -375,7 +375,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginLeft: 10,
   },
   feedbackBox: {
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F8FAFC',
+    backgroundColor: isDarkMode ? '#334155' : '#F8FAFC',
     borderRadius: 12,
     padding: 24,
     marginBottom: 24,

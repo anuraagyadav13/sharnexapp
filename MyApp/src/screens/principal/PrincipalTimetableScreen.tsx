@@ -13,9 +13,12 @@ import {
   Platform,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
+import { COLORS } from '../../constants/theme';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useAuth } from '../../store/AuthContext';
+import { getCacheBustedUri } from '../../utils/image';
+
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import principalService, {
   ClassItem,
@@ -43,6 +46,42 @@ const getMonday = (date: Date): string => {
 };
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+const getSubjectColors = (subject?: string, isDarkMode?: boolean, theme?: any) => {
+  const norm = typeof subject === 'string' ? subject.toLowerCase().trim() : '';
+  const primary = theme?.primary || COLORS.primary;
+  const secondary = theme?.secondary || COLORS.secondary;
+  const warning = theme?.warning || COLORS.warning;
+  const danger = theme?.danger || COLORS.danger;
+  const success = theme?.success || COLORS.success;
+  const subtext = theme?.subtext || COLORS.textSecondary;
+  const iconBg = theme?.iconBackground || COLORS.background;
+
+  if (norm.includes('science') || norm.includes('chem') || norm.includes('bio') || norm.includes('phys'))
+    return { iconBg: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)', iconColor: warning, barColor: warning };
+  if (norm.includes('math'))
+    return { iconBg: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)', iconColor: danger, barColor: danger };
+  if (norm.includes('english') || norm.includes('lit'))
+    return { iconBg: isDarkMode ? 'rgba(59, 130, 246, 0.2)' : iconBg, iconColor: primary, barColor: primary };
+  if (norm.includes('computer') || norm.includes('it') || norm.includes('code'))
+    return { iconBg: isDarkMode ? 'rgba(107, 114, 128, 0.2)' : 'rgba(107, 114, 128, 0.1)', iconColor: subtext, barColor: subtext };
+  if (norm.includes('hindi') || norm.includes('lang'))
+    return { iconBg: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)', iconColor: success, barColor: success };
+  if (norm.includes('social') || norm.includes('hist') || norm.includes('geo'))
+    return { iconBg: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)', iconColor: success, barColor: success };
+  return { iconBg: isDarkMode ? 'rgba(139, 92, 246, 0.2)' : iconBg, iconColor: secondary, barColor: secondary };
+};
+
+const getSubjectIcon = (subject?: string) => {
+  const norm = typeof subject === 'string' ? subject.toLowerCase().trim() : '';
+  if (norm.includes('science') || norm.includes('chem') || norm.includes('bio') || norm.includes('phys')) return 'flask-outline';
+  if (norm.includes('math')) return 'calculator-outline';
+  if (norm.includes('english') || norm.includes('lit')) return 'book-outline';
+  if (norm.includes('computer') || norm.includes('it') || norm.includes('code')) return 'laptop-outline';
+  if (norm.includes('hindi') || norm.includes('lang')) return 'language-outline';
+  if (norm.includes('social') || norm.includes('hist') || norm.includes('geo')) return 'earth-outline';
+  return 'document-text-outline';
+};
 
 const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, isDarkMode } = useTheme();
@@ -127,35 +166,14 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
           if (isSunday) return day;
 
           const slots = [...(day.slots || [])];
-          const hasLunch = slots.some((s) => {
-            const label = s.period?.label?.toLowerCase() || '';
-            return label.includes('4') || label.includes('lunch');
+          slots.sort((a, b) => {
+            const pA = a.period as any;
+            const pB = b.period as any;
+            const numA = pA?.period_number ?? (pA?.label ? (pA.label.match(/\d+/)?.[0] ? parseInt(pA.label.match(/\d+/)[0], 10) : 99) : 99);
+            const numB = pB?.period_number ?? (pB?.label ? (pB.label.match(/\d+/)?.[0] ? parseInt(pB.label.match(/\d+/)[0], 10) : 99) : 99);
+            if (numA !== numB) return numA - numB;
+            return (pA?.start || pA?.start_time || '').localeCompare(pB?.start || pB?.start_time || '');
           });
-
-          if (!hasLunch) {
-            slots.push({
-              time_slot_id: `lunch-${day.date}`,
-              period: {
-                id: 'lunch-period',
-                label: 'Lunch',
-                start: '11:15:00',
-                end: '12:00:00',
-                is_break: true,
-              },
-              subject: '',
-              teacher: { id: '', name: '', is_absent: false },
-              substitution: null,
-            });
-          }
-
-          const getPeriodNum = (s: any) => {
-            const label = s.period?.label || '';
-            if (label.toLowerCase() === 'lunch') return 4;
-            const m = label.match(/\d+/);
-            return m ? parseInt(m[0], 10) : 99;
-          };
-
-          slots.sort((a, b) => getPeriodNum(a) - getPeriodNum(b));
 
           return { ...day, slots };
         });
@@ -271,138 +289,303 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
     });
 
     if (match.length > 0) return match;
-    return [{ date: selectedDay, slots: [] }];
+    return [{ type: 'day', date: selectedDay, slots: [] }];
   }, [scheduleData, viewMode, selectedDay]);
-
-  const renderPeriodCard = useCallback(
-    (periodLabel: string, timeRange: string, slot: any, periodId: string) => {
-      const isPeriod4 = periodLabel.toLowerCase() === 'period 4' || periodLabel.toLowerCase() === 'lunch';
-      const isBreak = slot?.period?.is_break || (slot?.period?.label?.toLowerCase() === 'lunch') || isPeriod4;
-
-      const startFormatted = isPeriod4 ? '11:15' : formatTime(slot?.period?.start || slot?.period?.start_time || '');
-      const endFormatted = isPeriod4 ? '12:00' : formatTime(slot?.period?.end || slot?.period?.end_time || '');
-      const displayTime = timeRange || (startFormatted && endFormatted ? `${startFormatted} - ${endFormatted}` : '');
-      const labelText = isPeriod4 ? 'Lunch' : (periodLabel || 'Break');
-
-      if (isBreak) {
-        return (
-          <View key={periodId} style={styles.breakRow}>
-            <View style={styles.breakLeft}>
-              <Ionicons name="cafe-outline" size={16} color="#D97706" style={{ marginRight: 8 }} />
-              <Text style={styles.breakText}>{labelText}</Text>
-            </View>
-            {displayTime ? <Text style={styles.breakTimeText}>{displayTime}</Text> : null}
-          </View>
-        );
-      }
-
-      const hasTeacher = !!slot?.teacher?.name;
-      const isAbsent = slot?.teacher?.is_absent || false;
-      const substitutionName = slot?.substitution?.name || null;
-      const isFree = !slot || !hasTeacher || slot.subject === 'Free Period';
-      const subjectName = slot?.subject || 'Free Period';
-      const teacherName = slot?.teacher?.name || '';
-
-      const borderAccentColor = isAbsent
-        ? '#EF4444'
-        : substitutionName
-        ? '#F59E0B'
-        : isFree
-        ? (isDarkMode ? '#64748B' : '#94A3B8')
-        : (theme.primary || '#3B82F6');
-
-      return (
-        <View key={periodId} style={[styles.slotCard, { borderLeftColor: borderAccentColor }, isFree && styles.slotCardFree]}>
-          <View style={styles.slotCardMain}>
-            <View style={{ flex: 1, paddingRight: 8 }}>
-              <View style={styles.periodLabelRow}>
-                <Text style={styles.periodLabelText}>{labelText}</Text>
-              </View>
-              <Text style={[styles.subjectText, isFree && styles.subjectTextFree]} numberOfLines={1}>
-                {subjectName}
-              </Text>
-              {hasTeacher ? (
-                <View style={styles.teacherRow}>
-                  <Ionicons name="person-outline" size={12} color={theme.subtext} style={{ marginRight: 4 }} />
-                  <Text style={styles.teacherNameText} numberOfLines={1}>{teacherName}</Text>
-                  {isAbsent && (
-                    <View style={styles.absentBadge}>
-                      <Text style={styles.absentText}>Absent</Text>
-                    </View>
-                  )}
-                </View>
-              ) : (
-                <Text style={styles.freePeriodText}>Free Period</Text>
-              )}
-
-              {substitutionName && (
-                <View style={styles.substituteRow}>
-                  <MaterialCommunityIcons name="swap-horizontal" size={12} color={isDarkMode ? '#FBBF24' : '#D97706'} style={{ marginRight: 4 }} />
-                  <Text style={styles.substituteText} numberOfLines={1}>Substituted by: {substitutionName}</Text>
-                </View>
-              )}
-            </View>
-
-            {displayTime ? (
-              <View style={styles.timeBadgeBox}>
-                <Ionicons name="time-outline" size={12} color={theme.subtext} style={{ marginRight: 4 }} />
-                <Text style={styles.timeRangeText}>{displayTime}</Text>
-              </View>
-            ) : null}
-          </View>
-        </View>
-      );
-    },
-    [formatTime, isDarkMode, theme, styles]
-  );
 
   const renderDayItem = useCallback(
     ({ item }: { item: ScheduleDay }) => {
       const hasSlots = item.slots && item.slots.length > 0;
       const hasPeriods = sortedPeriods && sortedPeriods.length > 0;
-      const headerString = getDayHeader(item.date);
       const dateOnly = item.date ? item.date.split('T')[0] : '';
       const isToday = dateOnly === todayStr;
 
       return (
         <View style={styles.dayContainer}>
-          <View style={[styles.dayHeader, isToday && styles.dayHeaderToday]}>
-            <View style={[styles.dayHeaderDot, isToday && styles.dayHeaderDotToday]} />
-            <Text style={[styles.dayHeaderText, isToday && styles.dayHeaderTextToday]}>{headerString}</Text>
-            {isToday && (
-              <View style={styles.todayBadge}>
-                <Text style={styles.todayBadgeText}>TODAY</Text>
-              </View>
-            )}
+          {/* Day Header with Today Badge */}
+          <View style={styles.dayHeaderContainer}>
+            <View style={[styles.dayDateHeader, isToday && styles.dayHeaderToday]}>
+              <Ionicons name="calendar-outline" size={16} color={isToday ? theme.primary : theme.subtext} />
+              <Text style={[styles.dayDateText, isToday && styles.dayHeaderTextToday]}>
+                {getDayHeader(item.date)}
+              </Text>
+              {isToday && (
+                <View style={styles.todayBadge}>
+                  <Text style={styles.todayBadgeText}>TODAY</Text>
+                </View>
+              )}
+            </View>
           </View>
 
-          {hasSlots ? (
-            <View style={styles.slotsContainer}>
+          {hasSlots || hasPeriods ? (
+            <View style={styles.dayTimeline}>
               {hasPeriods ? (
                 sortedPeriods.map((period) => {
-                  const slot = item.slots.find(
+                  const slot = item.slots?.find(
                     (s) =>
                       s.period?.id === period.id ||
                       s.period?.label?.toLowerCase() === period.label?.toLowerCase()
                   );
-                  const startFormatted = formatTime(period.start_time || '');
-                  const endFormatted = formatTime(period.end_time || '');
-                  const timeRange = startFormatted && endFormatted ? `${startFormatted} - ${endFormatted}` : '';
-                  const displayLabel = (period.label || '').toLowerCase().startsWith('period')
-                    ? `Period ${period.period_number}`
-                    : `Period ${period.period_number} — ${period.label || ''}`;
 
-                  return renderPeriodCard(displayLabel, timeRange, slot, period.id);
+                  const isBreak = slot?.period?.is_break || period.is_break || false;
+
+                  const startFormatted = formatTime(slot?.period?.start || period.start_time || '');
+                  const endFormatted = formatTime(slot?.period?.end || period.end_time || '');
+                  const periodLabelText = period.label
+                    ? (period.label.toLowerCase().startsWith('period')
+                        ? `Period ${period.period_number}`
+                        : period.label)
+                    : `Period ${period.period_number}`;
+
+                  if (isBreak) {
+                    const breakStart = startFormatted || 'Time TBD';
+                    const breakEnd = endFormatted || 'Time TBD';
+                    return (
+                      <View key={period.id} style={styles.dayTimelineRow}>
+                        <View style={styles.dayTimeCol}>
+                          <Text style={styles.dayTimeStartText}>{breakStart}</Text>
+                          <Text style={styles.dayTimeEndText}>{breakEnd}</Text>
+                        </View>
+                        <View style={styles.dayTimelineDotCol}>
+                          <View style={[styles.timelineDot, { backgroundColor: theme.warning }]} />
+                        </View>
+                        <View style={styles.dayContentCol}>
+                          <View style={styles.lunchDivider}>
+                            <Ionicons name="cafe-outline" size={16} color={theme.warning} />
+                            <Text style={styles.lunchText}>
+                              LUNCH BREAK{' '}
+                              <Text style={{ fontWeight: '400', fontSize: 10 }}>
+                                ({breakStart} - {breakEnd})
+                              </Text>
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  }
+
+                  const hasTeacher = !!slot?.teacher?.name;
+                  const isAbsent = slot?.teacher?.is_absent || false;
+                  const substitutionName = slot?.substitution?.name || null;
+                  const isFree = !slot || !hasTeacher || slot.subject === 'Free Period';
+                  const subjectName = slot?.subject || 'Free Period';
+                  const teacherName = slot?.teacher?.name || '';
+                  const colors = isFree
+                    ? { iconBg: isDarkMode ? theme.surface : theme.border, iconColor: theme.subtext, barColor: theme.border }
+                    : getSubjectColors(subjectName, isDarkMode, theme);
+                  const iconName = getSubjectIcon(subjectName);
+                  const dotColor = isAbsent
+                    ? theme.danger
+                    : substitutionName
+                    ? theme.warning
+                    : isFree
+                    ? (theme.placeholder)
+                    : colors.barColor;
+
+                  return (
+                    <View key={period.id} style={styles.dayTimelineRow}>
+                      <View style={styles.dayTimeCol}>
+                        <Text style={styles.dayTimeStartText}>{startFormatted || '--:--'}</Text>
+                        {endFormatted ? <Text style={styles.dayTimeEndText}>{endFormatted}</Text> : null}
+                      </View>
+                      <View style={styles.dayTimelineDotCol}>
+                        <View style={[styles.timelineDot, { backgroundColor: dotColor }]} />
+                      </View>
+                      <View style={styles.dayContentCol}>
+                        <View
+                          style={[
+                            styles.dayCard,
+                            {
+                              backgroundColor: theme.surface,
+                              borderColor: isAbsent ? theme.danger : substitutionName ? theme.warning : theme.border,
+                              borderStyle: isFree ? 'dashed' : 'solid',
+                            },
+                          ]}
+                        >
+                          {!isFree && <View style={[styles.dayCardLeftBar, { backgroundColor: colors.barColor }]} />}
+
+                          <View style={[styles.dayCardIconWrapper, { backgroundColor: colors.iconBg }]}>
+                            <Ionicons
+                              name={isFree ? 'happy-outline' : iconName}
+                              size={18}
+                              color={colors.iconColor}
+                            />
+                          </View>
+
+                          <View style={styles.dayCardTextCol}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <Text
+                                style={[styles.dayCardSubject, isFree && { color: theme.subtext, fontStyle: 'italic' }]}
+                                numberOfLines={1}
+                              >
+                                {subjectName}
+                              </Text>
+                              {periodLabelText ? (
+                                <Text style={styles.periodLabelTag}>{periodLabelText}</Text>
+                              ) : null}
+                            </View>
+
+                            {hasTeacher ? (
+                              <View style={styles.teacherRow}>
+                                <Ionicons name="person-outline" size={12} color={theme.subtext} style={{ marginRight: 4 }} />
+                                <Text style={styles.dayCardTeacher} numberOfLines={1}>
+                                  {teacherName}
+                                </Text>
+                                {isAbsent && (
+                                  <View style={styles.absentBadge}>
+                                    <Text style={styles.absentText}>Absent</Text>
+                                  </View>
+                                )}
+                              </View>
+                            ) : !isFree ? (
+                              <Text style={styles.dayCardTeacher}>No teacher assigned</Text>
+                            ) : null}
+
+                            {substitutionName && (
+                              <View style={styles.substituteRow}>
+                                <MaterialCommunityIcons
+                                  name="swap-horizontal"
+                                  size={12}
+                                  color={theme.warning}
+                                  style={{ marginRight: 4 }}
+                                />
+                                <Text style={styles.substituteText} numberOfLines={1}>
+                                  Substituted by: {substitutionName}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  );
                 })
               ) : (
                 item.slots.map((slot, index) => {
-                  const isPeriod4 = slot.period?.label?.toLowerCase() === 'period 4';
-                  const startFormatted = isPeriod4 ? '11:15' : formatTime(slot.period?.start || '');
-                  const endFormatted = isPeriod4 ? '12:00' : formatTime(slot.period?.end || '');
-                  const timeRange = startFormatted && endFormatted ? `${startFormatted} - ${endFormatted}` : '';
-                  const label = slot.period?.label || 'Slot';
+                  const isBreak = slot.period?.is_break || false;
+                  const startFormatted = formatTime(slot.period?.start || '');
+                  const endFormatted = formatTime(slot.period?.end || '');
+                  const label = slot.period?.label || `Slot ${index + 1}`;
 
-                  return renderPeriodCard(label, timeRange, slot, `slot-${index}`);
+                  if (isBreak) {
+                    const breakStart = startFormatted || 'Time TBD';
+                    const breakEnd = endFormatted || 'Time TBD';
+                    return (
+                      <View key={`slot-${index}`} style={styles.dayTimelineRow}>
+                        <View style={styles.dayTimeCol}>
+                          <Text style={styles.dayTimeStartText}>{breakStart}</Text>
+                          <Text style={styles.dayTimeEndText}>{breakEnd}</Text>
+                        </View>
+                        <View style={styles.dayTimelineDotCol}>
+                          <View style={[styles.timelineDot, { backgroundColor: theme.warning }]} />
+                        </View>
+                        <View style={styles.dayContentCol}>
+                          <View style={styles.lunchDivider}>
+                            <Ionicons name="cafe-outline" size={16} color={theme.warning} />
+                            <Text style={styles.lunchText}>
+                              LUNCH BREAK{' '}
+                              <Text style={{ fontWeight: '400', fontSize: 10 }}>
+                                ({breakStart} - {breakEnd})
+                              </Text>
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  }
+
+                  const hasTeacher = !!slot.teacher?.name;
+                  const isAbsent = slot.teacher?.is_absent || false;
+                  const substitutionName = slot.substitution?.name || null;
+                  const isFree = !hasTeacher || slot.subject === 'Free Period';
+                  const subjectName = slot.subject || 'Free Period';
+                  const teacherName = slot.teacher?.name || '';
+                  const colors = isFree
+                    ? { iconBg: isDarkMode ? theme.surface : theme.border, iconColor: theme.subtext, barColor: theme.border }
+                    : getSubjectColors(subjectName, isDarkMode, theme);
+                  const iconName = getSubjectIcon(subjectName);
+                  const dotColor = isAbsent
+                    ? theme.danger
+                    : substitutionName
+                    ? theme.warning
+                    : isFree
+                    ? (theme.placeholder)
+                    : colors.barColor;
+
+                  return (
+                    <View key={`slot-${index}`} style={styles.dayTimelineRow}>
+                      <View style={styles.dayTimeCol}>
+                        <Text style={styles.dayTimeStartText}>{startFormatted || '--:--'}</Text>
+                        {endFormatted ? <Text style={styles.dayTimeEndText}>{endFormatted}</Text> : null}
+                      </View>
+                      <View style={styles.dayTimelineDotCol}>
+                        <View style={[styles.timelineDot, { backgroundColor: dotColor }]} />
+                      </View>
+                      <View style={styles.dayContentCol}>
+                        <View
+                          style={[
+                            styles.dayCard,
+                            {
+                              backgroundColor: theme.surface,
+                              borderColor: isAbsent ? theme.danger : substitutionName ? theme.warning : theme.border,
+                              borderStyle: isFree ? 'dashed' : 'solid',
+                            },
+                          ]}
+                        >
+                          {!isFree && <View style={[styles.dayCardLeftBar, { backgroundColor: colors.barColor }]} />}
+
+                          <View style={[styles.dayCardIconWrapper, { backgroundColor: colors.iconBg }]}>
+                            <Ionicons
+                              name={isFree ? 'happy-outline' : iconName}
+                              size={18}
+                              color={colors.iconColor}
+                            />
+                          </View>
+
+                          <View style={styles.dayCardTextCol}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <Text
+                                style={[styles.dayCardSubject, isFree && { color: theme.subtext, fontStyle: 'italic' }]}
+                                numberOfLines={1}
+                              >
+                                {subjectName}
+                              </Text>
+                              <Text style={styles.periodLabelTag}>{label}</Text>
+                            </View>
+
+                            {hasTeacher ? (
+                              <View style={styles.teacherRow}>
+                                <Ionicons name="person-outline" size={12} color={theme.subtext} style={{ marginRight: 4 }} />
+                                <Text style={styles.dayCardTeacher} numberOfLines={1}>
+                                  {teacherName}
+                                </Text>
+                                {isAbsent && (
+                                  <View style={styles.absentBadge}>
+                                    <Text style={styles.absentText}>Absent</Text>
+                                  </View>
+                                )}
+                              </View>
+                            ) : !isFree ? (
+                              <Text style={styles.dayCardTeacher}>No teacher assigned</Text>
+                            ) : null}
+
+                            {substitutionName && (
+                              <View style={styles.substituteRow}>
+                                <MaterialCommunityIcons
+                                  name="swap-horizontal"
+                                  size={12}
+                                  color={theme.warning}
+                                  style={{ marginRight: 4 }}
+                                />
+                                <Text style={styles.substituteText} numberOfLines={1}>
+                                  Substituted by: {substitutionName}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  );
                 })
               )}
             </View>
@@ -416,8 +599,179 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       );
     },
-    [getDayHeader, todayStr, sortedPeriods, formatTime, renderPeriodCard, theme, styles]
+    [getDayHeader, todayStr, sortedPeriods, formatTime, theme, isDarkMode, styles]
   );
+
+  const renderWeekTab = useCallback(() => {
+    const daysInWeek = scheduleData?.schedule || [];
+
+    if (daysInWeek.length === 0) {
+      return (
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => fetchSchedule(true)}
+              colors={[theme.primary]}
+            />
+          }
+        >
+          <View style={styles.emptyContainer}>
+            <Ionicons name="calendar-outline" size={56} color={theme.subtext} />
+            <Text style={styles.emptyTitle}>No schedule available</Text>
+            <Text style={styles.emptySubtitle}>
+              No working days or slots scheduled for this period.
+            </Text>
+          </View>
+        </ScrollView>
+      );
+    }
+
+    return (
+      <View style={styles.gridCanvas}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 40 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => fetchSchedule(true)}
+              colors={[theme.primary]}
+            />
+          }
+        >
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
+            <View style={{ paddingTop: 8 }}>
+              {/* Header Row */}
+              <View style={styles.daysHeaderRow}>
+                <View style={styles.timeColumnHeader}>
+                  <Text style={styles.timeHeaderTitle}>TIME</Text>
+                </View>
+                {daysInWeek.map((dayItem) => {
+                  const dateStr = dayItem.date ? dayItem.date.split('T')[0] : '';
+                  const dateObj = new Date(dayItem.date);
+                  const dayShort = DAY_NAMES[dateObj.getDay()] ? DAY_NAMES[dateObj.getDay()].substring(0, 3) : '';
+                  const dayNum = dateObj.getDate();
+                  const isToday = dateStr === todayStr;
+
+                  return (
+                    <View key={dayItem.date} style={[styles.dayHeaderCell, isToday && styles.dayHeaderCellToday]}>
+                      <Text style={[styles.dayHeaderTextGrid, isToday && styles.dayHeaderTextGridToday]}>
+                        {dayShort.toUpperCase()}
+                      </Text>
+                      <Text style={[styles.dayHeaderDateGrid, isToday && styles.dayHeaderDateGridToday]}>
+                        {dayNum || ''}
+                      </Text>
+                      {isToday && <View style={styles.todayDotGrid} />}
+                    </View>
+                  );
+                })}
+              </View>
+
+              {/* Grid Rows */}
+              {sortedPeriods.map((period) => {
+                const startFormatted = formatTime(period.start_time || '');
+                const endFormatted = formatTime(period.end_time || '');
+                const isBreak = period.is_break || false;
+
+                if (isBreak) {
+                  const breakStart = startFormatted || 'Time TBD';
+                  const breakEnd = endFormatted || 'Time TBD';
+                  return (
+                    <View key={period.id} style={styles.gridLunchRow}>
+                      <View style={styles.timeCell}>
+                        <Text style={styles.timeText}>{breakStart}</Text>
+                      </View>
+                      <View style={styles.gridLunchContent}>
+                        <Ionicons name="cafe-outline" size={14} color={theme.warning} style={{ marginRight: 6 }} />
+                        <Text style={styles.gridLunchText}>
+                          LUNCH BREAK ({breakStart} - {breakEnd})
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                }
+
+                return (
+                  <View key={period.id} style={styles.gridRow}>
+                    <View style={styles.timeCell}>
+                      <Text style={styles.timeText}>{startFormatted || '--:--'}</Text>
+                      <Text style={styles.periodSubText}>P{period.period_number}</Text>
+                    </View>
+
+                    {daysInWeek.map((dayItem) => {
+                      const slot = dayItem.slots?.find(
+                        (s) =>
+                          s.period?.id === period.id ||
+                          s.period?.label?.toLowerCase() === period.label?.toLowerCase()
+                      );
+
+                      const hasTeacher = !!slot?.teacher?.name;
+                      const isAbsent = slot?.teacher?.is_absent || false;
+                      const substitutionName = slot?.substitution?.name || null;
+                      const isFree = !slot || !hasTeacher || slot.subject === 'Free Period';
+                      const subjectName = slot?.subject || 'Free Period';
+                      const teacherName = slot?.teacher?.name || '';
+                      const colors = getSubjectColors(subjectName, isDarkMode, theme);
+
+                      if (isFree) {
+                        return (
+                          <View key={`${dayItem.date}-${period.id}`} style={styles.cellOuter}>
+                            <View style={styles.freePeriodCard}>
+                              <Ionicons name="happy-outline" size={14} color={theme.subtext} />
+                              <Text style={styles.freePeriodText}>Free Period</Text>
+                            </View>
+                          </View>
+                        );
+                      }
+
+                      return (
+                        <View key={`${dayItem.date}-${period.id}`} style={styles.cellOuter}>
+                          <View
+                            style={[
+                              styles.gridCard,
+                              {
+                                backgroundColor: theme.surface,
+                                borderColor: isAbsent ? theme.danger : substitutionName ? theme.warning : theme.border,
+                              },
+                            ]}
+                          >
+                            <View style={[styles.gridCardTopBar, { backgroundColor: colors.barColor }]} />
+                            <Text style={styles.gridCardSubject} numberOfLines={1}>
+                              {subjectName}
+                            </Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                              <Text style={styles.gridCardTeacher} numberOfLines={1}>
+                                {teacherName}
+                              </Text>
+                              {isAbsent && (
+                                <View style={styles.compactAbsentBadge}>
+                                  <Text style={styles.compactAbsentText}>ABS</Text>
+                                </View>
+                              )}
+                            </View>
+                            {substitutionName && (
+                              <View style={styles.compactSubBadge}>
+                                <MaterialCommunityIcons name="swap-horizontal" size={10} color={theme.warning} />
+                                <Text style={styles.compactSubText} numberOfLines={1}>
+                                  {substitutionName}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </ScrollView>
+      </View>
+    );
+  }, [scheduleData, sortedPeriods, todayStr, formatTime, fetchSchedule, isRefreshing, theme, isDarkMode, styles]);
 
   if (isLoading) {
     return (
@@ -433,14 +787,14 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
       <View style={styles.errorContainer}>
         <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
         <View style={styles.errorBadge}>
-          <Ionicons name="alert-circle-outline" size={40} color="#EF4444" />
+          <Ionicons name="alert-circle-outline" size={40} color={theme.danger} />
         </View>
         <Text style={styles.errorTitle}>Failed to load timetable</Text>
         <Text style={styles.errorSubtitle}>
           An error occurred while fetching timetable data. Please try again.
         </Text>
         <TouchableOpacity style={styles.retryBtn} onPress={loadInitialData}>
-          <Ionicons name="refresh-outline" size={18} color="#FFF" style={{ marginRight: 8 }} />
+          <Ionicons name="refresh-outline" size={18} color={theme.onPrimary} style={{ marginRight: 8 }} />
           <Text style={styles.retryBtnText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -459,8 +813,9 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
         <Text style={styles.appHeaderTitle}>Timetable</Text>
         <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })} accessibilityLabel="Account settings">
           {authState.user?.photoUrl ? (
-            <Image source={{ uri: authState.user.photoUrl }} style={styles.headerAvatarImage} />
+            <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.headerAvatarImage} />
           ) : (
+
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
             </View>
@@ -475,7 +830,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => setViewMode('week')}
           accessibilityLabel="Switch to week view"
         >
-          <Ionicons name="calendar-outline" size={14} color={viewMode === 'week' ? '#FFF' : theme.subtext} style={{ marginRight: 6 }} />
+          <Ionicons name="calendar-outline" size={14} color={viewMode === 'week' ? theme.onPrimary : theme.subtext} style={{ marginRight: 6 }} />
           <Text style={[styles.toggleBtnText, viewMode === 'week' && styles.toggleBtnTextActive]}>Week View</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -483,7 +838,7 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => setViewMode('day')}
           accessibilityLabel="Switch to day view"
         >
-          <Ionicons name="today-outline" size={14} color={viewMode === 'day' ? '#FFF' : theme.subtext} style={{ marginRight: 6 }} />
+          <Ionicons name="today-outline" size={14} color={viewMode === 'day' ? theme.onPrimary : theme.subtext} style={{ marginRight: 6 }} />
           <Text style={[styles.toggleBtnText, viewMode === 'day' && styles.toggleBtnTextActive]}>Day View</Text>
         </TouchableOpacity>
       </View>
@@ -572,6 +927,8 @@ const PrincipalTimetableScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           ))}
         </View>
+      ) : viewMode === 'week' ? (
+        renderWeekTab()
       ) : (
         <FlatList
           data={displaySchedule}
@@ -626,7 +983,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: isDarkMode ? '#EF444420' : '#FEE2E2',
+    backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -652,7 +1009,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderRadius: 12,
   },
   retryBtnText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -705,7 +1062,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     color: theme.subtext,
   },
   toggleBtnTextActive: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontWeight: '700',
   },
 
@@ -725,7 +1082,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: theme.border,
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 3,
@@ -746,7 +1103,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     color: theme.subtext,
   },
   classPillTextActive: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontWeight: '800',
   },
 
@@ -766,7 +1123,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: theme.border,
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
@@ -803,12 +1160,12 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   todayBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: isDarkMode ? '#3B82F620' : '#EFF6FF',
+    backgroundColor: isDarkMode ? 'rgba(59, 130, 246, 0.2)' : theme.iconBackground,
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: isDarkMode ? '#3B82F640' : '#BFDBFE',
+    borderColor: isDarkMode ? 'rgba(59, 130, 246, 0.4)' : theme.border,
   },
   todayBtnText: {
     fontSize: 12,
@@ -836,47 +1193,41 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     alignItems: 'center',
   },
   skeletonLine: {
-    backgroundColor: isDarkMode ? '#334155' : '#E2E8F0',
+    backgroundColor: isDarkMode ? theme.surface : theme.border,
     borderRadius: 4,
   },
 
   // List & Day Items
   listContent: {
-    padding: 16,
     paddingBottom: 40,
   },
   dayContainer: {
     marginBottom: 20,
   },
-  dayHeader: {
+  dayHeaderContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  dayDateHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.surface,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 12,
-    marginBottom: 10,
     borderWidth: 1,
     borderColor: theme.border,
   },
   dayHeaderToday: {
-    backgroundColor: isDarkMode ? '#1E293B' : '#EFF6FF',
+    backgroundColor: isDarkMode ? theme.surface : theme.iconBackground,
     borderColor: theme.primary,
   },
-  dayHeaderDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: theme.subtext,
-    marginRight: 8,
-  },
-  dayHeaderDotToday: {
-    backgroundColor: theme.primary,
-  },
-  dayHeaderText: {
+  dayDateText: {
     fontSize: 14,
     fontWeight: '700',
     color: theme.text,
+    marginLeft: 8,
+    flex: 1,
   },
   dayHeaderTextToday: {
     color: theme.primary,
@@ -890,98 +1241,314 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     marginLeft: 'auto',
   },
   todayBadgeText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
-
-  // Slots
-  slotsContainer: {
-    gap: 10,
-  },
-  breakRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: isDarkMode ? '#F59E0B15' : '#FFFBEB',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#F59E0B',
-    borderWidth: 1,
-    borderColor: isDarkMode ? '#78350F40' : '#FDE68A',
-  },
-  breakLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  breakText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: isDarkMode ? '#FBBF24' : '#D97706',
-  },
-  breakTimeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: isDarkMode ? '#FBBF24' : '#D97706',
-  },
-  slotCard: {
-    backgroundColor: theme.surface,
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: theme.border,
-    borderLeftWidth: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  slotCardFree: {
-    opacity: 0.85,
-    borderStyle: 'dashed',
-  },
-  slotCardMain: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  periodLabelRow: {
-    marginBottom: 2,
-  },
-  periodLabelText: {
-    fontSize: 10,
+  periodLabelTag: {
+    fontSize: 9,
     fontWeight: '800',
     color: theme.subtext,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    backgroundColor: theme.background,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: theme.border,
   },
-  subjectText: {
+
+  // Timeline (Day View)
+  dayTimeline: {
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+  },
+  dayTimelineRow: {
+    flexDirection: 'row',
+    minHeight: 75,
+    marginBottom: 4,
+  },
+  dayTimeCol: {
+    width: 45,
+    alignItems: 'flex-end',
+    paddingRight: 10,
+    paddingTop: 12,
+  },
+  dayTimeStartText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: theme.text,
+  },
+  dayTimeEndText: {
+    fontSize: 9,
+    color: theme.subtext,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  dayTimelineDotCol: {
+    width: 20,
+    alignItems: 'center',
+  },
+  timelineDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginTop: 14,
+    borderWidth: 2,
+    borderColor: theme.surface,
+  },
+  dayContentCol: {
+    flex: 1,
+    paddingLeft: 10,
+    paddingBottom: 12,
+  },
+  dayCard: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    overflow: 'hidden',
+    borderWidth: 1,
+  },
+  dayCardLeftBar: {
+    position: 'absolute',
+    left: 0,
+    top: 10,
+    bottom: 10,
+    width: 4,
+    borderTopRightRadius: 3,
+    borderBottomRightRadius: 3,
+  },
+  dayCardIconWrapper: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  dayCardTextCol: {
+    flex: 1,
+  },
+  dayCardSubject: {
     fontSize: 14,
     fontWeight: '800',
     color: theme.text,
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  subjectTextFree: {
+  dayCardTeacher: {
+    fontSize: 12,
     color: theme.subtext,
-    fontWeight: '600',
-    fontStyle: 'italic',
+    fontWeight: '500',
   },
+  lunchDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: isDarkMode ? 'rgba(245, 158, 11, 0.4)' : theme.warning,
+    marginTop: 4,
+  },
+  lunchText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: theme.warning,
+  },
+
+  // Grid (Week View)
+  gridCanvas: {
+    flex: 1,
+  },
+  daysHeaderRow: {
+    flexDirection: 'row',
+    paddingBottom: 10,
+    alignItems: 'center',
+  },
+  timeColumnHeader: {
+    width: 55,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  timeHeaderTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: theme.subtext,
+    letterSpacing: 0.5,
+  },
+  dayHeaderCell: {
+    width: 110,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    borderRadius: 10,
+    backgroundColor: theme.surface,
+    borderWidth: 1,
+    borderColor: theme.border,
+    marginHorizontal: 4,
+  },
+  dayHeaderCellToday: {
+    backgroundColor: isDarkMode ? theme.surface : theme.iconBackground,
+    borderColor: theme.primary,
+  },
+  dayHeaderTextGrid: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: theme.subtext,
+  },
+  dayHeaderTextGridToday: {
+    color: theme.primary,
+  },
+  dayHeaderDateGrid: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: theme.text,
+    marginTop: 1,
+  },
+  dayHeaderDateGridToday: {
+    color: theme.primary,
+  },
+  todayDotGrid: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: theme.primary,
+    marginTop: 3,
+  },
+  gridRow: {
+    flexDirection: 'row',
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  timeCell: {
+    width: 55,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: theme.text,
+  },
+  periodSubText: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: theme.subtext,
+    marginTop: 2,
+  },
+  cellOuter: {
+    width: 110,
+    paddingHorizontal: 4,
+  },
+  gridCard: {
+    borderRadius: 10,
+    padding: 8,
+    minHeight: 62,
+    borderWidth: 1,
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  gridCardTopBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+  },
+  gridCardSubject: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: theme.text,
+    marginBottom: 2,
+  },
+  gridCardTeacher: {
+    fontSize: 10,
+    color: theme.subtext,
+    fontWeight: '500',
+    flex: 1,
+  },
+  compactAbsentBadge: {
+    backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 3,
+    marginLeft: 4,
+  },
+  compactAbsentText: {
+    fontSize: 8,
+    fontWeight: '900',
+    color: theme.danger,
+  },
+  compactSubBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: 4,
+  },
+  compactSubText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: theme.warning,
+  },
+  freePeriodCard: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderStyle: 'dashed',
+    minHeight: 62,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.surface,
+    padding: 6,
+  },
+  freePeriodText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: theme.subtext,
+    marginTop: 3,
+  },
+  gridLunchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  gridLunchContent: {
+    flex: 1,
+    backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: isDarkMode ? 'rgba(245, 158, 11, 0.4)' : theme.warning,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
+  gridLunchText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: theme.warning,
+    letterSpacing: 0.5,
+  },
+
+  // Badges & Actions
   teacherRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
   },
-  teacherNameText: {
-    fontSize: 12,
-    color: theme.text,
-    fontWeight: '600',
-  },
   absentBadge: {
-    backgroundColor: isDarkMode ? '#EF444425' : '#FEE2E2',
+    backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
     paddingVertical: 2,
     paddingHorizontal: 6,
     borderRadius: 4,
@@ -990,41 +1557,21 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   absentText: {
     fontSize: 9,
     fontWeight: '800',
-    color: '#EF4444',
-  },
-  freePeriodText: {
-    fontSize: 12,
-    color: theme.subtext,
-    fontStyle: 'italic',
+    color: theme.danger,
   },
   substituteRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 6,
-    backgroundColor: isDarkMode ? '#F59E0B15' : '#FFFBEB',
+    backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)',
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 6,
   },
   substituteText: {
     fontSize: 11,
-    color: isDarkMode ? '#FBBF24' : '#D97706',
+    color: theme.warning,
     fontWeight: '700',
-  },
-  timeBadgeBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.background,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: theme.border,
-  },
-  timeRangeText: {
-    fontSize: 11,
-    color: theme.subtext,
-    fontWeight: '600',
   },
   emptyDayContainer: {
     padding: 16,
@@ -1067,17 +1614,17 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#9F7AEA',
+    backgroundColor: theme.secondary,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 4,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
   headerAvatarImage: {
     width: 32,
     height: 32,

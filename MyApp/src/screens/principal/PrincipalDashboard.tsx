@@ -13,12 +13,14 @@ import {
   Image,
   Modal,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
+import { usePermissions } from '../../hooks/usePermissions';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -29,6 +31,8 @@ import principalService from '../../services/principalService';
 import { ENDPOINTS } from '../../constants/api';
 import Skeleton from '../../components/common/Skeleton';
 import Toast, { ToastType } from '../../components/Toast';
+import { getCacheBustedUri } from '../../utils/image';
+
 
 type DashboardNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PrincipalDashboard'>;
 
@@ -188,7 +192,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
           name: a.teacherName || 'Staff Member',
           action: `Clocked ${a.outTime ? 'out' : 'in'} (${a.method || 'Biometric'})`,
           time: formattedTime,
-          color: a.outTime ? '#8B5CF6' : '#10B981',
+          color: a.outTime ? theme.secondary : theme.success,
           icon: a.outTime ? 'exit-outline' : 'enter-outline',
         };
       }));
@@ -201,9 +205,13 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
     }
   };
 
+  const { requestNotifications } = usePermissions();
+
   useEffect(() => {
     fetchDashboard();
-  }, []);
+    // Contextual Notification Permission Request on first meaningful dashboard load
+    requestNotifications().catch(() => {});
+  }, [requestNotifications]);
 
   const onRefresh = () => {
     setIsRefreshing(true);
@@ -214,7 +222,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
   const upcomingEvents = (dashboardData?.upcomingEvents || announcements).map((a: any) => ({
     title: a.title,
     date: a.date || new Date(a.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
-    color: a.color || (a.priority === 'high' ? '#EF4444' : '#6366F1')
+    color: a.color || (a.priority === 'high' ? theme.danger : theme.primary)
   }));
 
   return (
@@ -262,7 +270,10 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
             </Text>
 
             <View style={styles.headerRight}>
-              <TouchableOpacity style={styles.iconBtnTransparent}>
+              <TouchableOpacity
+                style={styles.iconBtnTransparent}
+                onPress={() => Alert.alert('Notifications', 'Notification center is currently under development.')}
+              >
                 <Ionicons name="notifications-outline" size={22} color={theme.text} />
               </TouchableOpacity>
               <TouchableOpacity
@@ -282,8 +293,9 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                 onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
               >
                 {authState.user?.photoUrl ? (
-                  <Image source={{ uri: authState.user.photoUrl }} style={styles.headerAvatarImage} />
+                  <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.headerAvatarImage} />
                 ) : (
+
                   <View style={styles.avatar}>
                     <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
                   </View>
@@ -299,21 +311,21 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                 <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
                   <Defs>
                     <SvgLinearGradient id="heroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <Stop offset="0%" stopColor={isDarkMode ? '#312E81' : '#4338CA'} />
-                      <Stop offset="45%" stopColor={isDarkMode ? '#4338CA' : '#4F46E5'} />
-                      <Stop offset="80%" stopColor={isDarkMode ? '#581C87' : '#7C3AED'} />
-                      <Stop offset="100%" stopColor={isDarkMode ? '#6B21A8' : '#8B5CF6'} />
+                      <Stop offset="0%" stopColor={theme.primary} />
+                      <Stop offset="45%" stopColor={theme.primary} />
+                      <Stop offset="80%" stopColor={theme.secondary} />
+                      <Stop offset="100%" stopColor={theme.secondary} />
                     </SvgLinearGradient>
                     <SvgLinearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.25" />
-                      <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.0" />
+                      <Stop offset="0%" stopColor={theme.onPrimary} stopOpacity="0.25" />
+                      <Stop offset="100%" stopColor={theme.onPrimary} stopOpacity="0.0" />
                     </SvgLinearGradient>
                   </Defs>
                   <Rect width="100%" height="100%" fill="url(#heroGrad)" rx={24} ry={24} />
                   {/* Layered decorative glowing shapes & wave lines */}
                   <Circle cx="92%" cy="10%" r="110" fill="url(#glowGrad)" />
-                  <Circle cx="85%" cy="90%" r="70" fill="#FFFFFF" fillOpacity={0.06} />
-                  <Circle cx="10%" cy="85%" r="50" fill="#FFFFFF" fillOpacity={0.05} />
+                  <Circle cx="85%" cy="90%" r="70" fill={theme.onPrimary} fillOpacity={0.06} />
+                  <Circle cx="10%" cy="85%" r="50" fill={theme.onPrimary} fillOpacity={0.05} />
                   <Path
                     d="M-20 80 Q 80 20 180 100 T 380 40"
                     stroke="rgba(255, 255, 255, 0.12)"
@@ -332,7 +344,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
               <View style={styles.heroContent}>
                 <View style={styles.heroTopRow}>
                   <View style={styles.heroBadge}>
-                    <Ionicons name="sparkles" size={13} color="#FBBF24" />
+                    <Ionicons name="sparkles" size={13} color={theme.warning} />
                     <Text style={styles.heroBadgeText}>Institution Control Center</Text>
                   </View>
                   <View style={styles.heroTimePill}>
@@ -349,7 +361,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
 
                   <View style={styles.heroGraphicBox}>
                     <View style={styles.heroGlassCircle}>
-                      <MaterialCommunityIcons name="shield-crown" size={30} color="#FFFFFF" />
+                      <MaterialCommunityIcons name="shield-crown" size={30} color={theme.onPrimary} />
                     </View>
                   </View>
                 </View>
@@ -357,17 +369,17 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                 {/* Hero Bottom Quick Stats Glass Bar */}
                 <View style={styles.heroStatsRow}>
                   <View style={styles.heroStatChip}>
-                    <Ionicons name="school" size={13} color="#A5B4FC" />
+                    <Ionicons name="school" size={13} color={theme.primary} />
                     <Text style={styles.heroStatChipText}>{stats.students} Students</Text>
                   </View>
                   <View style={styles.heroStatDivider} />
                   <View style={styles.heroStatChip}>
-                    <Ionicons name="people" size={13} color="#DDD6FE" />
+                    <Ionicons name="people" size={13} color={theme.secondary} />
                     <Text style={styles.heroStatChipText}>{stats.staff} Staff</Text>
                   </View>
                   <View style={styles.heroStatDivider} />
                   <View style={styles.heroStatChip}>
-                    <Ionicons name="checkmark-circle" size={13} color="#6EE7B7" />
+                    <Ionicons name="checkmark-circle" size={13} color={theme.success} />
                     <Text style={styles.heroStatChipText}>{stats.attendance !== null ? `${stats.attendance}% Attendance` : 'Live Tracking'}</Text>
                   </View>
                 </View>
@@ -379,25 +391,25 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
           <View style={[styles.sectionPadding, { marginTop: 16 }]}>
             <View style={styles.metricRow}>
               <MetricCard
-                title="STUDENTS"
+                title="Total Students"
                 value={stats.students}
                 trend={dashboardData?.stats?.students?.trend}
                 icon="school"
-                color="#4F46E5"
+                color={theme.primary}
               />
               <MetricCard
-                title="STAFF"
+                title="Teaching Staff"
                 value={stats.staff}
                 trend={dashboardData?.stats?.teachers?.trend}
                 icon="people"
-                color="#8B5CF6"
+                color={theme.secondary}
               />
               <MetricCard
-                title="ATTENDANCE"
+                title="Attendance Rate"
                 value={stats.attendance !== null ? `${stats.attendance}%` : null}
                 trend={dashboardData?.stats?.attendance?.trend}
                 icon="calendar"
-                color="#10B981"
+                color={theme.success}
               />
             </View>
           </View>
@@ -412,33 +424,33 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
               <View style={styles.quickActionsGrid}>
                 <QuickActionCard
                   delay={100}
-                  title="Staff"
-                  desc="Manage your team"
-                  color="#4F46E5"
-                  icon="people"
-                  onPress={() => navigation.navigate('PrincipalStaff')}
+                  title="Generate Report"
+                  desc="Download reports"
+                  color={theme.primary}
+                  icon="document-text"
+                  onPress={() => navigation.navigate('PrincipalRMS')}
                 />
                 <QuickActionCard
                   delay={150}
-                  title="Students"
-                  desc="Enroll & track"
-                  color="#10B981"
-                  icon="school"
-                  onPress={() => navigation.navigate('PrincipalStudentDetails')}
+                  title="Add Staff"
+                  desc="Register new staff"
+                  color={theme.success}
+                  icon="person-add"
+                  onPress={() => navigation.navigate('PrincipalAddStaff')}
                 />
                 <QuickActionCard
                   delay={200}
-                  title="Announce"
+                  title="Announcements"
                   desc="Notify everyone"
-                  color="#F59E0B"
+                  color={theme.warning}
                   icon="megaphone"
                   onPress={() => navigation.navigate('PrincipalAnnouncements')}
                 />
                 <QuickActionCard
                   delay={250}
-                  title="Calendar"
+                  title="Schedule Event"
                   desc="Schedule events"
-                  color="#EC4899"
+                  color={theme.secondary}
                   icon="calendar"
                   onPress={() => navigation.navigate('PrincipalCalendar')}
                 />
@@ -449,7 +461,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
           {/* Upcoming Events */}
           <View style={[styles.sectionPadding, { marginTop: 4 }]}>
             <View style={styles.sectionHeaderRow}>
-              <View style={[styles.sectionTitleDot, { backgroundColor: '#6366F1' }]} />
+              <View style={[styles.sectionTitleDot, { backgroundColor: theme.primary }]} />
               <Text style={styles.sectionTitle}>Upcoming Events</Text>
             </View>
             <View style={styles.cardContainer}>
@@ -464,8 +476,8 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                 ))
               ) : (
                 <View style={styles.emptyStateContainer}>
-                  <View style={[styles.emptyIconCircle, { backgroundColor: '#6366F115' }]}>
-                    <Ionicons name="calendar-outline" size={24} color="#6366F1" />
+                  <View style={[styles.emptyIconCircle, { backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.2)' : theme.iconBackground }]}>
+                    <Ionicons name="calendar-outline" size={24} color={theme.primary} />
                   </View>
                   <Text style={styles.emptyStateTitle}>No upcoming events</Text>
                   <Text style={styles.emptyText}>Check back later for new scheduled events</Text>
@@ -482,8 +494,8 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                 onPress={() => toggleSection('activity')}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
               >
-                <View style={[styles.sectionTitleDot, { backgroundColor: '#10B981' }]} />
-                <Text style={styles.sectionTitle}>Staff Activity</Text>
+                <View style={[styles.sectionTitleDot, { backgroundColor: theme.success }]} />
+                <Text style={styles.sectionTitle}>Recent Staff Activity</Text>
                 <Ionicons name={isActivityCollapsed ? "chevron-down" : "chevron-up"} size={16} color={theme.subtext} />
               </TouchableOpacity>
               <TouchableOpacity>
@@ -507,8 +519,8 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                   ))
                 ) : (
                   <View style={styles.emptyStateContainer}>
-                    <View style={[styles.emptyIconCircle, { backgroundColor: '#10B98115' }]}>
-                      <Ionicons name="people-outline" size={24} color="#10B981" />
+                    <View style={[styles.emptyIconCircle, { backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)' }]}>
+                      <Ionicons name="people-outline" size={24} color={theme.success} />
                     </View>
                     <Text style={styles.emptyStateTitle}>No recent activity</Text>
                     <Text style={styles.emptyText}>Staff check-ins will appear here</Text>
@@ -526,7 +538,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                 onPress={() => toggleSection('approvals')}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
               >
-                <View style={[styles.sectionTitleDot, { backgroundColor: '#F59E0B' }]} />
+                <View style={[styles.sectionTitleDot, { backgroundColor: theme.warning }]} />
                 <Text style={styles.sectionTitle}>Pending Approvals</Text>
                 <Ionicons name={isApprovalsCollapsed ? "chevron-down" : "chevron-up"} size={16} color={theme.subtext} />
               </TouchableOpacity>
@@ -540,8 +552,8 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                 {approvals.length > 0 ? (
                   approvals.map((app, idx) => (
                     <View key={app.id} style={[styles.approvalCard, idx === approvals.length - 1 && { borderBottomWidth: 0 }]}>
-                      <View style={[styles.approvalIconBox, { backgroundColor: '#F59E0B' + (isDarkMode ? '25' : '15') }]}>
-                        <Ionicons name="document-text-outline" size={20} color="#F59E0B" />
+                      <View style={[styles.approvalIconBox, { backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)' }]}>
+                        <Ionicons name="document-text-outline" size={20} color={theme.warning} />
                       </View>
                       <View style={styles.approvalInfo}>
                         <Text style={styles.approvalRequest} numberOfLines={1}>{app.request}</Text>
@@ -553,7 +565,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                           onPress={() => handleApprovalAction(app.id, 'APPROVED')}
                           activeOpacity={0.7}
                         >
-                          <Ionicons name="checkmark-sharp" size={14} color="#10B981" />
+                          <Ionicons name="checkmark-sharp" size={14} color={theme.success} />
                           <Text style={styles.approveBtnText}>Approve</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -561,15 +573,15 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                           onPress={() => handleApprovalAction(app.id, 'REJECTED')}
                           activeOpacity={0.7}
                         >
-                          <Ionicons name="close-sharp" size={14} color="#EF4444" />
+                          <Ionicons name="close-sharp" size={14} color={theme.danger} />
                         </TouchableOpacity>
                       </View>
                     </View>
                   ))
                 ) : (
                   <View style={styles.emptyStateContainer}>
-                    <View style={[styles.emptyIconCircle, { backgroundColor: '#10B98115' }]}>
-                      <Ionicons name="checkmark-circle-outline" size={28} color="#10B981" />
+                    <View style={[styles.emptyIconCircle, { backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)' }]}>
+                      <Ionicons name="checkmark-circle-outline" size={28} color={theme.success} />
                     </View>
                     <Text style={styles.emptyStateTitle}>All caught up!</Text>
                     <Text style={styles.emptyText}>All pending requests have been processed.</Text>
@@ -728,12 +740,12 @@ const ActivityItem = React.memo(({ initial, iconBgColor, name, action, time, isL
         <View style={[styles.activityAvatarBox, { backgroundColor: iconBgColor + (isDarkMode ? '30' : '15') }]}>
           <Text style={[styles.activityInitial, { color: iconBgColor }]}>{initial}</Text>
         </View>
-        <View style={[styles.activityStatusDot, { backgroundColor: isClockOut ? '#8B5CF6' : '#10B981' }]} />
+        <View style={[styles.activityStatusDot, { backgroundColor: isClockOut ? theme.secondary : theme.success }]} />
       </View>
       <View style={styles.activityContent}>
         <Text style={styles.activityName}>{name}</Text>
         <View style={styles.activityActionRow}>
-          <Ionicons name={isClockOut ? "exit-outline" : "enter-outline"} size={13} color={isClockOut ? '#8B5CF6' : '#10B981'} />
+          <Ionicons name={isClockOut ? "exit-outline" : "enter-outline"} size={13} color={isClockOut ? theme.secondary : theme.success} />
           <Text style={styles.activityAction}>{action}</Text>
         </View>
       </View>
@@ -836,7 +848,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     ...(isDarkMode
       ? {}
       : {
-          shadowColor: '#0F172A',
+          shadowColor: theme.text,
           shadowOffset: { width: 0, height: 6 },
           shadowOpacity: 0.05,
           shadowRadius: 14,
@@ -865,7 +877,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     ...(isDarkMode
       ? {}
       : {
-          shadowColor: '#0F172A',
+          shadowColor: theme.text,
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.05,
           shadowRadius: 10,
@@ -889,12 +901,12 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#818CF8',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 4,
   },
-  avatarText: { color: '#FFF', fontWeight: '700', fontSize: 15 },
+  avatarText: { color: theme.onPrimary, fontWeight: '700', fontSize: 15 },
   headerAvatarImage: {
     width: 34,
     height: 34,
@@ -913,7 +925,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     ...(isDarkMode
       ? { borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }
       : {
-          shadowColor: '#4338CA',
+          shadowColor: theme.text,
           shadowOffset: { width: 0, height: 12 },
           shadowOpacity: 0.28,
           shadowRadius: 22,
@@ -943,7 +955,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   heroBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     letterSpacing: 0.3,
   },
   heroTimePill: {
@@ -972,7 +984,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   heroTitle: {
     fontSize: 23,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     marginBottom: 6,
     letterSpacing: -0.5,
     lineHeight: 29,
@@ -995,7 +1007,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -1020,7 +1032,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   heroStatChipText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
   heroStatDivider: {
     width: 1,
@@ -1046,7 +1058,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     ...(isDarkMode
       ? {}
       : {
-          shadowColor: '#0F172A',
+          shadowColor: theme.text,
           shadowOffset: { width: 0, height: 6 },
           shadowOpacity: 0.05,
           shadowRadius: 10,
@@ -1145,7 +1157,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     ...(isDarkMode
       ? {}
       : {
-          shadowColor: '#0F172A',
+          shadowColor: theme.text,
           shadowOffset: { width: 0, height: 6 },
           shadowOpacity: 0.05,
           shadowRadius: 14,
@@ -1198,7 +1210,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     ...(isDarkMode
       ? {}
       : {
-          shadowColor: '#0F172A',
+          shadowColor: theme.text,
           shadowOffset: { width: 0, height: 6 },
           shadowOpacity: 0.05,
           shadowRadius: 14,
@@ -1259,7 +1271,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     ...(isDarkMode
       ? {}
       : {
-          shadowColor: '#0F172A',
+          shadowColor: theme.text,
           shadowOffset: { width: 0, height: 3 },
           shadowOpacity: 0.04,
           shadowRadius: 8,
@@ -1305,7 +1317,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     ...(isDarkMode
       ? {}
       : {
-          shadowColor: '#0F172A',
+          shadowColor: theme.text,
           shadowOffset: { width: 0, height: 6 },
           shadowOpacity: 0.05,
           shadowRadius: 14,
@@ -1332,18 +1344,18 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: isDarkMode ? '#065F4640' : '#DCFCE7',
+    backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)',
   },
   approveBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#10B981',
+    color: theme.success,
   },
   rejectBtn: {
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: isDarkMode ? '#991B1B40' : '#FEE2E2',
+    backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1364,7 +1376,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     padding: 20,
     borderWidth: 1,
     borderColor: theme.border,
-    shadowColor: '#0F172A',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.15,
     shadowRadius: 24,

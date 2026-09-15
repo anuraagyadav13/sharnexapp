@@ -9,6 +9,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  RefreshControl,
+  Linking,
+  Share,
+  Alert,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
@@ -36,11 +40,16 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
   const [grades, setGrades] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchGradesData = async () => {
+  const fetchGradesData = async (isRefresh = false) => {
     try {
-      setIsLoading(true);
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       setError(null);
       
       // 1. Resolve student ID reliably
@@ -65,6 +74,48 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
       setReports([]);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => fetchGradesData(true);
+
+  const handleReportPress = async (report: any) => {
+    try {
+      const url = report?.fileUrl || report?.url || report?.downloadUrl;
+      if (url) {
+        Linking.openURL(url).catch(() => Alert.alert('Error', 'Could not open report link.'));
+        return;
+      }
+
+      // Fallback: Format transcript from grades state for native Share
+      const lines: string[] = [
+        '📋 ACADEMIC REPORT TRANSCRIPT',
+        '═══════════════════════════════',
+        `Report  : ${report?.title || 'Academic Report Card'}`,
+        `Date    : ${report?.date || new Date().toLocaleDateString()}`,
+        '',
+        '📊 Subject Grades Breakdown',
+        '-------------------------------',
+        ...grades.map((g: any) => {
+          const sName = typeof g.name === 'object' ? (g.name?.name || 'Subject') : (g.name || g.subject_name || 'Subject');
+          const gStr = typeof g.grade === 'object' ? (g.grade?.name || g.grade?.label || 'N/A') : String(g.grade || 'N/A');
+          const score = g.score || g.percentage || 0;
+          const maxMarks = g.total_marks || 100;
+          return `${sName.padEnd(18)}: ${score}/${maxMarks}  Grade: ${gStr}`;
+        }),
+        '-------------------------------',
+        `Generated on ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`,
+      ].filter(Boolean);
+
+      await Share.share({
+        message: lines.join('\n'),
+        title: report?.title || 'Academic Report Card',
+      });
+    } catch (err: any) {
+      if (err?.message !== 'Share was not shared') {
+        Alert.alert('Error', err?.message || 'Failed to open report.');
+      }
     }
   };
 
@@ -91,7 +142,18 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
         onMenuPress={() => setDrawerOpen(true)}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={[theme.primary]}
+            tintColor={theme.primary}
+          />
+        }
+      >
         
         {/* Page Title */}
         <Animated.View entering={FadeIn.duration(400)} style={styles.pageTitleWrapper}>
@@ -106,7 +168,7 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.emptyText}>{error}</Text>
             <ScaleButton 
               style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#3B82F6', borderRadius: 8 }}
-              onPress={fetchGradesData}
+              onPress={() => fetchGradesData()}
               scaleTo={0.95}
             >
               <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
@@ -181,7 +243,12 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
                  <Text style={[styles.emptyText, { fontSize: 13, marginTop: 0 }]}>No official report cards available yet.</Text>
                ) : (
                  reports.map((report, idx) => (
-                   <TouchableOpacity key={report.id || idx} style={styles.reportItem} activeOpacity={0.7}>
+                   <TouchableOpacity
+                     key={report.id || idx}
+                     style={styles.reportItem}
+                     activeOpacity={0.7}
+                     onPress={() => handleReportPress(report)}
+                   >
                       <View style={styles.pdfIconWrap}>
                          <Ionicons name="document-text" size={18} color="#FFFFFF" />
                          <Text style={styles.pdfIconText}>PDF</Text>

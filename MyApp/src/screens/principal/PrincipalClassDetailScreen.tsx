@@ -18,7 +18,10 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { BRAND } from '../../constants/theme';
 import principalService, { StudentItem } from '../../services/principalService';
+import { getCacheBustedUri } from '../../utils/image';
+
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PrincipalClassDetail'>;
 
@@ -107,7 +110,7 @@ const PrincipalClassDetailScreen: React.FC<Props> = ({ route, navigation }) => {
               <Text style={styles.attendanceText}>{attendancePct}% Att.</Text>
             </View>
           )}
-          <View style={[styles.statusIndicator, { backgroundColor: isActive ? '#10B981' : '#EF4444' }]} />
+          <View style={[styles.statusIndicator, { backgroundColor: isActive ? theme.success : theme.danger }]} />
         </View>
       </View>
     );
@@ -128,8 +131,9 @@ const PrincipalClassDetailScreen: React.FC<Props> = ({ route, navigation }) => {
           onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
         >
           {authState.user?.photoUrl ? (
-            <Image source={{ uri: authState.user.photoUrl }} style={styles.headerAvatarImage} />
+            <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.headerAvatarImage} />
           ) : (
+
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
             </View>
@@ -173,7 +177,7 @@ const PrincipalClassDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                   })
                 }
               >
-                <Ionicons name="options-outline" size={20} color="#FFF" />
+                <Ionicons name="options-outline" size={20} color={theme.onPrimary} />
                 <Text style={styles.manageBtnText}>Manage Class</Text>
               </TouchableOpacity>
 
@@ -197,25 +201,25 @@ const PrincipalClassDetailScreen: React.FC<Props> = ({ route, navigation }) => {
             {/* Info Grid */}
             <View style={styles.infoGrid}>
               <View style={styles.infoCard}>
-                <Ionicons name="calendar-outline" size={20} color="#4F46E5" style={styles.infoCardIcon} />
+                <Ionicons name="calendar-outline" size={20} color={theme.primary} style={styles.infoCardIcon} />
                 <Text style={styles.infoCardLabel}>Academic Year</Text>
                 <Text style={styles.infoCardValue}>{classData?.academicYear || '2026'}</Text>
               </View>
 
               <View style={styles.infoCard}>
-                <Ionicons name="people-outline" size={20} color="#06B6D4" style={styles.infoCardIcon} />
+                <Ionicons name="people-outline" size={20} color={BRAND.accentBlue} style={styles.infoCardIcon} />
                 <Text style={styles.infoCardLabel}>Students</Text>
                 <Text style={styles.infoCardValue}>{classData?.studentCount ?? students.length} enrolled</Text>
               </View>
 
               <View style={styles.infoCard}>
-                <Ionicons name="person-outline" size={20} color="#10B981" style={styles.infoCardIcon} />
+                <Ionicons name="person-outline" size={20} color={theme.success} style={styles.infoCardIcon} />
                 <Text style={styles.infoCardLabel}>Teachers</Text>
                 <Text style={styles.infoCardValue}>{classData?.teacherCount ?? 0} assigned</Text>
               </View>
 
               <View style={styles.infoCard}>
-                <Ionicons name="person-circle-outline" size={20} color="#F59E0B" style={styles.infoCardIcon} />
+                <Ionicons name="person-circle-outline" size={20} color={theme.warning} style={styles.infoCardIcon} />
                 <Text style={styles.infoCardLabel}>Class Teacher</Text>
                 <Text style={styles.infoCardValue} numberOfLines={2}>
                   {classData?.classTeacherName || 'Not assigned'}
@@ -306,7 +310,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -355,7 +359,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     elevation: 4,
   },
   manageBtnText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -394,7 +398,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -538,12 +542,12 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#9F7AEA',
+    backgroundColor: theme.secondary,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 4,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
   headerAvatarImage: {
     width: 32,
     height: 32,

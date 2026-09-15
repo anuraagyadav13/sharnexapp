@@ -15,6 +15,8 @@ import ThemeToggle from './common/ThemeToggle';
 import { useTheme } from '../store/ThemeContext';
 import { useAuth } from '../store/AuthContext';
 import { ThemeMode } from '../constants/theme';
+import { getCacheBustedUri } from '../utils/image';
+
 
 interface StudentHeaderProps {
   title: string;
@@ -106,13 +108,16 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({
             authState.user?.image ? (
             <Image
               source={{
-                uri:
+                uri: getCacheBustedUri(
                   authState.user.photoUrl ||
-                  authState.user.profileImage ||
-                  authState.user.image,
+                    authState.user.profileImage ||
+                    authState.user.image,
+                  authState.user.photoUpdatedAt
+                ),
               }}
               style={styles.headerAvatarImage}
             />
+
           ) : (
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>

@@ -67,15 +67,32 @@ const TeacherReviewSubmissionScreen: React.FC<Props> = ({ navigation, route }) =
   const totalSubjects = subjects.length || 1;
   const readinessPercent = Math.round((approvedCount / totalSubjects) * 100);
 
+  const [isGenerated, setIsGenerated] = useState(false);
+
+  const handleGenerateResults = async () => {
+    try {
+      setIsSubmitting(true);
+      await apiClient.post('/rms/results/generate', { examId, classId });
+      Alert.alert('Success', 'Results generated successfully for all students!');
+      setIsGenerated(true);
+      setCurrentStep(3);
+    } catch (err: any) {
+      console.error('Failed to generate results:', err);
+      Alert.alert('Error', err.response?.data?.message || err.message || 'Failed to generate results.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleApprove = async () => {
     try {
       setIsSubmitting(true);
-      await apiClient.post(ENDPOINTS.TEACHER.RMS_APPROVE, { examId, classId });
-      Alert.alert('Success', 'Examination results authorized and approved for publishing!');
+      await apiClient.post('/rms/results/publish', { examId, classId, template: 'CLASSIC' });
+      Alert.alert('Success', 'Examination results published with CLASSIC template!');
       navigation.goBack();
     } catch (err: any) {
-      console.error('Failed to approve review:', err);
-      Alert.alert('Error', err.message || 'Failed to authorize examination results.');
+      console.error('Failed to publish results:', err);
+      Alert.alert('Error', err.response?.data?.message || err.message || 'Failed to publish examination results.');
     } finally {
       setIsSubmitting(false);
     }
@@ -160,25 +177,48 @@ const TeacherReviewSubmissionScreen: React.FC<Props> = ({ navigation, route }) =
         </View>
       ))}
 
-      <TouchableOpacity style={styles.primaryActionBtn} onPress={() => setCurrentStep(3)}>
-        <Text style={styles.primaryActionText}>PROCEED TO OFFICIAL PUBLISH →</Text>
-      </TouchableOpacity>
+      {readinessPercent === 100 ? (
+        <TouchableOpacity 
+          style={[styles.primaryActionBtn, { backgroundColor: theme.primary }, isSubmitting && { opacity: 0.7 }]} 
+          onPress={handleGenerateResults}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <>
+              <Ionicons name="sparkles-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.primaryActionText}>GENERATE RESULTS (100% READY) →</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      ) : (
+        <View style={[styles.disabledGenCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <Ionicons name="alert-circle-outline" size={20} color={theme.subtext} />
+          <Text style={[styles.disabledGenText, { color: theme.subtext }]}>
+            All subject marksheets must be approved before results can be generated ({approvedCount}/{totalSubjects} approved).
+          </Text>
+        </View>
+      )}
     </View>
   );
 
   const renderStep3 = () => (
     <View style={styles.stepContent}>
-      <View style={styles.publishWarningCard}>
-        <Ionicons name="shield-checkmark" size={36} color="#7C3AED" />
-        <Text style={styles.publishWarningTitle}>Official Certification</Text>
-        <Text style={styles.publishWarningDesc}>
-          Authorizing this examination will permanently lock all subject marksheets for {className} and publish official report cards to students and parents.
+      <View style={[styles.publishWarningCard, { backgroundColor: theme.primary + '10', borderColor: theme.primary + '30' }]}>
+        <Ionicons name="shield-checkmark" size={36} color={theme.primary} />
+        <Text style={[styles.publishWarningTitle, { color: theme.text }]}>Official Certification & Publishing</Text>
+        <Text style={[styles.publishWarningDesc, { color: theme.subtext }]}>
+          Authorizing this examination will lock all subject marksheets for {className} and publish official report cards to students and parents using the <Text style={{ fontWeight: '700', color: theme.primary }}>CLASSIC</Text> template.
+        </Text>
+        <Text style={[styles.templateNote, { color: theme.subtext }]}>
+          * Note: CBSE template support is reserved for upcoming curriculum release.
         </Text>
       </View>
 
       <View style={styles.actionGrid}>
         <TouchableOpacity 
-          style={[styles.publishBtn, isSubmitting && { opacity: 0.7 }]} 
+          style={[styles.publishBtn, { backgroundColor: theme.primary }, isSubmitting && { opacity: 0.7 }]} 
           onPress={handleApprove}
           disabled={isSubmitting}
         >
@@ -187,7 +227,7 @@ const TeacherReviewSubmissionScreen: React.FC<Props> = ({ navigation, route }) =
           ) : (
             <>
               <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-              <Text style={styles.publishBtnText}>AUTHORIZE & APPROVE RESULTS</Text>
+              <Text style={styles.publishBtnText}>PUBLISH RESULTS (CLASSIC)</Text>
             </>
           )}
         </TouchableOpacity>
@@ -541,7 +581,8 @@ const getStyles = (theme: any) => StyleSheet.create({
 
   publishWarningCard: { backgroundColor: theme.isDarkMode ? '#312E8140' : '#F5F3FF', padding: 24, borderRadius: 16, borderWidth: 1, borderColor: theme.isDarkMode ? '#5B21B6' : '#DDD6FE', alignItems: 'center', marginBottom: 24 },
   publishWarningTitle: { fontSize: 18, fontWeight: '800', color: theme.isDarkMode ? '#DDD6FE' : '#5B21B6', marginTop: 12, marginBottom: 8 },
-  publishWarningDesc: { fontSize: 13, color: theme.isDarkMode ? '#C084FC' : '#6D28D9', textAlign: 'center', lineHeight: 20 },
+  publishWarningDesc: { fontSize: 13, color: theme.subtext, textAlign: 'center', lineHeight: 20 },
+  templateNote: { fontSize: 11, fontStyle: 'italic', marginTop: 12, textAlign: 'center' },
   actionGrid: { gap: 12 },
   publishBtn: { flexDirection: 'row', backgroundColor: '#10B981', paddingVertical: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 8 },
   publishBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
@@ -560,6 +601,22 @@ const getStyles = (theme: any) => StyleSheet.create({
   logItem: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: theme.border },
   logAction: { fontSize: 13, fontWeight: '700', color: theme.text },
   logMeta: { fontSize: 11, color: theme.subtext, marginTop: 2 },
+
+  disabledGenCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 20,
+  },
+  disabledGenText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: '500',
+  },
 });
 
 export default TeacherReviewSubmissionScreen;

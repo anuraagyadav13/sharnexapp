@@ -85,6 +85,17 @@ export async function fetchWithCache<T>(
 }
 
 /**
+ * Invalidate a specific cached key and its pending promise.
+ *
+ * @param key Unique cache key to invalidate
+ */
+export function invalidateCacheKey(key: string): void {
+  delete store[key];
+  delete pending[key];
+  if (__DEV__) { console.log(`[CACHE] Invalidated key: ${key}`); }
+}
+
+/**
  * Wipe all cached entries and in-flight promises.
  * Call on logout to prevent stale data leaking between sessions.
  */
@@ -93,3 +104,4 @@ export function clearCache(): void {
   Object.keys(pending).forEach(k => delete pending[k]);
   if (__DEV__) { console.log('[CACHE] Cleared all entries'); }
 }
+

@@ -509,7 +509,7 @@ const FAQ_DATA = [
 // ─────────────────────────────────────────────────────────────────────────────
 const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
-  const { authState } = useAuth();
+  const { authState, updateUser } = useAuth();
   const { theme, isDarkMode, toggleDarkMode } = useTheme();
   const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
   const [dashboardData, setDashboardData] = useState<any>(null);

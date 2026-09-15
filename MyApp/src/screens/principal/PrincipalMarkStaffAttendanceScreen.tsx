@@ -33,6 +33,8 @@ import Animated, {
 import ScaleButton from '../../components/animations/ScaleButton';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
+import { getCacheBustedUri } from '../../utils/image';
+
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import principalService from '../../services/principalService';
@@ -66,7 +68,7 @@ const PageSkeleton = () => {
 
 const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
   const { theme, isDarkMode, toggleDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const { authState } = useAuth();
 
   const [isDrawerOpen, setDrawerOpen] = useState(false);
@@ -91,7 +93,6 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
 
   const [showTimePicker, setShowTimePicker] = useState<{ visible: boolean; field: 'in' | 'out' }>({ visible: false, field: 'in' });
   const [editForm, setEditForm] = useState<{ inTime: Date; outTime: Date | null; notes: string }>({ inTime: new Date(), outTime: null, notes: '' });
-  const [isActionsVisible, setIsActionsVisible] = useState(false);
   const [cameraAvailable, setCameraAvailable] = useState(true);
   const [searchLogsQuery, setSearchLogsQuery] = useState('');
   const [isStaffDropdownOpen, setIsStaffDropdownOpen] = useState(false);
@@ -203,7 +204,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
 
     launchCamera(options, async (response: ImagePickerResponse) => {
       if (response.didCancel) {
-        console.log('User cancelled camera');
+        // user cancelled
       } else if (response.errorCode) {
         if (response.errorCode === 'camera_unavailable') {
           setCameraAvailable(false);
@@ -220,11 +221,16 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
             name: asset.fileName || 'attendance.jpg',
           } as any);
 
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 7000);
+
           const res = await apiClient.post('/attendance/face-scan', formData, {
             headers: {
               'Content-Type': 'multipart/form-data',
             },
+            signal: controller.signal,
           });
+          clearTimeout(timeoutId);
 
           const responseData = res.data?.data || res.data || {};
           const matchedName = responseData.name || responseData.teacherName || responseData.teacher?.name || 'Staff Member';
@@ -232,9 +238,12 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
           fetchData();
         } catch (error: any) {
           console.error('[MarkStaffAttendance] Face scan failed:', error);
-          const errorMsg = error.response?.data?.message || error.message || 'Could not verify face.';
+          const isTimeout = error?.name === 'CanceledError' || error?.name === 'AbortError' || error?.code === 'ECONNABORTED';
+          const errorMsg = isTimeout
+            ? 'Face verification timed out after 7 seconds. Please ensure good lighting and try again.'
+            : (error.response?.data?.message || error.message || 'Could not verify face.');
           Alert.alert(
-            'Scan Failed',
+            isTimeout ? 'Scan Timed Out' : 'Scan Failed',
             errorMsg,
             [
               { text: 'Cancel', style: 'cancel' },
@@ -252,9 +261,13 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
     fetchData();
   }, [selectedDate]);
 
-  const fetchData = async () => {
+  const fetchData = async (isRefresh = false) => {
     try {
-      if (!isRefreshing) setIsLoading(true);
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else if (!isRefreshing) {
+        setIsLoading(true);
+      }
 
       const dateStr = selectedDate.toISOString().split('T')[0];
       const institutionId = authState.user?.institutionId || '';
@@ -350,9 +363,6 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
       } else if (manualStatus === 'LATE') {
         type = 'IN';
         isLate = true;
-      } else if (manualStatus === 'HALF DAY') {
-        // TODO: Verify if backend supports HALF_DAY status for manual attendance. Currently sending type: 'HALF_DAY'
-        type = 'HALF_DAY';
       }
 
       const payload: any = {
@@ -382,7 +392,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
 
   const onRefresh = () => {
     setIsRefreshing(true);
-    fetchData();
+    fetchData(true);
   };
 
   const toggleStaffSelection = (id: string) => {
@@ -420,7 +430,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
     }
   };
 
-  const handleManualOut = async (logId: string, teacherId: string) => {
+  const handleManualOut = async (teacherId: string) => {
     try {
       setIsLoading(true);
       const dateStr = selectedDate.toISOString().split('T')[0];
@@ -428,9 +438,8 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
         teacherId,
         type: 'OUT',
         date: dateStr,
-        notes: `Manual OUT via action menu on ${dateStr}`
+        notes: `Manual OUT via Principal mobile app on ${dateStr}`,
       });
-      setIsActionsVisible(false);
       await fetchData();
       Alert.alert('Success', 'Staff member marked as OUT.');
     } catch (error: any) {
@@ -453,7 +462,6 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
             try {
               setIsLoading(true);
               await apiClient.delete(`${ENDPOINTS.PRINCIPAL.ATTENDANCE}/${logId}`);
-              setIsActionsVisible(false);
               await fetchData();
               Alert.alert('Success', 'Attendance record deleted.');
             } catch (error: any) {
@@ -507,7 +515,6 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
       if (activeFilter === 'Absent') return !log.isPresent;
       if (activeFilter === 'Late') return log.isLate;
       if (activeFilter === 'Checked Out') return log.status?.includes('OUT');
-      if (activeFilter === 'Half Day') return log.status === 'HALF_DAY' || log.status?.includes('Half');
       return true;
     });
   }, [attendanceLogs, selectedDropdownStaff, searchLogsQuery, activeFilter]);
@@ -569,7 +576,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
       <Modal visible={isViewModalOpen} transparent animationType="slide">
         <View style={styles.detailOverlay}>
           <View style={styles.detailContent}>
-            <View style={[styles.detailHeader, { backgroundColor: '#8B5CF6' }]}>
+            <View style={[styles.detailHeader, { backgroundColor: theme.secondary }]}>
               <View style={styles.detailHeaderInner}>
                 <View style={styles.detailAvatar}>
                   <Text style={styles.detailAvatarText}>{selectedLog?.name?.charAt(0)}</Text>
@@ -585,7 +592,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                   accessibilityRole="button"
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <Ionicons name="close" size={20} color="#FFF" />
+                  <Ionicons name="close" size={20} color={theme.onPrimary} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -595,7 +602,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                 <View style={styles.detailCol}>
                   <Text style={styles.detailLabel}>DATE</Text>
                   <View style={styles.detailValRow}>
-                    <Ionicons name="calendar-outline" size={16} color="#8B5CF6" />
+                    <Ionicons name="calendar-outline" size={16} color={theme.secondary} />
                     <Text style={styles.detailValText}>
                       {selectedLog?.date ? new Date(selectedLog.date).toDateString() : selectedDate.toDateString()}
                     </Text>
@@ -604,7 +611,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                 <View style={styles.detailCol}>
                   <Text style={styles.detailLabel}>STATUS</Text>
                   <View style={styles.detailValRow}>
-                    <View style={[styles.statusDot, { backgroundColor: selectedLog?.status === 'Absent' ? '#EF4444' : (selectedLog?.status.includes('OUT') ? '#F59E0B' : '#10B981') }]} />
+                    <View style={[styles.statusDot, { backgroundColor: selectedLog?.status === 'Absent' ? theme.danger : (selectedLog?.status.includes('OUT') ? theme.warning : theme.success) }]} />
                     <Text style={styles.detailValText}>{selectedLog?.status}</Text>
                   </View>
                 </View>
@@ -640,7 +647,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
               <View style={styles.detailSection}>
                 <Text style={styles.detailLabel}>VERIFICATION METHOD</Text>
                 <View style={styles.detailValRow}>
-                  <Ionicons name="create-outline" size={16} color="#F59E0B" />
+                  <Ionicons name="create-outline" size={16} color={theme.warning} />
                   <Text style={styles.detailValText}>{selectedLog?.method || 'Manual Entry'}</Text>
                 </View>
               </View>
@@ -723,8 +730,9 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
             accessibilityRole="button"
           >
             {authState.user?.photoUrl ? (
-              <Image source={{ uri: authState.user.photoUrl }} style={styles.avatarCircle} />
+              <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.avatarCircle} />
             ) : (
+
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
               </View>
@@ -740,7 +748,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
           style={styles.container}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />}
         >
           <View style={styles.pageHeader}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -755,7 +763,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                 accessibilityRole="button"
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Ionicons name="calendar" size={16} color="#FFF" />
+                <Ionicons name="calendar" size={16} color={theme.onPrimary} />
                 <Text style={styles.dateSelectorBtnText}>
                   {selectedDate.toLocaleDateString([], { month: 'short', day: 'numeric' })}
                 </Text>
@@ -767,35 +775,35 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
               <View style={[styles.statIconBox, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
-                <Ionicons name="people" size={16} color="#6366F1" />
+                <Ionicons name="people" size={16} color={theme.primary} />
               </View>
               <Text style={styles.statValue}>{stats.total}</Text>
               <Text style={styles.statLabel}>Total Staff</Text>
             </View>
             <View style={styles.statCard}>
               <View style={[styles.statIconBox, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
-                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                <Ionicons name="checkmark-circle" size={16} color={theme.success} />
               </View>
               <Text style={styles.statValue}>{stats.present}</Text>
               <Text style={styles.statLabel}>Present</Text>
             </View>
             <View style={styles.statCard}>
               <View style={[styles.statIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
-                <Ionicons name="close-circle" size={16} color="#EF4444" />
+                <Ionicons name="close-circle" size={16} color={theme.danger} />
               </View>
               <Text style={styles.statValue}>{stats.absent}</Text>
               <Text style={styles.statLabel}>Absent</Text>
             </View>
             <View style={styles.statCard}>
               <View style={[styles.statIconBox, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
-                <Ionicons name="time" size={16} color="#F59E0B" />
+                <Ionicons name="time" size={16} color={theme.warning} />
               </View>
               <Text style={styles.statValue}>{stats.late}</Text>
               <Text style={styles.statLabel}>Late</Text>
             </View>
             <View style={styles.statCard}>
               <View style={[styles.statIconBox, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
-                <Ionicons name="log-out" size={16} color="#8B5CF6" />
+                <Ionicons name="log-out" size={16} color={theme.secondary} />
               </View>
               <Text style={styles.statValue}>{stats.checkedOut}</Text>
               <Text style={styles.statLabel}>Checked Out</Text>
@@ -807,7 +815,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
             <View style={styles.scannerHeader}>
               <View style={styles.scannerTitleBox}>
                 <View style={styles.scannerIconSmall}>
-                  <Ionicons name="camera" size={16} color="#6366F1" />
+                  <Ionicons name="camera" size={16} color={theme.primary} />
                 </View>
                 <Text style={styles.scannerTitleText}>Face Recognition</Text>
               </View>
@@ -816,14 +824,14 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
             <View style={styles.scannerDisplayArea}>
               {isUploadingFace ? (
                 <View style={styles.uploadingContainer}>
-                  <ActivityIndicator size="large" color="#6366F1" />
+                  <ActivityIndicator size="large" color={theme.primary} />
                   <Text style={styles.uploadingText}>Verifying Face Scan...</Text>
                   <Text style={styles.uploadingSub}>Please wait while we match the biometric data.</Text>
                 </View>
               ) : !cameraAvailable ? (
                 <View style={styles.errorState}>
                   <View style={styles.errorIconBox}>
-                    <MaterialCommunityIcons name="alert" size={24} color="#EF4444" />
+                    <MaterialCommunityIcons name="alert" size={24} color={theme.danger} />
                   </View>
                   <Text style={styles.errorTitle}>Camera Error</Text>
                   <Text style={styles.errorSub}>No camera found or permissions denied.</Text>
@@ -851,7 +859,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                       }
                     }}
                   >
-                    <Ionicons name="refresh" size={16} color="#FFF" />
+                    <Ionicons name="refresh" size={16} color={theme.onPrimary} />
                     <Text style={styles.retryText}>Retry</Text>
                   </TouchableOpacity>
                 </View>
@@ -874,7 +882,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                     />
                     <View style={styles.scannerCenterIcon}>
                       <MaterialCommunityIcons name="face-recognition" size={40} color="rgba(99, 102, 241, 0.2)" />
-                      <Text style={{ fontSize: 12, color: '#6366F1', fontWeight: 'bold', marginTop: 8 }}>Tap to Scan Face</Text>
+                      <Text style={{ fontSize: 12, color: theme.primary, fontWeight: 'bold', marginTop: 8 }}>Tap to Scan Face</Text>
                     </View>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -894,7 +902,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
           <View style={[styles.scannerSection, { marginTop: 25 }]}>
             <View style={styles.sectionHeaderInner}>
               <View style={styles.sectionTitleRowInner}>
-                <Ionicons name="checkmark-circle-outline" size={20} color="#4F46E5" />
+                <Ionicons name="checkmark-circle-outline" size={20} color={theme.primary} />
                 <Text style={styles.innerSectionTitle}>Logs List</Text>
               </View>
               <ScrollView
@@ -925,7 +933,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                 accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                  <Ionicons name="person-outline" size={18} color="#6366F1" />
+                  <Ionicons name="person-outline" size={18} color={theme.primary} />
                   <Text style={{ color: selectedDropdownStaff ? theme.text : theme.subtext, fontWeight: '500', fontSize: 13 }}>
                     {selectedDropdownStaff ? selectedDropdownStaff.name : 'Select Specific Staff...'}
                   </Text>
@@ -991,7 +999,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                                 setIsViewModalOpen(true);
                               }}
                             >
-                              <Ionicons name="eye-outline" size={16} color="#6366F1" />
+                              <Ionicons name="eye-outline" size={16} color={theme.primary} />
                             </TouchableOpacity>
                             <TouchableOpacity
                               style={styles.miniActionBtn}
@@ -1012,23 +1020,23 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                                 setIsEditModalOpen(true);
                               }}
                             >
-                              <Ionicons name="pencil-outline" size={16} color="#6366F1" />
+                              <Ionicons name="pencil-outline" size={16} color={theme.primary} />
                             </TouchableOpacity>
                             <TouchableOpacity
                               style={styles.miniActionBtn}
                               accessibilityLabel="Check out manually"
                               accessibilityRole="button"
-                              onPress={() => handleManualOut(log.id, log.teacherId)}
+                              onPress={() => handleManualOut(log.teacherId)}
                             >
-                              <Ionicons name="log-out-outline" size={16} color="#F59E0B" />
+                              <Ionicons name="log-out-outline" size={16} color={theme.warning} />
                             </TouchableOpacity>
                             <TouchableOpacity
-                              style={[styles.miniActionBtn, { borderColor: '#FEE2E2' }]}
+                              style={[styles.miniActionBtn, { borderColor: theme.border }]}
                               accessibilityLabel="Delete record"
                               accessibilityRole="button"
                               onPress={() => handleDeleteAttendance(log.id)}
                             >
-                              <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                              <Ionicons name="trash-outline" size={16} color={theme.danger} />
                             </TouchableOpacity>
                           </View>
                         ) : (
@@ -1038,8 +1046,8 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                                 styles.miniActionBtn,
                                 styles.selectStaffBtn,
                                 selectedStaffIds.includes(log.teacherId) && {
-                                  borderColor: '#10B981',
-                                  backgroundColor: isDarkMode ? '#064E3B' : '#D1FAE5',
+                                  borderColor: theme.success,
+                                  backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)',
                                 }
                               ]}
                               onPress={() => toggleStaffSelection(log.teacherId)}
@@ -1049,12 +1057,12 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                               <Text style={[
                                 styles.selectStaffText,
                                 selectedStaffIds.includes(log.teacherId) && {
-                                  color: '#10B981',
+                                  color: theme.success,
                                   fontWeight: 'bold',
                                 }
                               ]}>
                                 {selectedStaffIds.includes(log.teacherId) ? (
-                                  <Ionicons name="checkmark" size={14} color="#10B981" />
+                                  <Ionicons name="checkmark" size={14} color={theme.success} />
                                 ) : (
                                   'S'
                                 )}
@@ -1064,13 +1072,13 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                         )}
                       </View>
                       <View style={styles.logBadgeRow}>
-                        <View style={[styles.logStatusPill, { backgroundColor: log.status === 'Absent' ? '#FEE2E2' : (log.status.includes('OUT') ? '#FEF3C7' : '#D1FAE5') }]}>
-                          <View style={[styles.statusDot, { backgroundColor: log.status === 'Absent' ? '#EF4444' : (log.status.includes('OUT') ? '#F59E0B' : '#10B981') }]} />
-                          <Text style={[styles.logStatusText, { color: log.status === 'Absent' ? '#991B1B' : (log.status.includes('OUT') ? '#92400E' : '#065F46') }]}>{log.status}</Text>
+                        <View style={[styles.logStatusPill, { backgroundColor: log.status === 'Absent' ? (isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)') : (log.status.includes('OUT') ? (isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)') : (isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)')) }]}>
+                          <View style={[styles.statusDot, { backgroundColor: log.status === 'Absent' ? (theme.danger) : (log.status.includes('OUT') ? theme.warning : theme.success) }]} />
+                          <Text style={[styles.logStatusText, { color: log.status === 'Absent' ? (theme.danger) : (log.status.includes('OUT') ? theme.warning : theme.success) }]}>{log.status}</Text>
                         </View>
                         {log.isPresent && (
                           <View style={styles.methodBadge}>
-                            <Ionicons name="scan-outline" size={10} color="#64748B" />
+                            <Ionicons name="scan-outline" size={10} color={theme.subtext} />
                             <Text style={styles.methodText}>{log.method}</Text>
                           </View>
                         )}
@@ -1095,7 +1103,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
             <View style={styles.searchBarInner}>
-              <Ionicons name="search-outline" size={16} color="#94A3B8" />
+              <Ionicons name="search-outline" size={16} color={theme.placeholder} />
               <TextInput
                 placeholder="Search Staff..."
                 style={styles.innerSearchInput}
@@ -1115,7 +1123,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                 >
                   <View style={styles.miniAvatar}><Text style={styles.miniAvatarText}>{staff.name.charAt(0)}</Text></View>
                   <Text style={styles.quickMarkName}>{staff.name}</Text>
-                  {selectedStaffIds.includes(staff.id) && <Ionicons name="checkmark-circle" size={18} color="#4F46E5" />}
+                  {selectedStaffIds.includes(staff.id) && <Ionicons name="checkmark-circle" size={18} color={theme.primary} />}
                 </TouchableOpacity>
               ))}
             </View>
@@ -1125,7 +1133,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
           <View style={[styles.scannerSection, { marginTop: 25, paddingBottom: 20 }]}>
             <View style={styles.sectionHeaderInner}>
               <View style={styles.sectionTitleRowInner}>
-                <Ionicons name="create-outline" size={20} color="#4F46E5" />
+                <Ionicons name="create-outline" size={20} color={theme.primary} />
                 <Text style={styles.innerSectionTitle}>Manual Entry Form</Text>
               </View>
             </View>
@@ -1135,7 +1143,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
               accessibilityLabel="Mark attendance manually"
               accessibilityRole="button"
             >
-              <Ionicons name="person-add-outline" size={18} color="#FFF" />
+              <Ionicons name="person-add-outline" size={18} color={theme.onPrimary} />
               <Text style={styles.manualActionText}>Mark Attendance Manually</Text>
             </TouchableOpacity>
           </View>
@@ -1174,7 +1182,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                       <Text style={styles.staffRole}>{staff.role || 'Staff Member'}</Text>
                     </View>
                     {isSelected ? (
-                      <Ionicons name="checkmark-circle" size={24} color="#4F46E5" />
+                      <Ionicons name="checkmark-circle" size={24} color={theme.primary} />
                     ) : (
                       <View style={styles.checkPlaceholder} />
                     )}
@@ -1192,7 +1200,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
           <View style={styles.selectionActions}>
             <TouchableOpacity
               onPress={() => handleMarkBulkAttendance('IN')}
-              style={[styles.actionBtn, { backgroundColor: '#10B981' }, isLoading && { opacity: 0.6 }]}
+              style={[styles.actionBtn, { backgroundColor: theme.success }, isLoading && { opacity: 0.6 }]}
               disabled={isLoading}
               accessibilityLabel="Bulk mark present"
               accessibilityRole="button"
@@ -1201,7 +1209,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => handleMarkBulkAttendance('OUT')}
-              style={[styles.actionBtn, { backgroundColor: '#EF4444' }, isLoading && { opacity: 0.6 }]}
+              style={[styles.actionBtn, { backgroundColor: theme.danger }, isLoading && { opacity: 0.6 }]}
               disabled={isLoading}
               accessibilityLabel="Bulk mark absent"
               accessibilityRole="button"
@@ -1220,7 +1228,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
             <View style={styles.editModalHeader}>
               <View style={styles.editHeaderLeft}>
                 <View style={styles.editIconBox}>
-                  <Ionicons name="time-outline" size={20} color="#4F46E5" />
+                  <Ionicons name="time-outline" size={20} color={theme.primary} />
                 </View>
                 <Text style={styles.editModalTitle}>Edit Attendance</Text>
               </View>
@@ -1229,7 +1237,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                 accessibilityLabel="Close Edit Modal"
                 accessibilityRole="button"
               >
-                <Ionicons name="close-outline" size={24} color="#94A3B8" />
+                <Ionicons name="close-outline" size={24} color={theme.placeholder} />
               </TouchableOpacity>
             </View>
 
@@ -1257,7 +1265,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                   <Text style={styles.timeInputText}>
                     {editForm.inTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </Text>
-                  <Ionicons name="time-outline" size={18} color="#4F46E5" />
+                  <Ionicons name="time-outline" size={18} color={theme.primary} />
                 </TouchableOpacity>
               </View>
               <View style={styles.editInputCol}>
@@ -1271,7 +1279,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                   <Text style={styles.timeInputText}>
                     {editForm.outTime ? editForm.outTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}
                   </Text>
-                  <Ionicons name="time-outline" size={18} color="#4F46E5" />
+                  <Ionicons name="time-outline" size={18} color={theme.primary} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -1349,7 +1357,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                 accessibilityLabel="Close Manual Entry Modal"
                 accessibilityRole="button"
               >
-                <Ionicons name="close" size={24} color="#64748B" />
+                <Ionicons name="close" size={24} color={theme.subtext} />
               </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -1361,10 +1369,10 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                   accessibilityLabel="Choose staff dropdown selector"
                   accessibilityRole="button"
                 >
-                  <Text style={[styles.fieldText, !selectedManualStaff && { color: '#94A3B8' }]}>
+                  <Text style={[styles.fieldText, !selectedManualStaff && { color: theme.placeholder }]}>
                     {selectedManualStaff ? selectedManualStaff.name : 'Choose a staff member...'}
                   </Text>
-                  <Ionicons name="chevron-down" size={18} color="#94A3B8" />
+                  <Ionicons name="chevron-down" size={18} color={theme.placeholder} />
                 </TouchableOpacity>
               </View>
               <View style={styles.modalField}>
@@ -1376,25 +1384,25 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                   accessibilityRole="button"
                 >
                   <Text style={styles.fieldText}>{manualDate.toDateString()}</Text>
-                  <Ionicons name="calendar-outline" size={18} color="#94A3B8" />
+                  <Ionicons name="calendar-outline" size={18} color={theme.placeholder} />
                 </TouchableOpacity>
               </View>
               <View style={styles.modalField}>
                 <Text style={styles.fieldLabel}>ATTENDANCE STATUS</Text>
                 <View style={styles.statusGrid}>
-                  {['PRESENT', 'ABSENT', 'LATE', 'HALF DAY'].map(s => {
+                  {['PRESENT', 'ABSENT', 'LATE'].map(s => {
                     const isSelected = manualStatus === s;
                     return (
                       <TouchableOpacity
                         key={s}
-                        style={[styles.statusBox, isSelected && { borderColor: '#4F46E5', backgroundColor: '#EEF2FF' }]}
+                        style={[styles.statusBox, isSelected && { borderColor: theme.primary, backgroundColor: theme.iconBackground }]}
                         onPress={() => setManualStatus(s)}
                         accessibilityLabel={`Status ${s}`}
                         accessibilityRole="radio"
                         accessibilityState={{ checked: isSelected }}
                       >
-                        <View style={[styles.statusCircle, { backgroundColor: isSelected ? '#4F46E5' : '#CBD5E1' }]} />
-                        <Text style={[styles.statusBoxText, isSelected && { color: '#4F46E5' }]}>{s}</Text>
+                        <View style={[styles.statusCircle, { backgroundColor: isSelected ? theme.primary : theme.border }]} />
+                        <Text style={[styles.statusBoxText, isSelected && { color: theme.primary }]}>{s}</Text>
                       </TouchableOpacity>
                     );
                   })}
@@ -1443,7 +1451,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   container: { flex: 1 },
   scrollContent: { paddingBottom: 100 },
@@ -1454,14 +1462,14 @@ const getStyles = (theme: any) => StyleSheet.create({
   userNameHighlight: { color: theme.primary, fontWeight: '700' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerIcon: { padding: 4 },
-  avatarCircle: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#A78BFA', alignItems: 'center', justifyContent: 'center', marginLeft: 4 },
-  avatarInitial: { color: '#FFF', fontWeight: 'bold', fontSize: 15 },
+  avatarCircle: { width: 34, height: 34, borderRadius: 17, backgroundColor: theme.secondary, alignItems: 'center', justifyContent: 'center', marginLeft: 4 },
+  avatarInitial: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 15 },
 
   pageHeader: { marginBottom: 20, paddingHorizontal: 20, marginTop: 10 },
   screenTitle: { fontSize: 24, fontWeight: '800', color: theme.primary, marginBottom: 4 },
   screenSubtitle: { fontSize: 13, color: theme.subtext, fontWeight: '500' },
 
-  scannerSection: { backgroundColor: theme.surface, marginHorizontal: 20, borderRadius: 24, padding: 16, borderWidth: 1, borderColor: theme.border, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.02, shadowRadius: 10, elevation: 2 },
+  scannerSection: { backgroundColor: theme.surface, marginHorizontal: 20, borderRadius: 24, padding: 16, borderWidth: 1, borderColor: theme.border, shadowColor: theme.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.02, shadowRadius: 10, elevation: 2 },
   sectionHeaderInner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   sectionTitleRowInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   innerSectionTitle: { fontSize: 15, fontWeight: '800', color: theme.text },
@@ -1470,7 +1478,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   filterPill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: theme.background },
   filterPillActive: { backgroundColor: theme.primary },
   filterPillText: { fontSize: 9, fontWeight: '700', color: theme.subtext },
-  filterPillTextActive: { color: '#FFF' },
+  filterPillTextActive: { color: theme.onPrimary },
 
   searchBarInner: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.background, height: 40, borderRadius: 10, paddingHorizontal: 12, marginBottom: 15, borderWidth: 1, borderColor: theme.border },
   innerSearchInput: { flex: 1, marginLeft: 8, fontSize: 12, color: theme.text },
@@ -1498,29 +1506,29 @@ const getStyles = (theme: any) => StyleSheet.create({
   quickMarkName: { flex: 1, fontSize: 13, fontWeight: '600', color: theme.text },
   selectAllBtnText: { fontSize: 10, fontWeight: '800', color: theme.primary },
 
-  manualActionBtn: { backgroundColor: theme.isDarkMode ? '#334155' : '#1E293B', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 48, borderRadius: 14, marginTop: 10 },
-  manualActionText: { color: '#FFF', fontSize: 13, fontWeight: '800' },
+  manualActionBtn: { backgroundColor: theme.isDarkMode ? theme.surface : theme.text, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 48, borderRadius: 14, marginTop: 10 },
+  manualActionText: { color: theme.onPrimary, fontSize: 13, fontWeight: '800' },
 
   listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 32, marginBottom: 16 },
   listTitle: { fontSize: 18, fontWeight: '800', color: theme.text },
   selectAllText: { fontSize: 10, fontWeight: '800', color: theme.primary, letterSpacing: 0.5 },
   staffList: { paddingHorizontal: 20, gap: 12 },
-  staffCard: { backgroundColor: theme.surface, borderRadius: 24, padding: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: theme.border, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2 },
-  staffCardActive: { borderColor: theme.primary, backgroundColor: theme.isDarkMode ? '#312E81' : '#EEF2FF' },
+  staffCard: { backgroundColor: theme.surface, borderRadius: 24, padding: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: theme.border, shadowColor: theme.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2 },
+  staffCardActive: { borderColor: theme.primary, backgroundColor: theme.isDarkMode ? 'rgba(79, 70, 229, 0.2)' : theme.iconBackground },
   staffAvatar: { width: 48, height: 48, borderRadius: 14, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center' },
   avatarActive: { backgroundColor: theme.primary },
   staffInitial: { fontSize: 18, fontWeight: '800', color: theme.subtext },
-  initialActive: { color: '#FFF' },
+  initialActive: { color: theme.onPrimary },
   staffMain: { flex: 1, marginLeft: 15 },
   staffName: { fontSize: 15, fontWeight: '700', color: theme.text },
   staffRole: { fontSize: 11, color: theme.subtext, marginTop: 2, fontWeight: '600' },
   checkPlaceholder: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: theme.border },
 
-  selectionBar: { position: 'absolute', bottom: 30, left: 20, right: 20, backgroundColor: theme.isDarkMode ? '#1E293B' : '#1E293B', borderRadius: 24, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 },
-  selectionText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+  selectionBar: { position: 'absolute', bottom: 30, left: 20, right: 20, backgroundColor: theme.surface, borderRadius: 24, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', shadowColor: theme.text, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 },
+  selectionText: { color: theme.onPrimary, fontSize: 14, fontWeight: '700' },
   selectionActions: { flexDirection: 'row', gap: 10 },
   actionBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
-  actionBtnText: { color: '#FFF', fontSize: 10, fontWeight: '800' },
+  actionBtnText: { color: theme.onPrimary, fontSize: 10, fontWeight: '800' },
 
   // Modal
   detailOverlay: { flex: 1, backgroundColor: theme.background },
@@ -1528,9 +1536,9 @@ const getStyles = (theme: any) => StyleSheet.create({
   detailHeader: { padding: 16, paddingTop: Platform.OS === 'ios' ? 60 : 40, paddingBottom: 25 },
   detailHeaderInner: { flexDirection: 'row', alignItems: 'center' },
   detailAvatar: { width: 48, height: 48, borderRadius: 12, backgroundColor: theme.surface, alignItems: 'center', justifyContent: 'center' },
-  detailAvatarText: { fontSize: 18, fontWeight: '900', color: '#8B5CF6' },
+  detailAvatarText: { fontSize: 18, fontWeight: '900', color: theme.secondary },
   detailMainInfo: { flex: 1, marginLeft: 12 },
-  detailName: { fontSize: 16, fontWeight: '800', color: '#FFF' },
+  detailName: { fontSize: 16, fontWeight: '800', color: theme.onPrimary },
   detailId: { fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 2, fontWeight: '600' },
   detailCloseIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
   detailBody: { flex: 1, padding: 20 },
@@ -1561,7 +1569,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.text,
   },
   editModalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  editModalContent: { backgroundColor: theme.surface, width: '92%', maxWidth: 400, borderRadius: 28, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.15, shadowRadius: 30, elevation: 20, borderWidth: 1, borderColor: theme.border },
+  editModalContent: { backgroundColor: theme.surface, width: '92%', maxWidth: 400, borderRadius: 28, padding: 24, shadowColor: theme.text, shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.15, shadowRadius: 30, elevation: 20, borderWidth: 1, borderColor: theme.border },
   editModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   editHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   editIconBox: { width: 40, height: 40, borderRadius: 12, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center' },
@@ -1583,7 +1591,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   editCancelBtn: { flex: 1, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.background, borderWidth: 1, borderColor: theme.border },
   editCancelBtnText: { fontSize: 15, fontWeight: '700', color: theme.subtext },
   editSaveBtn: { flex: 1, height: 52, borderRadius: 14, backgroundColor: theme.primary, alignItems: 'center', justifyContent: 'center', shadowColor: theme.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 8 },
-  editSaveBtnText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
+  editSaveBtnText: { color: theme.onPrimary, fontSize: 15, fontWeight: '800' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'flex-end' },
   modalSheet: { backgroundColor: theme.surface, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, maxHeight: '80%', borderWidth: 1, borderColor: theme.border },
   modalIndicator: { width: 40, height: 4, backgroundColor: theme.border, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
@@ -1599,7 +1607,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   statusCircle: { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.primary },
   statusBoxText: { fontSize: 12, fontWeight: '800', color: theme.text },
   primaryActionBtn: { backgroundColor: theme.primary, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 10, shadowColor: theme.primary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
-  primaryActionText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+  primaryActionText: { color: theme.onPrimary, fontSize: 16, fontWeight: '800' },
 
   statsRowSkeleton: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginTop: 25 },
   statsRow: {
@@ -1618,7 +1626,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.border,
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.01,
     shadowRadius: 5,
@@ -1700,23 +1708,23 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginLeft: 10,
   },
   dateSelectorBtnText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 12,
     fontWeight: '700',
   },
   selectStaffBtn: {
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
     paddingHorizontal: 8,
     backgroundColor: 'transparent',
   },
   selectStaffText: {
     fontSize: 10,
-    color: '#6366F1',
+    color: theme.primary,
     fontWeight: 'bold',
   },
 
   // Face Scanner Refined
-  scannerContainer: { backgroundColor: theme.surface, marginHorizontal: 20, marginTop: 10, borderRadius: 24, padding: 15, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.05, shadowRadius: 20, elevation: 5, borderWidth: 1, borderColor: theme.border },
+  scannerContainer: { backgroundColor: theme.surface, marginHorizontal: 20, marginTop: 10, borderRadius: 24, padding: 15, shadowColor: theme.text, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.05, shadowRadius: 20, elevation: 5, borderWidth: 1, borderColor: theme.border },
   scannerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, paddingHorizontal: 5 },
   scannerTitleBox: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   scannerIconSmall: { width: 32, height: 32, borderRadius: 8, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center' },
@@ -1725,38 +1733,38 @@ const getStyles = (theme: any) => StyleSheet.create({
 
   // Error State
   errorState: { alignItems: 'center', padding: 20 },
-  errorIconBox: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  errorIconBox: { width: 48, height: 48, borderRadius: 24, backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   errorTitle: { fontSize: 16, fontWeight: '800', color: theme.text, marginBottom: 4 },
   errorSub: { fontSize: 12, color: theme.subtext, fontWeight: '500', marginBottom: 15 },
-  retryBtn: { backgroundColor: '#8B5CF6', flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, height: 38, borderRadius: 10 },
-  retryText: { color: '#FFF', fontSize: 13, fontWeight: '800' },
+  retryBtn: { backgroundColor: theme.secondary, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, height: 38, borderRadius: 10 },
+  retryText: { color: theme.onPrimary, fontSize: 13, fontWeight: '800' },
 
   // Live State
   liveScannerArea: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
   scannerFrame: { width: 140, height: 140, justifyContent: 'center', alignItems: 'center' },
-  scannerCornerTL: { position: 'absolute', top: 0, left: 0, width: 20, height: 20, borderLeftWidth: 3, borderTopWidth: 3, borderColor: '#6366F1', borderTopLeftRadius: 10 },
-  scannerCornerTR: { position: 'absolute', top: 0, right: 0, width: 20, height: 20, borderRightWidth: 3, borderTopWidth: 3, borderColor: '#6366F1', borderTopRightRadius: 10 },
-  scannerCornerBL: { position: 'absolute', bottom: 0, left: 0, width: 20, height: 20, borderLeftWidth: 3, borderBottomWidth: 3, borderColor: '#6366F1', borderBottomLeftRadius: 10 },
-  scannerCornerBR: { position: 'absolute', bottom: 0, right: 0, width: 20, height: 20, borderRightWidth: 3, borderBottomWidth: 3, borderColor: '#6366F1', borderBottomRightRadius: 10 },
+  scannerCornerTL: { position: 'absolute', top: 0, left: 0, width: 20, height: 20, borderLeftWidth: 3, borderTopWidth: 3, borderColor: theme.primary, borderTopLeftRadius: 10 },
+  scannerCornerTR: { position: 'absolute', top: 0, right: 0, width: 20, height: 20, borderRightWidth: 3, borderTopWidth: 3, borderColor: theme.primary, borderTopRightRadius: 10 },
+  scannerCornerBL: { position: 'absolute', bottom: 0, left: 0, width: 20, height: 20, borderLeftWidth: 3, borderBottomWidth: 3, borderColor: theme.primary, borderBottomLeftRadius: 10 },
+  scannerCornerBR: { position: 'absolute', bottom: 0, right: 0, width: 20, height: 20, borderRightWidth: 3, borderBottomWidth: 3, borderColor: theme.primary, borderBottomRightRadius: 10 },
   scannerLine: { position: 'absolute', width: '90%', height: 2, backgroundColor: 'rgba(99, 102, 241, 0.5)', top: '50%' },
   scannerCenterIcon: { opacity: 0.5 },
   stopScannerBtn: { marginTop: 20 },
-  stopScannerText: { color: '#6366F1', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
+  stopScannerText: { color: theme.primary, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
   avatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#9F7AEA', // Soft purple
+    backgroundColor: theme.secondary,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 4,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
   dropdownSelector: {
     flexDirection: 'row',
     alignItems: 'center',

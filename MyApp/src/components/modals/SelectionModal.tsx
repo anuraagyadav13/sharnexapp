@@ -20,6 +20,8 @@ interface SelectionModalProps {
   options: string[];
   onSelect: (option: string) => void;
   onClose: () => void;
+  searchQuery?: string;
+  onSearchQueryChange?: (query: string) => void;
 }
 
 const SelectionModal: React.FC<SelectionModalProps> = ({
@@ -28,8 +30,12 @@ const SelectionModal: React.FC<SelectionModalProps> = ({
   options,
   onSelect,
   onClose,
+  searchQuery: controlledSearchQuery,
+  onSearchQueryChange,
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [internalSearchQuery, setInternalSearchQuery] = useState('');
+  const searchQuery = controlledSearchQuery ?? internalSearchQuery;
+  const setSearchQuery = onSearchQueryChange ?? setInternalSearchQuery;
 
   const filteredOptions = options.filter(option =>
     option.toLowerCase().includes(searchQuery.toLowerCase())

@@ -22,6 +22,8 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import principalService, { EquipmentRequestItem } from '../../services/principalService';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
+import { getCacheBustedUri } from '../../utils/image';
+
 
 type PrincipalEquipmentNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -40,7 +42,7 @@ interface ModalState {
 
 const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, isDarkMode);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'NEED_CLARIFICATION' | 'RECEIVED'>('SUBMITTED');
   const [isLoading, setIsLoading] = useState(true);
@@ -58,6 +60,11 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
   });
   const [remarkInput, setRemarkInput] = useState('');
   const [remarkError, setRemarkError] = useState('');
+
+  // Detail Modal State
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [selectedDetail, setSelectedDetail] = useState<any>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
   const loadData = useCallback(async (showRefreshIndicator = false) => {
     if (showRefreshIndicator) {
@@ -97,34 +104,43 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
     const p = priority?.toUpperCase();
     switch (p) {
       case 'HIGH':
-        return { bg: '#FEF2F2', text: '#EF4444' };
+        return { bg: isDarkMode ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.1)', text: theme.danger };
       case 'MEDIUM':
-        return { bg: '#FFF7ED', text: '#EA580C' };
+        return { bg: isDarkMode ? 'rgba(245,158,11,0.2)' : 'rgba(245,158,11,0.1)', text: theme.warning };
       case 'LOW':
-        return { bg: '#EFF6FF', text: '#3B82F6' };
+        return { bg: isDarkMode ? 'rgba(79,70,229,0.2)' : 'rgba(79,70,229,0.1)', text: theme.primary };
       default:
-        return { bg: '#F3F4F6', text: '#6B7280' };
+        return { bg: isDarkMode ? theme.border : theme.background, text: theme.subtext };
     }
   }, []);
 
-  const handleActionPress = useCallback((requestId: string, action: 'approve' | 'reject') => {
-    setRemarkInput('');
-    setRemarkError('');
-    setModalState({
-      visible: true,
-      requestId,
-      action,
-    });
+  const handleActionPress = useCallback((id: string, action: 'approve' | 'reject') => {
+    setModalState({ visible: true, requestId: id, action });
   }, []);
 
   const closeModal = useCallback(() => {
-    setModalState({
-      visible: false,
-      requestId: '',
-      action: 'approve',
-    });
+    setModalState(prev => ({ ...prev, visible: false }));
     setRemarkInput('');
     setRemarkError('');
+  }, []);
+
+  const handleViewDetail = useCallback(async (item: EquipmentRequestItem) => {
+    setSelectedDetail(item);
+    setDetailModalVisible(true);
+    if (!item.items || item.items.length === 0) {
+      setIsLoadingDetail(true);
+      try {
+        const detailRes = await principalService.getEquipmentRequestDetail(item.id);
+        const detailData = (detailRes.data as any)?.data || detailRes.data;
+        if (detailData) {
+          setSelectedDetail(detailData);
+        }
+      } catch (err) {
+        console.warn('Failed to load request detail:', err);
+      } finally {
+        setIsLoadingDetail(false);
+      }
+    }
   }, []);
 
   const handleConfirmAction = useCallback(async () => {
@@ -142,7 +158,28 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
       closeModal();
 
       if (action === 'approve') {
-        await principalService.approveEquipmentRequest(requestId, remarkInput);
+        const targetRequest = requests.find((r) => r.id === requestId);
+        let lineItems = targetRequest?.items || [];
+
+        if (!lineItems.length) {
+          try {
+            const detailRes = await principalService.getEquipmentRequestDetail(requestId);
+            const detailData = (detailRes.data as any)?.data || detailRes.data;
+            if (detailData?.items && Array.isArray(detailData.items)) {
+              lineItems = detailData.items;
+            }
+          } catch (e) {
+            console.warn('[PrincipalEquipment] Failed to fetch request details for items:', e);
+          }
+        }
+
+        const itemsPayload = lineItems.map((item: any) => ({
+          id: item.id,
+          approvedQuantity: Number(item.requested_quantity ?? item.requestedQuantity ?? item.quantity ?? 1),
+          approvalNote: item.approval_note ?? item.approvalNote ?? '',
+        }));
+
+        await principalService.approveEquipmentRequest(requestId, remarkInput, itemsPayload);
         Alert.alert('Success', 'Request approved successfully.');
       } else {
         await principalService.rejectEquipmentRequest(requestId, remarkInput);
@@ -153,7 +190,7 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
       Alert.alert('Error', `Failed to ${action} request. Please reload and try again.`);
       loadData(); // Reload to sync state
     }
-  }, [modalState, remarkInput, closeModal, loadData]);
+  }, [modalState, remarkInput, closeModal, loadData, requests]);
 
   const renderRequestCard = useCallback(
     ({ item }: { item: EquipmentRequestItem }) => {
@@ -161,7 +198,11 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
       const itemsCount = parseInt(item.item_count || '0');
 
       return (
-        <View style={styles.requestCard}>
+        <TouchableOpacity
+          style={styles.requestCard}
+          activeOpacity={0.7}
+          onPress={() => handleViewDetail(item)}
+        >
           <View style={styles.cardHeader}>
             <View style={styles.numberBox}>
               <Text style={styles.numberText}>{item.request_number}</Text>
@@ -204,7 +245,7 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
                 style={[styles.actionBtn, styles.rejectBtn]}
                 onPress={() => handleActionPress(item.id, 'reject')}
               >
-                <Ionicons name="close-circle-outline" size={16} color="#FFF" style={{ marginRight: 4 }} />
+                <Ionicons name="close-circle-outline" size={16} color={theme.onPrimary} style={{ marginRight: 4 }} />
                 <Text style={styles.actionBtnText}>Reject</Text>
               </TouchableOpacity>
 
@@ -212,22 +253,47 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
                 style={[styles.actionBtn, styles.approveBtn]}
                 onPress={() => handleActionPress(item.id, 'approve')}
               >
-                <Ionicons name="checkmark-circle-outline" size={16} color="#FFF" style={{ marginRight: 4 }} />
+                <Ionicons name="checkmark-circle-outline" size={16} color={theme.onPrimary} style={{ marginRight: 4 }} />
                 <Text style={styles.actionBtnText}>Approve</Text>
               </TouchableOpacity>
             </View>
           ) : (
-            <View style={{ marginTop: 12, padding: 8, backgroundColor: '#F3F4F6', borderRadius: 8, alignItems: 'center' }}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: '#6B7280' }}>
+            <View style={{ marginTop: 12, padding: 8, backgroundColor: isDarkMode ? theme.border : theme.background, borderRadius: 8, alignItems: 'center' }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: theme.subtext }}>
                 STATUS: {item.status}
               </Text>
             </View>
           )}
-        </View>
+        </TouchableOpacity>
       );
     },
     [getPriorityStyles, formatDate, handleActionPress]
   );
+
+  if (isLoading) {
+    return (
+      <View style={styles.loaderContainer}>
+        <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
+        <ActivityIndicator size="large" color={theme.primary} />
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View style={styles.errorContainer}>
+        <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
+        <Ionicons name="alert-circle-outline" size={64} color={theme.danger} />
+        <Text style={styles.errorTitle}>Failed to load equipment requests</Text>
+        <Text style={styles.errorSubtitle}>
+          An error occurred while fetching equipment requests. Please try again.
+        </Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={() => loadData()}>
+          <Text style={styles.retryBtnText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.safeContainer}>
@@ -244,8 +310,9 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
         >
           {authState.user?.photoUrl ? (
-            <Image source={{ uri: authState.user.photoUrl }} style={styles.headerAvatarImage} />
+            <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.headerAvatarImage} />
           ) : (
+
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
             </View>
@@ -275,7 +342,7 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
                 }}
                 onPress={() => setSelectedTab(tab.status as any)}
               >
-                <Text style={{ fontSize: 12, fontWeight: '700', color: isActive ? '#FFF' : theme.text }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: isActive ? theme.onPrimary : theme.text }}>
                   {tab.label}
                 </Text>
               </TouchableOpacity>
@@ -294,7 +361,7 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={() => loadData(true)}
-            colors={['#4F46E5']}
+            colors={[theme.primary]}
           />
         }
         ListEmptyComponent={
@@ -331,7 +398,7 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
             <TextInput
               style={[styles.modalInput, remarkError ? styles.modalInputError : null]}
               placeholder="Add a remark..."
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={theme.placeholder}
               multiline
               numberOfLines={3}
               value={remarkInput}
@@ -350,7 +417,7 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
               <TouchableOpacity
                 style={[
                   styles.modalConfirmBtn,
-                  { backgroundColor: modalState.action === 'approve' ? '#10B981' : '#EF4444' },
+                  { backgroundColor: modalState.action === 'approve' ? theme.success : theme.danger },
                 ]}
                 onPress={handleConfirmAction}
               >
@@ -360,11 +427,112 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+
+      {/* Detail Modal */}
+      <Modal
+        visible={detailModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setDetailModalVisible(false)}
+      >
+        <View style={styles.detailModalOverlay}>
+          <View style={styles.detailModalContainer}>
+            <View style={styles.detailModalHeader}>
+              <Text style={styles.detailModalTitle}>Request Details</Text>
+              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+                <Ionicons name="close" size={24} color={theme.text} />
+              </TouchableOpacity>
+            </View>
+
+            {isLoadingDetail ? (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={theme.primary} />
+              </View>
+            ) : selectedDetail ? (
+              <ScrollView style={{ padding: 16 }}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Request No:</Text>
+                  <Text style={styles.detailValue}>{selectedDetail.request_number}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Status:</Text>
+                  <Text style={[styles.detailValue, { fontWeight: 'bold' }]}>{selectedDetail.status}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Priority:</Text>
+                  <Text style={styles.detailValue}>{selectedDetail.priority}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Teacher:</Text>
+                  <Text style={styles.detailValue}>{selectedDetail.teacher_name}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Purpose:</Text>
+                  <Text style={styles.detailValue}>{selectedDetail.purpose}</Text>
+                </View>
+                {!!selectedDetail.teacher_note && (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Teacher Note:</Text>
+                    <Text style={styles.detailValue}>{selectedDetail.teacher_note}</Text>
+                  </View>
+                )}
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Needed By:</Text>
+                  <Text style={styles.detailValue}>{formatDate(selectedDetail.needed_by_date)}</Text>
+                </View>
+
+                <Text style={[styles.detailSectionTitle, { marginTop: 16, marginBottom: 8 }]}>Requested Items</Text>
+                {selectedDetail.items && selectedDetail.items.length > 0 ? (
+                  selectedDetail.items.map((it: any, idx: number) => (
+                    <View key={idx} style={styles.detailItemCard}>
+                      <Text style={styles.detailItemName}>{it.name || it.item_name}</Text>
+                      <Text style={styles.detailItemText}>Quantity: {it.requested_quantity || it.quantity || 1}</Text>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={{ color: theme.subtext }}>No items listed.</Text>
+                )}
+                
+                {selectedDetail.status === 'SUBMITTED' && (
+                  <View style={{ flexDirection: 'row', gap: 12, marginTop: 24, marginBottom: 40 }}>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, styles.rejectBtn, { flex: 1, justifyContent: 'center' }]}
+                      onPress={() => {
+                        setDetailModalVisible(false);
+                        handleActionPress(selectedDetail.id, 'reject');
+                      }}
+                    >
+                      <Ionicons name="close-circle-outline" size={20} color={theme.onPrimary} style={{ marginRight: 6 }} />
+                      <Text style={[styles.actionBtnText, { fontSize: 16 }]}>Reject</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.actionBtn, styles.approveBtn, { flex: 1, justifyContent: 'center' }]}
+                      onPress={() => {
+                        setDetailModalVisible(false);
+                        handleActionPress(selectedDetail.id, 'approve');
+                      }}
+                    >
+                      <Ionicons name="checkmark-circle-outline" size={20} color={theme.onPrimary} style={{ marginRight: 6 }} />
+                      <Text style={[styles.actionBtnText, { fontSize: 16 }]}>Approve</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                <View style={{ height: 40 }} />
+              </ScrollView>
+            ) : (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <Text style={{ color: theme.subtext }}>Could not load details.</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create({
   safeContainer: {
     flex: 1,
     backgroundColor: theme.background,
@@ -403,7 +571,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 8,
   },
   retryBtnText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -433,7 +601,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -507,21 +675,21 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.text,
   },
   remarkBox: {
-    backgroundColor: theme.isDarkMode ? '#B4530920' : '#FEF3C7',
+    backgroundColor: isDarkMode ? 'rgba(245,158,11,0.2)' : 'rgba(245,158,11,0.1)',
     padding: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.isDarkMode ? '#B4530940' : '#FDE68A',
+    borderColor: isDarkMode ? 'rgba(245,158,11,0.3)' : 'rgba(245,158,11,0.2)',
   },
   remarkLabel: {
     fontSize: 11,
-    color: theme.isDarkMode ? '#FBBF24' : '#D97706',
+    color: theme.warning,
     fontWeight: '600',
     marginBottom: 2,
   },
   remarkValue: {
     fontSize: 12,
-    color: theme.isDarkMode ? '#FBBF24' : '#78350F',
+    color: theme.warning,
   },
   dateMeta: {
     flexDirection: 'row',
@@ -549,15 +717,15 @@ const getStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
   },
   rejectBtn: {
-    backgroundColor: '#EF4444',
+    backgroundColor: theme.danger,
     marginRight: 8,
   },
   approveBtn: {
-    backgroundColor: '#10B981',
+    backgroundColor: theme.success,
     marginLeft: 8,
   },
   actionBtnText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -623,10 +791,10 @@ const getStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.background,
   },
   modalInputError: {
-    borderColor: '#EF4444',
+    borderColor: theme.danger,
   },
   errorText: {
-    color: '#EF4444',
+    color: theme.danger,
     fontSize: 12,
     fontWeight: '600',
     marginBottom: 12,
@@ -661,7 +829,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginLeft: 6,
   },
   modalConfirmBtnText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -669,22 +837,85 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#9F7AEA', // Soft purple
+    backgroundColor: theme.secondary,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 4,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
   headerAvatarImage: {
     width: 32,
     height: 32,
     borderRadius: 16,
     marginLeft: 4,
+  },
+  detailModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  detailModalContainer: {
+    backgroundColor: theme.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    minHeight: '70%',
+    maxHeight: '90%',
+  },
+  detailModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+  },
+  detailModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.text,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  detailLabel: {
+    width: 100,
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.subtext,
+  },
+  detailValue: {
+    flex: 1,
+    fontSize: 14,
+    color: theme.text,
+  },
+  detailSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.text,
+  },
+  detailItemCard: {
+    backgroundColor: theme.surface,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  detailItemName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.text,
+    marginBottom: 4,
+  },
+  detailItemText: {
+    fontSize: 13,
+    color: theme.subtext,
   },
 });
 

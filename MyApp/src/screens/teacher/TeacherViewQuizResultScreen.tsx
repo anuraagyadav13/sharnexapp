@@ -18,6 +18,7 @@ import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
 import { TeacherHeader } from '../../components/TeacherHeader';
 import apiClient from '../../services/apiClient';
+import teacherService from '../../services/teacherService';
 import { ENDPOINTS } from '../../constants/api';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherViewQuizResult'>;
@@ -34,7 +35,7 @@ const TeacherViewQuizResultScreen: React.FC<Props> = ({ navigation, route }) => 
     const fetchResults = async () => {
       try {
         setIsLoading(true);
-        const res = await apiClient.get(ENDPOINTS.TEACHER.QUIZ_RESULTS(quizId));
+        const res = await teacherService.getQuizResults(quizId);
         setData(res.data);
       } catch (error) {
         console.error('Failed to fetch quiz results:', error);
@@ -46,8 +47,20 @@ const TeacherViewQuizResultScreen: React.FC<Props> = ({ navigation, route }) => 
     fetchResults();
   }, [quizId]);
 
-  const results = data?.results || [];
-  const analytics = data?.analytics || { avg: 0, highest: 0, lowest: 0 };
+  const rawResults = 
+    data?.data?.attempts || 
+    data?.results || 
+    (Array.isArray(data?.data) ? data.data : null) || 
+    (Array.isArray(data) ? data : []);
+
+  const results = Array.isArray(rawResults) ? rawResults : [];
+
+  const metrics = data?.data?.metrics || data?.metrics;
+  const analytics = data?.analytics || {
+    avg: metrics?.averageScore ?? (results.length > 0 ? Number((results.reduce((sum: number, r: any) => sum + Number(r.score || 0), 0) / results.length).toFixed(1)) : 0),
+    highest: metrics?.highestScore ?? (results.length > 0 ? Math.max(...results.map((r: any) => Number(r.score || 0))) : 0),
+    lowest: metrics?.lowestScore ?? (results.length > 0 ? Math.min(...results.map((r: any) => Number(r.score || 0))) : 0),
+  };
 
   return (
     <View style={styles.mainContainer}>

@@ -25,14 +25,40 @@ const expoExtra = getExpoExtra();
 // Override this value when using a physical device or custom backend host.
 // For Android emulator use 10.0.2.2, for iOS simulator use localhost.
 const API_HOST_OVERRIDE = '';
-const API_HOST =
-  expoExtra.API_HOST ||
-  API_HOST_OVERRIDE ||
-  (Platform.OS === 'android' ? '10.0.2.2' : 'localhost');
-const API_PORT = expoExtra.API_PORT ?? '3000';
 
-export const API_BASE_URL = 'https://sharnex.com/api';
+/**
+ * Dynamic API Base URL Resolution for Dev & Production Environments
+ * Priority:
+ * 1. process.env.EXPO_PUBLIC_API_URL or process.env.API_BASE_URL
+ * 2. process.env.EXPO_PUBLIC_API_HOST & EXPO_PUBLIC_API_PORT
+ * 3. Fallback Hosted Production URL (https://www.sharnex.com/api)
+ */
+const DEFAULT_PROD_URL = 'https://www.sharnex.com/api';
+
+const resolveBaseUrl = (): string => {
+  const envUrl = process.env.EXPO_PUBLIC_API_URL || process.env.API_BASE_URL;
+  if (envUrl && envUrl.trim().length > 0) {
+    return envUrl.trim();
+  }
+
+  const envHost = process.env.EXPO_PUBLIC_API_HOST || expoExtra.API_HOST || API_HOST_OVERRIDE;
+  const envPort = process.env.EXPO_PUBLIC_API_PORT || expoExtra.API_PORT || '3000';
+
+  if (envHost && envHost.trim().length > 0) {
+    const host = envHost.trim();
+    if (host.startsWith('http://') || host.startsWith('https://')) {
+      return host.endsWith('/api') ? host : `${host}/api`;
+    }
+    return `http://${host}:${envPort}/api`;
+  }
+
+  return DEFAULT_PROD_URL;
+};
+
+export const API_BASE_URL = resolveBaseUrl();
 export const ENDPOINTS = {
+  CONTACT: '/contact',
+  UPLOAD: '/upload',
   AUTH: {
     LOGIN: '/auth/login',
     REGISTER: '/auth/register',
@@ -85,10 +111,19 @@ export const ENDPOINTS = {
     CALENDAR_EVENTS: '/calendar/events',
     CALENDAR_HOLIDAYS: '/calendar/holidays',
     CALENDAR_EXAMS: '/calendar/exams',
-    OFFICIAL_RESULT: (id: string) => `/rms/results/${id}`,
+    OFFICIAL_RESULT: (examId: string) => `/rms/results/student/exam/${examId}`,
+    OFFICIAL_RESULT_EXAM: (examId: string) => `/rms/results/student/exam/${examId}`,
     OFFICIAL_RESULT_LIST: '/rms/results/student',
+    OFFICIAL_RESULT_ALL: '/rms/results/student/all',
+    OFFICIAL_RESULT_QUIZZES: '/rms/results/student/quizzes',
     START_QUIZ: (quizId: string) => `/quizzes/${quizId}/start`,
     SUBMIT_QUIZ: (quizId: string) => `/quizzes/${quizId}/submit`,
+    // Student LMS Syllabus & Daily Logs
+    LMS_ENROLLED_SUBJECTS: '/student/lms/enrolled-subjects',
+    LMS_BLUEPRINT: '/student/lms/blueprint',
+    LMS_DAILY_LOGS: '/student/lms/daily-logs',
+    LMS_REVISION: '/student/lms/revision',
+    LMS_MISSED_CLASSES: '/student/lms/missed-classes',
   },
   TEACHER: {
     DASHBOARD: (id: string) => `/teachers/${id}/dashboard-summary`,
@@ -105,7 +140,7 @@ export const ENDPOINTS = {
     QUIZZES: '/quizzes',
     CREATE_QUIZ: '/quizzes',
     UPDATE_QUIZ: (id: string) => `/quizzes/${id}`,
-    QUIZ_RESULTS: (quizId: string) => `/teacher/quizzes/${quizId}/results`,
+    QUIZ_RESULTS: (quizId: string) => `/teacher/quizzes/${quizId}/attempts`,
     QUIZ_ATTEMPTS: (quizId: string) => `/teacher/quizzes/${quizId}/attempts`,
     QUIZ_ATTEMPTS_EXPORT: (quizId: string) => `/teacher/quizzes/${quizId}/attempts/export`,
     QUIZ_LIVE: (quizId: string) => `/teacher/quizzes/${quizId}/live`,
@@ -125,6 +160,8 @@ export const ENDPOINTS = {
     RMS_REJECT: '/rms/marks/review/reject',
     RMS_RECALL: '/rms/marks/recall',
     RMS_AUDIT: (marksId: string) => `/rms/marks/audit/${marksId}`,
+    RMS_TEACHER_STUDENT_ALL_RESULTS: (studentId: string) => `/rms/teacher/students/${studentId}/all-results`,
+    RMS_TEACHER_CLASS_STUDENTS: '/rms/teacher/class-students',
     STUDY_MATERIALS: '/teachers/study-materials',
     DELETE_STUDY_MATERIAL: (id: string) => `/teachers/study-materials/${id}`,
     LEAVES: '/timetable/teacher-leave',
@@ -145,6 +182,14 @@ export const ENDPOINTS = {
     PENDING_TASKS: (id: string) => `/teachers/${id}/pending-tasks`,
     // Timetable: periods config (same endpoint used by the website)
     TIMETABLE_PERIODS: '/timetable/periods',
+    // LMS Syllabus Blueprint & Daily Work Logger
+    LMS_ASSIGNED_SUBJECTS: '/teacher/lms/assigned-subjects',
+    LMS_BLUEPRINT: '/teacher/lms/blueprint',
+    LMS_CHAPTERS: '/teacher/lms/chapters',
+    LMS_TOPICS: '/teacher/lms/topics',
+    LMS_SUBTOPICS: '/teacher/lms/subtopics',
+    LMS_DAILY_LOGS: '/teacher/lms/daily-logs',
+    LMS_DASHBOARD_SUMMARY: '/teacher/lms/dashboard-summary',
   },
   PRINCIPAL: {
     // Old endpoints to prevent compiler errors on other principal files
@@ -173,6 +218,7 @@ export const ENDPOINTS = {
     RMS_PUBLISH: '/rms/results/publish',
     RMS_PREVIEW: '/rms/results/preview',
     RMS_ADMIN: '/rms/results/admin',
+    RMS_MARKS_AUDIT: (marksId: string) => `/rms/marks/audit/${marksId}`,
     EQUIPMENT_REQUESTS: '/equipment/requests',
     ATTENDANCE: '/attendance',
     ATTENDANCE_SUMMARY: '/institution/attendance-summary',
@@ -206,6 +252,8 @@ export const ENDPOINTS = {
     ACCOUNT_PROFILE: '/account/profile',
     ACCOUNT_INSTITUTION: '/account/institution',
     ACCOUNT_SESSIONS: '/account/sessions',
+    LMS: '/institution/lms',
+    LMS_BLUEPRINT: '/teacher/lms/blueprint',
   },
   MESSAGES: {
     CONVERSATION: '/messages',

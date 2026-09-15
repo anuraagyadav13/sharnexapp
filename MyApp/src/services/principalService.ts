@@ -6,8 +6,8 @@ import { ENDPOINTS } from '../constants/api';
 export interface ClassItem {
   id: string;
   name: string;
-  section: string | null;
-  grade: string | null;
+  section?: string;
+  grade?: string;
   academicYear: string;
   studentCount: number;
   teacherCount: number;
@@ -146,16 +146,52 @@ export interface ClassScheduleResponse {
   schedule: ScheduleDay[];
 }
 
+export interface RmsExamSubjectConfig {
+  id?: string;
+  marksId?: string;
+  subjectId: string;
+  subjectName?: string;
+  maxMarks: number;
+  passMarks: number;
+}
+
+export interface RmsParticipatingClass {
+  classId: string;
+  className?: string;
+  section?: string;
+  grade?: string;
+  subjects: RmsExamSubjectConfig[];
+}
+
 export interface RmsExamItem {
   id: string;
   name: string;
-  examType: 'MIDTERM' | 'FINAL' | 'UNIT_TEST' | 'QUARTERLY' | string;
+  examType: 'MIDTERM' | 'FINAL' | 'UNIT_TEST' | 'QUARTERLY' | 'HALF_YEARLY' | string;
   academicYear: string;
-  status: 'ACTIVE' | string;
+  status: 'ACTIVE' | 'DRAFT' | 'COMPLETED' | string;
   createdAt: string;
-  _count: {
+  description?: string;
+  classes_count?: number;
+  _count?: {
     classes: number;
   };
+  classes?: RmsParticipatingClass[];
+}
+
+export interface RmsExamDetail extends RmsExamItem {
+  createdBy?: string;
+}
+
+export interface RmsMarksAuditItem {
+  id: string;
+  marks_id?: string;
+  old_marks?: number | null;
+  new_marks?: number | null;
+  old_status?: string | null;
+  new_status?: string | null;
+  change_reason?: string | null;
+  created_at?: string;
+  changed_by_name?: string;
 }
 
 export interface AnnouncementItem {
@@ -194,8 +230,10 @@ export interface InvoiceItem {
   studentId: string;
   studentName: string;
   studentGrade?: string;
+  className?: string;
   grade: string | null;
   baseAmount: number;
+  amountPaid?: number;
   totalAmount: number;
   currency: string;
   description: string;
@@ -232,6 +270,25 @@ export interface ReconciliationData {
   discrepancies: any[];
 }
 
+export interface EquipmentLineItem {
+  id: string;
+  item_name?: string;
+  itemName?: string;
+  requested_quantity?: number | string;
+  requestedQuantity?: number | string;
+  approved_quantity?: number | string | null;
+  approvedQuantity?: number | string | null;
+  unit?: string;
+  item_note?: string;
+  itemNote?: string;
+}
+
+export interface EquipmentRequestApprovalItemPayload {
+  id: string;
+  approvedQuantity: number;
+  approvalNote: string;
+}
+
 export interface EquipmentRequestItem {
   id: string;
   request_number: string;
@@ -247,6 +304,7 @@ export interface EquipmentRequestItem {
   reviewed_at: string | null;
   teacher_name: string;
   item_count: string;
+  items?: EquipmentLineItem[];
 }
 
 export interface EquipmentPagination {
@@ -257,11 +315,13 @@ export interface EquipmentPagination {
 
 export interface LibraryDashboardStats {
   totalBooks: number;
-  totalCopies: number;
-  activeIssues: number;
-  overdueCount: number;
-  totalCategories: number;
-  staffCount: number;
+  totalCopies?: number;
+  activeIssues?: number;
+  issuedBooks?: number;
+  overdueCount?: number;
+  overdueBooks?: number;
+  totalCategories?: number;
+  staffCount?: number;
 }
 
 export interface LibraryCategoryItem {
@@ -322,6 +382,128 @@ export interface SessionItem {
   isCurrent: boolean;
 }
 
+export interface LmsTeacherItem {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  assignedClassesCount: number | string;
+  totalLogs: number | string;
+  logsThisMonth: number | string;
+  lastLogDate: string | null;
+}
+
+export interface LmsClassItem {
+  id: string;
+  name: string;
+  section: string;
+  academic_year: string;
+}
+
+export interface LmsDailyLogItem {
+  id: string;
+  logDate: string;
+  actionType: string;
+  coverageTitle: string;
+  hoursSpent: number | string;
+  periodsCount: number | string;
+  notes: string;
+  homeworkAssigned?: string;
+  nextClassPlan?: string;
+  createdAt: string;
+  teacherName: string;
+  teacherId: string;
+  classId: string;
+  className: string;
+  section: string;
+  subjectName: string;
+  chapterTitle: string | null;
+  topicTitle: string | null;
+}
+
+export interface LmsPagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface LmsMatrixItem {
+  classSubjectId: string;
+  classId: string;
+  className: string;
+  section: string;
+  subjectName: string;
+  subjectCode?: string;
+  teacherName: string;
+  teacherId: string | null;
+  blueprintId?: string | null;
+  isLocked: boolean;
+  totalChapters: number;
+  completedChapters: number;
+  targetHours: number;
+  targetPeriods: number;
+  loggedHours?: number;
+  completionPercent: number;
+  pacingStatus: string;
+  pacingColor: string;
+}
+
+export interface LmsInstitutionData {
+  teachers: LmsTeacherItem[];
+  classes: LmsClassItem[];
+  logs: LmsDailyLogItem[];
+  pagination: LmsPagination;
+  matrix: LmsMatrixItem[];
+}
+
+export interface LmsSubtopicItem {
+  id: string;
+  subtopicNumber?: number;
+  title: string;
+  status: string;
+  sortOrder?: number;
+}
+
+export interface LmsTopicItem {
+  id: string;
+  topicNumber?: number;
+  title: string;
+  status: string;
+  sortOrder?: number;
+  subtopics?: LmsSubtopicItem[];
+}
+
+export interface LmsChapterItem {
+  id: string;
+  chapterNumber?: number;
+  title: string;
+  description?: string;
+  estimatedHours: number;
+  estimatedPeriods: number;
+  status: 'pending' | 'in_progress' | 'completed' | string;
+  isLocked: boolean;
+  sortOrder?: number;
+  topics?: LmsTopicItem[];
+}
+
+export interface LmsBlueprintTree {
+  blueprintId: string;
+  classSubjectId: string;
+  academicYear?: string;
+  chapters: LmsChapterItem[];
+}
+
+export interface LmsQueryParams {
+  page?: number;
+  limit?: number;
+  teacherId?: string;
+  classId?: string;
+  startDate?: string;
+  endDate?: string;
+  search?: string;
+}
+
 // --- Service Object ---
 
 const principalService = {
@@ -357,6 +539,10 @@ const principalService = {
     return apiClient.delete<any>(ENDPOINTS.PRINCIPAL.DELETE_STUDENT(studentId));
   },
 
+  getExamResultsAdmin(examId: string, classId: string) {
+    return apiClient.get<{ data: any }>(`${ENDPOINTS.PRINCIPAL.RMS_ADMIN}?examId=${examId}&classId=${classId}`);
+  },
+
   updateStudent(studentId: string, payload: any) {
     return apiClient.put<any>(ENDPOINTS.PRINCIPAL.UPDATE_STUDENT(studentId), payload);
   },
@@ -369,8 +555,9 @@ const principalService = {
     return apiClient.get<any>(ENDPOINTS.PRINCIPAL.EXPORT_STUDENTS(classId));
   },
 
-  getSubjects() {
-    return apiClient.get<{ subjects: SubjectItem[] }>(ENDPOINTS.PRINCIPAL.SUBJECTS);
+  async getSubjects() {
+    const res = await apiClient.get<{ subjects: SubjectItem[] }>(ENDPOINTS.PRINCIPAL.SUBJECTS);
+    return res.data;
   },
 
   getTeachers(institutionId: string) {
@@ -412,8 +599,54 @@ const principalService = {
     return apiClient.get<ClassScheduleResponse>(`${ENDPOINTS.PRINCIPAL.CLASS_SCHEDULE(classId)}?week=${week}`);
   },
 
-  getRmsExams() {
-    return apiClient.get<{ data: RmsExamItem[] }>(`${ENDPOINTS.PRINCIPAL.RMS_EXAMS}?limit=100`);
+  async getRmsExams() {
+    const res = await apiClient.get<{ success?: boolean; data?: RmsExamItem[]; exams?: RmsExamItem[] }>(`${ENDPOINTS.PRINCIPAL.RMS_EXAMS}?limit=100`);
+    return res.data;
+  },
+
+  async getExamDetail(id: string) {
+    const res = await apiClient.get<{ success?: boolean; data: RmsExamDetail }>(ENDPOINTS.PRINCIPAL.EXAM_DETAIL(id));
+    return res.data;
+  },
+
+  async createExam(payload: {
+    name: string;
+    examType: string;
+    academicYear: string;
+    description?: string;
+    status?: string;
+    classes: {
+      classId: string;
+      subjects: { subjectId: string; maxMarks: number; passMarks: number }[];
+    }[];
+  }) {
+    const res = await apiClient.post<{ success?: boolean; message?: string; id?: string }>(ENDPOINTS.PRINCIPAL.RMS_EXAMS, payload);
+    return res.data;
+  },
+
+  async updateExam(id: string, payload: {
+    name?: string;
+    examType?: string;
+    academicYear?: string;
+    description?: string;
+    status?: string;
+    classes?: {
+      classId: string;
+      subjects: { subjectId: string; maxMarks: number; passMarks: number }[];
+    }[];
+  }) {
+    const res = await apiClient.patch<{ success?: boolean; message?: string }>(ENDPOINTS.PRINCIPAL.EXAM_DETAIL(id), payload);
+    return res.data;
+  },
+
+  async deleteExam(id: string) {
+    const res = await apiClient.delete<{ success?: boolean; message?: string }>(ENDPOINTS.PRINCIPAL.EXAM_DETAIL(id));
+    return res.data;
+  },
+
+  async getMarksAuditHistory(marksId: string) {
+    const res = await apiClient.get<RmsMarksAuditItem[] | { data: RmsMarksAuditItem[] }>(ENDPOINTS.PRINCIPAL.RMS_MARKS_AUDIT(marksId));
+    return res.data;
   },
 
   getAnnouncements(institutionId: string) {
@@ -469,11 +702,38 @@ const principalService = {
     );
   },
 
-  actionEquipmentRequest(id: string, action: 'APPROVED' | 'REJECTED', remarks?: string, items?: any[]) {
+  getEquipmentRequestDetail(id: string) {
+    return apiClient.get<{ data: EquipmentRequestItem }>(`/equipment/requests/${id}`);
+  },
+
+  async actionEquipmentRequest(
+    id: string,
+    action: 'APPROVED' | 'REJECTED',
+    remarks?: string,
+    items?: EquipmentRequestApprovalItemPayload[]
+  ) {
+    let payloadItems = items;
+
+    if (action === 'APPROVED' && (!payloadItems || payloadItems.length === 0)) {
+      try {
+        const detailRes = await this.getEquipmentRequestDetail(id);
+        const detailData = (detailRes.data as any)?.data || detailRes.data;
+        if (detailData?.items && Array.isArray(detailData.items)) {
+          payloadItems = detailData.items.map((i: any) => ({
+            id: i.id,
+            approvedQuantity: Number(i.requested_quantity ?? i.requestedQuantity ?? i.quantity ?? 1),
+            approvalNote: i.approval_note ?? i.approvalNote ?? '',
+          }));
+        }
+      } catch (e) {
+        console.warn('[principalService] Could not auto-fetch line items for approval:', e);
+      }
+    }
+
     return apiClient.post(ENDPOINTS.PRINCIPAL.EQUIPMENT_ACTION(id), {
       action,
       remarks: remarks ?? '',
-      items: items ?? [],
+      items: payloadItems ?? [],
     }).catch(async (err) => {
       // Fallback to legacy endpoints if /action is not found
       if (err?.response?.status === 404) {
@@ -484,11 +744,11 @@ const principalService = {
     });
   },
 
-  approveEquipmentRequest(id: string, remark?: string, items?: any[]) {
+  approveEquipmentRequest(id: string, remark?: string, items?: EquipmentRequestApprovalItemPayload[]) {
     return this.actionEquipmentRequest(id, 'APPROVED', remark, items);
   },
 
-  rejectEquipmentRequest(id: string, remark: string, items?: any[]) {
+  rejectEquipmentRequest(id: string, remark: string, items?: EquipmentRequestApprovalItemPayload[]) {
     return this.actionEquipmentRequest(id, 'REJECTED', remark, items);
   },
 
@@ -535,6 +795,47 @@ const principalService = {
 
   getSessions() {
     return apiClient.get<{ sessions: SessionItem[] }>(ENDPOINTS.PRINCIPAL.ACCOUNT_SESSIONS);
+  },
+
+  getInstitutionLMS(params?: LmsQueryParams) {
+    const query = new URLSearchParams();
+    if (params?.page) query.append('page', String(params.page));
+    if (params?.limit) query.append('limit', String(params.limit));
+    if (params?.teacherId && params.teacherId !== 'all') query.append('teacherId', params.teacherId);
+    if (params?.classId && params.classId !== 'all') query.append('classId', params.classId);
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    if (params?.search && params.search.trim()) query.append('search', params.search.trim());
+
+    const qs = query.toString();
+    const url = qs ? `${ENDPOINTS.PRINCIPAL.LMS}?${qs}` : ENDPOINTS.PRINCIPAL.LMS;
+    return apiClient.get<{ data: LmsInstitutionData }>(url);
+  },
+
+  toggleBlueprintLock(classSubjectId: string, isLocked: boolean) {
+    return apiClient.post<{ message: string; data?: any }>(ENDPOINTS.PRINCIPAL.LMS, {
+      classSubjectId,
+      isLocked,
+    });
+  },
+
+  toggleChapterLock(chapterId: string, isLocked: boolean) {
+    return apiClient.post<{ message: string; data?: any }>(ENDPOINTS.PRINCIPAL.LMS, {
+      chapterId,
+      isLocked,
+    });
+  },
+
+  sendTeacherReminderPing(teacherId: string) {
+    return apiClient.post<{ message: string; data?: any }>(ENDPOINTS.PRINCIPAL.LMS, {
+      pingTeacherId: teacherId,
+    });
+  },
+
+  getSyllabusBlueprintTree(classSubjectId: string) {
+    return apiClient.get<{ data: LmsBlueprintTree }>(
+      `${ENDPOINTS.PRINCIPAL.LMS_BLUEPRINT}?classSubjectId=${encodeURIComponent(classSubjectId)}`
+    );
   },
 };
 

@@ -18,6 +18,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { BRAND } from '../../constants/theme';
 import apiClient from '../../services/apiClient';
 import principalService from '../../services/principalService';
 import { ENDPOINTS } from '../../constants/api';
@@ -365,7 +366,7 @@ const PrincipalEditClassScreen = ({ navigation, route }: any) => {
                   </View>
 
                   <TouchableOpacity onPress={() => removeSubject(index)} style={styles.rowDeleteBtn}>
-                    <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                    <Ionicons name="trash-outline" size={18} color={theme.danger} />
                   </TouchableOpacity>
                 </View>
               ))
@@ -392,7 +393,7 @@ const PrincipalEditClassScreen = ({ navigation, route }: any) => {
               disabled={isUpdating}
             >
               {isUpdating ? (
-                <ActivityIndicator size="small" color="#FFF" />
+                <ActivityIndicator size="small" color={theme.onPrimary} />
               ) : (
                 <Text style={styles.submitBtnText}>Update Class</Text>
               )}
@@ -459,7 +460,7 @@ const PrincipalEditClassScreen = ({ navigation, route }: any) => {
                   setTeacherPickerVisible(false);
                 }}
               >
-                <Ionicons name="person-remove-outline" size={20} color="#EF4444" />
+                <Ionicons name="person-remove-outline" size={20} color={theme.danger} />
                 <Text style={styles.removeAssignmentText}>Remove Assignment</Text>
               </TouchableOpacity>
 
@@ -543,14 +544,14 @@ const getStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitleContainer: { flex: 1, marginLeft: 15 },
-  headerLabel: { fontSize: 10, fontWeight: '800', color: '#10B981', letterSpacing: 1 },
+  headerLabel: { fontSize: 10, fontWeight: '800', color: theme.success, letterSpacing: 1 },
   headerTitle: { fontSize: 18, fontWeight: '900', color: theme.text, marginTop: 2 },
 
   formCard: {
     backgroundColor: theme.surface,
     borderRadius: 24,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.05,
     shadowRadius: 20,
@@ -657,7 +658,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     elevation: 6,
   },
   submitBtnDisabled: { backgroundColor: theme.subtext, shadowOpacity: 0 },
-  submitBtnText: { color: '#FFF', fontSize: 14, fontWeight: '800' },
+  submitBtnText: { color: theme.onPrimary, fontSize: 14, fontWeight: '800' },
 
   // Picker Modals
   modalOverlay: {
@@ -725,12 +726,12 @@ const getStyles = (theme: any) => StyleSheet.create({
     padding: 14,
     borderRadius: 12,
     marginBottom: 12,
-    backgroundColor: '#FFF1F2',
+    backgroundColor: theme.isDarkMode ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.08)',
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: theme.isDarkMode ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)',
     gap: 10,
   },
-  removeAssignmentText: { fontSize: 14, fontWeight: '700', color: '#EF4444' },
+  removeAssignmentText: { fontSize: 14, fontWeight: '700', color: theme.danger },
   emptyTeachersBox: { padding: 30, alignItems: 'center', justifyContent: 'center' },
   emptyTeachersText: { fontSize: 14, color: theme.subtext, fontWeight: '500', fontStyle: 'italic' },
 });

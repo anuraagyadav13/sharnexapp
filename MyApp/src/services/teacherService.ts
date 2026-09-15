@@ -111,7 +111,10 @@ const teacherService = {
 
   // Gets the final results of a quiz after students have taken it
   getQuizResults(quizId: string) {
-    return apiClient.get(ENDPOINTS.TEACHER.QUIZ_RESULTS(quizId));
+    return apiClient.get(ENDPOINTS.TEACHER.QUIZ_ATTEMPTS(quizId)).catch(err => {
+      console.warn('Teacher quiz attempts failed, trying general /quizzes/' + quizId + '/attempts:', err.message);
+      return apiClient.get(`/quizzes/${quizId}/attempts`);
+    });
   },
 
   // Sees the details of students' attempts at a quiz
@@ -242,6 +245,16 @@ const teacherService = {
     return apiClient.get(ENDPOINTS.TEACHER.RMS_AUDIT(marksId));
   },
 
+  // Gets multi-exam aggregated results for a student in teacher's class
+  getTeacherStudentAllResults(studentId: string) {
+    return apiClient.get(ENDPOINTS.TEACHER.RMS_TEACHER_STUDENT_ALL_RESULTS(studentId));
+  },
+
+  // Gets class students roster for assigned Class Teacher
+  getTeacherClassStudents() {
+    return apiClient.get(ENDPOINTS.TEACHER.RMS_TEACHER_CLASS_STUDENTS);
+  },
+
   // ----------------------------------------------------
   // Study Materials
   // ----------------------------------------------------
@@ -351,7 +364,211 @@ const teacherService = {
   // Gets a to-do list of tasks the teacher needs to complete (like grading an exam)
   getPendingTasks(teacherId: string) {
     return apiClient.get(ENDPOINTS.TEACHER.PENDING_TASKS(teacherId));
-  }
+  },
+
+  // ----------------------------------------------------
+  // LMS Syllabus Blueprint & Daily Work Logger
+  // ----------------------------------------------------
+
+  getLmsAssignedSubjects() {
+    return apiClient.get<{ data: TeacherLmsAssignedSubject[]; reminders?: any[] }>(
+      ENDPOINTS.TEACHER.LMS_ASSIGNED_SUBJECTS
+    );
+  },
+
+  getLmsBlueprint(classSubjectId: string) {
+    return apiClient.get<{ data: TeacherLmsBlueprintTree }>(
+      `${ENDPOINTS.TEACHER.LMS_BLUEPRINT}?classSubjectId=${encodeURIComponent(classSubjectId)}`
+    );
+  },
+
+  addLmsChapter(data: {
+    classSubjectId: string;
+    title: string;
+    description?: string;
+    estimatedHours?: number;
+    estimatedPeriods?: number;
+  }) {
+    return apiClient.post<{ data: TeacherLmsChapter }>(ENDPOINTS.TEACHER.LMS_CHAPTERS, data);
+  },
+
+  updateLmsChapter(data: {
+    id: string;
+    title: string;
+    description?: string;
+    estimatedHours?: number;
+    estimatedPeriods?: number;
+    status?: string;
+  }) {
+    return apiClient.put<{ data: TeacherLmsChapter }>(ENDPOINTS.TEACHER.LMS_CHAPTERS, data);
+  },
+
+  deleteLmsChapter(id: string) {
+    return apiClient.delete<{ message: string }>(
+      `${ENDPOINTS.TEACHER.LMS_CHAPTERS}?id=${encodeURIComponent(id)}`
+    );
+  },
+
+  addLmsTopic(data: { chapterId: string; topicNumber?: number; title: string }) {
+    return apiClient.post<{ message: string; data: TeacherLmsTopic }>(
+      ENDPOINTS.TEACHER.LMS_TOPICS,
+      data
+    );
+  },
+
+  updateLmsTopic(data: { id: string; title: string; status?: string }) {
+    return apiClient.put<{ data: TeacherLmsTopic }>(ENDPOINTS.TEACHER.LMS_TOPICS, data);
+  },
+
+  deleteLmsTopic(id: string) {
+    return apiClient.delete<{ message: string }>(
+      `${ENDPOINTS.TEACHER.LMS_TOPICS}?id=${encodeURIComponent(id)}`
+    );
+  },
+
+  addLmsSubtopic(data: { topicId: string; subtopicNumber?: number; title: string }) {
+    return apiClient.post<{ message: string; data: TeacherLmsSubtopic }>(
+      ENDPOINTS.TEACHER.LMS_SUBTOPICS,
+      data
+    );
+  },
+
+  deleteLmsSubtopic(id: string) {
+    return apiClient.delete<{ message: string }>(
+      `${ENDPOINTS.TEACHER.LMS_SUBTOPICS}?id=${encodeURIComponent(id)}`
+    );
+  },
+
+  getLmsDailyLogs(params: {
+    classSubjectId?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const query = new URLSearchParams();
+    if (params.classSubjectId) query.append('classSubjectId', params.classSubjectId);
+    if (params.dateFrom) query.append('dateFrom', params.dateFrom);
+    if (params.dateTo) query.append('dateTo', params.dateTo);
+    if (params.page) query.append('page', String(params.page));
+    if (params.limit) query.append('limit', String(params.limit));
+
+    const qs = query.toString();
+    const url = qs ? `${ENDPOINTS.TEACHER.LMS_DAILY_LOGS}?${qs}` : ENDPOINTS.TEACHER.LMS_DAILY_LOGS;
+    return apiClient.get<{ data: TeacherLmsDailyLog[] }>(url);
+  },
+
+  createLmsDailyLog(data: {
+    classSubjectId: string;
+    logDate: string;
+    coverageTitle: string;
+    chapterId?: string;
+    topicId?: string;
+    subtopicId?: string;
+    actionType?: string;
+    hoursSpent?: number;
+    periodsCount?: number;
+    notes?: string;
+    homeworkAssigned?: string;
+    nextClassPlan?: string;
+    idempotencyKey?: string;
+  }) {
+    return apiClient.post<{ data: TeacherLmsDailyLog }>(ENDPOINTS.TEACHER.LMS_DAILY_LOGS, data);
+  },
+
+  deleteLmsDailyLog(id: string) {
+    return apiClient.delete<{ message: string }>(
+      `${ENDPOINTS.TEACHER.LMS_DAILY_LOGS}?id=${encodeURIComponent(id)}`
+    );
+  },
+
+  getLmsDashboardSummary(classSubjectId: string) {
+    return apiClient.get<{ data: TeacherLmsDashboardSummary }>(
+      `${ENDPOINTS.TEACHER.LMS_DASHBOARD_SUMMARY}?classSubjectId=${encodeURIComponent(classSubjectId)}`
+    );
+  },
 };
+
+export interface TeacherLmsAssignedSubject {
+  classSubjectId: string;
+  className: string;
+  section?: string | null;
+  academicYear?: string | null;
+  subjectName: string;
+  subjectCode?: string | null;
+}
+
+export interface TeacherLmsSubtopic {
+  id: string;
+  subtopicNumber?: number;
+  subtopic_number?: number;
+  title: string;
+  status: string;
+  sortOrder?: number;
+}
+
+export interface TeacherLmsTopic {
+  id: string;
+  topicNumber?: number;
+  topic_number?: number;
+  title: string;
+  status: string;
+  sortOrder?: number;
+  subtopics?: TeacherLmsSubtopic[];
+}
+
+export interface TeacherLmsChapter {
+  id: string;
+  chapterNumber?: number;
+  chapter_number?: number;
+  title: string;
+  description?: string | null;
+  estimatedHours: number;
+  estimated_hours?: number;
+  estimatedPeriods: number;
+  estimated_periods?: number;
+  status: string;
+  isLocked?: boolean;
+  sortOrder?: number;
+  topics?: TeacherLmsTopic[];
+}
+
+export interface TeacherLmsBlueprintTree {
+  blueprintId?: string;
+  classSubjectId: string;
+  academicYear?: string;
+  isLocked?: boolean;
+  chapters: TeacherLmsChapter[];
+}
+
+export interface TeacherLmsDailyLog {
+  id: string;
+  logDate: string;
+  actionType: 'started' | 'in_progress' | 'extended' | 'completed' | 'revision' | string;
+  coverageTitle: string;
+  hoursSpent: number;
+  periodsCount: number;
+  notes?: string | null;
+  homeworkAssigned?: string | null;
+  nextClassPlan?: string | null;
+  createdAt?: string;
+  className?: string;
+  section?: string;
+  subjectName?: string;
+  chapterTitle?: string;
+  topicTitle?: string;
+  subtopicTitle?: string;
+}
+
+export interface TeacherLmsDashboardSummary {
+  classSubjectId: string;
+  totalChapters: number;
+  completedChapters: number;
+  completionPercent: number;
+  targetPeriods: number;
+  loggedPeriods: number;
+  loggedHours: number;
+  pacingStatus: string;
+}
 
 export default teacherService;

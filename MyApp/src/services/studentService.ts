@@ -150,9 +150,9 @@ const studentService = {
     return apiClient.get(ENDPOINTS.AUTH.ME);
   },
 
-  // Profile (legacy - do not use for timetable)
+  // Profile - uses /auth/me (HRT-main route)
   getProfile() {
-    return apiClient.get(ENDPOINTS.STUDENT.PROFILE);
+    return apiClient.get(ENDPOINTS.AUTH.ME);
   },
 
   // Attendance
@@ -208,6 +208,16 @@ const studentService = {
       ENDPOINTS.STUDENT.ASSIGNMENT_SUBMIT(id),
       data,
     );
+  },
+
+  // File Upload (Multipart)
+  uploadFile(formData: FormData) {
+    return apiClient.post(ENDPOINTS.UPLOAD, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      transformRequest: (data) => data,
+    });
   },
 
   // Grades
@@ -314,16 +324,170 @@ const studentService = {
     );
   },
 
-  // Official Results
-  getOfficialResults() {
+  // ─── Official Results (RMS) ────────────────────────────────────────────────
+  
+  /**
+   * GET /api/rms/results/student?page=1&limit=20
+   * 
+   * Response Envelope:
+   * {
+   *   success: boolean,
+   *   data: Array<{
+   *     id: string,               // result uuid
+   *     exam_id: string,          // exam uuid
+   *     exam_name: string,        // e.g. "Midterm Examination 2025"
+   *     academic_year: string,    // e.g. "2024-2025"
+   *     exam_type: string,        // e.g. "MIDTERM", "FINAL"
+   *     total_marks: number,      // total obtained marks across subjects
+   *     max_total: number,        // total max marks possible
+   *     percentage: number,       // aggregated percentage
+   *     grade: string,            // e.g. "A+", "B"
+   *     outcome: string,          // "PASS" | "FAIL"
+   *     published_at: string,     // ISO timestamp
+   *     result_template: string   // template key
+   *   }>,
+   *   pagination: {
+   *     page: number,
+   *     limit: number,
+   *     total: number,
+   *     totalPages: number
+   *   }
+   * }
+   */
+  getOfficialResults(params?: { page?: number; limit?: number }) {
+    const query = params ? `?page=${params.page || 1}&limit=${params.limit || 20}` : '';
     return apiClient.get(
-      ENDPOINTS.STUDENT.OFFICIAL_RESULT_LIST,
+      `${ENDPOINTS.STUDENT.OFFICIAL_RESULT_LIST}${query}`,
     );
   },
 
-  getOfficialResult(id: string) {
+  /**
+   * GET /api/rms/results/student/exam/[examId]
+   * 
+   * Response Envelope:
+   * {
+   *   data: {
+   *     id: string,                     // result uuid
+   *     total_marks: number,            // total marks obtained
+   *     max_total: number,              // maximum total marks
+   *     percentage: number,             // overall percentage
+   *     grade: string,                  // overall grade e.g. "A+"
+   *     outcome: string,                // "PASS" | "FAIL"
+   *     published_at: string,           // ISO timestamp
+   *     result_template: string,        // e.g. "cbse_standard"
+   *     exam_name: string,              // e.g. "Annual Board Exam"
+   *     academic_year: string,          // e.g. "2024-2025"
+   *     exam_type: string,              // e.g. "ANNUAL"
+   *     student_name: string,           // student full name
+   *     roll_no: string,                // roll number
+   *     parent_name: string,            // parent / guardian name
+   *     date_of_birth: string,          // DOB string
+   *     class_name: string,             // e.g. "Grade 10"
+   *     section: string,                // e.g. "A"
+   *     class_grade: string,            // grade standard
+   *     institution_name: string,       // school name
+   *     institution_logo_url: string,   // logo url or null
+   *     institution_address: string,    // school address or null
+   *     subjects: Array<{
+   *       subject_id: string,           // subject uuid
+   *       subject_name: string,         // e.g. "Mathematics"
+   *       marks_obtained: number,       // obtained score
+   *       max_marks: number,            // max possible score
+   *       is_failed: boolean,           // true if failed
+   *       grade: string,                // subject letter grade
+   *       percentage: number,           // subject percentage
+   *       is_absent: boolean            // true if marked absent
+   *     }>
+   *   }
+   * }
+   * 
+   * Note on 404: Returns { message: "Published result not found for this exam" } with status 404
+   * when results have not yet been published by institution administrators.
+   */
+  getOfficialResult(examId: string) {
     return apiClient.get(
-      ENDPOINTS.STUDENT.OFFICIAL_RESULT(id),
+      ENDPOINTS.STUDENT.OFFICIAL_RESULT_EXAM(examId),
+    );
+  },
+
+  /**
+   * GET /api/rms/results/student/all
+   * 
+   * Response Envelope:
+   * {
+   *   success: true,
+   *   data: {
+   *     student: {
+   *       name: string,
+   *       rollNumber: string,
+   *       parentName: string,
+   *       dateOfBirth: string,
+   *       className: string,
+   *       section: string,
+   *       institutionId: string
+   *     },
+   *     institutionName: string,
+   *     institutionLogoUrl: string | null,
+   *     institutionAddress: string | null,
+   *     subjects: Array<{ subjectId: string, subjectName: string }>,
+   *     exams: Array<{
+   *       examId: string,
+   *       examName: string,
+   *       academicYear: string,
+   *       totalMarks: number,
+   *       maxTotal: number,
+   *       percentage: number,
+   *       grade: string,
+   *       outcome: string,
+   *       publishedAt: string,
+   *       subjectMarks: {
+   *         [subjectId: string]: {
+   *           marks: number,
+   *           maxMarks: number,
+   *           grade: string
+   *         }
+   *       }
+   *     }>
+   *   }
+   * }
+   */
+  getStudentAllResults() {
+    return apiClient.get(
+      ENDPOINTS.STUDENT.OFFICIAL_RESULT_ALL,
+    );
+  },
+
+  /**
+   * GET /api/rms/results/student/quizzes
+   * 
+   * Response Envelope:
+   * {
+   *   success: true,
+   *   data: {
+   *     student: { name, rollNo, dateOfBirth, parentName, className, section, grade, academicYear },
+   *     institution: { name, address, logoUrl },
+   *     quizzes: Array<{
+   *       quizId: string,
+   *       title: string,
+   *       subject: string,
+   *       classId: string,
+   *       className: string,
+   *       section: string,
+   *       teacherName: string,
+   *       questionCount: number,
+   *       maxScore: number,
+   *       scoreObtained: number | null,
+   *       isAttempted: boolean,
+   *       submittedAt: string | null,
+   *       dueDate: string | null
+   *     }>,
+   *     summary: { totalQuizzes, attempted, totalScore, totalMaxScore, percentage, grade, outcome }
+   *   }
+   * }
+   */
+  getStudentQuizResults() {
+    return apiClient.get(
+      ENDPOINTS.STUDENT.OFFICIAL_RESULT_QUIZZES,
     );
   },
 
@@ -348,7 +512,7 @@ const studentService = {
 
   getStartQuiz(id: string) {
     return apiClient.get(
-      ENDPOINTS.STUDENT.START_QUIZ(id),
+      ENDPOINTS.STUDENT.QUIZ_DETAILS(id),
     );
   },
 
@@ -370,6 +534,128 @@ const studentService = {
       ENDPOINTS.STUDENT.QUIZ_ANALYSIS(id),
     );
   },
+
+  // Contact / Support
+  contactSupport(data: { fullName: string; email: string; phone?: string; school?: string; message: string }) {
+    return apiClient.post(ENDPOINTS.CONTACT, data);
+  },
+
+  // ----------------------------------------------------
+  // Student LMS Syllabus & Daily Logs
+  // ----------------------------------------------------
+
+  getLmsEnrolledSubjects() {
+    return apiClient.get<{ data: StudentLmsEnrolledSubject[] }>(
+      ENDPOINTS.STUDENT.LMS_ENROLLED_SUBJECTS
+    );
+  },
+
+  getLmsBlueprint(classSubjectId: string) {
+    return apiClient.get<{ data: StudentLmsBlueprintTree }>(
+      `${ENDPOINTS.STUDENT.LMS_BLUEPRINT}?classSubjectId=${encodeURIComponent(classSubjectId)}`
+    );
+  },
+
+  getLmsDailyLogs(classSubjectId: string) {
+    return apiClient.get<{ data: StudentLmsDailyLog[] }>(
+      `${ENDPOINTS.STUDENT.LMS_DAILY_LOGS}?classSubjectId=${encodeURIComponent(classSubjectId)}`
+    );
+  },
+
+  getLmsRevisions() {
+    return apiClient.get<{ data: string[] }>(
+      ENDPOINTS.STUDENT.LMS_REVISION
+    );
+  },
+
+  markLogAsRevised(logId: string, isRevised: boolean = true) {
+    return apiClient.post<{ data: { success: boolean; logId: string; isRevised: boolean } }>(
+      ENDPOINTS.STUDENT.LMS_REVISION,
+      { logId, isRevised }
+    );
+  },
+
+  getLmsMissedClasses() {
+    return apiClient.get<{ data: any[] }>(
+      ENDPOINTS.STUDENT.LMS_MISSED_CLASSES
+    );
+  },
 };
+
+export interface StudentLmsEnrolledSubject {
+  classSubjectId: string;
+  subjectName: string;
+  subjectCode?: string | null;
+  code?: string | null;
+  teacherName?: string | null;
+  className?: string;
+  section?: string;
+  totalChapters: number;
+  completedChapters: number;
+  completionPercent: number;
+  targetHours: number;
+  targetPeriods: number;
+  loggedHours: number;
+}
+
+export interface StudentLmsSubtopic {
+  id: string;
+  subtopicNumber?: number;
+  subtopic_number?: number;
+  title: string;
+  status: string;
+  sortOrder?: number;
+}
+
+export interface StudentLmsTopic {
+  id: string;
+  topicNumber?: number;
+  topic_number?: number;
+  title: string;
+  status: string;
+  sortOrder?: number;
+  subtopics?: StudentLmsSubtopic[];
+}
+
+export interface StudentLmsChapter {
+  id: string;
+  chapterNumber?: number;
+  chapter_number?: number;
+  title: string;
+  description?: string | null;
+  estimatedHours: number;
+  estimated_hours?: number;
+  estimatedPeriods: number;
+  estimated_periods?: number;
+  status: string;
+  sortOrder?: number;
+  topics?: StudentLmsTopic[];
+}
+
+export interface StudentLmsBlueprintTree {
+  blueprintId?: string;
+  classSubjectId: string;
+  academicYear?: string;
+  isLocked?: boolean;
+  chapters: StudentLmsChapter[];
+}
+
+export interface StudentLmsDailyLog {
+  id: string;
+  logDate: string;
+  actionType: string;
+  coverageTitle: string;
+  hoursSpent: number;
+  periodsCount: number;
+  notes?: string | null;
+  homeworkAssigned?: string | null;
+  nextClassPlan?: string | null;
+  createdAt?: string;
+  teacherName?: string | null;
+  chapterTitle?: string | null;
+  chapterNumber?: number | null;
+  topicTitle?: string | null;
+  topicNumber?: number | null;
+}
 
 export default studentService;

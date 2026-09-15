@@ -51,16 +51,31 @@ const accountService = {
         return apiClient.put(ENDPOINTS.ACCOUNT.PREFERENCES, data);
     },
 
-    uploadPhoto(data: FormData) {
-        return apiClient.post('/account/student/photo', data, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        });
+    async uploadPhoto(data: FormData) {
+        try {
+            return await apiClient.post('/account/student/photo', data, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+        } catch (err: any) {
+            if (err?.response?.status === 404 || err?.response?.status === 403) {
+                return await apiClient.post('/account/profile/photo', data, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                });
+            }
+            throw err;
+        }
     },
 
-    deletePhoto() {
-        return apiClient.delete('/account/student/photo');
+    async deletePhoto() {
+        try {
+            return await apiClient.delete('/account/student/photo');
+        } catch (err: any) {
+            return await apiClient.delete('/account/profile/photo');
+        }
     },
 };
 
