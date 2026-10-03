@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Theme } from '../../constants/theme';
 import {
   View,
   Text,
@@ -279,7 +280,7 @@ const GradesScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 

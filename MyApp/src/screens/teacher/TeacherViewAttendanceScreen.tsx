@@ -20,7 +20,7 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 // Import our easy-to-use teacherService for talking to the server
 import teacherService from '../../services/teacherService';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
@@ -80,7 +80,7 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
   const { classId } = route.params;
   const { authState } = useAuth();
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles({ ...theme, isDarkMode });
+  const styles = getStyles(theme);
   const [selectedDate, setSelectedDate] = React.useState(new Date());
   const [isCalendarVisible, setIsCalendarVisible] = React.useState(false);
   const [attendance, setAttendance] = React.useState<any[]>([]);
@@ -289,7 +289,7 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 100 }, // enough padding for bottom bar
 

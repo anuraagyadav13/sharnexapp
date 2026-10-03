@@ -22,7 +22,7 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { TeacherHeader } from '../../components/TeacherHeader';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import ScaleButton from '../../components/animations/ScaleButton';
 import messageService from '../../services/messageService';
@@ -187,7 +187,7 @@ const Messages = () => {
   const route = useRoute<any>();
   const { authState } = useAuth();
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles({ ...theme, isDarkMode });
+  const styles = getStyles(theme);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -805,7 +805,7 @@ const Messages = () => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   safeArea: {
     flex: 1,
   },

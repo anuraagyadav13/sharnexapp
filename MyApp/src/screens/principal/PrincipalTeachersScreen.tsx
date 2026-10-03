@@ -16,7 +16,7 @@ import { RootStackParamList } from '../../types/navigation';
 import { useAuth } from '../../store/AuthContext';
 import principalService, { TeacherItem } from '../../services/principalService';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 type PrincipalTeachersNavigationProp = NativeStackNavigationProp<
@@ -268,7 +268,7 @@ const PrincipalTeachersScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create({
+const getStyles = (theme: Theme, isDarkMode: boolean = false) => StyleSheet.create({
   safeContainer: {
     flex: 1,
     backgroundColor: theme.background,

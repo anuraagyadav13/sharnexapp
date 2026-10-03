@@ -19,7 +19,7 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 
@@ -29,7 +29,7 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles({ ...theme, isDarkMode });
+  const styles = getStyles(theme);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [performanceData, setPerformanceData] = useState<any>(null);
@@ -283,7 +283,7 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   container: { flex: 1 },
   scrollContent: { paddingBottom: 40, paddingHorizontal: 16 },

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Theme } from '../../constants/theme';
 import {
   View,
   Text,
@@ -391,7 +392,7 @@ const PrincipalCreateInvoiceScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
+const getStyles = (theme: Theme, isDarkMode: boolean) => StyleSheet.create({
   container: {
     flex: 1, backgroundColor: theme.surface,
     paddingTop: Platform.OS === 'ios' ? 50 : 30,

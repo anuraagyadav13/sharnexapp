@@ -8,7 +8,8 @@
     "lint": "eslint .",
     "postinstall": "patch-package",
     "start": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "check:colors": "node scripts/check-colors.js"
   },
   "dependencies": {
     "@notifee/react-native": "^9.1.8",

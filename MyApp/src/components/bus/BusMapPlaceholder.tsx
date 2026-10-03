@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-nati
 import Svg, { Rect, Path, Circle, G, Text as SvgText, Defs, LinearGradient, Stop } from 'react-native-svg';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 
 interface BusMapPlaceholderProps {
   height?: number;
@@ -145,7 +145,7 @@ export const BusMapPlaceholder: React.FC<BusMapPlaceholderProps> = ({
   );
 };
 
-const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
+const getStyles = (theme: Theme, isDarkMode: boolean) => StyleSheet.create({
   container: {
     width: '100%',
     borderRadius: 16,

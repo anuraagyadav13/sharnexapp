@@ -23,7 +23,7 @@ import principalService, { InvoiceStats, InvoiceItem, ReconciliationData, Reconc
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 
 import { getCacheBustedUri } from '../../utils/image';
 import { generatePDF } from 'react-native-html-to-pdf';
@@ -54,7 +54,7 @@ const escapeHtml = (value: unknown) => String(value)
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#039;');
 
-function generatePrincipalFeeReceiptHTML(receipt: any, theme: any): string {
+function generatePrincipalFeeReceiptHTML(receipt: any, theme: Theme): string {
   const invNum = receipt.invoiceNumber || receipt.invoice_number;
   const schoolName = receipt.institutionName || receipt.institution_name;
   const paidAt = receipt.paidAt || receipt.completedAt || receipt.completed_at;
@@ -227,7 +227,7 @@ const getInitials = (name: string) => {
   return parts.length > 1 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : parts[0][0].toUpperCase();
 };
 
-const getAvatarColor = (name: string, theme: any) => {
+const getAvatarColor = (name: string, theme: Theme) => {
   const avatarColors = [theme.secondary, theme.danger, theme.warning, theme.success, theme.primary];
 
   let hash = 0;
@@ -1225,7 +1225,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
 };
 
 // ─── STYLES ──────────────────────────────────────────────────────────────────
-const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
+const getStyles = (theme: Theme, isDarkMode: boolean) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.background,

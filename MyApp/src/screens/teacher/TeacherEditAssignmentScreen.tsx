@@ -17,7 +17,7 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { TeacherHeader } from '../../components/TeacherHeader';
 import teacherService from '../../services/teacherService';
 
@@ -27,7 +27,7 @@ const TeacherEditAssignmentScreen: React.FC<Props> = ({ navigation, route }) => 
   const { assignmentId } = route.params;
   const { authState } = useAuth();
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles({ ...theme, isDarkMode });
+  const styles = getStyles(theme);
   
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -245,7 +245,7 @@ const TeacherEditAssignmentScreen: React.FC<Props> = ({ navigation, route }) => 
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40, paddingHorizontal: 16 },
   loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background },

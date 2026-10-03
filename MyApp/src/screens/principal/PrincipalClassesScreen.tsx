@@ -14,7 +14,7 @@ import {
   TextInput,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha } from '../../constants/theme';
+import { Theme, withAlpha } from '../../constants/theme';
 
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -406,7 +406,7 @@ const PrincipalClassesScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   safeContainer: {
     flex: 1,
     backgroundColor: theme.background,

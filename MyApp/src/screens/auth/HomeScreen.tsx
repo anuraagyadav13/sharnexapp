@@ -25,7 +25,7 @@ import { RootStackParamList } from '../../types/navigation';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import ThemeSelectionModal from '../../components/modals/ThemeSelectionModal';
 
 
@@ -611,7 +611,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any) =>
+const getStyles = (theme: Theme) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.background },
     header: {

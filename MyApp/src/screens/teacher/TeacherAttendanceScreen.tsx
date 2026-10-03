@@ -21,7 +21,7 @@ import { useAuth } from '../../store/AuthContext';
 // Import our easy-to-use teacherService for talking to the server
 import teacherService from '../../services/teacherService';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import Skeleton from '../../components/common/Skeleton';
 
 const PageSkeleton = () => {
@@ -259,7 +259,7 @@ const TeacherAttendanceScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 

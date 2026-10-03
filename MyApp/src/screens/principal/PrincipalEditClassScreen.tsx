@@ -18,7 +18,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha } from '../../constants/theme';
+import { Theme, withAlpha } from '../../constants/theme';
 
 import apiClient from '../../services/apiClient';
 import principalService from '../../services/principalService';
@@ -516,7 +516,7 @@ const PrincipalEditClassScreen = ({ navigation, route }: any) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   container: { flex: 1 },
   scrollContent: { padding: 20 },

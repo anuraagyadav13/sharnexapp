@@ -22,7 +22,7 @@ import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha } from '../../constants/theme';
+import { Theme, withAlpha } from '../../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -31,7 +31,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'TeacherReviewSubmission
 const TeacherReviewSubmissionScreen: React.FC<Props> = ({ navigation, route }) => {
   const { examId, classId, examName, className } = route.params;
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles({ ...theme, isDarkMode });
+  const styles = getStyles(theme);
   const { authState } = useAuth();
   
   const [summary, setSummary] = useState<any>(null);
@@ -401,7 +401,7 @@ const TeacherReviewSubmissionScreen: React.FC<Props> = ({ navigation, route }) =
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40, paddingHorizontal: 20 },
 

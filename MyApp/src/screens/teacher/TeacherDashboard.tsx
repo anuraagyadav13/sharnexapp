@@ -34,7 +34,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import teacherService from '../../services/teacherService';
 import { API_BASE_URL } from '../../constants/api';
@@ -1035,7 +1035,7 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
 // Styles — theme-aware factory; dark-specific overrides use TD.* constants
 // Light mode falls back to theme.* tokens so it responds to light/dark/system
 // ─────────────────────────────────────────────────────────────────────────────
-const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
+const getStyles = (theme: Theme, isDarkMode: boolean) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: isDarkMode ? TD.bg : theme.background },
   container: { flex: 1, backgroundColor: isDarkMode ? TD.bg : theme.background },
   scrollContent: { paddingBottom: 60 },

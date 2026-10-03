@@ -77,3 +77,14 @@ yarn-error.log
 # Local working-context persistent context file
 AGENT.md
 
+
+bundle.js
+*.log
+logcat.txt
+crash*.txt
+tsc-errors*.txt
+metro_error*.txt
+*_utf8.txt
+tmp*.txt
+rn_config.json
+*_report.json

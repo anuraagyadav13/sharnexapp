@@ -11,7 +11,7 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../../store/ThemeContext';
-import { withAlpha } from '../../../constants/theme';
+import { Theme, withAlpha } from '../../../constants/theme';
 import { NavigationDrawer } from '../../../components/NavigationDrawer';
 import { BusSubHeader } from '../../../components/bus/BusSubHeader';
 import { BusMapPlaceholder } from '../../../components/bus/BusMapPlaceholder';
@@ -315,7 +315,7 @@ export const BusDashboardScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any, isDarkMode: boolean) =>
+const getStyles = (theme: Theme, isDarkMode: boolean) =>
   StyleSheet.create({
     safeContainer: {
       flex: 1,

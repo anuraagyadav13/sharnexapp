@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha } from '../../constants/theme';
+import { Theme, withAlpha } from '../../constants/theme';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -95,7 +95,7 @@ const SelectionModal: React.FC<SelectionModalProps> = ({
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: withAlpha(theme.overlay, 0.5),

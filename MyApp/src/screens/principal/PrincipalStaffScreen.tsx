@@ -17,7 +17,7 @@ import {
   Image,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
@@ -533,7 +533,7 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
   );
 };
 
-const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create({
+const getStyles = (theme: Theme, isDarkMode: boolean = false) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   container: { flex: 1 },
   scrollContent: { paddingBottom: 40 },
@@ -613,7 +613,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   readOnlyText: { fontSize: 14, fontWeight: '600', color: theme.text },
   pickerBox: { backgroundColor: theme.surface, borderRadius: 12, borderWidth: 1, borderColor: theme.border, padding: 5 },
   teacherOption: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: theme.border },
-  teacherOptionActive: { backgroundColor: theme.isDarkMode ? theme.primary : theme.iconBackground, borderColor: theme.primary },
+  teacherOptionActive: { backgroundColor: theme.primaryBg, borderColor: theme.primary },
   teacherIndexBox: { width: 28, height: 28, borderRadius: 14, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   teacherIndexText: { fontSize: 11, fontWeight: '800', color: theme.subtext },
   teacherDetails: { flex: 1 },

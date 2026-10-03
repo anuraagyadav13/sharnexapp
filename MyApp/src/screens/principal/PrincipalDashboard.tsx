@@ -16,13 +16,14 @@ import {
   Alert,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { usePermissions } from '../../hooks/usePermissions';
 import ScaleButton from '../../components/animations/ScaleButton';
+import { ThemeToggle } from '../../components/common/ThemeToggle';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect, Circle, Path } from 'react-native-svg';
@@ -53,9 +54,9 @@ const getGreeting = () => {
 // --- Main Screen ---
 const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
   const { theme, themeMode, setThemeMode, isDarkMode } = useTheme();
-  const [isThemeModalOpen, setThemeModalOpen] = useState(false);
   const styles = getStyles(theme, isDarkMode);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const { authState } = useAuth();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -283,20 +284,18 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
               >
                 <Ionicons name="settings-outline" size={22} color={theme.text} />
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.iconBtnTransparent}
-                onPress={() => setThemeModalOpen(true)}
-              >
-                <Ionicons name="moon-outline" size={22} color={theme.text} />
-              </TouchableOpacity>
+              <ThemeToggle buttonStyle={styles.iconBtnTransparent} />
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })}
               >
-                {authState.user?.photoUrl ? (
-                  <Image source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} style={styles.headerAvatarImage} />
+                {(authState.user?.photoUrl && !imageError) ? (
+                  <Image 
+                    source={{ uri: getCacheBustedUri(authState.user.photoUrl, authState.user.photoUpdatedAt) }} 
+                    style={styles.headerAvatarImage} 
+                    onError={() => setImageError(true)}
+                  />
                 ) : (
-
                   <View style={styles.avatar}>
                     <Text style={styles.avatarText}>{authState.user?.name?.charAt(0) || 'I'}</Text>
                   </View>
@@ -599,67 +598,6 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
         onClose={() => setDrawerOpen(false)}
         role="principal"
       />
-
-      {/* Theme Selection Modal */}
-      <Modal
-        visible={isThemeModalOpen}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setThemeModalOpen(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setThemeModalOpen(false)}
-        >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Theme</Text>
-            <View style={styles.modalDivider} />
-
-            <TouchableOpacity
-              style={styles.optionRow}
-              onPress={async () => {
-                await setThemeMode('light');
-                setThemeModalOpen(false);
-              }}
-            >
-              <View style={styles.optionLeft}>
-                <Ionicons name="sunny-outline" size={20} color={themeMode === 'light' ? theme.primary : theme.text} />
-                <Text style={[styles.optionText, themeMode === 'light' && styles.optionTextSelected]}>Light</Text>
-              </View>
-              {themeMode === 'light' && <Ionicons name="checkmark" size={20} color={theme.primary} />}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.optionRow}
-              onPress={async () => {
-                await setThemeMode('dark');
-                setThemeModalOpen(false);
-              }}
-            >
-              <View style={styles.optionLeft}>
-                <Ionicons name="moon-outline" size={20} color={themeMode === 'dark' ? theme.primary : theme.text} />
-                <Text style={[styles.optionText, themeMode === 'dark' && styles.optionTextSelected]}>Dark</Text>
-              </View>
-              {themeMode === 'dark' && <Ionicons name="checkmark" size={20} color={theme.primary} />}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.optionRow}
-              onPress={async () => {
-                await setThemeMode('system');
-                setThemeModalOpen(false);
-              }}
-            >
-              <View style={styles.optionLeft}>
-                <Ionicons name="settings-outline" size={20} color={themeMode === 'system' ? theme.primary : theme.text} />
-                <Text style={[styles.optionText, themeMode === 'system' && styles.optionTextSelected]}>System Default</Text>
-              </View>
-              {themeMode === 'system' && <Ionicons name="checkmark" size={20} color={theme.primary} />}
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </View>
   );
 };
@@ -830,7 +768,7 @@ const MetricCard = React.memo(({ title, value, trend, icon, color }: any) => {
   );
 });
 
-const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create({
+const getStyles = (theme: Theme, isDarkMode: boolean = false) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   container: { flex: 1 },
   scrollContent: { paddingBottom: 40 },

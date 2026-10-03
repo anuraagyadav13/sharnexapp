@@ -21,7 +21,7 @@ import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import ThemeSelectionModal from '../../components/modals/ThemeSelectionModal';
 
 
@@ -207,7 +207,7 @@ const ResetPasswordScreen = () => {
   );
 };
 
-const getStyles = (theme: any) =>
+const getStyles = (theme: Theme) =>
   StyleSheet.create({
     container: {
       flex: 1,

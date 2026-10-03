@@ -1,4 +1,5 @@
 import React from 'react';
+import { Theme } from '../../../constants/theme';
 import { useTheme } from '../../../store/ThemeContext';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { Book } from '../types';
@@ -50,7 +51,7 @@ const CategoriesTab: React.FC<CategoriesTabProps> = ({ categories, books, onAddP
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   wrapper: {
     flex: 1,
   },
@@ -70,7 +71,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: theme.borderLight,
+    borderColor: theme.border,
     borderRadius: 12,
     padding: 16,
     minWidth: '46%',
@@ -91,7 +92,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 5,
   },
   countText: {
-    color: theme.primaryLight,
+    color: theme.accent,
     fontSize: 10,
     fontWeight: '700',
   },

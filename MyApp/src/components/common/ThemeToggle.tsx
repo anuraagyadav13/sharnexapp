@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { ThemeMode } from '../../constants/theme';
 
 const THEME_OPTIONS: { mode: ThemeMode; icon: string; label: string }[] = [
@@ -106,7 +106,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
   );
 };
 
-const getStyles = (theme: any) =>
+const getStyles = (theme: Theme) =>
   StyleSheet.create({
     iconBtnTransparent: {
       width: 40,

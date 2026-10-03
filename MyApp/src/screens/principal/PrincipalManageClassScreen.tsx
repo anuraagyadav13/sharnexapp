@@ -22,7 +22,7 @@ import { ENDPOINTS } from '../../constants/api';
 import Skeleton from '../../components/common/Skeleton';
 import Toast, { ToastType } from '../../components/Toast';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -525,7 +525,7 @@ const PrincipalManageClassScreen = ({ navigation, route }: any) => {
 // ─────────────────────────────────────────────────────────────
 // Styles
 // ─────────────────────────────────────────────────────────────
-const getStyles = (theme: any, isDarkMode: boolean) =>
+const getStyles = (theme: Theme, isDarkMode: boolean) =>
   StyleSheet.create({
     // ── Layout ──
     mainContainer: { flex: 1, backgroundColor: theme.background },

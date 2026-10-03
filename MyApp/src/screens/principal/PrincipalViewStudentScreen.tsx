@@ -17,7 +17,7 @@ import apiClient, { getApiErrorMessage } from '../../services/apiClient';
 import principalService from '../../services/principalService';
 import { ENDPOINTS } from '../../constants/api';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 
 const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
   const { theme, isDarkMode } = useTheme();
@@ -302,7 +302,7 @@ const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
   );
 };
 
-const getStyles = (theme: any, isDarkMode: boolean) =>
+const getStyles = (theme: Theme, isDarkMode: boolean) =>
   StyleSheet.create({
     mainContainer: { flex: 1, backgroundColor: theme.background },
     container: { flex: 1 },

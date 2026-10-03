@@ -23,7 +23,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { StudentHeader } from '../../components/StudentHeader';
 import { useAuth } from '../../store/AuthContext';
 import studentService from '../../services/studentService';
@@ -1310,7 +1310,7 @@ const ResultManagementScreen: React.FC<Props> = ({ navigation }) => {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const getStyles = (theme: any, isDarkMode: boolean) =>
+const getStyles = (theme: Theme, isDarkMode: boolean) =>
   StyleSheet.create({
     container: { flex: 1 },
     scrollContent: { paddingBottom: 40 },

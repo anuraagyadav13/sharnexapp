@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Theme } from '../../constants/theme';
 import {
   View,
   Text,
@@ -157,7 +158,7 @@ const PrincipalEditSubjectScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40, paddingHorizontal: 16 },
   globalHeader: {
@@ -185,7 +186,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   textInput: { borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, fontSize: 14, color: theme.text, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border },
   textArea: { minHeight: 100, textAlignVertical: 'top' },
   actionRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginTop: 10 },
-  actionBtnCancel: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.isDarkMode ? theme.border : theme.surface, borderRadius: 14, paddingVertical: 16 },
+  actionBtnCancel: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.background, borderRadius: 14, paddingVertical: 16 },
   actionBtnCancelText: { fontSize: 14, fontWeight: '700', color: theme.subtext },
   actionBtnPublish: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.primary, borderRadius: 14, paddingVertical: 16, shadowColor: theme.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
   actionBtnPublishText: { fontSize: 14, fontWeight: '700', color: theme.onPrimary },

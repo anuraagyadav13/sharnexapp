@@ -20,7 +20,7 @@ import Animated, { FadeIn, FadeInUp, Layout } from 'react-native-reanimated';
 import teacherService from '../../services/teacherService';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { TeacherHeader } from '../../components/TeacherHeader';
 
 const theme = LIGHT_COLORS;
@@ -58,7 +58,7 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
 }) => {
   const { authState } = useAuth();
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles({ ...theme, isDarkMode });
+  const styles = getStyles(theme);
   const requestId = route.params?.requestId;
   const isEditing = !!requestId;
 
@@ -477,7 +477,7 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.background },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {

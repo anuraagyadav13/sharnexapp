@@ -20,7 +20,7 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { TeacherHeader } from '../../components/TeacherHeader';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import RNFS from 'react-native-fs';
@@ -31,7 +31,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'TeacherQuiz'>;
 const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
   const { authState } = useAuth();
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles({ ...theme, isDarkMode });
+  const styles = getStyles(theme);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -339,7 +339,7 @@ const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 

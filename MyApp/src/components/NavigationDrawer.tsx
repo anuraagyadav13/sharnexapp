@@ -16,7 +16,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { useAuth } from '../store/AuthContext';
 import { useTheme } from '../store/ThemeContext';
-import { withAlpha } from '../constants/theme';
+import { Theme, withAlpha } from '../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DRAWER_WIDTH = SCREEN_WIDTH * 0.75;
@@ -118,12 +118,14 @@ const LIBRARY_MENU: MenuItem[] = [
 
 export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onClose, role = 'student' }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { authState, logout } = useAuth();
   
   const drawerText = isDarkMode ? theme.text : theme.onPrimary;
   const drawerBg = isDarkMode ? theme.surface : (role === 'principal' ? theme.primary : withAlpha(theme.primary, 0.95));
+  
+  const styles = getStyles(theme, drawerText);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { authState, logout } = useAuth();
+  
   const route = useRoute();
   const currentRouteName = route.name;
 
@@ -411,7 +413,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme, drawerText: string) => StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: theme.overlay,
@@ -441,12 +443,12 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginTop: 10,
   },
   headerTitle: {
-    color: theme.onPrimary,
+    color: drawerText,
     fontSize: 22,
     fontWeight: 'bold',
   },
   headerSubtitle: {
-    color: withAlpha(theme.onPrimary, 0.7),
+    color: withAlpha(drawerText, 0.7),
     fontSize: 14,
     marginTop: 4,
   },
@@ -458,22 +460,22 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginBottom: 2,
   },
   menuItemActive: {
-    backgroundColor: withAlpha(theme.onPrimary, 0.15),
+    backgroundColor: withAlpha(drawerText, 0.15),
     borderLeftWidth: 4,
-    borderLeftColor: theme.onPrimary,
+    borderLeftColor: drawerText,
     paddingLeft: 16,
   },
   expandableActive: {
-    backgroundColor: withAlpha(theme.onPrimary, 0.1),
+    backgroundColor: withAlpha(drawerText, 0.1),
   },
   menuText: {
     marginLeft: 14,
     fontSize: 15,
     fontWeight: '600',
-    color: withAlpha(theme.onPrimary, 0.85),
+    color: withAlpha(drawerText, 0.85),
   },
   menuTextActive: {
-    color: theme.onPrimary,
+    color: drawerText,
     fontWeight: '800',
   },
   subMenuContainer: {
@@ -484,23 +486,23 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 10,
   },
   subMenuItemActive: {
-    backgroundColor: withAlpha(theme.onPrimary, 0.2),
+    backgroundColor: withAlpha(drawerText, 0.2),
     borderRadius: 8,
     marginRight: 20,
     paddingLeft: 10,
   },
   subMenuText: {
     fontSize: 14,
-    color: withAlpha(theme.onPrimary, 0.7),
+    color: withAlpha(drawerText, 0.7),
     fontWeight: '500',
   },
   subMenuTextActive: {
-    color: theme.onPrimary,
+    color: drawerText,
     fontWeight: '700',
   },
   divider: {
     height: 1,
-    backgroundColor: withAlpha(theme.onPrimary, 0.1),
+    backgroundColor: withAlpha(drawerText, 0.1),
     marginHorizontal: 0,
     marginVertical: 10,
   },

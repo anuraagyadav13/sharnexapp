@@ -28,7 +28,7 @@ import { getCacheBustedUri } from '../../utils/image';
 import Skeleton from '../../components/common/Skeleton';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -519,7 +519,7 @@ const PrincipalCalendarScreen = ({ navigation }: any) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   container: { flex: 1 },
   scrollContent: { paddingBottom: 40 },
@@ -791,7 +791,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   // Holidays
   holidaysWrapper: { paddingHorizontal: 20, gap: 12 },
   holidayCard: { backgroundColor: theme.surface, borderRadius: 24, padding: 15, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: theme.border, shadowColor: theme.text, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2 },
-  holidayIconBox: { width: 44, height: 44, borderRadius: 12, backgroundColor: theme.withAlpha(theme.warning, 0.2), alignItems: 'center', justifyContent: 'center' },
+  holidayIconBox: { width: 44, height: 44, borderRadius: 12, backgroundColor: withAlpha(theme.warning, 0.2), alignItems: 'center', justifyContent: 'center' },
   holidayMain: { flex: 1, marginLeft: 15 },
   holidayName: { fontSize: 14, fontWeight: '700', color: theme.text },
   holidayDateRange: { fontSize: 11, color: theme.subtext, marginTop: 2, fontWeight: '600' },
@@ -832,7 +832,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 10,
-    backgroundColor: theme.withAlpha(theme.primary, 0.2),
+    backgroundColor: withAlpha(theme.primary, 0.2),
   },
   examClassText: { fontSize: 11, fontWeight: '800', color: theme.primary },
   emptyCardFull: {

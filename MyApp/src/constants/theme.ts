@@ -1,3 +1,6 @@
+import { Theme as NavigationTheme } from '@react-navigation/native';
+export type Theme = ThemeTokens;
+
 export interface ThemeTokens {
   background: string;
   surface: string;
@@ -6,7 +9,7 @@ export interface ThemeTokens {
   subtext: string;
   textSecondary: string;
   placeholder: string;
-  
+
   primary: string;
   primaryBg: string;
   primaryPressed: string;
@@ -14,7 +17,7 @@ export interface ThemeTokens {
   secondary: string;
   secondaryBg: string;
   accent: string;
-  
+
   success: string;
   successBg: string;
   warning: string;
@@ -23,39 +26,39 @@ export interface ThemeTokens {
   dangerBg: string;
   info: string;
   infoBg: string;
-  
+
   border: string;
   overlay: string;
   shadow: string;
-  
+
   card: string;
   cardSurface: string;
   cardNested: string;
   cardNestedBorder: string;
-  
+
   iconBackground: string;
   iconBoxPurpleBg: string;
   iconBoxBlueBg: string;
-  
+
   faqContainerBg: string;
   faqAnswer: string;
   faqBorder: string;
-  
+
   heroBg: string;
   heroBorder: string;
-  
+
   topRankingBg: string;
   topRankingBorder: string;
-  
+
   pillCompletedBg: string;
   scheduleOngoingBg: string;
   scheduleOngoingBorder: string;
-  
+
   sparkle: string;
   gradHero: string[];
   gradHelp: string[];
   needHelpBtnText: string;
-  
+
   statusBarStyle: 'dark-content' | 'light-content';
 }
 
@@ -144,65 +147,60 @@ export const LIGHT_COLORS: ThemeTokens = {
 };
 
 export const DARK_COLORS: ThemeTokens = {
-  ...BASE_COLORS,
-  background: '#14121A',
-  surface: '#1E1A29',
-  surfaceHigh: '#272235',
-  text: '#ECE9F4',
-  subtext: '#B5B0C4',
-  textSecondary: '#B5B0C4',
-  placeholder: '#8A849B',
+  background: '#1D1930',
+  surface: '#2A2440',
+  surfaceHigh: '#362F52',
+  text: '#EFEBFA',
+  subtext: '#BFB8D6',
+  textSecondary: '#BFB8D6',
+  placeholder: '#A098BE',
 
-  primary: '#AD97E8',
-  primaryBg: '#2E2745',
-  primaryPressed: '#9680D6',
-  onPrimary: '#1A1230',
-  secondary: '#C9B9F2',
-  secondaryBg: '#2E2745',
-  accent: '#AD97E8',
+  primary: '#9a7ceeff',
+  primaryPressed: '#A58CEB',
+  accent: '#B9A3F5',
+  onPrimary: '#1F1440',
+  secondary: '#D8CCFA',
+
+  primaryBg: '#403568',
+  iconBackground: '#403568',
+  iconBoxPurpleBg: '#403568',
+  topRankingBg: '#403568',
+  scheduleOngoingBg: '#403568',
+  secondaryBg: '#403568',
 
   success: '#7BD3A0',
-  successBg: '#1E3329',
+  successBg: '#37404F',
   warning: '#E8C07A',
-  warningBg: '#3A3020',
+  warningBg: '#483D49',
   danger: '#F28B9B',
-  dangerBg: '#3D2229',
+  dangerBg: '#4A344F',
   info: '#8AB4F0',
-  infoBg: '#1F2D45',
+  infoBg: '#393B5C',
+  iconBoxBlueBg: '#393B5C',
 
-  border: '#332E42',
-  overlay: 'rgba(0,0,0,0.6)',
+  sparkle: '#B9A3F5',
+  topRankingBorder: '#5E5390',
+  pillCompletedBg: '#3A3454',
+  scheduleOngoingBorder: '#B9A3F5',
+  heroBg: '#1D1930',
+  faqAnswer: '#1D1930',
+
+  border: '#4A4268',
+  cardNestedBorder: '#4A4268',
+  faqBorder: '#4A4268',
+  heroBorder: '#4A4268',
+  card: '#2A2440',
+  cardSurface: '#2A2440',
+  cardNested: '#362F52',
+  faqContainerBg: '#2A2440',
+
+  overlay: 'rgba(10,6,20,0.65)',
   shadow: '#000000',
-
-  card: '#1E1A29',
-  cardSurface: '#1E1A29',
-  cardNested: '#272235',
-  cardNestedBorder: '#332E42',
-
-  iconBackground: '#2E2745',
-  iconBoxPurpleBg: '#2E2745',
-  iconBoxBlueBg: '#1F2D45',
-
-  faqContainerBg: '#1E1A29',
-  faqAnswer: '#1E1A29',
-  faqBorder: '#332E42',
-
-  heroBg: '#14121A',
-  heroBorder: '#332E42',
-
-  topRankingBg: '#2E2745',
-  topRankingBorder: '#4A3F73',
-
-  pillCompletedBg: '#2E2A3B',
-  scheduleOngoingBg: '#2E2745',
-  scheduleOngoingBorder: '#AD97E8',
-
-  sparkle: '#AD97E8',
-  gradHero: ['#2E2745', '#1E1A29'],
-  gradHelp: ['#3A2F63', '#243456'],
-  needHelpBtnText: '#1A1230',
-
   statusBarStyle: 'light-content',
+
+  gradHero: ['#403568', '#2A2440'],
+  gradHelp: ['#4B3A7A', '#2E3D6B'],
+  needHelpBtnText: '#1F1440'
 };
 
 export type ThemeMode = 'light' | 'dark' | 'system';
@@ -224,3 +222,21 @@ export function withAlpha(color: string, alpha: number): string {
   const b = parseInt(hex.substring(4, 6), 16);
   return `rgba(${r},${g},${b},${alpha})`;
 }
+
+export const buildNavigationTheme = (tokens: ThemeTokens, isDark: boolean): NavigationTheme => ({
+  dark: isDark,
+  colors: {
+    primary: tokens.primary,
+    background: tokens.background,
+    card: tokens.surface,
+    text: tokens.text,
+    border: tokens.border,
+    notification: tokens.danger,
+  },
+  fonts: {
+    regular: { fontFamily: 'System', fontWeight: '400' },
+    medium: { fontFamily: 'System', fontWeight: '500' },
+    bold: { fontFamily: 'System', fontWeight: '700' },
+    heavy: { fontFamily: 'System', fontWeight: '900' },
+  },
+});

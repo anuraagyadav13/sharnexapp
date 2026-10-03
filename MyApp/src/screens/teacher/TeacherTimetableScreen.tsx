@@ -23,7 +23,7 @@ import Animated, { FadeInDown, FadeInUp, FadeIn } from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { useNavigation } from '@react-navigation/native';
 // Use teacherService so all API calls go through the same centralized layer
 import teacherService from '../../services/teacherService';
@@ -68,7 +68,7 @@ const { width, height } = Dimensions.get('window');
 // --- Custom Calendar Picker Component (Overlay Version for stability) ---
 const CustomCalendarPickerOverlay = ({ visible, onClose, onSelect, initialDate }: { visible: boolean, onClose: () => void, onSelect: (date: Date) => void, initialDate: Date }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles({ ...theme, isDarkMode });
+  const styles = getStyles(theme);
   const [currentMonth, setCurrentMonth] = useState(new Date(initialDate.getFullYear(), initialDate.getMonth(), 1));
   const daysInMonth = (month: number, year: number) => new Date(year, month + 1, 0).getDate();
   const firstDayOfMonth = (month: number, year: number) => new Date(year, month, 1).getDay();
@@ -125,7 +125,7 @@ const CustomCalendarPickerOverlay = ({ visible, onClose, onSelect, initialDate }
 
 const ScheduleCard = ({ item, index }: { item: any, index: number }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles({ ...theme, isDarkMode });
+  const styles = getStyles(theme);
   // is_break: true means this is a break slot (Lunch, Sports, etc.) from /timetable/periods
   const isBreak = item.is_break === true || item.type === 'BREAK';
   const isFree = item.type === 'FREE' || (!item.subject_name && !item.subject && !isBreak);
@@ -198,7 +198,7 @@ const ScheduleCard = ({ item, index }: { item: any, index: number }) => {
 
 const ScheduleRow = ({ item, index }: { item: any, index: number }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles({ ...theme, isDarkMode });
+  const styles = getStyles(theme);
   const isFree = item.type === 'FREE' || !item.subject_name;
   if (isFree) return null;
   return (
@@ -223,7 +223,7 @@ const TeacherTimetableScreen = () => {
   const navigation = useNavigation<any>();
   const { authState } = useAuth();
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles({ ...theme, isDarkMode });
+  const styles = getStyles(theme);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewType, setViewType] = useState('Daily');
   const [schedule, setSchedule] = useState<any[]>([]);
@@ -667,7 +667,7 @@ const TeacherTimetableScreen = () => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: theme.background },
   globalHeader: {
     flexDirection: 'row',

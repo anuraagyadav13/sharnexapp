@@ -40,7 +40,7 @@ import Svg, {
 } from 'react-native-svg';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 
 import studentService from '../../services/studentService';
 import Skeleton from '../../components/common/Skeleton';
@@ -61,7 +61,7 @@ interface Props {
 // ---------------------------------------------------------------------------
 // getStyles — called once per render in each component with the active theme
 // ---------------------------------------------------------------------------
-const getStyles = (theme: any) =>
+const getStyles = (theme: Theme) =>
   StyleSheet.create({
     // CONTAINERS
     mainContainer: { flex: 1, backgroundColor: theme.background },
@@ -769,7 +769,7 @@ interface FAQItemProps {
   isOpen: boolean;
   onToggle: () => void;
   isLast?: boolean;
-  theme: any;
+  theme: Theme;
 }
 
 const FAQItem = React.memo(

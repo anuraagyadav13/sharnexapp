@@ -17,7 +17,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha } from '../../constants/theme';
+import { Theme, withAlpha } from '../../constants/theme';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
@@ -709,7 +709,7 @@ const PrincipalStudentDetailsScreen = ({ navigation }: any) => {
   );
 };
 
-const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create({
+const getStyles = (theme: Theme, isDarkMode: boolean = false) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   container: { flex: 1 },
   scrollContent: { paddingBottom: 40 },

@@ -21,7 +21,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import Animated, { FadeInUp, FadeInDown, SlideInRight } from 'react-native-reanimated';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { useAuth } from '../../store/AuthContext';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { StudentHeader } from '../../components/StudentHeader';
@@ -858,7 +858,7 @@ const Messages = () => {
   );
 };
 
-const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
+const getStyles = (theme: Theme, isDarkMode: boolean) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.background,

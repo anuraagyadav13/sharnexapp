@@ -21,7 +21,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import teacherService from '../../services/teacherService';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -30,7 +30,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'TeacherMarksEntry'>;
 const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
   const { examId, classId, subjectId, examName, className, subjectName } = route.params;
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles({ ...theme, isDarkMode });
+  const styles = getStyles(theme);
   const { authState } = useAuth();
   
   const [students, setStudents] = useState<any[]>([]);
@@ -480,7 +480,7 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 100 },
 

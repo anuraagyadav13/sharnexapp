@@ -1,4 +1,5 @@
 import React from 'react';
+import { Theme } from '../../../constants/theme';
 import { useTheme } from '../../../store/ThemeContext';
 import { View, Text, TextInput, StyleSheet, TextInputProps } from 'react-native';
 
@@ -22,7 +23,7 @@ const FormField: React.FC<FormFieldProps> = ({ label, style, ...props }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   wrapper: {
     marginBottom: 14,
   },

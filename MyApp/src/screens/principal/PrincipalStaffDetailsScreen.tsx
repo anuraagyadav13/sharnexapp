@@ -23,7 +23,7 @@ import Animated, { FadeInUp, FadeInDown, SlideInRight } from 'react-native-reani
 import ScaleButton from '../../components/animations/ScaleButton';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
@@ -295,7 +295,7 @@ const PrincipalStaffDetailsScreen: React.FC<Props> = ({ navigation, route }) => 
   );
 };
 
-const getStyles = (theme: any, isDarkMode: boolean) =>
+const getStyles = (theme: Theme, isDarkMode: boolean) =>
   StyleSheet.create({
     mainContainer: { flex: 1, backgroundColor: theme.background },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background },

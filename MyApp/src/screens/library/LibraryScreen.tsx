@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { Theme } from '../../constants/theme';
 import {
   View,
   Text,
@@ -152,7 +153,7 @@ const LibraryScreen = () => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: theme.background,

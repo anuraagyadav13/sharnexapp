@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Theme } from '../../constants/theme';
 import {
     View,
     Text,
@@ -409,7 +410,7 @@ const PrincipalEditStudentScreen = ({ navigation, route }: any) => {
     );
 };
 
-const getStyles = (theme: any, isDarkMode: boolean) =>
+const getStyles = (theme: Theme, isDarkMode: boolean) =>
     StyleSheet.create({
         mainContainer: { flex: 1, backgroundColor: theme.background },
         container: { flex: 1 },

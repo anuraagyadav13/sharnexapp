@@ -22,7 +22,7 @@ import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { TeacherHeader } from '../../components/TeacherHeader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherSelfAttendance'>;
@@ -30,7 +30,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'TeacherSelfAttendance'>
 const TeacherSelfAttendanceScreen: React.FC<Props> = ({ navigation }) => {
   const { authState } = useAuth();
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles({ ...theme, isDarkMode });
+  const styles = getStyles(theme);
   const [records, setRecords] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -188,7 +188,7 @@ const TeacherSelfAttendanceScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.background },
   globalHeader: {
     flexDirection: 'row',

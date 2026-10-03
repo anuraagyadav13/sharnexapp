@@ -27,13 +27,13 @@ import { ENDPOINTS } from '../../constants/api';
 import Skeleton from '../../components/common/Skeleton';
 import Toast, { ToastType } from '../../components/Toast';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const PageSkeleton = () => {
-  const { theme } = useTheme();
-  const styles = getStyles(theme);
+  const { theme, themeMode } = useTheme();
+  const styles = getStyles(theme, (theme as any).isDarkMode);
   return (
     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.pageHeader}>
@@ -52,8 +52,8 @@ const PageSkeleton = () => {
 };
 
 const StatCard = ({ title, value, color, icon }: { title: string, value: string | number, color: string, icon: string }) => {
-  const { theme } = useTheme();
-  const styles = getStyles(theme);
+  const { theme, themeMode } = useTheme();
+  const styles = getStyles(theme, (theme as any).isDarkMode);
   return (
     <View style={styles.statCard}>
       <View style={[styles.statIconCircle, { backgroundColor: `${color}15` }]}>
@@ -68,7 +68,7 @@ const StatCard = ({ title, value, color, icon }: { title: string, value: string 
 const SubjectCard = ({ item, index, delay, onDelete }: any) => {
   const navigation = useNavigation<any>();
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, (theme as any).isDarkMode);
   const colors = [theme.secondary, theme.primary, theme.success, theme.warning, theme.danger, theme.secondary, theme.primary];
   const brandColor = colors[index % colors.length];
 
@@ -101,7 +101,7 @@ const SubjectCard = ({ item, index, delay, onDelete }: any) => {
 
 const PrincipalSubjectsScreen = ({ navigation }: any) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, (theme as any).isDarkMode);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -253,7 +253,7 @@ const PrincipalSubjectsScreen = ({ navigation }: any) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme, isDark: boolean) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   container: { flex: 1 },
   scrollContent: { paddingBottom: 40 },
@@ -300,7 +300,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   subjectName: { fontSize: 16, fontWeight: '700', color: theme.text },
   subjectCode: { fontSize: 12, color: theme.subtext, marginTop: 2, fontWeight: '600' },
   cardActions: { flexDirection: 'row', gap: 8 },
-  circleActionBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: theme.isDarkMode ? theme.surface : theme.background, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.border },
+  circleActionBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: isDark ? theme.surface : theme.background, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.border },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: theme.background },

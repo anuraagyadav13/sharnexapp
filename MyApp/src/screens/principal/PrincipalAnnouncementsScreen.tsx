@@ -16,7 +16,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useAuth } from '../../store/AuthContext';
@@ -572,7 +572,7 @@ const PrincipalAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create({
+const getStyles = (theme: Theme, isDarkMode: boolean = false) => StyleSheet.create({
   mainContainer: {
     flex: 1,
     backgroundColor: theme.background,

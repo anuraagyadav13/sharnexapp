@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useColorScheme, StatusBar } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LIGHT_COLORS, DARK_COLORS, ThemeMode, ThemeTokens } from '../constants/theme';
+import { LIGHT_COLORS, DARK_COLORS, ThemeMode, ThemeTokens, buildNavigationTheme } from '../constants/theme';
+import { Theme as NavigationTheme } from '@react-navigation/native';
 
 type ThemeContextType = {
+  navigationTheme: NavigationTheme;
   isDarkMode: boolean;
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
@@ -74,9 +76,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const theme = isDarkMode ? DARK_COLORS : LIGHT_COLORS;
+  
+  const navigationTheme = React.useMemo(() => buildNavigationTheme(theme, isDarkMode), [theme, isDarkMode]);
 
   return (
-    <ThemeContext.Provider value={{ isDarkMode, themeMode, setThemeMode, toggleDarkMode, theme }}>
+    <ThemeContext.Provider value={{ navigationTheme, isDarkMode, themeMode, setThemeMode, toggleDarkMode, theme }}>
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor="transparent"

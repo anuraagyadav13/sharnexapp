@@ -23,7 +23,7 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Animated, { FadeInUp, FadeIn, Layout } from 'react-native-reanimated';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import teacherService from '../../services/teacherService';
 
 const { width } = Dimensions.get('window');
@@ -36,7 +36,7 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles({ ...theme, isDarkMode });
+  const styles = getStyles(theme);
   const [isLoading, setIsLoading] = useState(true);
   const [materials, setMaterials] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
@@ -437,7 +437,7 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   container: { flex: 1 },
   centerFill: { flex: 1, justifyContent: 'center', alignItems: 'center' },

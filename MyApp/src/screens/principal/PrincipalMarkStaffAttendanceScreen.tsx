@@ -18,7 +18,7 @@ import {
   PermissionsAndroid,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { launchCamera, ImagePickerResponse } from 'react-native-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -46,8 +46,8 @@ import SelectionModal from '../../components/modals/SelectionModal';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const PageSkeleton = () => {
-  const { theme } = useTheme();
-  const styles = getStyles(theme);
+  const { theme, themeMode } = useTheme();
+  const styles = getStyles(theme, themeMode === 'dark');
   return (
     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.pageHeader}>
@@ -1452,7 +1452,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
   );
 };
 
-const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create({
+const getStyles = (theme: Theme, isDarkMode: boolean = false) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   container: { flex: 1 },
   scrollContent: { paddingBottom: 100 },
@@ -1507,7 +1507,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   quickMarkName: { flex: 1, fontSize: 13, fontWeight: '600', color: theme.text },
   selectAllBtnText: { fontSize: 10, fontWeight: '800', color: theme.primary },
 
-  manualActionBtn: { backgroundColor: theme.isDarkMode ? theme.surface : theme.text, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 48, borderRadius: 14, marginTop: 10 },
+  manualActionBtn: { backgroundColor: (theme as any).isDarkMode ? theme.surface : theme.text, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 48, borderRadius: 14, marginTop: 10 },
   manualActionText: { color: theme.onPrimary, fontSize: 13, fontWeight: '800' },
 
   listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 32, marginBottom: 16 },
@@ -1515,7 +1515,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   selectAllText: { fontSize: 10, fontWeight: '800', color: theme.primary, letterSpacing: 0.5 },
   staffList: { paddingHorizontal: 20, gap: 12 },
   staffCard: { backgroundColor: theme.surface, borderRadius: 24, padding: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: theme.border, shadowColor: theme.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2 },
-  staffCardActive: { borderColor: theme.primary, backgroundColor: theme.withAlpha(theme.primary, 0.2) },
+  staffCardActive: { borderColor: theme.primary, backgroundColor: withAlpha(theme.primary, 0.2) },
   staffAvatar: { width: 48, height: 48, borderRadius: 14, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center' },
   avatarActive: { backgroundColor: theme.primary },
   staffInitial: { fontSize: 18, fontWeight: '800', color: theme.subtext },

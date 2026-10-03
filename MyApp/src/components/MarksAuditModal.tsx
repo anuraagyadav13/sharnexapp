@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../store/ThemeContext';
-import { withAlpha } from '../constants/theme';
+import { Theme, withAlpha } from '../constants/theme';
 import principalService, { RmsMarksAuditItem } from '../services/principalService';
 
 interface MarksAuditModalProps {
@@ -176,7 +176,7 @@ export const MarksAuditModal: React.FC<MarksAuditModalProps> = ({
   );
 };
 
-const getStyles = (theme: any, isDarkMode: boolean) =>
+const getStyles = (theme: Theme, isDarkMode: boolean) =>
   StyleSheet.create({
     overlay: {
       flex: 1,

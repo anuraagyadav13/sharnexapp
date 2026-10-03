@@ -1,4 +1,5 @@
 import React from 'react';
+import { Theme } from '../../../constants/theme';
 import { useTheme } from '../../../store/ThemeContext';
 import {
   Modal,
@@ -47,7 +48,7 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ visible, title, onClose, ch
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   overlay: {
     flex: 1,
   },

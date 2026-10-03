@@ -11,7 +11,7 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Svg, { Defs, LinearGradient, Stop, Rect, Path } from 'react-native-svg';
 import { useTheme } from '../../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../../constants/theme';
 import { NavigationDrawer } from '../../../components/NavigationDrawer';
 import { BusSubHeader } from '../../../components/bus/BusSubHeader';
 import { busStore, BusRoute } from '../../../services/busMockData';
@@ -225,7 +225,7 @@ export const RouteManagementScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any, isDarkMode: boolean) =>
+const getStyles = (theme: Theme, isDarkMode: boolean) =>
   StyleSheet.create({
     safeContainer: {
       flex: 1,

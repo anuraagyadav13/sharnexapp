@@ -21,7 +21,7 @@ import { RootStackParamList } from '../../types/navigation';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../store/ToastContext';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 
@@ -267,7 +267,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any) =>
+const getStyles = (theme: Theme) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Theme } from '../../constants/theme';
 import {
   View,
   Text,
@@ -421,7 +422,7 @@ const LibraryAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any, isDarkMode: boolean) =>
+const getStyles = (theme: Theme, isDarkMode: boolean) =>
   StyleSheet.create({
     mainContainer: { flex: 1, backgroundColor: theme.background },
     globalHeader: {

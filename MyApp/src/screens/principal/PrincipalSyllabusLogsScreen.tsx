@@ -17,7 +17,7 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { useAuth } from '../../store/AuthContext';
 import { getCacheBustedUri } from '../../utils/image';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
@@ -1517,7 +1517,7 @@ const PrincipalSyllabusLogsScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any, isDarkMode: boolean) =>
+const getStyles = (theme: Theme, isDarkMode: boolean) =>
   StyleSheet.create({
     safeContainer: {
       flex: 1,

@@ -19,7 +19,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { StudentHeader } from '../../components/StudentHeader';
 import studentService from '../../services/studentService';
 import { getApiErrorMessage } from '../../services/apiClient';
@@ -1599,7 +1599,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const getStyles = (theme: any, isDarkMode: boolean) =>
+const getStyles = (theme: Theme, isDarkMode: boolean) =>
   StyleSheet.create({
     mainContainer: { flex: 1, backgroundColor: theme.background },
     scrollContent: { paddingBottom: 40 },

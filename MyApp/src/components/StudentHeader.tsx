@@ -13,7 +13,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import ScaleButton from './animations/ScaleButton';
 import ThemeToggle from './common/ThemeToggle';
 import { useTheme } from '../store/ThemeContext';
-import { withAlpha } from '../constants/theme';
+import { Theme, withAlpha } from '../constants/theme';
 import { useAuth } from '../store/AuthContext';
 import { ThemeMode } from '../constants/theme';
 import { getCacheBustedUri } from '../utils/image';
@@ -46,6 +46,7 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({
   const styles = getStyles(theme);
 
   const [pickerVisible, setPickerVisible] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const handleLeftPress = () => {
     if (isStackScreen) {
@@ -104,9 +105,7 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({
             navigation.navigate('AccountSettings', { targetTab: 'Personal Details' })
           }
         >
-          {authState.user?.photoUrl ||
-            authState.user?.profileImage ||
-            authState.user?.image ? (
+          {((authState.user?.photoUrl || authState.user?.profileImage || authState.user?.image) && !imageError) ? (
             <Image
               source={{
                 uri: getCacheBustedUri(
@@ -117,12 +116,13 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({
                 ),
               }}
               style={styles.headerAvatarImage}
+              onError={() => setImageError(true)}
             />
 
           ) : (
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
-                {authState.user?.name?.charAt(0) || 'S'}
+                {authState.user?.name?.charAt(0) || 'U'}
               </Text>
             </View>
           )}
@@ -135,7 +135,7 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({
 // ---------------------------------------------------------------------------
 // Styles — called with the active theme each render
 // ---------------------------------------------------------------------------
-const getStyles = (theme: any) =>
+const getStyles = (theme: Theme) =>
   StyleSheet.create({
     globalHeader: {
       flexDirection: 'row',

@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { useTheme } from '../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../constants/theme';
 import Animated, {
   useAnimatedStyle,
   withTiming,
@@ -170,7 +170,7 @@ export const InstitutionPortalMenu = () => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.primary,

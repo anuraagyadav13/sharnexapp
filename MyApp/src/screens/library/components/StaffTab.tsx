@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTheme } from '../../../store/ThemeContext';
-import { withAlpha } from '../../../constants/theme';
+import { Theme, withAlpha } from '../../../constants/theme';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { StaffMember } from '../types';
@@ -66,7 +66,7 @@ const StaffTab: React.FC<StaffTabProps> = ({ staff, onAddPress, onRemove }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   wrapper: {
     flex: 1,
   },
@@ -82,7 +82,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   card: {
     backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: theme.borderLight,
+    borderColor: theme.border,
     borderRadius: 14,
     padding: 20,
     marginBottom: 14,

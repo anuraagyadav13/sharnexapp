@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { useAuth } from '../../store/AuthContext';
 import ThemeSelectionModal from '../modals/ThemeSelectionModal';
 import ScaleButton from '../animations/ScaleButton';
@@ -157,7 +157,7 @@ export const BusSubHeader: React.FC<BusSubHeaderProps> = ({
   );
 };
 
-const getStyles = (theme: any, isDarkMode: boolean) =>
+const getStyles = (theme: Theme, isDarkMode: boolean) =>
   StyleSheet.create({
     container: {
       backgroundColor: theme.surface,

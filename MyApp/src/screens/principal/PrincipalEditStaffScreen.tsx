@@ -25,7 +25,7 @@ import Animated, { FadeInUp, SlideInRight } from 'react-native-reanimated';
 import { launchCamera, ImagePickerResponse } from 'react-native-image-picker';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { getApiErrorMessage } from '../../services/apiClient';
 import principalService from '../../services/principalService';
 import { COUNTRIES } from '../../constants/countries';
@@ -542,7 +542,7 @@ const PrincipalEditStaffScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const getStyles = (theme: any, isDarkMode: boolean) =>
+const getStyles = (theme: Theme, isDarkMode: boolean) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.background },
     header: {

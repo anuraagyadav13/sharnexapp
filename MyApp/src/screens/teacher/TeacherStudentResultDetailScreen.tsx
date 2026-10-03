@@ -17,13 +17,13 @@ import { TeacherHeader } from '../../components/TeacherHeader';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import teacherService from '../../services/teacherService';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha } from '../../constants/theme';
+import { Theme, withAlpha } from '../../constants/theme';
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherStudentResultDetail'>;
 
 const TeacherStudentResultDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const { studentId, studentName, rollNo } = route.params;
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles({ ...theme, isDarkMode });
+  const styles = getStyles(theme);
 
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -226,7 +226,7 @@ const TeacherStudentResultDetailScreen: React.FC<Props> = ({ navigation, route }
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { padding: 16, paddingBottom: 40 },
 

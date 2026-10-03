@@ -23,7 +23,7 @@ import { TeacherHeader } from '../../components/TeacherHeader';
 import { useAuth } from '../../store/AuthContext';
 import teacherService from '../../services/teacherService';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha } from '../../constants/theme';
+import { Theme, withAlpha } from '../../constants/theme';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherResultManagement'>;
@@ -32,7 +32,7 @@ import { Alert, Modal } from 'react-native';
 
 const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles({ ...theme, isDarkMode });
+  const styles = getStyles(theme);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const { authState } = useAuth();
   const [activeTab, setActiveTab] = useState<'entry' | 'review' | 'view_result'>('entry');
@@ -634,7 +634,7 @@ const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40, paddingHorizontal: 16 },
 

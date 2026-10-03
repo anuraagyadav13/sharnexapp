@@ -32,7 +32,7 @@ import principalService, {
 } from '../../services/principalService';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Camera, useCameraPermission, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
 
@@ -1668,7 +1668,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
     </View>
   );
 };
-const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
+const getStyles = (theme: Theme, isDarkMode: boolean) => StyleSheet.create({
   safeContainer: {
     flex: 1,
     backgroundColor: theme.background,

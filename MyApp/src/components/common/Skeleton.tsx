@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, DimensionValue, ViewStyle } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha } from '../../constants/theme';
+import { Theme, withAlpha } from '../../constants/theme';
 import Animated, { 
   useAnimatedStyle, 
   useSharedValue, 
@@ -61,7 +61,7 @@ const Skeleton: React.FC<SkeletonProps> = (props) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   skeleton: {
     backgroundColor: withAlpha(theme.border, 0.5),
   },

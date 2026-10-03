@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTheme } from '../../../store/ThemeContext';
-import { withAlpha } from '../../../constants/theme';
+import { Theme, withAlpha } from '../../../constants/theme';
 import { View, Text, StyleSheet } from 'react-native';
 import LibraryModal from './LibraryModal';
 import FormField from './FormField';
@@ -188,7 +188,7 @@ const LibraryModals: React.FC<LibraryModalsProps> = ({ library }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   actions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',

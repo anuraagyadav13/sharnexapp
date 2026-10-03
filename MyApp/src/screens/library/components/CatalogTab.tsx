@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTheme } from '../../../store/ThemeContext';
-import { withAlpha } from '../../../constants/theme';
+import { Theme, withAlpha } from '../../../constants/theme';
 import { View, Text, TextInput, FlatList, StyleSheet } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Book } from '../types';
@@ -110,12 +110,12 @@ const CatalogTab: React.FC<CatalogTabProps> = ({
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: theme.borderLight,
+    borderColor: theme.border,
     borderRadius: 14,
     overflow: 'hidden',
   },
@@ -123,7 +123,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     padding: 16,
     gap: 10,
     borderBottomWidth: 1,
-    borderBottomColor: theme.borderLight,
+    borderBottomColor: theme.border,
   },
   searchBox: {
     flexDirection: 'row',

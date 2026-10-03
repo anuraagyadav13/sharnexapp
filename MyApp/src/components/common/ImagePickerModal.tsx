@@ -15,7 +15,7 @@ import {
   ImagePickerResponse,
 } from 'react-native-image-picker';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { usePermissions } from '../../hooks/usePermissions';
 
 interface ImagePickerModalProps {
@@ -142,7 +142,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
   );
 };
 
-const getStyles = (theme: any, isDarkMode: boolean) =>
+const getStyles = (theme: Theme, isDarkMode: boolean) =>
   StyleSheet.create({
     overlay: {
       flex: 1,

@@ -18,7 +18,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha } from '../../constants/theme';
+import { Theme, withAlpha } from '../../constants/theme';
 
 import principalService, { StudentItem } from '../../services/principalService';
 import { getCacheBustedUri } from '../../utils/image';
@@ -278,7 +278,7 @@ const PrincipalClassDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   safeContainer: {
     flex: 1,
     backgroundColor: theme.background,

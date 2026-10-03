@@ -483,29 +483,11 @@ function RootNavigator() {
 }
 
 function ThemedApp() {
-  const { theme, isDarkMode } = useTheme();
-  
-  const navigationTheme = {
-    dark: isDarkMode,
-    colors: {
-      primary: theme.primary,
-      background: theme.background,
-      card: theme.surface,
-      text: theme.text,
-      border: theme.border,
-      notification: theme.danger,
-    },
-    fonts: {
-      regular: { fontFamily: 'System', fontWeight: '400' as const },
-      medium: { fontFamily: 'System', fontWeight: '500' as const },
-      bold: { fontFamily: 'System', fontWeight: '700' as const },
-      heavy: { fontFamily: 'System', fontWeight: '900' as const },
-    },
-  };
+  const { navigationTheme } = useTheme();
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <NavigationContainer theme={navigationTheme as any}>
+      <NavigationContainer theme={navigationTheme}>
         <RootNavigator />
       </NavigationContainer>
     </GestureHandlerRootView>

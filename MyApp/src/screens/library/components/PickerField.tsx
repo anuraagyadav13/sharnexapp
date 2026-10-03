@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '../../../store/ThemeContext';
-import { withAlpha } from '../../../constants/theme';
+import { Theme, withAlpha } from '../../../constants/theme';
 import {
   View,
   Text,
@@ -84,7 +84,7 @@ const PickerField: React.FC<PickerFieldProps> = ({
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   wrapper: {
     marginBottom: 14,
   },
@@ -136,7 +136,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: theme.borderLight,
+    borderBottomColor: theme.border,
   },
   sheetTitle: {
     fontSize: 17,
@@ -156,7 +156,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: theme.borderLight,
+    borderBottomColor: theme.border,
   },
   optionActive: {
     backgroundColor: withAlpha(theme.infoBg, 0.55),

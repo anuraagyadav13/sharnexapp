@@ -16,7 +16,7 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+import { Theme, withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { TeacherHeader } from '../../components/TeacherHeader';
 import apiClient from '../../services/apiClient';
 import teacherService from '../../services/teacherService';
@@ -27,7 +27,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'TeacherViewQuizResult'>
 const TeacherViewQuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
   const { authState } = useAuth();
   const { theme, isDarkMode } = useTheme();
-  const styles = getStyles({ ...theme, isDarkMode });
+  const styles = getStyles(theme);
   const { quizId } = route.params;
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -166,7 +166,7 @@ const TeacherViewQuizResultScreen: React.FC<Props> = ({ navigation, route }) => 
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: theme.background },
   scrollContent: { paddingBottom: 40 },
 
