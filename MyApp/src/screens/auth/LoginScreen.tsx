@@ -21,6 +21,7 @@ import { RootStackParamList } from '../../types/navigation';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../store/ToastContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 
@@ -126,7 +127,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       <View style={styles.headerBar}>
         <View style={styles.brandRow}>
           <View style={styles.logoBadge}>
-            <Ionicons name="school" size={20} color="#FFFFFF" />
+            <Ionicons name="school" size={20} color={theme.onPrimary} />
           </View>
           <Text style={styles.wordmark}>Sharnex</Text>
         </View>
@@ -330,7 +331,7 @@ const getStyles = (theme: any) =>
       borderRadius: 24,
       padding: 24,
       width: '100%',
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 0.08,
       shadowRadius: 16,
@@ -393,7 +394,7 @@ const getStyles = (theme: any) =>
       borderRadius: 14,
     },
     loginButtonText: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontSize: 16,
       fontWeight: '700',
       letterSpacing: 0.2,

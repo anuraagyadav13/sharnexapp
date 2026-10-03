@@ -23,7 +23,8 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
 import { StudentHeader } from '../../components/StudentHeader';
 import { useTheme } from '../../store/ThemeContext';
-import { COLORS } from '../../constants/theme';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+
 import studentService from '../../services/studentService';
 import Skeleton from '../../components/common/Skeleton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -132,7 +133,7 @@ function generateAttendanceHTML(
   className: string,
   academicYear: string,
   stats: AttendanceStatistics | undefined,
-  records: AttendanceRecord[],
+  records: AttendanceRecord[]
 ): string {
   const summaryRows = `
     <tr><td>Attendance Rate</td><td style="font-weight:700;">${
@@ -174,12 +175,12 @@ function generateAttendanceHTML(
       const st = (r.status || '').toUpperCase();
       const stColor =
         st === 'PRESENT'
-          ? COLORS.success
+          ? LIGHT_COLORS.success
           : st === 'ABSENT'
-          ? COLORS.danger
+          ? LIGHT_COLORS.danger
           : st === 'LATE'
-          ? COLORS.warning
-          : COLORS.primary;
+          ? LIGHT_COLORS.warning
+          : LIGHT_COLORS.primary;
       return `
         <tr>
           <td>${formatted}</td>
@@ -197,24 +198,24 @@ function generateAttendanceHTML(
 <meta charset="utf-8"/>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;color:#0f172a;padding:32px;background:#fff;}
-  .header{text-align:center;margin-bottom:24px;border-bottom:2px solid #4F46E5;padding-bottom:16px;}
-  .title{font-size:22px;font-weight:800;color:#1e1b4b;margin-bottom:4px;}
-  .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px;padding:12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;color:${LIGHT_COLORS.text};padding:32px;background:${LIGHT_COLORS.surface};}
+  .header{text-align:center;margin-bottom:24px;border-bottom:2px solid ${LIGHT_COLORS.primary};padding-bottom:16px;}
+  .title{font-size:22px;font-weight:800;color:${LIGHT_COLORS.text};margin-bottom:4px;}
+  .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px;padding:12px;background:${LIGHT_COLORS.background};border-radius:8px;border:1px solid ${LIGHT_COLORS.border};}
   .meta-item{font-size:12px;}
-  .meta-label{font-weight:700;color:#64748b;}
-  .section-title{font-size:14px;font-weight:700;color:#1e1b4b;margin:20px 0 10px;text-transform:uppercase;}
+  .meta-label{font-weight:700;color:${LIGHT_COLORS.subtext};}
+  .section-title{font-size:14px;font-weight:700;color:${LIGHT_COLORS.text};margin:20px 0 10px;text-transform:uppercase;}
   table{width:100%;border-collapse:collapse;margin-bottom:20px;}
-  th,td{padding:8px 10px;border:1px solid #e2e8f0;text-align:left;font-size:11px;}
-  th{background:#4F46E5;color:#ffffff;font-weight:700;}
-  tr:nth-child(even){background:#f8fafc;}
-  .footer{text-align:center;font-size:10px;color:#94a3b8;margin-top:30px;border-top:1px solid #e2e8f0;padding-top:12px;}
+  th,td{padding:8px 10px;border:1px solid ${LIGHT_COLORS.border};text-align:left;font-size:11px;}
+  th{background:${LIGHT_COLORS.primary};color:${LIGHT_COLORS.onPrimary};font-weight:700;}
+  tr:nth-child(even){background:${LIGHT_COLORS.background};}
+  .footer{text-align:center;font-size:10px;color:${LIGHT_COLORS.subtext};margin-top:30px;border-top:1px solid ${LIGHT_COLORS.border};padding-top:12px;}
 </style>
 </head>
 <body>
   <div class="header">
     <div class="title">OFFICIAL ATTENDANCE REPORT</div>
-    <div style="font-size:11px;color:#64748b;">Sharnex Academic Management Platform</div>
+    <div style="font-size:11px;color:${LIGHT_COLORS.subtext};">Sharnex Academic Management Platform</div>
   </div>
 
   <div class="meta-grid">
@@ -430,7 +431,7 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
           className,
           academicYear,
           attendanceData?.statistics,
-          attendanceData?.records ?? [],
+          attendanceData?.records ?? []
         );
 
         const file = await generatePDF({
@@ -773,8 +774,8 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
                   {
                     borderColor: theme.border,
                     backgroundColor: isDarkMode
-                      ? 'rgba(16, 185, 129, 0.15)'
-                      : 'rgba(16, 185, 129, 0.1)',
+                      ? withAlpha(theme.success, 0.15)
+                      : withAlpha(theme.success, 0.1),
                     marginHorizontal: 8,
                   },
                 ]}
@@ -793,11 +794,11 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
                     backgroundColor:
                       (stats?.monthlyChange ?? 0) >= 0
                         ? isDarkMode
-                          ? 'rgba(16, 185, 129, 0.15)'
-                          : 'rgba(16, 185, 129, 0.1)'
+                          ? withAlpha(theme.success, 0.15)
+                          : withAlpha(theme.success, 0.1)
                         : isDarkMode
-                        ? 'rgba(239, 68, 68, 0.15)'
-                        : 'rgba(239, 68, 68, 0.1)',
+                        ? withAlpha(theme.danger, 0.15)
+                        : withAlpha(theme.danger, 0.1),
                   },
                 ]}
               >
@@ -933,26 +934,26 @@ const AttendanceScreen: React.FC<Props> = ({ navigation }) => {
               {[
                 {
                   color: isDarkMode
-                    ? 'rgba(16, 185, 129, 0.3)'
-                    : 'rgba(16, 185, 129, 0.2)',
+                    ? withAlpha(theme.success, 0.3)
+                    : withAlpha(theme.success, 0.2),
                   label: 'Present',
                 },
                 {
                   color: isDarkMode
-                    ? 'rgba(239, 68, 68, 0.3)'
-                    : 'rgba(239, 68, 68, 0.2)',
+                    ? withAlpha(theme.danger, 0.3)
+                    : withAlpha(theme.danger, 0.2),
                   label: 'Absent',
                 },
                 {
                   color: isDarkMode
-                    ? 'rgba(245, 158, 11, 0.3)'
-                    : 'rgba(245, 158, 11, 0.2)',
+                    ? withAlpha(theme.warning, 0.3)
+                    : withAlpha(theme.warning, 0.2),
                   label: 'Late',
                 },
                 {
                   color: isDarkMode
-                    ? 'rgba(59, 130, 246, 0.3)'
-                    : 'rgba(59, 130, 246, 0.2)',
+                    ? withAlpha(theme.info, 0.3)
+                    : withAlpha(theme.info, 0.2),
                   label: 'Excused',
                 },
               ].map(({ color, label }) => (
@@ -1602,27 +1603,27 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     },
     calCellPresent: {
       backgroundColor: isDarkMode
-        ? 'rgba(16, 185, 129, 0.25)'
-        : 'rgba(16, 185, 129, 0.15)',
+        ? withAlpha(theme.success, 0.25)
+        : withAlpha(theme.success, 0.15),
     },
     calCellAbsent: {
       backgroundColor: isDarkMode
-        ? 'rgba(239, 68, 68, 0.25)'
-        : 'rgba(239, 68, 68, 0.15)',
+        ? withAlpha(theme.danger, 0.25)
+        : withAlpha(theme.danger, 0.15),
       borderWidth: 1,
       borderColor: theme.danger,
     },
     calCellLate: {
       backgroundColor: isDarkMode
-        ? 'rgba(245, 158, 11, 0.25)'
-        : 'rgba(245, 158, 11, 0.15)',
+        ? withAlpha(theme.warning, 0.25)
+        : withAlpha(theme.warning, 0.15),
       borderWidth: 1,
       borderColor: theme.warning,
     },
     calCellExcused: {
       backgroundColor: isDarkMode
-        ? 'rgba(59, 130, 246, 0.25)'
-        : 'rgba(59, 130, 246, 0.15)',
+        ? withAlpha(theme.info, 0.25)
+        : withAlpha(theme.info, 0.15),
       borderWidth: 1,
       borderColor: theme.primary,
     },
@@ -1675,8 +1676,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: isDarkMode
-        ? 'rgba(245, 158, 11, 0.15)'
-        : 'rgba(245, 158, 11, 0.1)',
+        ? withAlpha(theme.warning, 0.15)
+        : withAlpha(theme.warning, 0.1),
       borderRadius: 8,
       paddingHorizontal: 12,
       paddingVertical: 8,
@@ -1810,32 +1811,32 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     // Status pills
     statusPresent: {
       backgroundColor: isDarkMode
-        ? 'rgba(16, 185, 129, 0.25)'
-        : 'rgba(16, 185, 129, 0.15)',
+        ? withAlpha(theme.success, 0.25)
+        : withAlpha(theme.success, 0.15),
       paddingHorizontal: 7,
       paddingVertical: 2,
       borderRadius: 12,
     },
     statusAbsent: {
       backgroundColor: isDarkMode
-        ? 'rgba(239, 68, 68, 0.25)'
-        : 'rgba(239, 68, 68, 0.15)',
+        ? withAlpha(theme.danger, 0.25)
+        : withAlpha(theme.danger, 0.15),
       paddingHorizontal: 7,
       paddingVertical: 2,
       borderRadius: 12,
     },
     statusLate: {
       backgroundColor: isDarkMode
-        ? 'rgba(245, 158, 11, 0.25)'
-        : 'rgba(245, 158, 11, 0.15)',
+        ? withAlpha(theme.warning, 0.25)
+        : withAlpha(theme.warning, 0.15),
       paddingHorizontal: 7,
       paddingVertical: 2,
       borderRadius: 12,
     },
     statusExcused: {
       backgroundColor: isDarkMode
-        ? 'rgba(59, 130, 246, 0.25)'
-        : 'rgba(59, 130, 246, 0.15)',
+        ? withAlpha(theme.info, 0.25)
+        : withAlpha(theme.info, 0.15),
       paddingHorizontal: 7,
       paddingVertical: 2,
       borderRadius: 12,
@@ -1881,7 +1882,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     // ── Goal Modal ──
     modalBackdrop: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: withAlpha(theme.overlay, 0.5),
       justifyContent: 'center',
       alignItems: 'center',
       padding: 24,

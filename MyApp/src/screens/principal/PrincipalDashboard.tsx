@@ -16,6 +16,7 @@ import {
   Alert,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import Animated, { FadeInUp } from 'react-native-reanimated';
@@ -328,13 +329,13 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                   <Circle cx="10%" cy="85%" r="50" fill={theme.onPrimary} fillOpacity={0.05} />
                   <Path
                     d="M-20 80 Q 80 20 180 100 T 380 40"
-                    stroke="rgba(255, 255, 255, 0.12)"
+                    stroke={withAlpha(theme.onPrimary, 0.12)}
                     strokeWidth="3"
                     fill="none"
                   />
                   <Path
                     d="M-10 120 Q 100 60 200 130 T 400 70"
-                    stroke="rgba(255, 255, 255, 0.08)"
+                    stroke={withAlpha(theme.onPrimary, 0.08)}
                     strokeWidth="2"
                     fill="none"
                   />
@@ -348,7 +349,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                     <Text style={styles.heroBadgeText}>Institution Control Center</Text>
                   </View>
                   <View style={styles.heroTimePill}>
-                    <Ionicons name="time-outline" size={12} color="rgba(255,255,255,0.9)" />
+                    <Ionicons name="time-outline" size={12} color={withAlpha(theme.onPrimary, 0.9)} />
                     <Text style={styles.heroGreetingTag}>{getGreeting()}</Text>
                   </View>
                 </View>
@@ -476,7 +477,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                 ))
               ) : (
                 <View style={styles.emptyStateContainer}>
-                  <View style={[styles.emptyIconCircle, { backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.2)' : theme.iconBackground }]}>
+                  <View style={[styles.emptyIconCircle, { backgroundColor: withAlpha(theme.primary, 0.2) }]}>
                     <Ionicons name="calendar-outline" size={24} color={theme.primary} />
                   </View>
                   <Text style={styles.emptyStateTitle}>No upcoming events</Text>
@@ -519,7 +520,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                   ))
                 ) : (
                   <View style={styles.emptyStateContainer}>
-                    <View style={[styles.emptyIconCircle, { backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)' }]}>
+                    <View style={[styles.emptyIconCircle, { backgroundColor: withAlpha(theme.success, 0.2) }]}>
                       <Ionicons name="people-outline" size={24} color={theme.success} />
                     </View>
                     <Text style={styles.emptyStateTitle}>No recent activity</Text>
@@ -552,7 +553,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                 {approvals.length > 0 ? (
                   approvals.map((app, idx) => (
                     <View key={app.id} style={[styles.approvalCard, idx === approvals.length - 1 && { borderBottomWidth: 0 }]}>
-                      <View style={[styles.approvalIconBox, { backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)' }]}>
+                      <View style={[styles.approvalIconBox, { backgroundColor: withAlpha(theme.warning, 0.2) }]}>
                         <Ionicons name="document-text-outline" size={20} color={theme.warning} />
                       </View>
                       <View style={styles.approvalInfo}>
@@ -580,7 +581,7 @@ const PrincipalDashboard: React.FC<Props> = ({ navigation }) => {
                   ))
                 ) : (
                   <View style={styles.emptyStateContainer}>
-                    <View style={[styles.emptyIconCircle, { backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)' }]}>
+                    <View style={[styles.emptyIconCircle, { backgroundColor: withAlpha(theme.success, 0.2) }]}>
                       <Ionicons name="checkmark-circle-outline" size={28} color={theme.success} />
                     </View>
                     <Text style={styles.emptyStateTitle}>All caught up!</Text>
@@ -923,7 +924,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     minHeight: 185,
     justifyContent: 'space-between',
     ...(isDarkMode
-      ? { borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }
+      ? { borderWidth: 1, borderColor: withAlpha(theme.onPrimary, 0.12) }
       : {
           shadowColor: theme.text,
           shadowOffset: { width: 0, height: 12 },
@@ -945,8 +946,8 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    borderColor: 'rgba(255,255,255,0.28)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.16),
+    borderColor: withAlpha(theme.onPrimary, 0.28),
     borderWidth: 1,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -962,7 +963,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(0,0,0,0.18)',
+    backgroundColor: withAlpha(theme.overlay, 0.18),
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 16,
@@ -970,7 +971,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   heroGreetingTag: {
     fontSize: 11,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.9)',
+    color: withAlpha(theme.onPrimary, 0.9),
   },
   heroMainRow: {
     flexDirection: 'row',
@@ -991,7 +992,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   },
   heroSubtitle: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.82)',
+    color: withAlpha(theme.onPrimary, 0.82),
     lineHeight: 17,
   },
   heroGraphicBox: {
@@ -1002,8 +1003,8 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-    borderColor: 'rgba(255, 255, 255, 0.35)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.18),
+    borderColor: withAlpha(theme.onPrimary, 0.35),
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1016,8 +1017,8 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    borderColor: 'rgba(255, 255, 255, 0.22)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.12),
+    borderColor: withAlpha(theme.onPrimary, 0.22),
     borderWidth: 1,
     borderRadius: 16,
     paddingVertical: 8,
@@ -1037,7 +1038,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   heroStatDivider: {
     width: 1,
     height: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.25),
   },
 
   // Metric Cards
@@ -1344,7 +1345,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)',
+    backgroundColor: withAlpha(theme.success, 0.2),
   },
   approveBtnText: {
     fontSize: 12,
@@ -1355,7 +1356,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: withAlpha(theme.danger, 0.2),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1363,7 +1364,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   // Theme Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: withAlpha(theme.overlay, 0.6),
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,

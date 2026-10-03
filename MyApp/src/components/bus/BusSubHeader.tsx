@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { useAuth } from '../../store/AuthContext';
 import ThemeSelectionModal from '../modals/ThemeSelectionModal';
 import ScaleButton from '../animations/ScaleButton';
@@ -134,7 +135,7 @@ export const BusSubHeader: React.FC<BusSubHeaderProps> = ({
                   <Ionicons
                     name={tab.icon}
                     size={16}
-                    color={isActive ? '#FFFFFF' : theme.subtext}
+                    color={isActive ? theme.onPrimary : theme.subtext}
                     style={{ marginRight: 6 }}
                   />
                   <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
@@ -198,12 +199,12 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 32,
       height: 32,
       borderRadius: 16,
-      backgroundColor: '#7C3AED',
+      backgroundColor: theme.primary,
       justifyContent: 'center',
       alignItems: 'center',
     },
     avatarText: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontWeight: '700',
       fontSize: 14,
     },
@@ -218,7 +219,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       justifyContent: 'space-between',
       paddingHorizontal: 12,
       paddingVertical: 10,
-      backgroundColor: isDarkMode ? '#17122C' : '#F5F3FF',
+      backgroundColor: withAlpha(theme.primary, 0.1),
       borderTopWidth: 1,
       borderTopColor: theme.border,
     },
@@ -237,8 +238,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       backgroundColor: 'transparent',
     },
     tabButtonActive: {
-      backgroundColor: '#7C3AED',
-      shadowColor: '#7C3AED',
+      backgroundColor: theme.primary,
+      shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.3,
       shadowRadius: 4,
@@ -250,31 +251,31 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       color: theme.subtext,
     },
     tabTextActive: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontWeight: '700',
     },
     liveBadgeContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.15)' : '#D1FAE5',
+      backgroundColor: withAlpha(theme.success, 0.15),
       paddingVertical: 5,
       paddingHorizontal: 10,
       borderRadius: 12,
       borderWidth: 1,
-      borderColor: isDarkMode ? 'rgba(16, 185, 129, 0.3)' : '#A7F3D0',
+      borderColor: withAlpha(theme.success, 0.3),
       marginLeft: 4,
     },
     liveDot: {
       width: 7,
       height: 7,
       borderRadius: 3.5,
-      backgroundColor: '#10B981',
+      backgroundColor: theme.success,
       marginRight: 6,
     },
     liveBadgeText: {
       fontSize: 10,
       fontWeight: '800',
-      color: '#10B981',
+      color: theme.success,
       letterSpacing: 0.5,
     },
   });

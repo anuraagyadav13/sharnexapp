@@ -16,6 +16,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { useAuth } from '../../store/AuthContext';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
@@ -123,7 +124,7 @@ const LibraryEquipmentScreen: React.FC<Props> = ({ navigation }) => {
         renderItem={renderRequestCard}
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={() => loadEquipmentRequests(true)} colors={['#8B5CF6']} />
+          <RefreshControl refreshing={isRefreshing} onRefresh={() => loadEquipmentRequests(true)} colors={[theme.primary]} />
         }
         ListHeaderComponent={
           <>
@@ -137,7 +138,7 @@ const LibraryEquipmentScreen: React.FC<Props> = ({ navigation }) => {
                 style={styles.newRequestBtn}
                 onPress={() => navigation.navigate('LibraryNewSupply')}
               >
-                <Ionicons name="add" size={18} color="#FFFFFF" style={{ marginRight: 4 }} />
+                <Ionicons name="add" size={18} color={theme.onPrimary} style={{ marginRight: 4 }} />
                 <Text style={styles.newRequestBtnText}>New Request</Text>
               </TouchableOpacity>
             </View>
@@ -173,10 +174,10 @@ const LibraryEquipmentScreen: React.FC<Props> = ({ navigation }) => {
         }
         ListEmptyComponent={
           isLoading ? (
-            <ActivityIndicator size="large" color="#8B5CF6" style={{ marginVertical: 40 }} />
+            <ActivityIndicator size="large" color={theme.primary} style={{ marginVertical: 40 }} />
           ) : (
             <View style={styles.emptyContainer}>
-              <Ionicons name="archive-outline" size={54} color="#CBD5E1" />
+              <Ionicons name="archive-outline" size={54} color={theme.placeholder} />
               <Text style={styles.emptyTitle}>NO REQUESTS FOUND</Text>
               <Text style={styles.emptySub}>
                 You haven't initiated any equipment requests yet or no matches found.
@@ -207,8 +208,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     },
     menuHandle: { padding: 4 },
     headerTitle: { fontSize: 16, fontWeight: '700', color: theme.primary, flex: 1, marginLeft: 8 },
-    avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#8B5CF6', justifyContent: 'center', alignItems: 'center' },
-    avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
+    avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.accent, justifyContent: 'center', alignItems: 'center' },
+    avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 14 },
     headerAvatarImage: { width: 32, height: 32, borderRadius: 16 },
     listContent: { padding: 16 },
     bannerCard: {
@@ -228,17 +229,17 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     newRequestBtn: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#8B5CF6',
+      backgroundColor: theme.primary,
       paddingVertical: 10,
       paddingHorizontal: 16,
       borderRadius: 10,
     },
-    newRequestBtnText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
+    newRequestBtnText: { fontSize: 13, fontWeight: '700', color: theme.onPrimary },
     tabsRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: theme.border, marginBottom: 16, gap: 8 },
     tabItem: { paddingVertical: 8, paddingHorizontal: 12, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-    tabItemActive: { borderBottomColor: '#8B5CF6' },
+    tabItemActive: { borderBottomColor: theme.primary },
     tabItemText: { fontSize: 12, fontWeight: '600', color: theme.subtext },
-    tabItemTextActive: { color: '#8B5CF6', fontWeight: '700' },
+    tabItemTextActive: { color: theme.primary, fontWeight: '700' },
     searchBox: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -261,8 +262,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     },
     cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
     requestNum: { fontSize: 14, fontWeight: '800', color: theme.text },
-    priorityPill: { backgroundColor: '#FFF7ED', paddingVertical: 2, paddingHorizontal: 8, borderRadius: 6 },
-    priorityText: { fontSize: 10, fontWeight: '700', color: '#EA580C' },
+    priorityPill: { backgroundColor: theme.warningBg, paddingVertical: 2, paddingHorizontal: 8, borderRadius: 6 },
+    priorityText: { fontSize: 10, fontWeight: '700', color: theme.warning },
     teacherName: { fontSize: 13, color: theme.subtext, marginBottom: 4 },
     purposeText: { fontSize: 14, color: theme.text, fontWeight: '600', marginBottom: 8 },
     itemCount: { fontSize: 12, color: theme.subtext },

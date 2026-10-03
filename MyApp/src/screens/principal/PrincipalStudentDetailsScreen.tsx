@@ -17,6 +17,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha } from '../../constants/theme';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
@@ -124,7 +125,7 @@ const StudentCard = ({ item, index, delay, onEdit, onView, onDelete, isDeleting 
         </View>
         <View style={styles.actionIconsRow}>
           <TouchableOpacity
-            style={[styles.actionIconButton, { backgroundColor: theme.primary + '15' }]}
+            style={[styles.actionIconButton, { backgroundColor: withAlpha(theme.primary, 0.15) }]}
             onPress={onView}
             accessibilityLabel="View student details"
             hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
@@ -140,7 +141,7 @@ const StudentCard = ({ item, index, delay, onEdit, onView, onDelete, isDeleting 
             <Ionicons name="pencil-outline" size={16} color={theme.subtext} />
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionIconButton, { backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)' }]}
+            style={[styles.actionIconButton, { backgroundColor: withAlpha(theme.danger, 0.2) }]}
             onPress={onDelete}
             disabled={isDeleting}
             accessibilityLabel="Delete student"
@@ -842,17 +843,17 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.2),
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroTitle: { fontSize: 18, fontWeight: '800', color: theme.onPrimary, letterSpacing: -0.3 },
-  heroTeacherName: { fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: '500', marginTop: 2 },
-  heroDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.2)', marginVertical: 12 },
+  heroTeacherName: { fontSize: 12, color: withAlpha(theme.onPrimary, 0.85), fontWeight: '500', marginTop: 2 },
+  heroDivider: { height: 1, backgroundColor: withAlpha(theme.onPrimary, 0.2), marginVertical: 12 },
   heroStats: { flexDirection: 'row', justifyContent: 'space-between' },
   heroStatItem: { alignItems: 'center', flex: 1 },
   heroStatVal: { fontSize: 15, fontWeight: '800', color: theme.onPrimary, marginBottom: 2 },
-  heroStatLab: { fontSize: 9, fontWeight: '600', color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: 0.5 },
+  heroStatLab: { fontSize: 9, fontWeight: '600', color: withAlpha(theme.onPrimary, 0.8), textTransform: 'uppercase', letterSpacing: 0.5 },
 
   // Actions & Search
   actionsWrapper: { marginHorizontal: 20, marginTop: 16, marginBottom: 16 },
@@ -938,7 +939,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   metricLabel: { fontSize: 9, fontWeight: '800', color: theme.subtext, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
   metricVal: { fontSize: 14, fontWeight: '800', color: theme.text },
   metricSub: { fontSize: 9, color: theme.subtext, marginTop: 2, fontStyle: 'italic' },
-  perfPill: { backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  perfPill: { backgroundColor: withAlpha(theme.success, 0.2), paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   perfText: { fontSize: 10, fontWeight: '800', color: theme.success },
 
   // Empty State

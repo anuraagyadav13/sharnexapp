@@ -15,6 +15,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { useAuth } from '../../store/AuthContext';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
@@ -140,14 +141,14 @@ const LibraryNewSupplyScreen: React.FC<Props> = ({ navigation }) => {
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Navigation Link */}
         <TouchableOpacity style={styles.backLink} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={14} color="#8B5CF6" style={{ marginRight: 4 }} />
+          <Ionicons name="arrow-back" size={14} color={theme.primary} style={{ marginRight: 4 }} />
           <Text style={styles.backLinkText}>Back to Requisition Ledger</Text>
         </TouchableOpacity>
 
         {/* Title Card */}
         <View style={styles.titleCard}>
           <View style={styles.titleIconBox}>
-            <Ionicons name="document-text-outline" size={20} color="#8B5CF6" />
+            <Ionicons name="document-text-outline" size={20} color={theme.accent} />
           </View>
           <View>
             <Text style={styles.cardTitle}>New Supply Initiation</Text>
@@ -164,7 +165,7 @@ const LibraryNewSupplyScreen: React.FC<Props> = ({ navigation }) => {
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="e.g. Archival expansion, Technical infrastructure upgrade..."
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={theme.placeholder}
               multiline
               numberOfLines={3}
               value={purpose}
@@ -188,7 +189,7 @@ const LibraryNewSupplyScreen: React.FC<Props> = ({ navigation }) => {
                 <TextInput
                   style={styles.dateInput}
                   placeholder="dd-mm-yyyy"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={theme.placeholder}
                   value={requiredByDate}
                   onChangeText={setRequiredByDate}
                 />
@@ -203,7 +204,7 @@ const LibraryNewSupplyScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.inventoryHeader}>
             <Text style={styles.sectionHeader}>Inventory Specification</Text>
             <TouchableOpacity style={styles.addItemBtn} onPress={handleAddItem}>
-              <Ionicons name="add" size={14} color="#8B5CF6" style={{ marginRight: 2 }} />
+              <Ionicons name="add" size={14} color={theme.primary} style={{ marginRight: 2 }} />
               <Text style={styles.addItemBtnText}>Add Item</Text>
             </TouchableOpacity>
           </View>
@@ -215,7 +216,7 @@ const LibraryNewSupplyScreen: React.FC<Props> = ({ navigation }) => {
                 <TextInput
                   style={[styles.input, { flex: 2 }]}
                   placeholder="Asset description (e.g. RFID Scanner)"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={theme.placeholder}
                   value={item.description}
                   onChangeText={val => updateItem(index, 'description', val)}
                 />
@@ -232,7 +233,7 @@ const LibraryNewSupplyScreen: React.FC<Props> = ({ navigation }) => {
                 />
                 {items.length > 1 && (
                   <TouchableOpacity onPress={() => handleRemoveItem(index)}>
-                    <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                    <Ionicons name="trash-outline" size={18} color={theme.danger} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -240,7 +241,7 @@ const LibraryNewSupplyScreen: React.FC<Props> = ({ navigation }) => {
               <TextInput
                 style={[styles.input, { marginTop: 8 }]}
                 placeholder="Specification or usage note..."
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={theme.placeholder}
                 value={item.note}
                 onChangeText={val => updateItem(index, 'note', val)}
               />
@@ -254,7 +255,7 @@ const LibraryNewSupplyScreen: React.FC<Props> = ({ navigation }) => {
           <TextInput
             style={[styles.input, styles.textArea]}
             placeholder="Any additional details for administrative review..."
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={theme.subtext}
             multiline
             numberOfLines={3}
             value={supplementaryNote}
@@ -274,7 +275,7 @@ const LibraryNewSupplyScreen: React.FC<Props> = ({ navigation }) => {
 
           <TouchableOpacity style={styles.commitBtn} onPress={handleCommitRequest}>
             <Text style={styles.commitBtnText}>COMMIT REQUEST</Text>
-            <Ionicons name="checkmark-circle-outline" size={16} color="#FFF" style={{ marginLeft: 4 }} />
+            <Ionicons name="checkmark-circle-outline" size={16} color={theme.onPrimary} style={{ marginLeft: 4 }} />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -301,13 +302,13 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     menuHandle: { padding: 4 },
     backBtnRow: { flexDirection: 'row', alignItems: 'center', flex: 1, marginLeft: 8 },
     headerTitle: { fontSize: 16, fontWeight: '700', color: theme.primary },
-    avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#8B5CF6', justifyContent: 'center', alignItems: 'center' },
-    avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
+    avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.accent, justifyContent: 'center', alignItems: 'center' },
+    avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 14 },
     headerAvatarImage: { width: 32, height: 32, borderRadius: 16 },
     container: { flex: 1 },
     scrollContent: { padding: 16 },
     backLink: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-    backLinkText: { fontSize: 12, fontWeight: '700', color: '#8B5CF6' },
+    backLinkText: { fontSize: 12, fontWeight: '700', color: theme.primary },
     titleCard: {
       backgroundColor: theme.surface,
       borderRadius: 14,
@@ -319,7 +320,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       alignItems: 'center',
       gap: 12,
     },
-    titleIconBox: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F3E8FF', justifyContent: 'center', alignItems: 'center' },
+    titleIconBox: { width: 36, height: 36, borderRadius: 10, backgroundColor: theme.iconBackground, justifyContent: 'center', alignItems: 'center' },
     cardTitle: { fontSize: 18, fontWeight: '800', color: theme.text },
     cardSubtitle: { fontSize: 12, color: theme.subtext, marginTop: 2 },
     sectionCard: {
@@ -332,8 +333,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     },
     sectionHeader: { fontSize: 12, fontWeight: '800', color: theme.subtext, marginBottom: 12, letterSpacing: 0.5 },
     inventoryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-    addItemBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3E8FF', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 6 },
-    addItemBtnText: { fontSize: 12, fontWeight: '700', color: '#8B5CF6' },
+    addItemBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.iconBackground, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 6 },
+    addItemBtnText: { fontSize: 12, fontWeight: '700', color: theme.accent },
     formGroup: { marginBottom: 12 },
     rowForm: { flexDirection: 'row', gap: 10 },
     label: { fontSize: 11, fontWeight: '700', color: theme.subtext, marginBottom: 4 },
@@ -347,10 +348,10 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     actionRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginVertical: 20 },
     discardBtn: { paddingVertical: 10, paddingHorizontal: 14 },
     discardBtnText: { fontSize: 11, fontWeight: '800', color: theme.subtext },
-    draftBtn: { backgroundColor: '#1E293B', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8 },
-    draftBtnText: { fontSize: 12, fontWeight: '800', color: '#FFF' },
-    commitBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#8B5CF6', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8 },
-    commitBtnText: { fontSize: 12, fontWeight: '800', color: '#FFF' },
+    draftBtn: { backgroundColor: theme.cardNested, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8 },
+    draftBtnText: { fontSize: 12, fontWeight: '800', color: theme.text },
+    commitBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.primary, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8 },
+    commitBtnText: { fontSize: 12, fontWeight: '800', color: theme.onPrimary },
   });
 
 export default LibraryNewSupplyScreen;

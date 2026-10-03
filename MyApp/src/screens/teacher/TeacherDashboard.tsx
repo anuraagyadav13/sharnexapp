@@ -34,41 +34,44 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import teacherService from '../../services/teacherService';
 import { API_BASE_URL } from '../../constants/api';
 import Skeleton from '../../components/common/Skeleton';
 import { fetchWithCache, CACHE_KEYS, TTL } from '../../utils/cache';
 
+const theme = LIGHT_COLORS;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // LOCAL COLOUR PALETTE — scoped to dark mode for this screen
 // Light mode reads directly from theme.* tokens from ThemeContext
 // ─────────────────────────────────────────────────────────────────────────────
 const TD = {
-  bg: '#0F0B1E',              // page background
-  surface: '#17122C',         // card surface
-  surfaceRaised: '#1E1A35',   // elevated card / inner row
-  border: '#271F42',          // card border
-  accentPurple: '#A855F7',    // purple text / icons
-  accentPurpleDark: '#7C3AED',// purple buttons / chips
-  accentBlue: '#38BDF8',      // blue accents
-  heroGrad1: '#3B0764',       // hero gradient start
-  heroGrad2: '#1E1652',       // hero gradient end
-  pillChipBg: '#26174A',      // icon-chip background for section headers
-  scheduleCard: '#1C1732',    // schedule card background
-  scheduleBorder: '#2A2050',  // schedule card border
-  taskCard: '#17122C',        // task card
-  faqCard: '#17122C',         // faq outer card
-  faqBorder: '#271F42',       // faq row separator
-  pendingAmber: '#D97706',    // "Pending" pill amber
-  pendingAmberBg: '#3B2800',  // "Pending" pill background
-  upNextAmber: '#F59E0B',     // "Up next" text
-  muted: '#94A3B8',           // muted / subtext
-  carouselBg: '#130F25',      // carousel area background
+  bg: theme.background,              // page background
+  surface: theme.surface,         // card surface
+  surfaceRaised: theme.surface,   // elevated card / inner row
+  border: theme.border,          // card border
+  accentPurple: theme.primary,    // purple text / icons
+  accentPurpleDark: theme.primary,// purple buttons / chips
+  accentBlue: theme.info,      // blue accents
+  heroGrad1: theme.primary,       // hero gradient start
+  heroGrad2: theme.primary,       // hero gradient end
+  pillChipBg: theme.surface,      // icon-chip background for section headers
+  scheduleCard: theme.surface,    // schedule card background
+  scheduleBorder: theme.border,  // schedule card border
+  taskCard: theme.surface,        // task card
+  faqCard: theme.surface,         // faq outer card
+  faqBorder: theme.border,       // faq row separator
+  pendingAmber: theme.warning,    // "Pending" pill amber
+  pendingAmberBg: withAlpha(theme.warning, 0.15),  // "Pending" pill background
+  upNextAmber: theme.warning,     // "Up next" text
+  muted: theme.subtext,           // muted / subtext
+  carouselBg: theme.surface,      // carousel area background
 };
 
-const PILL_GREEN = '#059669';
-const PILL_PINK = '#D946EF';
+const PILL_GREEN = theme.success;
+const PILL_PINK = theme.primary;
 
 // Screen width for carousel calculations
 const SCREEN_W = Dimensions.get('window').width;
@@ -167,10 +170,10 @@ const HeroCarousel = () => {
     return () => { if (autoTimer.current) clearInterval(autoTimer.current); };
   }, [advance]);
 
-  const carouselBg = isDarkMode ? TD.carouselBg : 'rgba(255,255,255,0.15)';
-  const dotActiveColor = isDarkMode ? TD.accentBlue : '#FFFFFF';
-  const dotColor = isDarkMode ? '#4B3F72' : 'rgba(255,255,255,0.4)';
-  const textureColor = isDarkMode ? TD.accentPurple : '#FFFFFF';
+  const carouselBg = isDarkMode ? TD.carouselBg : withAlpha(theme.onPrimary, 0.15);
+  const dotActiveColor = isDarkMode ? TD.accentBlue : theme.onPrimary;
+  const dotColor = isDarkMode ? theme.border : withAlpha(theme.onPrimary, 0.4);
+  const textureColor = isDarkMode ? TD.accentPurple : theme.onPrimary;
 
   return (
     <View style={[carouselStyles.wrapper, { backgroundColor: carouselBg }]}>
@@ -313,7 +316,7 @@ const DashboardSkeleton = () => {
 type DashboardNavigationProp = NativeStackNavigationProp<RootStackParamList, 'TeacherDashboard'>;
 interface Props { navigation: DashboardNavigationProp; }
 
-const IconBox = ({ name, color = '#fff', bgColor, size = 50, iconSize = 24, iconLibrary = 'Ionicons' }: any) => {
+const IconBox = ({ name, color = theme.onPrimary, bgColor, size = 50, iconSize = 24, iconLibrary = 'Ionicons' }: any) => {
   const { theme, isDarkMode } = useTheme();
   const styles = getStyles(theme, isDarkMode);
   const IconComponent = iconLibrary === 'MaterialCommunityIcons' ? MaterialCommunityIcons : Ionicons;
@@ -331,7 +334,7 @@ const ActivityItem = ({ iconName, iconBgColor, name, action, time, isLast, iconL
   return (
     <View style={[styles.activityItem, !isLast && styles.activityItemBorder]}>
       <View style={[styles.activityAvatarBox, { backgroundColor: iconBgColor }]}>
-        <IconComponent name={iconName} size={14} color="#FFF" />
+        <IconComponent name={iconName} size={14} color={theme.onPrimary} />
       </View>
       <View style={styles.activityContent}>
         <Text style={styles.activityName}>{name}</Text>
@@ -472,8 +475,8 @@ const TopStudentCard = ({ rank, name, className, percentage }: any) => {
   const styles = getStyles(theme, isDarkMode);
   return (
     <View style={styles.topStudentCard}>
-      <View style={[styles.rankCircle, { backgroundColor: rank === 1 ? '#FEF3C7' : isDarkMode ? '#334155' : '#F3F4F6' }]}>
-        <Text style={[styles.rankText, { color: rank === 1 ? '#D97706' : styles.topStudentName.color }]}>{rank}</Text>
+      <View style={[styles.rankCircle, { backgroundColor: rank === 1 ? withAlpha(theme.warning, 0.1) : isDarkMode ? theme.surface : withAlpha(theme.border, 0.5) }]}>
+        <Text style={[styles.rankText, { color: rank === 1 ? theme.warning : styles.topStudentName.color }]}>{rank}</Text>
       </View>
       <View style={styles.topStudentInfo}>
         <Text style={styles.topStudentName} numberOfLines={1}>{name}</Text>
@@ -488,12 +491,12 @@ const TopStudentCard = ({ rank, name, className, percentage }: any) => {
 // Static data
 // ─────────────────────────────────────────────────────────────────────────────
 const HELP_CENTER_DATA = [
-  { title: 'Getting Started', desc: 'Learn the basics of Sharnex and how to navigate the dashboard.', icon: 'check-circle-outline', color: '#3B82F6', iconLib: 'MaterialCommunityIcons' },
-  { title: 'Managing Grades', desc: 'Learn how to add, edit, and manage student grades and report cards.', icon: 'chart-bar', color: '#10B981', iconLib: 'MaterialCommunityIcons' },
-  { title: 'Attendance Tracking', desc: 'Learn how to mark attendance, generate reports, and manage absences.', icon: 'calendar-check', color: '#F59E0B', iconLib: 'MaterialCommunityIcons' },
-  { title: 'Assignment & Homework', desc: 'Create, assign, and track assignments and homework for students.', icon: 'clipboard-text-outline', color: '#8B5CF6', iconLib: 'MaterialCommunityIcons' },
-  { title: 'Report & Analytics', desc: 'Generate performance reports and analyze student data.', icon: 'chart-pie', color: '#06B6D4', iconLib: 'MaterialCommunityIcons' },
-  { title: 'Technical Support', desc: 'Troubleshooting login issues, app problems, and technical questions.', icon: 'monitor-cellphone', color: '#EF4444', iconLib: 'MaterialCommunityIcons' },
+  { title: 'Getting Started', desc: 'Learn the basics of Sharnex and how to navigate the dashboard.', icon: 'check-circle-outline', color: theme.info, iconLib: 'MaterialCommunityIcons' },
+  { title: 'Managing Grades', desc: 'Learn how to add, edit, and manage student grades and report cards.', icon: 'chart-bar', color: theme.success, iconLib: 'MaterialCommunityIcons' },
+  { title: 'Attendance Tracking', desc: 'Learn how to mark attendance, generate reports, and manage absences.', icon: 'calendar-check', color: theme.warning, iconLib: 'MaterialCommunityIcons' },
+  { title: 'Assignment & Homework', desc: 'Create, assign, and track assignments and homework for students.', icon: 'clipboard-text-outline', color: theme.primary, iconLib: 'MaterialCommunityIcons' },
+  { title: 'Report & Analytics', desc: 'Generate performance reports and analyze student data.', icon: 'chart-pie', color: theme.info, iconLib: 'MaterialCommunityIcons' },
+  { title: 'Technical Support', desc: 'Troubleshooting login issues, app problems, and technical questions.', icon: 'monitor-cellphone', color: theme.danger, iconLib: 'MaterialCommunityIcons' },
 ];
 
 const FAQ_DATA = [
@@ -758,8 +761,8 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
                 <Svg height="100%" width="100%">
                   <Defs>
                     <SvgLinearGradient id="heroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <Stop offset="0" stopColor={isDarkMode ? TD.heroGrad1 : '#6D28D9'} stopOpacity="1" />
-                      <Stop offset="1" stopColor={isDarkMode ? TD.heroGrad2 : '#4C1D95'} stopOpacity="1" />
+                      <Stop offset="0" stopColor={isDarkMode ? TD.heroGrad1 : theme.primary} stopOpacity="1" />
+                      <Stop offset="1" stopColor={isDarkMode ? TD.heroGrad2 : theme.primary} stopOpacity="1" />
                     </SvgLinearGradient>
                   </Defs>
                   <Rect width="100%" height="100%" fill="url(#heroGrad)" rx="20" ry="20" />
@@ -994,8 +997,8 @@ const TeacherDashboard: React.FC<Props> = ({ navigation }) => {
                 <Svg height="100%" width="100%">
                   <Defs>
                     <SvgLinearGradient id="helpGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <Stop offset="0" stopColor="#4C1D95" stopOpacity="1" />
-                      <Stop offset="1" stopColor="#1E40AF" stopOpacity="1" />
+                      <Stop offset="0" stopColor={theme.primary} stopOpacity="1" />
+                      <Stop offset="1" stopColor={theme.info} stopOpacity="1" />
                     </SvgLinearGradient>
                   </Defs>
                   <Rect x="0" y="0" width="100%" height="100%" fill="url(#helpGrad2)" rx={20} />
@@ -1056,12 +1059,12 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 20,
     overflow: 'hidden',
-    backgroundColor: isDarkMode ? TD.heroGrad1 : '#4C1D95',
+    backgroundColor: isDarkMode ? TD.heroGrad1 : theme.primary,
   },
   heroPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.12),
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 5,
@@ -1073,29 +1076,29 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 3.5,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.success,
   },
   heroPillText: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.85)',
+    color: withAlpha(theme.onPrimary, 0.85),
     fontWeight: '500',
   },
   heroGreeting: {
     fontSize: 15,
     fontStyle: 'italic',
-    color: 'rgba(220,210,255,0.85)',
+    color: withAlpha(theme.onPrimary, 0.85),
     fontWeight: '400',
     marginBottom: 4,
   },
   heroName: {
     fontSize: 28,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     letterSpacing: -0.5,
   },
   heroNameUnderline: {
     height: 3,
-    backgroundColor: '#A78BFA',
+    backgroundColor: theme.primary,
     borderRadius: 2,
     width: '100%',
     marginTop: 2,
@@ -1103,7 +1106,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   },
   heroSubtitle: {
     fontSize: 12,
-    color: 'rgba(220,210,255,0.75)',
+    color: withAlpha(theme.onPrimary, 0.75),
     lineHeight: 18,
     marginBottom: 16,
   },
@@ -1115,7 +1118,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   },
   heroPeriodsLabel: {
     fontSize: 10,
-    color: 'rgba(200,190,255,0.7)',
+    color: withAlpha(theme.onPrimary, 0.7),
     fontWeight: '700',
     letterSpacing: 1,
     textTransform: 'uppercase',
@@ -1131,14 +1134,14 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     flexWrap: 'wrap',
   },
   heroBadge: {
-    backgroundColor: 'rgba(255,255,255,0.13)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.13),
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 6,
   },
   heroBadgeText: {
     fontSize: 12,
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontWeight: '600',
   },
 
@@ -1153,7 +1156,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   scheduleSectionTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: isDarkMode ? '#FFFFFF' : theme.text,
+    color: theme.text,
     marginBottom: 16,
     letterSpacing: -0.3,
   },
@@ -1163,15 +1166,15 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   statCard: { alignItems: 'center', backgroundColor: isDarkMode ? TD.surface : theme.surface, borderColor: isDarkMode ? TD.border : theme.border, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 8, borderWidth: 1, width: '31%', minHeight: 110 },
   statIconCircle: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
   statTitle: { fontSize: 10, fontWeight: '700', color: isDarkMode ? TD.muted : theme.subtext, marginTop: 6, textAlign: 'center', width: '100%' },
-  statValue: { fontSize: 16, fontWeight: '800', color: isDarkMode ? '#FFFFFF' : theme.text, marginTop: 2 },
+  statValue: { fontSize: 16, fontWeight: '800', color: theme.text, marginTop: 2 },
 
   // ── Quick actions ──────────────────────────────────────────────────────────
   quickActionsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 },
   quickActionCard: { width: '31%', backgroundColor: isDarkMode ? TD.surface : theme.surface, borderColor: isDarkMode ? TD.border : theme.border, borderRadius: 16, paddingVertical: 16, paddingHorizontal: 4, borderWidth: 1 },
   quickActionTouchable: { alignItems: 'center' },
-  quickActionTitle: { fontSize: 11, fontWeight: '600', color: isDarkMode ? '#FFFFFF' : theme.text, marginTop: 10, textAlign: 'center' },
-  badgeContainer: { position: 'absolute', top: -4, right: -4, backgroundColor: '#EF4444', borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4, borderWidth: 2, borderColor: isDarkMode ? TD.bg : theme.background, zIndex: 10 },
-  badgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800' },
+  quickActionTitle: { fontSize: 11, fontWeight: '600', color: theme.text, marginTop: 10, textAlign: 'center' },
+  badgeContainer: { position: 'absolute', top: -4, right: -4, backgroundColor: theme.danger, borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4, borderWidth: 2, borderColor: isDarkMode ? TD.bg : theme.background, zIndex: 10 },
+  badgeText: { color: theme.onPrimary, fontSize: 10, fontWeight: '800' },
 
   // ── Schedule cards ─────────────────────────────────────────────────────────
   scheduleList: { gap: 12 },
@@ -1200,34 +1203,34 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     minHeight: 60,
   },
   scheduleBody: { flex: 1, paddingRight: 14 },
-  scheduleTime: { fontSize: 13, fontWeight: '600', color: isDarkMode ? '#FFFFFF' : theme.text, marginBottom: 6 },
+  scheduleTime: { fontSize: 13, fontWeight: '600', color: theme.text, marginBottom: 6 },
   schedulePillRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   schedulePill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8 },
-  schedulePillText: { fontSize: 11, fontWeight: '700', color: '#FFFFFF' },
+  schedulePillText: { fontSize: 11, fontWeight: '700', color: theme.onPrimary },
   statusRowInline: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   ongoingDot: { width: 6, height: 6, borderRadius: 3 },
   ongoingText: { fontSize: 11, fontWeight: '700' },
   upNextCircle: { fontSize: 12, color: TD.upNextAmber },
   upNextText: { fontSize: 11, color: TD.upNextAmber, fontWeight: '600' },
   completedText: { fontSize: 11, color: isDarkMode ? TD.muted : theme.subtext, fontWeight: '500' },
-  scheduleTeacherName: { fontSize: 15, fontWeight: '700', color: isDarkMode ? '#FFFFFF' : theme.text },
+  scheduleTeacherName: { fontSize: 15, fontWeight: '700', color: theme.text },
   scheduleRoomText: { fontSize: 11, color: isDarkMode ? TD.muted : theme.subtext, marginTop: 2 },
 
   emptyText: { fontSize: 14, color: isDarkMode ? TD.muted : theme.subtext, textAlign: 'center', marginTop: 20, fontWeight: '500' },
 
   // ── Live session banner ────────────────────────────────────────────────────
-  liveBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: isDarkMode ? TD.surface : theme.surface, borderColor: isDarkMode ? TD.border : theme.border, borderRadius: 16, padding: 16, marginBottom: 0, borderLeftWidth: 4, shadowColor: '#EF4444', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5, borderWidth: 1 },
+  liveBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: isDarkMode ? TD.surface : theme.surface, borderColor: isDarkMode ? TD.border : theme.border, borderRadius: 16, padding: 16, marginBottom: 0, borderLeftWidth: 4, shadowColor: theme.danger, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5, borderWidth: 1 },
   liveBannerContent: { flex: 1 },
   liveIndicatorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   liveDot: { width: 8, height: 8, borderRadius: 4 },
   liveText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
-  liveSubject: { fontSize: 16, fontWeight: '700', color: isDarkMode ? '#FFFFFF' : theme.text },
+  liveSubject: { fontSize: 16, fontWeight: '700', color: theme.text },
   liveClassName: { fontSize: 13, color: isDarkMode ? TD.muted : theme.subtext, marginTop: 2 },
   liveJoinBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, marginLeft: 12 },
-  liveJoinBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
+  liveJoinBtnText: { color: theme.onPrimary, fontWeight: '700', fontSize: 14 },
   liveProgressContainer: { height: 8, width: '100%', backgroundColor: isDarkMode ? TD.border : theme.border, borderRadius: 4, overflow: 'hidden', marginTop: 10, marginBottom: 8 },
   liveProgressFill: { height: '100%', borderRadius: 4 },
-  shimmerStreak: { position: 'absolute', top: 0, bottom: 0, width: 60, backgroundColor: 'rgba(255, 255, 255, 0.6)', zIndex: 2 },
+  shimmerStreak: { position: 'absolute', top: 0, bottom: 0, width: 60, backgroundColor: withAlpha(theme.onPrimary, 0.6), zIndex: 2 },
 
   // ── Pending tasks ──────────────────────────────────────────────────────────
   pendingTasksCard: { backgroundColor: isDarkMode ? TD.surface : theme.surface, borderColor: isDarkMode ? TD.border : theme.border, borderRadius: 12, paddingVertical: 24, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
@@ -1252,25 +1255,25 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     marginRight: 14,
   },
   taskInfo: { flex: 1 },
-  taskTitle: { fontSize: 14, fontWeight: '700', color: isDarkMode ? '#FFFFFF' : theme.text, marginBottom: 2 },
+  taskTitle: { fontSize: 14, fontWeight: '700', color: theme.text, marginBottom: 2 },
   taskSubtitle: { fontSize: 11, color: isDarkMode ? TD.muted : theme.subtext, fontWeight: '500', marginBottom: 6 },
   taskPendingPill: {
     alignSelf: 'flex-start',
-    backgroundColor: isDarkMode ? TD.pendingAmberBg : '#FEF3C7',
+    backgroundColor: isDarkMode ? TD.pendingAmberBg : withAlpha(theme.warning, 0.1),
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
-  taskPendingText: { fontSize: 11, fontWeight: '700', color: isDarkMode ? TD.pendingAmber : '#D97706' },
+  taskPendingText: { fontSize: 11, fontWeight: '700', color: isDarkMode ? TD.pendingAmber : theme.warning },
 
   // ── Announcements (unchanged visually) ────────────────────────────────────
-  announcementCard: { backgroundColor: '#EA580C', borderRadius: 20, overflow: 'hidden', padding: 24, paddingBottom: 30, shadowColor: '#EA580C', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 },
+  announcementCard: { backgroundColor: theme.warning, borderRadius: 20, overflow: 'hidden', padding: 24, paddingBottom: 30, shadowColor: theme.warning, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 },
   announcementContent: { zIndex: 1 },
   announcementList: { gap: 12 },
   announcementItem: { flexDirection: 'row', alignItems: 'flex-start' },
-  announcementBullet: { color: '#FFFFFF', fontSize: 16, marginRight: 10, fontWeight: '900', marginTop: -3 },
-  announcementText: { fontSize: 13, color: 'rgba(255,255,255,0.95)', lineHeight: 19, flex: 1, fontWeight: '500' },
-  boldText: { fontWeight: '800', color: '#FFFFFF' },
+  announcementBullet: { color: theme.onPrimary, fontSize: 16, marginRight: 10, fontWeight: '900', marginTop: -3 },
+  announcementText: { fontSize: 13, color: withAlpha(theme.onPrimary, 0.95), lineHeight: 19, flex: 1, fontWeight: '500' },
+  boldText: { fontWeight: '800', color: theme.onPrimary },
 
   // ── Help center ────────────────────────────────────────────────────────────
   helpList: { gap: 12 },
@@ -1284,7 +1287,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderWidth: 1,
   },
   helpIconBg: { width: 42, height: 42, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: 14 },
-  helpCardTitle: { fontSize: 15, fontWeight: '700', color: isDarkMode ? '#FFFFFF' : theme.text, marginBottom: 6 },
+  helpCardTitle: { fontSize: 15, fontWeight: '700', color: theme.text, marginBottom: 6 },
   helpCardDesc: { fontSize: 12, color: isDarkMode ? TD.muted : theme.subtext, lineHeight: 16, marginBottom: 14 },
   viewGuidesRow: { flexDirection: 'row', alignItems: 'center' },
   viewGuidesText: { fontSize: 12, fontWeight: '700', color: isDarkMode ? TD.accentPurple : theme.primary },
@@ -1293,48 +1296,48 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   faqList: { backgroundColor: isDarkMode ? TD.faqCard : theme.surface, borderRadius: 16, paddingHorizontal: 4, borderWidth: 1, borderColor: isDarkMode ? TD.border : theme.border },
   faqItem: { borderBottomWidth: 1, borderBottomColor: isDarkMode ? TD.faqBorder : theme.border },
   faqHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
-  faqQuestion: { fontSize: 13, fontWeight: '600', color: isDarkMode ? '#FFFFFF' : theme.text, flex: 1, paddingRight: 8 },
-  faqAnswerContainer: { backgroundColor: isDarkMode ? '#120D24' : theme.faqAnswer, borderRadius: 10, padding: 12, marginHorizontal: 10, marginBottom: 14 },
+  faqQuestion: { fontSize: 13, fontWeight: '600', color: theme.text, flex: 1, paddingRight: 8 },
+  faqAnswerContainer: { backgroundColor: isDarkMode ? theme.surface : theme.faqAnswer, borderRadius: 10, padding: 12, marginHorizontal: 10, marginBottom: 14 },
   faqAnswer: { fontSize: 13, color: isDarkMode ? TD.muted : theme.subtext, lineHeight: 20 },
 
   // ── Need More Help banner ──────────────────────────────────────────────────
-  helpBannerCard: { paddingVertical: 28, paddingHorizontal: 24, marginHorizontal: 0, marginBottom: 40, alignItems: 'center', overflow: 'hidden', borderRadius: 20, shadowColor: '#5A67D8', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 8 },
+  helpBannerCard: { paddingVertical: 28, paddingHorizontal: 24, marginHorizontal: 0, marginBottom: 40, alignItems: 'center', overflow: 'hidden', borderRadius: 20, shadowColor: theme.primary, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 8 },
   helpBannerContent: { zIndex: 1, alignItems: 'center', width: '100%' },
-  helpBannerTitle: { fontSize: 22, fontWeight: '800', color: '#FFFFFF', marginBottom: 8 },
-  helpBannerSubtitle: { fontSize: 12, color: '#E0E7FF', textAlign: 'center', lineHeight: 18, marginBottom: 20, paddingHorizontal: 10 },
+  helpBannerTitle: { fontSize: 22, fontWeight: '800', color: theme.onPrimary, marginBottom: 8 },
+  helpBannerSubtitle: { fontSize: 12, color: withAlpha(theme.onPrimary, 0.8), textAlign: 'center', lineHeight: 18, marginBottom: 20, paddingHorizontal: 10 },
   helpBtnDark: {
     width: '100%',
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: isDarkMode ? 'rgba(0,0,0,0.4)' : '#FFFFFF',
+    backgroundColor: theme.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: isDarkMode ? 1 : 0,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: withAlpha(theme.onPrimary, 0.15),
   },
-  helpBtnText: { color: isDarkMode ? TD.accentPurple : '#4C1D95', fontSize: 14, fontWeight: '700' },
+  helpBtnText: { color: theme.primary, fontSize: 14, fontWeight: '700' },
 
   // ── Misc shared ────────────────────────────────────────────────────────────
   iconBox: { borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
   cardContainer: { backgroundColor: isDarkMode ? TD.surface : theme.surface, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: isDarkMode ? TD.border : theme.border },
   eventCard: { backgroundColor: isDarkMode ? TD.surface : theme.surface, borderRadius: 12, padding: 12, borderLeftWidth: 4, borderWidth: 1, borderColor: isDarkMode ? TD.border : theme.border },
   eventCardContent: { flex: 1 },
-  eventTitle: { fontSize: 13, fontWeight: '700', color: isDarkMode ? '#FFFFFF' : theme.text, marginBottom: 4 },
+  eventTitle: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 4 },
   eventDateContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   eventDateText: { fontSize: 11, color: isDarkMode ? TD.muted : theme.subtext },
   topStudentCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: isDarkMode ? TD.border : theme.border },
   rankCircle: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   rankText: { fontSize: 12, fontWeight: '700' },
   topStudentInfo: { flex: 1 },
-  topStudentName: { fontSize: 13, fontWeight: '700', color: isDarkMode ? '#FFFFFF' : theme.text },
+  topStudentName: { fontSize: 13, fontWeight: '700', color: theme.text },
   topStudentClass: { fontSize: 11, color: isDarkMode ? TD.muted : theme.subtext },
-  topStudentPercentage: { fontSize: 13, fontWeight: '700', color: '#10B981' },
+  topStudentPercentage: { fontSize: 13, fontWeight: '700', color: theme.success },
   activityBox: { backgroundColor: isDarkMode ? TD.surface : theme.surface, borderRadius: 16, padding: 4, borderWidth: 1, borderColor: isDarkMode ? TD.border : theme.border },
   activityItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16 },
   activityItemBorder: { borderBottomWidth: 1, borderBottomColor: isDarkMode ? TD.border : theme.border },
   activityAvatarBox: { width: 32, height: 32, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   activityContent: { flex: 1, justifyContent: 'center' },
-  activityName: { fontSize: 13, fontWeight: '700', color: isDarkMode ? '#FFFFFF' : theme.text, marginBottom: 2 },
+  activityName: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 2 },
   activityAction: { fontSize: 11, color: isDarkMode ? TD.muted : theme.subtext, marginBottom: 4, lineHeight: 15 },
   activityDateText: { fontSize: 10, color: isDarkMode ? TD.muted : theme.placeholder },
 
@@ -1342,8 +1345,8 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   headerTitle: { fontSize: 16, fontWeight: '500', color: theme.primary, flex: 1, textAlign: 'center', paddingTop: 12, marginHorizontal: 10 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   iconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: isDarkMode ? TD.pillChipBg : theme.iconBackground, justifyContent: 'center', alignItems: 'center' },
-  avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#A855F7', justifyContent: 'center', alignItems: 'center' },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center' },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
   sectionSpacing: { height: 10 },
 });
 

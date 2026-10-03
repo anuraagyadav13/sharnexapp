@@ -85,7 +85,7 @@ const LibraryDashboardScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.background} />
+      <StatusBar barStyle={theme.statusBarStyle} backgroundColor={theme.background} />
 
       {/* Global Dashboard Header */}
       <View style={styles.globalHeader}>
@@ -141,8 +141,8 @@ const LibraryDashboardScreen: React.FC<Props> = ({ navigation }) => {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={() => loadDashboardData(true)}
-            colors={['#8B5CF6']}
-            tintColor="#8B5CF6"
+            colors={[theme.primary]}
+            tintColor={theme.primary}
           />
         }
       >
@@ -158,7 +158,7 @@ const LibraryDashboardScreen: React.FC<Props> = ({ navigation }) => {
               onPress={() => navigation.navigate('LibraryBookCatalog')}
               activeOpacity={0.8}
             >
-              <Ionicons name="add" size={18} color="#FFFFFF" style={{ marginRight: 4 }} />
+              <Ionicons name="add" size={18} color={theme.onPrimary} style={{ marginRight: 4 }} />
               <Text style={styles.primaryAddBtnText}>Add Book</Text>
             </TouchableOpacity>
 
@@ -175,7 +175,7 @@ const LibraryDashboardScreen: React.FC<Props> = ({ navigation }) => {
 
         {isLoading ? (
           <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color="#8B5CF6" />
+            <ActivityIndicator size="large" color={theme.primary} />
           </View>
         ) : (
           <>
@@ -183,8 +183,8 @@ const LibraryDashboardScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.metricsGrid}>
               {/* Total Books Card */}
               <View style={styles.metricCard}>
-                <View style={[styles.iconBox, { backgroundColor: '#EEF2FF' }]}>
-                  <Ionicons name="book" size={24} color="#4F46E5" />
+                <View style={[styles.iconBox, { backgroundColor: theme.infoBg }]}>
+                  <Ionicons name="book" size={24} color={theme.info} />
                 </View>
                 <View style={styles.metricContent}>
                   <Text style={styles.metricLabel}>TOTAL BOOKS</Text>
@@ -194,8 +194,8 @@ const LibraryDashboardScreen: React.FC<Props> = ({ navigation }) => {
 
               {/* Issued Books Card */}
               <View style={styles.metricCard}>
-                <View style={[styles.iconBox, { backgroundColor: '#F3E8FF' }]}>
-                  <Ionicons name="swap-horizontal" size={24} color="#9333EA" />
+                <View style={[styles.iconBox, { backgroundColor: theme.iconBackground }]}>
+                  <Ionicons name="swap-horizontal" size={24} color={theme.accent} />
                 </View>
                 <View style={styles.metricContent}>
                   <Text style={styles.metricLabel}>ISSUED BOOKS</Text>
@@ -205,8 +205,8 @@ const LibraryDashboardScreen: React.FC<Props> = ({ navigation }) => {
 
               {/* Overdue Card */}
               <View style={styles.metricCard}>
-                <View style={[styles.iconBox, { backgroundColor: '#FEF2F2' }]}>
-                  <Ionicons name="close" size={24} color="#EF4444" />
+                <View style={[styles.iconBox, { backgroundColor: theme.dangerBg }]}>
+                  <Ionicons name="close" size={24} color={theme.danger} />
                 </View>
                 <View style={styles.metricContent}>
                   <Text style={styles.metricLabel}>OVERDUE</Text>
@@ -222,8 +222,8 @@ const LibraryDashboardScreen: React.FC<Props> = ({ navigation }) => {
                 onPress={() => navigation.navigate('LibraryBookCatalog')}
                 activeOpacity={0.8}
               >
-                <View style={[styles.quickNavIcon, { backgroundColor: '#EFF6FF' }]}>
-                  <Ionicons name="book-outline" size={22} color="#2563EB" />
+                <View style={[styles.quickNavIcon, { backgroundColor: theme.infoBg }]}>
+                  <Ionicons name="book-outline" size={22} color={theme.info} />
                 </View>
                 <Text style={styles.quickNavTitle}>Book Catalog</Text>
                 <Text style={styles.quickNavSub}>Manage library inventory</Text>
@@ -234,8 +234,8 @@ const LibraryDashboardScreen: React.FC<Props> = ({ navigation }) => {
                 onPress={() => navigation.navigate('LibraryCirculation')}
                 activeOpacity={0.8}
               >
-                <View style={[styles.quickNavIcon, { backgroundColor: '#F5F3FF' }]}>
-                  <Ionicons name="swap-horizontal-outline" size={22} color="#7C3AED" />
+                <View style={[styles.quickNavIcon, { backgroundColor: theme.iconBackground }]}>
+                  <Ionicons name="swap-horizontal-outline" size={22} color={theme.accent} />
                 </View>
                 <Text style={styles.quickNavTitle}>Circulation</Text>
                 <Text style={styles.quickNavSub}>Handle issues & returns</Text>
@@ -246,8 +246,8 @@ const LibraryDashboardScreen: React.FC<Props> = ({ navigation }) => {
                 onPress={() => navigation.navigate('LibraryAnnouncements')}
                 activeOpacity={0.8}
               >
-                <View style={[styles.quickNavIcon, { backgroundColor: '#FFFBEB' }]}>
-                  <Ionicons name="megaphone-outline" size={22} color="#D97706" />
+                <View style={[styles.quickNavIcon, { backgroundColor: theme.warningBg }]}>
+                  <Ionicons name="megaphone-outline" size={22} color={theme.warning} />
                 </View>
                 <Text style={styles.quickNavTitle}>Announcements</Text>
                 <Text style={styles.quickNavSub}>Post library updates</Text>
@@ -258,8 +258,8 @@ const LibraryDashboardScreen: React.FC<Props> = ({ navigation }) => {
                 onPress={() => navigation.navigate('AccountSettings')}
                 activeOpacity={0.8}
               >
-                <View style={[styles.quickNavIcon, { backgroundColor: '#F3F4F6' }]}>
-                  <Ionicons name="chevron-forward-outline" size={22} color="#4B5563" />
+                <View style={[styles.quickNavIcon, { backgroundColor: theme.surface }]}>
+                  <Ionicons name="chevron-forward-outline" size={22} color={theme.subtext} />
                 </View>
                 <Text style={styles.quickNavTitle}>Settings</Text>
                 <Text style={styles.quickNavSub}>Configure portal</Text>
@@ -311,11 +311,11 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 32,
       height: 32,
       borderRadius: 16,
-      backgroundColor: '#8B5CF6',
+      backgroundColor: theme.accent,
       justifyContent: 'center',
       alignItems: 'center',
     },
-    avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
+    avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 14 },
     headerAvatarImage: { width: 32, height: 32, borderRadius: 16 },
     container: { flex: 1 },
     scrollContent: { padding: 16 },
@@ -334,12 +334,12 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     primaryAddBtn: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#8B5CF6',
+      backgroundColor: theme.primary,
       paddingVertical: 10,
       paddingHorizontal: 16,
       borderRadius: 10,
     },
-    primaryAddBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+    primaryAddBtnText: { color: theme.onPrimary, fontSize: 14, fontWeight: '700' },
     secondaryIssueBtn: {
       flexDirection: 'row',
       alignItems: 'center',

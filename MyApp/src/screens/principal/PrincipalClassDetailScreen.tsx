@@ -18,7 +18,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { BRAND } from '../../constants/theme';
+import { withAlpha } from '../../constants/theme';
+
 import principalService, { StudentItem } from '../../services/principalService';
 import { getCacheBustedUri } from '../../utils/image';
 
@@ -207,7 +208,7 @@ const PrincipalClassDetailScreen: React.FC<Props> = ({ route, navigation }) => {
               </View>
 
               <View style={styles.infoCard}>
-                <Ionicons name="people-outline" size={20} color={BRAND.accentBlue} style={styles.infoCardIcon} />
+                <Ionicons name="people-outline" size={20} color={theme.info} style={styles.infoCardIcon} />
                 <Text style={styles.infoCardLabel}>Students</Text>
                 <Text style={styles.infoCardValue}>{classData?.studentCount ?? students.length} enrolled</Text>
               </View>
@@ -322,7 +323,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: theme.primary + '15',
+    backgroundColor: withAlpha(theme.primary, 0.15),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -477,7 +478,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: theme.primary + '20',
+    backgroundColor: withAlpha(theme.primary, 0.2),
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -506,7 +507,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     gap: 8,
   },
   attendanceBadge: {
-    backgroundColor: theme.primary + '15',
+    backgroundColor: withAlpha(theme.primary, 0.15),
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 6,

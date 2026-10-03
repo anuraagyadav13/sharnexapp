@@ -20,6 +20,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { StudentHeader } from '../../components/StudentHeader';
 import studentService from '../../services/studentService';
 
@@ -49,7 +50,7 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   const AttachmentItem = ({ title, meta, onPress }: { title: string, meta: string, onPress?: () => void }) => (
     <ScaleButton style={styles.attachmentItem} activeOpacity={0.8} scaleTo={0.98} onPress={onPress}>
       <View style={styles.pdfIconContainer}>
-        <MaterialCommunityIcons name="file-pdf-box" size={28} color="#FFFFFF" />
+        <MaterialCommunityIcons name="file-pdf-box" size={28} color={theme.onPrimary} />
       </View>
       <View style={styles.attachmentTextCol}>
         <Text style={styles.attachmentTitle}>{title}</Text>
@@ -99,7 +100,7 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
             activeOpacity={0.7}
             scaleTo={0.9}
           >
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={20} color={theme.onPrimary} />
           </ScaleButton>
 
           <Text style={styles.heroTitle}>Assignment Details</Text>
@@ -109,13 +110,13 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
         <View style={styles.cardsContainer}>
 
           {isLoading ? (
-            <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
+            <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
           ) : error ? (
-            <View style={{ padding: 16, backgroundColor: '#FEE2E2', borderRadius: 12, marginHorizontal: 16 }}>
-              <Text style={{ color: '#DC2626', fontWeight: '500' }}>{error}</Text>
+            <View style={{ padding: 16, backgroundColor: withAlpha(theme.danger, 0.15), borderRadius: 12, marginHorizontal: 16 }}>
+              <Text style={{ color: theme.danger, fontWeight: '500' }}>{error}</Text>
             </View>
           ) : !assignmentData ? (
-            <Text style={{ textAlign: 'center', marginTop: 40, color: '#9CA3AF' }}>No assignment data found</Text>
+            <Text style={{ textAlign: 'center', marginTop: 40, color: theme.subtext }}>No assignment data found</Text>
           ) : (
             <>
 
@@ -123,7 +124,7 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.card}>
             <View style={styles.cardHeader}>
               <View style={styles.cardHeaderIcon}>
-                <Ionicons name="information" size={16} color="#4F46E5" />
+                <Ionicons name="information" size={16} color={theme.primary} />
               </View>
               <Text style={styles.cardHeaderTitle}>Assignment Information</Text>
             </View>
@@ -164,7 +165,7 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.card}>
             <View style={styles.cardHeader}>
               <View style={styles.cardHeaderIcon}>
-                <Ionicons name="document-text" size={14} color="#4F46E5" />
+                <Ionicons name="document-text" size={14} color={theme.primary} />
               </View>
               <Text style={styles.cardHeaderTitle}>Instruction & Description</Text>
             </View>
@@ -196,7 +197,7 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.card}>
             <View style={styles.cardHeader}>
               <View style={styles.cardHeaderIcon}>
-                <Ionicons name="attach" size={16} color="#4F46E5" style={{ transform: [{ rotate: '45deg' }] }} />
+                <Ionicons name="attach" size={16} color={theme.primary} style={{ transform: [{ rotate: '45deg' }] }} />
               </View>
               <Text style={styles.cardHeaderTitle}>Attachments</Text>
             </View>
@@ -227,7 +228,7 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
                   );
                 })
               ) : (
-                <Text style={{ textAlign: 'center', color: '#9CA3AF', paddingVertical: 20 }}>
+                <Text style={{ textAlign: 'center', color: theme.subtext, paddingVertical: 20 }}>
                   No attachments available
                 </Text>
               )}
@@ -241,7 +242,7 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
                   style={styles.viewGradeBtn}
                   onPress={() => navigation.navigate('AssignmentGrade', { assignmentId: assignmentData.id })}
                 >
-                  <Ionicons name="ribbon" size={20} color="#FFFFFF" style={{ marginRight: 10 }} />
+                  <Ionicons name="ribbon" size={20} color={theme.onPrimary} style={{ marginRight: 10 }} />
                   <Text style={styles.viewGradeBtnText}>View My Grade Result</Text>
                 </ScaleButton>
               </Animated.View>
@@ -251,10 +252,10 @@ const AssignmentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
             {(assignmentData?.status?.toLowerCase() === 'pending' || assignmentData?.status?.toLowerCase() === 'overdue' || assignmentData?.status?.toLowerCase() === 'upcoming') && (
               <Animated.View entering={FadeInUp.delay(450).springify()} style={{ paddingBottom: 20 }}>
                 <ScaleButton 
-                  style={[styles.viewGradeBtn, { backgroundColor: '#4F46E5', shadowColor: '#4F46E5' }]}
+                  style={[styles.viewGradeBtn, { backgroundColor: theme.primary, shadowColor: theme.primary }]}
                   onPress={() => navigation.navigate('AssignmentSubmit', { assignmentId: assignmentData.id })}
                 >
-                  <Ionicons name="send" size={18} color="#FFFFFF" style={{ marginRight: 10, transform: [{ rotate: '-45deg' }] }} />
+                  <Ionicons name="send" size={18} color={theme.onPrimary} style={{ marginRight: 10, transform: [{ rotate: '-45deg' }] }} />
                   <Text style={styles.viewGradeBtnText}>Submit Assignment</Text>
                 </ScaleButton>
               </Animated.View>
@@ -296,7 +297,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 14 },
 
   scrollContent: {
     paddingBottom: 40,
@@ -314,7 +315,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)', // Translucent circle
+    backgroundColor: withAlpha(theme.onPrimary, 0.25), // Translucent circle
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -322,12 +323,12 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   heroTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     marginBottom: 4,
   },
   heroSubtitle: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: withAlpha(theme.onPrimary, 0.9),
     fontWeight: '400',
   },
 
@@ -341,7 +342,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 20,
-    shadowColor: '#1E293B', // sophisticated deep shadow tint
+    shadowColor: theme.border, // sophisticated deep shadow tint
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -358,7 +359,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: isDarkMode ? '#1E3A8A' : '#EFF6FF',
+    backgroundColor: withAlpha(theme.info, 0.1),
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
@@ -438,7 +439,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: isDarkMode ? '#334155' : '#F8FAFC', // exact subtle blueish-grey fill
+    backgroundColor: theme.surface, // exact subtle blueish-grey fill
     borderRadius: 8,
     borderWidth: 1,
     borderColor: theme.border,
@@ -466,21 +467,21 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     color: theme.subtext,
   },
   viewGradeBtn: {
-    backgroundColor: '#00C48C',
+    backgroundColor: theme.success,
     marginHorizontal: 16,
     paddingVertical: 16,
     borderRadius: 12,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#00C48C',
+    shadowColor: theme.success,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
   viewGradeBtnText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 16,
     fontWeight: '700',
   },

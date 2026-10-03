@@ -12,7 +12,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import Toast, { ToastType } from '../../components/Toast';
 import { useLibraryManagement } from './hooks/useLibraryManagement';
 import { LIBRARY_TABS } from './constants';
-import { LIBRARY_COLORS } from './theme';
+import { useTheme } from '../../store/ThemeContext';
 import StatCard from './components/StatCard';
 import CirculationTab from './components/CirculationTab';
 import CatalogTab from './components/CatalogTab';
@@ -22,6 +22,8 @@ import LibraryModals from './components/LibraryModals';
 import { LibraryTab } from './types';
 
 const LibraryScreen = () => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
   const [toast, setToast] = useState<{
     visible: boolean;
     message: string;
@@ -85,7 +87,7 @@ const LibraryScreen = () => {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <StatusBar barStyle="light-content" backgroundColor={LIBRARY_COLORS.bg} />
+      <StatusBar barStyle={theme.statusBarStyle} backgroundColor={theme.background} />
 
       <View style={styles.header}>
         <View>
@@ -127,7 +129,7 @@ const LibraryScreen = () => {
               <Ionicons
                 name={t.icon as any}
                 size={15}
-                color={active ? '#FFFFFF' : LIBRARY_COLORS.textMuted}
+                color={active ? theme.onPrimary : theme.subtext}
               />
               <Text style={[styles.tabText, active && styles.tabTextActive]}>{t.label}</Text>
             </TouchableOpacity>
@@ -150,10 +152,10 @@ const LibraryScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: LIBRARY_COLORS.bg,
+    backgroundColor: theme.background,
   },
   header: {
     paddingHorizontal: 20,
@@ -163,10 +165,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '800',
-    color: LIBRARY_COLORS.text,
+    color: theme.text,
   },
   subtitle: {
-    color: LIBRARY_COLORS.textDim,
+    color: theme.subtext,
     fontSize: 13,
     marginTop: 4,
     lineHeight: 18,
@@ -184,7 +186,7 @@ const styles = StyleSheet.create({
   },
   tabsScroll: {
     paddingHorizontal: 20,
-    backgroundColor: LIBRARY_COLORS.surface,
+    backgroundColor: theme.surface,
     borderRadius: 12,
     marginHorizontal: 20,
     padding: 4,
@@ -199,15 +201,15 @@ const styles = StyleSheet.create({
     borderRadius: 9,
   },
   tabActive: {
-    backgroundColor: LIBRARY_COLORS.primary,
+    backgroundColor: theme.primary,
   },
   tabText: {
     fontWeight: '600',
     fontSize: 13,
-    color: LIBRARY_COLORS.textMuted,
+    color: theme.subtext,
   },
   tabTextActive: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
   tabContent: {
     flex: 1,

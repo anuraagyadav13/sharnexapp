@@ -16,6 +16,7 @@ import { RootStackParamList } from '../../types/navigation';
 import { useAuth } from '../../store/AuthContext';
 import principalService, { TeacherItem } from '../../services/principalService';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 type PrincipalTeachersNavigationProp = NativeStackNavigationProp<
@@ -107,7 +108,7 @@ const PrincipalTeachersScreen: React.FC<Props> = ({ navigation }) => {
 
       // Badge style configurations
       const roleColor = item.role === 'LIBRARY_ADMIN' ? theme.secondary : theme.primary;
-      const roleBg = item.role === 'LIBRARY_ADMIN' ? (isDarkMode ? 'rgba(139, 92, 246, 0.2)' : theme.iconBackground) : (isDarkMode ? 'rgba(59, 130, 246, 0.2)' : theme.iconBackground);
+      const roleBg = item.role === 'LIBRARY_ADMIN' ? (withAlpha(theme.primary, 0.2)) : (withAlpha(theme.info, 0.2));
 
       return (
         <View style={styles.teacherCard}>
@@ -126,7 +127,7 @@ const PrincipalTeachersScreen: React.FC<Props> = ({ navigation }) => {
                 <View
                   style={[
                     styles.verifyBadge,
-                    { backgroundColor: item.isVerified ? (isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)') : (isDarkMode ? 'rgba(107, 114, 128, 0.2)' : theme.border) },
+                    { backgroundColor: item.isVerified ? (withAlpha(theme.success, 0.2)) : (withAlpha(theme.subtext, 0.2)) },
                   ]}
                 >
                   <Text

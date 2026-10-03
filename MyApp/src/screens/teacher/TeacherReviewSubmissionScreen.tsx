@@ -22,6 +22,7 @@ import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha } from '../../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -166,7 +167,7 @@ const TeacherReviewSubmissionScreen: React.FC<Props> = ({ navigation, route }) =
         <View key={sub.id || idx} style={styles.analysisCard}>
           <View style={styles.analysisHeader}>
             <Text style={styles.analysisSubName}>{sub.name}</Text>
-            <Text style={[styles.analysisStatus, { color: sub.status === 'APPROVED' ? '#10B981' : '#F59E0B' }]}>
+            <Text style={[styles.analysisStatus, { color: sub.status === 'APPROVED' ? theme.success : theme.warning }]}>
               {sub.status || 'PENDING'}
             </Text>
           </View>
@@ -184,10 +185,10 @@ const TeacherReviewSubmissionScreen: React.FC<Props> = ({ navigation, route }) =
           disabled={isSubmitting}
         >
           {isSubmitting ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color={theme.onPrimary} />
           ) : (
             <>
-              <Ionicons name="sparkles-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Ionicons name="sparkles-outline" size={18} color={theme.onPrimary} style={{ marginRight: 8 }} />
               <Text style={styles.primaryActionText}>GENERATE RESULTS (100% READY) →</Text>
             </>
           )}
@@ -205,7 +206,7 @@ const TeacherReviewSubmissionScreen: React.FC<Props> = ({ navigation, route }) =
 
   const renderStep3 = () => (
     <View style={styles.stepContent}>
-      <View style={[styles.publishWarningCard, { backgroundColor: theme.primary + '10', borderColor: theme.primary + '30' }]}>
+      <View style={[styles.publishWarningCard, { backgroundColor: withAlpha(theme.primary, 0.1), borderColor: withAlpha(theme.primary, 0.3) }]}>
         <Ionicons name="shield-checkmark" size={36} color={theme.primary} />
         <Text style={[styles.publishWarningTitle, { color: theme.text }]}>Official Certification & Publishing</Text>
         <Text style={[styles.publishWarningDesc, { color: theme.subtext }]}>
@@ -223,10 +224,10 @@ const TeacherReviewSubmissionScreen: React.FC<Props> = ({ navigation, route }) =
           disabled={isSubmitting}
         >
           {isSubmitting ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color={theme.onPrimary} />
           ) : (
             <>
-              <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+              <Ionicons name="checkmark-circle" size={20} color={theme.onPrimary} />
               <Text style={styles.publishBtnText}>PUBLISH RESULTS (CLASSIC)</Text>
             </>
           )}
@@ -237,18 +238,18 @@ const TeacherReviewSubmissionScreen: React.FC<Props> = ({ navigation, route }) =
           onPress={handleReject}
           disabled={isSubmitting}
         >
-          <Ionicons name="return-up-back" size={18} color="#EF4444" />
+          <Ionicons name="return-up-back" size={18} color={theme.danger} />
           <Text style={styles.rejectBtnText}>RETURN TO FACULTY FOR REVISION</Text>
         </TouchableOpacity>
 
         <View style={styles.secondaryActionsRow}>
           <TouchableOpacity style={styles.recallBtn} onPress={handleRecall} disabled={isSubmitting}>
-            <Ionicons name="refresh" size={16} color="#F59E0B" />
+            <Ionicons name="refresh" size={16} color={theme.warning} />
             <Text style={styles.recallBtnText}>Recall Marks</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.auditBtn} onPress={handleViewAudit} disabled={isSubmitting}>
-            <Ionicons name="document-text" size={16} color="#6B7280" />
+            <Ionicons name="document-text" size={16} color={theme.subtext} />
             <Text style={styles.auditBtnText}>View Audit Trail</Text>
           </TouchableOpacity>
         </View>
@@ -261,7 +262,7 @@ const TeacherReviewSubmissionScreen: React.FC<Props> = ({ navigation, route }) =
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Examination Audit Trail</Text>
               <TouchableOpacity onPress={() => setShowAuditModal(false)}>
-                <Ionicons name="close" size={24} color="#6B7280" />
+                <Ionicons name="close" size={24} color={theme.subtext} />
               </TouchableOpacity>
             </View>
             <ScrollView style={{ maxHeight: 300, marginTop: 12 }}>
@@ -280,24 +281,24 @@ const TeacherReviewSubmissionScreen: React.FC<Props> = ({ navigation, route }) =
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.background} />
 
       {/* Wizard Header */}
       <View style={styles.wizardHeader}>
         <View style={styles.headerTop}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color="#1F2937" />
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.wizardTitle}>REVIEW SUBMISSION</Text>
-            <Text style={styles.wizardSubtitle}>{className} / <Text style={{ color: '#9CA3AF' }}>{examName}</Text></Text>
+            <Text style={styles.wizardSubtitle}>{className} / <Text style={{ color: theme.subtext }}>{examName}</Text></Text>
           </View>
           <TouchableOpacity 
             style={styles.actionBtn}
             onPress={() => setCurrentStep(2)}
           >
             <Text style={styles.actionBtnText}>ANALYZE RESULTS</Text>
-            <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
+            <Ionicons name="chevron-forward" size={16} color={theme.onPrimary} />
           </TouchableOpacity>
         </View>
 
@@ -308,7 +309,7 @@ const TeacherReviewSubmissionScreen: React.FC<Props> = ({ navigation, route }) =
               <TouchableOpacity style={styles.stepItem} onPress={() => setCurrentStep(step.id)}>
                 <View style={[styles.stepCircle, currentStep === step.id && styles.activeStepCircle]}>
                   {currentStep > step.id ? (
-                    <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                    <Ionicons name="checkmark" size={12} color={theme.onPrimary} />
                   ) : (
                     <Text style={[styles.stepNumber, currentStep === step.id && styles.activeStepNumber]}>{step.id}</Text>
                   )}
@@ -334,7 +335,7 @@ const TeacherReviewSubmissionScreen: React.FC<Props> = ({ navigation, route }) =
                 <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
               ) : subjects.length === 0 ? (
                 <View style={styles.emptySubjects}>
-                  <Ionicons name="documents-outline" size={48} color="#E5E7EB" />
+                  <Ionicons name="documents-outline" size={48} color={theme.border} />
                   <Text style={styles.emptyText}>No subjects submitted for review.</Text>
                 </View>
               ) : (
@@ -345,18 +346,18 @@ const TeacherReviewSubmissionScreen: React.FC<Props> = ({ navigation, route }) =
                     style={styles.subjectCard}
                   >
                     <View style={styles.subjectCardLeft}>
-                      <View style={[styles.subjectStatusBadge, { backgroundColor: subject.status === 'APPROVED' ? '#ECFDF5' : '#FEF3C7' }]}>
-                        <Text style={[styles.subjectStatusText, { color: subject.status === 'APPROVED' ? '#10B981' : '#F59E0B' }]}>
+                      <View style={[styles.subjectStatusBadge, { backgroundColor: subject.status === 'APPROVED' ? withAlpha(theme.success, 0.1) : withAlpha(theme.warning, 0.1) }]}>
+                        <Text style={[styles.subjectStatusText, { color: subject.status === 'APPROVED' ? theme.success : theme.warning }]}>
                           {subject.status || 'PENDING'}
                         </Text>
                       </View>
                       <Text style={styles.subjectNameText}>{subject.name}</Text>
                       <View style={styles.teacherInfo}>
-                        <Ionicons name="person-outline" size={12} color="#9CA3AF" />
+                        <Ionicons name="person-outline" size={12} color={theme.subtext} />
                         <Text style={styles.teacherName}>{subject.teacherName || 'Not Assigned'}</Text>
                       </View>
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color="#E5E7EB" />
+                    <Ionicons name="chevron-forward" size={20} color={theme.border} />
                   </Animated.View>
                 ))
               )}
@@ -368,7 +369,7 @@ const TeacherReviewSubmissionScreen: React.FC<Props> = ({ navigation, route }) =
                 <Text style={styles.readinessCardTitle}>CLASS READINESS</Text>
                 
                 <View style={styles.circleProgressContainer}>
-                  <View style={[styles.outerCircle, { borderColor: '#E5E7EB' }]}>
+                  <View style={[styles.outerCircle, { borderColor: theme.border }]}>
                     <View style={[styles.innerCircle, { borderColor: theme.primary }]}>
                       <Text style={styles.readinessValue}>{readinessPercent}%</Text>
                       <Text style={styles.readinessLabel}>APPROVED</Text>
@@ -384,7 +385,7 @@ const TeacherReviewSubmissionScreen: React.FC<Props> = ({ navigation, route }) =
                     <Text style={styles.approvalCount}>{approvedCount}/{totalSubjects}</Text>
                   </View>
                   <View style={styles.progressBarBg}>
-                    <View style={[styles.progressBarFill, { width: `${readinessPercent}%`, backgroundColor: '#10B981' }]} />
+                    <View style={[styles.progressBarFill, { width: `${readinessPercent}%`, backgroundColor: theme.success }]} />
                   </View>
                 </View>
               </Animated.View>
@@ -430,7 +431,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 8,
     gap: 8,
   },
-  actionBtnText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
+  actionBtnText: { color: theme.onPrimary, fontSize: 11, fontWeight: '800' },
 
   stepsContainer: {
     flexDirection: 'row',
@@ -446,19 +447,19 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: theme.isDarkMode ? '#334155' : '#E5E7EB',
+    backgroundColor: withAlpha(theme.border, 0.5),
     justifyContent: 'center',
     alignItems: 'center',
   },
-  activeStepCircle: { backgroundColor: '#3B82F6' },
+  activeStepCircle: { backgroundColor: theme.info },
   stepNumber: { fontSize: 11, fontWeight: '800', color: theme.subtext },
-  activeStepNumber: { color: '#FFFFFF' },
+  activeStepNumber: { color: theme.onPrimary },
   stepLabel: { fontSize: 10, fontWeight: '800', color: theme.subtext },
   activeStepLabel: { color: theme.text },
   stepConnector: {
     width: 30,
     height: 1,
-    backgroundColor: theme.isDarkMode ? '#334155' : '#E5E7EB',
+    backgroundColor: withAlpha(theme.border, 0.5),
     marginHorizontal: 12,
   },
 
@@ -478,7 +479,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
     marginBottom: 10,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
@@ -505,7 +506,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderColor: theme.border,
     padding: 20,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
     shadowRadius: 10,
@@ -540,23 +541,23 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRightColor: 'transparent',
   },
   readinessValue: { fontSize: 24, fontWeight: '900', color: theme.text },
-  readinessLabel: { fontSize: 9, fontWeight: '800', color: '#10B981', marginTop: 2 },
+  readinessLabel: { fontSize: 9, fontWeight: '800', color: theme.success, marginTop: 2 },
   progressArc: {
     position: 'absolute',
     width: 120,
     height: 120,
     borderRadius: 60,
     borderWidth: 12,
-    borderColor: '#3B82F6',
+    borderColor: theme.info,
     borderBottomColor: 'transparent',
     borderLeftColor: 'transparent',
   },
 
   subjectsApprovalContainer: { width: '100%' },
   approvalLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  approvalLabel: { fontSize: 9, fontWeight: '800', color: '#3B82F6' },
+  approvalLabel: { fontSize: 9, fontWeight: '800', color: theme.info },
   approvalCount: { fontSize: 11, fontWeight: '900', color: theme.text },
-  progressBarBg: { height: 6, backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9', borderRadius: 3, overflow: 'hidden' },
+  progressBarBg: { height: 6, backgroundColor: withAlpha(theme.border, 0.5), borderRadius: 3, overflow: 'hidden' },
   progressBarFill: { height: '100%', borderRadius: 3 },
 
   emptySubjects: { alignItems: 'center', justifyContent: 'center', marginTop: 60 },
@@ -567,7 +568,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   stepDesc: { fontSize: 13, color: theme.subtext, marginBottom: 20 },
   statsGrid: { flexDirection: 'row', gap: 12, marginBottom: 20 },
   statCard: { flex: 1, backgroundColor: theme.surface, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: theme.border, alignItems: 'center' },
-  statVal: { fontSize: 22, fontWeight: '900', color: '#7C3AED' },
+  statVal: { fontSize: 22, fontWeight: '900', color: theme.primary },
   statLab: { fontSize: 10, fontWeight: '800', color: theme.subtext, marginTop: 4 },
   sectionTitle: { fontSize: 16, fontWeight: '800', color: theme.text },
   analysisCard: { backgroundColor: theme.surface, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: theme.border, marginBottom: 12 },
@@ -577,24 +578,24 @@ const getStyles = (theme: any) => StyleSheet.create({
   analysisRow: { flexDirection: 'row', justifyContent: 'space-between' },
   analysisMeta: { fontSize: 12, color: theme.subtext, fontWeight: '500' },
   primaryActionBtn: { backgroundColor: theme.primary, paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginTop: 20 },
-  primaryActionText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
+  primaryActionText: { color: theme.onPrimary, fontWeight: '800', fontSize: 14 },
 
-  publishWarningCard: { backgroundColor: theme.isDarkMode ? '#312E8140' : '#F5F3FF', padding: 24, borderRadius: 16, borderWidth: 1, borderColor: theme.isDarkMode ? '#5B21B6' : '#DDD6FE', alignItems: 'center', marginBottom: 24 },
-  publishWarningTitle: { fontSize: 18, fontWeight: '800', color: theme.isDarkMode ? '#DDD6FE' : '#5B21B6', marginTop: 12, marginBottom: 8 },
+  publishWarningCard: { backgroundColor: withAlpha(theme.primary, 0.15), padding: 24, borderRadius: 16, borderWidth: 1, borderColor: theme.primary, alignItems: 'center', marginBottom: 24 },
+  publishWarningTitle: { fontSize: 18, fontWeight: '800', color: theme.primary, marginTop: 12, marginBottom: 8 },
   publishWarningDesc: { fontSize: 13, color: theme.subtext, textAlign: 'center', lineHeight: 20 },
   templateNote: { fontSize: 11, fontStyle: 'italic', marginTop: 12, textAlign: 'center' },
   actionGrid: { gap: 12 },
-  publishBtn: { flexDirection: 'row', backgroundColor: '#10B981', paddingVertical: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  publishBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
-  rejectBtn: { flexDirection: 'row', backgroundColor: theme.isDarkMode ? '#7F1D1D40' : '#FEE2E2', paddingVertical: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: theme.isDarkMode ? '#991B1B' : '#FECACA' },
-  rejectBtnText: { color: '#EF4444', fontWeight: '800', fontSize: 13 },
+  publishBtn: { flexDirection: 'row', backgroundColor: theme.success, paddingVertical: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 8 },
+  publishBtnText: { color: theme.onPrimary, fontWeight: '800', fontSize: 14 },
+  rejectBtn: { flexDirection: 'row', backgroundColor: withAlpha(theme.danger, 0.2), paddingVertical: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: withAlpha(theme.danger, 0.4) },
+  rejectBtnText: { color: theme.danger, fontWeight: '800', fontSize: 13 },
   secondaryActionsRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  recallBtn: { flex: 1, flexDirection: 'row', backgroundColor: theme.isDarkMode ? '#78350F40' : '#FEF3C7', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 6 },
-  recallBtnText: { color: '#D97706', fontWeight: '700', fontSize: 13 },
-  auditBtn: { flex: 1, flexDirection: 'row', backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  recallBtn: { flex: 1, flexDirection: 'row', backgroundColor: withAlpha(theme.warning, 0.2), paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  recallBtnText: { color: theme.warning, fontWeight: '700', fontSize: 13 },
+  auditBtn: { flex: 1, flexDirection: 'row', backgroundColor: withAlpha(theme.border, 0.5), paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 6 },
   auditBtnText: { color: theme.text, fontWeight: '700', fontSize: 13 },
 
-  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalBg: { flex: 1, backgroundColor: withAlpha(theme.overlay, 0.5), justifyContent: 'center', alignItems: 'center', padding: 20 },
   modalCard: { backgroundColor: theme.surface, borderRadius: 16, padding: 20, width: '100%', maxWidth: 500 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: theme.border, paddingBottom: 12 },
   modalTitle: { fontSize: 16, fontWeight: '800', color: theme.text },

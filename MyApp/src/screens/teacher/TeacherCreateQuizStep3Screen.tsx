@@ -16,6 +16,7 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { TeacherHeader } from '../../components/TeacherHeader';
 import teacherService from '../../services/teacherService';
 
@@ -99,7 +100,7 @@ const TeacherCreateQuizStep3Screen: React.FC<Props> = ({ navigation, route }) =>
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.background} />
 
       {/* Global Header */}
       <TeacherHeader
@@ -119,7 +120,7 @@ const TeacherCreateQuizStep3Screen: React.FC<Props> = ({ navigation, route }) =>
              }} 
              activeOpacity={0.8}
           >
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={20} color={theme.onPrimary} />
          </TouchableOpacity>
          <Text style={styles.blueTitle}>{quizData?.id ? 'Edit Quiz' : 'Create New Quiz'}</Text>
          <Text style={styles.blueSubtitle}>Review and Publish your Quiz</Text>
@@ -231,7 +232,7 @@ const TeacherCreateQuizStep3Screen: React.FC<Props> = ({ navigation, route }) =>
             }}
             disabled={isPublishing}
           >
-             <Ionicons name="arrow-back" size={16} color="#111827" style={{marginRight: 6}} />
+             <Ionicons name="arrow-back" size={16} color={theme.text} style={{marginRight: 6}} />
              <Text style={styles.cancelBtnText}>Previous</Text>
           </TouchableOpacity>
          <TouchableOpacity 
@@ -241,11 +242,11 @@ const TeacherCreateQuizStep3Screen: React.FC<Props> = ({ navigation, route }) =>
            disabled={isPublishing}
          >
             {isPublishing ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
+              <ActivityIndicator size="small" color={theme.onPrimary} />
             ) : (
               <>
                 <Text style={styles.nextBtnText}>{quizData?.id ? 'Update Quiz' : 'Publish Quiz'}</Text>
-                <Ionicons name="cloud-upload-outline" size={16} color="#FFFFFF" style={{marginLeft: 6}} />
+                <Ionicons name="cloud-upload-outline" size={16} color={theme.onPrimary} style={{marginLeft: 6}} />
               </>
             )}
          </TouchableOpacity>
@@ -266,7 +267,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -286,16 +287,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
   blueHeader: {
     backgroundColor: theme.primary,
@@ -309,7 +310,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.25),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -317,13 +318,13 @@ const getStyles = (theme: any) => StyleSheet.create({
   blueTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     marginBottom: 4,
   },
   blueSubtitle: {
     fontSize: 11,
     fontWeight: '400',
-    color: '#E0E7FF',
+    color: withAlpha(theme.onPrimary, 0.8),
   },
 
   stepperContainer: {
@@ -331,7 +332,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
     gap: 40,
     paddingVertical: 20,
-    backgroundColor: theme.isDarkMode ? '#33415530' : '#F8FAFC',
+    backgroundColor: withAlpha(theme.border, 0.3),
   },
   stepItem: {
     alignItems: 'center',
@@ -352,8 +353,8 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderColor: theme.primary,
   },
   stepCircleCompleted: {
-    backgroundColor: '#22C55E',
-    borderColor: '#22C55E',
+    backgroundColor: theme.success,
+    borderColor: theme.success,
   },
   stepNumber: {
     fontSize: 12,
@@ -361,7 +362,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '600',
   },
   stepNumberActive: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
   stepText: {
     fontSize: 12,
@@ -372,7 +373,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.primary,
   },
   stepTextCompleted: {
-    color: '#22C55E',
+    color: theme.success,
   },
 
   mainCard: {
@@ -380,7 +381,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 6,
     padding: 20,
     marginHorizontal: 16,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -447,9 +448,9 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
 
   infoBox: {
-    backgroundColor: theme.isDarkMode ? '#78350F30' : '#FFFBEB',
+    backgroundColor: withAlpha(theme.warning, 0.15),
     borderWidth: 1,
-    borderColor: theme.isDarkMode ? '#D97706' : '#FDE68A',
+    borderColor: withAlpha(theme.warning, 0.4),
     borderRadius: 8,
     padding: 16,
     marginBottom: 10,
@@ -457,13 +458,13 @@ const getStyles = (theme: any) => StyleSheet.create({
   infoBoxTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: theme.isDarkMode ? '#F59E0B' : '#B45309',
+    color: theme.warning,
     marginBottom: 6,
   },
   infoBoxSub: {
     fontSize: 11,
     fontWeight: '500',
-    color: theme.isDarkMode ? '#F59E0B' : '#B45309',
+    color: theme.warning,
     lineHeight: 18,
   },
 
@@ -514,7 +515,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   nextBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
 });
 

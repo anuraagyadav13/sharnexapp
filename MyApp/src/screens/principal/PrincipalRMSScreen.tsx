@@ -17,7 +17,8 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
-import { BRAND } from '../../constants/theme';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+
 import { useAuth } from '../../store/AuthContext';
 import { getCacheBustedUri } from '../../utils/image';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -308,7 +309,7 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
         <View style={styles.cardHeader}>
           <View style={styles.examTitleRow}>
             <View style={styles.docIconBox}>
-              <Ionicons name="document-text" size={18} color={BRAND.accentPurpleDark} />
+              <Ionicons name="document-text" size={18} color={theme.primary} />
             </View>
             <View style={styles.examTitleCol}>
               <Text style={styles.examNameText}>{item.name}</Text>
@@ -356,7 +357,7 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
               activeOpacity={0.7}
               accessibilityLabel="View Exam"
             >
-              <Ionicons name="eye-outline" size={18} color={BRAND.accentPurpleDark} />
+              <Ionicons name="eye-outline" size={18} color={theme.primary} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -488,7 +489,7 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
           {/* List View */}
           {isLoading && !isRefreshing ? (
             <View style={styles.centerContainer}>
-              <ActivityIndicator size="large" color={BRAND.accentPurpleDark} />
+              <ActivityIndicator size="large" color={theme.primary} />
               <Text style={styles.loadingText}>Loading exam definitions...</Text>
             </View>
           ) : error ? (
@@ -521,8 +522,8 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
                 <RefreshControl
                   refreshing={isRefreshing}
                   onRefresh={() => loadData(true)}
-                  tintColor={BRAND.accentPurpleDark}
-                  colors={[BRAND.accentPurpleDark]}
+                  tintColor={theme.primary}
+                  colors={[theme.primary]}
                 />
               }
             />
@@ -566,7 +567,7 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
                   {isLoadingExamDetail && (
-                    <ActivityIndicator size="small" color={BRAND.accentPurpleDark} style={{ marginRight: 8 }} />
+                    <ActivityIndicator size="small" color={theme.primary} style={{ marginRight: 8 }} />
                   )}
                   <Text
                     style={[
@@ -593,7 +594,7 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
           {/* Selector scope boundary state */}
           {!selectedExamId || !selectedClassId ? (
             <View style={styles.resultsPlaceholderCard}>
-              <Ionicons name="stats-chart-outline" size={48} color={BRAND.accentPurpleDark} style={{ marginBottom: 12 }} />
+              <Ionicons name="stats-chart-outline" size={48} color={theme.primary} style={{ marginBottom: 12 }} />
               <Text style={styles.placeholderTitle}>Exam Results View</Text>
               <Text style={styles.placeholderSubtext}>
                 {!selectedExamId
@@ -606,7 +607,7 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={styles.resultsHeaderTitle}>Results for {selectedClassObj?.className}</Text>
               {isLoadingResults ? (
                 <View style={{ padding: 40, alignItems: 'center' }}>
-                  <ActivityIndicator size="large" color={BRAND.accentPurpleDark} />
+                  <ActivityIndicator size="large" color={theme.primary} />
                   <Text style={{ marginTop: 12, color: theme.subtext }}>Fetching results...</Text>
                 </View>
               ) : resultsError ? (
@@ -672,7 +673,7 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
             <View style={{ marginTop: 12 }}>
               {isTrackerDetailLoading ? (
                 <View style={{ padding: 32, alignItems: 'center' }}>
-                  <ActivityIndicator size="large" color={BRAND.accentPurpleDark} />
+                  <ActivityIndicator size="large" color={theme.primary} />
                   <Text style={{ marginTop: 12, color: theme.subtext, fontSize: 13 }}>Loading exam details...</Text>
                 </View>
               ) : trackerExamDetail ? (
@@ -680,7 +681,7 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
                   {/* Summary Stats Row */}
                   <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
                     <View style={[styles.filterCard, { flex: 1, minWidth: '45%', alignItems: 'center', paddingVertical: 16 }]}>
-                      <Text style={{ fontSize: 22, fontWeight: '900', color: BRAND.accentPurpleDark }}>
+                      <Text style={{ fontSize: 22, fontWeight: '900', color: theme.primary }}>
                         {trackerExamDetail.classes?.length ?? 0}
                       </Text>
                       <Text style={{ fontSize: 10, fontWeight: '800', color: theme.subtext, textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 4 }}>
@@ -711,12 +712,12 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
                         </Text>
                       </View>
                       <View style={{
-                        backgroundColor: isDarkMode ? 'rgba(79,70,229,0.2)' : 'rgba(79,70,229,0.08)',
+                        backgroundColor: withAlpha(theme.primary, 0.2),
                         paddingHorizontal: 10,
                         paddingVertical: 4,
                         borderRadius: 8,
                       }}>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: BRAND.accentPurpleDark }}>Mapped</Text>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: theme.primary }}>Mapped</Text>
                       </View>
                     </View>
                   ))}
@@ -734,7 +735,7 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
 
           {!trackerExamId && (
             <View style={styles.resultsPlaceholderCard}>
-              <Ionicons name="git-network-outline" size={48} color={BRAND.accentPurpleDark} style={{ marginBottom: 12 }} />
+              <Ionicons name="git-network-outline" size={48} color={theme.primary} style={{ marginBottom: 12 }} />
               <Text style={styles.placeholderTitle}>Global Progress Tracker</Text>
               <Text style={styles.placeholderSubtext}>
                 Select an exam above to monitor submission and class-level progress.
@@ -746,7 +747,7 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
           {trackerExamId && (
             <View style={{ gap: 12, marginTop: 20 }}>
               <TouchableOpacity
-                style={[styles.addExamButton, { paddingVertical: 14, borderRadius: 12, justifyContent: 'center', backgroundColor: BRAND.accentPurpleDark }]}
+                style={[styles.addExamButton, { paddingVertical: 14, borderRadius: 12, justifyContent: 'center', backgroundColor: theme.primary }]}
                 onPress={handleGenerateResults}
                 disabled={isGenerating}
                 activeOpacity={0.8}
@@ -824,7 +825,7 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
                     {exam.name} ({exam.academicYear})
                   </Text>
                   {trackerExamId === exam.id && (
-                    <Ionicons name="checkmark" size={18} color={BRAND.accentPurpleDark} />
+                    <Ionicons name="checkmark" size={18} color={theme.primary} />
                   )}
                 </TouchableOpacity>
               ))}
@@ -875,7 +876,7 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
                     {exam.name} ({exam.academicYear})
                   </Text>
                   {selectedExamId === exam.id && (
-                    <Ionicons name="checkmark" size={18} color={BRAND.accentPurpleDark} />
+                    <Ionicons name="checkmark" size={18} color={theme.primary} />
                   )}
                 </TouchableOpacity>
               ))}
@@ -900,7 +901,7 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.dropdownModalTitle}>Select Class</Text>
             {isLoadingExamDetail ? (
               <View style={{ paddingVertical: 24, alignItems: 'center', justifyContent: 'center' }}>
-                <ActivityIndicator size="small" color={BRAND.accentPurpleDark} />
+                <ActivityIndicator size="small" color={theme.primary} />
                 <Text style={{ marginTop: 8, fontSize: 13, color: theme.subtext }}>
                   Loading participating classes...
                 </Text>
@@ -912,7 +913,7 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
                   {examDetailError}
                 </Text>
                 <TouchableOpacity
-                  style={{ backgroundColor: BRAND.accentPurpleDark, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 }}
+                  style={{ backgroundColor: theme.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 }}
                   onPress={() => fetchExamDetail(selectedExamId)}
                 >
                   <Text style={{ color: theme.onPrimary, fontWeight: '600', fontSize: 13 }}>Retry</Text>
@@ -952,7 +953,7 @@ const PrincipalRMSScreen: React.FC<Props> = ({ navigation }) => {
                         {cls.className || `Class ${cls.classId}`}
                       </Text>
                       {selectedClassId === cls.classId && (
-                        <Ionicons name="checkmark" size={18} color={BRAND.accentPurpleDark} />
+                        <Ionicons name="checkmark" size={18} color={theme.primary} />
                       )}
                     </TouchableOpacity>
                   ))
@@ -1032,7 +1033,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       color: theme.subtext,
     },
     addExamButton: {
-      backgroundColor: BRAND.accentPurpleDark,
+      backgroundColor: theme.primary,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
@@ -1059,7 +1060,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       backgroundColor: isDarkMode ? theme.surface : theme.border,
     },
     tabButtonActive: {
-      backgroundColor: BRAND.accentPurpleDark,
+      backgroundColor: theme.primary,
     },
     tabText: {
       fontSize: 13,
@@ -1104,7 +1105,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     errorBox: {
       padding: 20,
       borderRadius: 16,
-      backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
+      backgroundColor: withAlpha(theme.danger, 0.15),
       borderWidth: 1,
       borderColor: theme.danger,
       alignItems: 'center',
@@ -1178,7 +1179,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 32,
       height: 32,
       borderRadius: 8,
-      backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.2)' : theme.iconBackground,
+      backgroundColor: withAlpha(theme.primary, 0.2),
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -1200,10 +1201,10 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderRadius: 16,
     },
     statusBadgeActive: {
-      backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)',
+      backgroundColor: withAlpha(theme.success, 0.2),
     },
     statusBadgeDraft: {
-      backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)',
+      backgroundColor: withAlpha(theme.warning, 0.2),
     },
     statusBadgeText: {
       fontSize: 10,
@@ -1242,7 +1243,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       color: theme.subtext,
     },
     scopePill: {
-      backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.15)' : theme.iconBackground,
+      backgroundColor: withAlpha(theme.primary, 0.15),
       paddingHorizontal: 6,
       paddingVertical: 2,
       borderRadius: 10,
@@ -1250,7 +1251,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     scopePillText: {
       fontSize: 10,
       fontWeight: '700',
-      color: BRAND.accentPurpleDark,
+      color: theme.primary,
     },
     actionsRow: {
       flexDirection: 'row',
@@ -1384,7 +1385,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(15, 23, 42, 0.5)',
+      backgroundColor: withAlpha(theme.overlay, 0.5),
       justifyContent: 'center',
       alignItems: 'center',
       padding: 20,
@@ -1413,7 +1414,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       justifyContent: 'space-between',
     },
     dropdownOptionSelected: {
-      backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.2)' : theme.iconBackground,
+      backgroundColor: withAlpha(theme.primary, 0.2),
     },
     dropdownOptionText: {
       fontSize: 13,

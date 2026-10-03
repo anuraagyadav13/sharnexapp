@@ -17,6 +17,7 @@ import {
   Alert,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
@@ -120,8 +121,8 @@ const PreferenceToggle = ({
       <Switch
         value={value}
         onValueChange={onValueChange}
-        trackColor={{ false: theme.border, true: '#22C55E' }}
-        thumbColor="#FFFFFF"
+        trackColor={{ false: theme.border, true: theme.success }}
+        thumbColor={theme.onPrimary}
       />
     </View>
   );
@@ -880,7 +881,7 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
               )}
             </View>
             <View style={styles.cameraIconBadge}>
-              <Ionicons name="camera" size={12} color="#FFFFFF" />
+              <Ionicons name="camera" size={12} color={theme.onPrimary} />
             </View>
           </ScaleButton>
 
@@ -1115,10 +1116,10 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
                   onPress={saveProfile}
                 >
                   {isLoading ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <ActivityIndicator size="small" color={theme.onPrimary} />
                   ) : (
                     <>
-                      <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                      <Ionicons name="checkmark-circle" size={16} color={theme.onPrimary} style={{ marginRight: 6 }} />
                       <Text style={styles.saveBtnText}>Save Profile</Text>
                     </>
                   )}
@@ -1200,10 +1201,10 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
 
                   <ScaleButton style={styles.saveBtn} onPress={saveInstitutionInfo}>
                     {isLoading ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <ActivityIndicator size="small" color={theme.onPrimary} />
                     ) : (
                       <>
-                        <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                        <Ionicons name="checkmark-circle" size={16} color={theme.onPrimary} style={{ marginRight: 6 }} />
                         <Text style={styles.saveBtnText}>Save Institution</Text>
                       </>
                     )}
@@ -1236,7 +1237,7 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
                             <Ionicons
                               name={sess.device?.toLowerCase().includes('mobile') ? 'hardware-chip-outline' : 'desktop-outline'}
                               size={18}
-                              color={isCurrent ? '#10B981' : theme.text}
+                              color={isCurrent ? theme.success : theme.text}
                             />
                             <Text style={styles.sessionDeviceText}>
                               {sess.device || sess.userAgent || 'Unknown Device'}
@@ -1357,10 +1358,10 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
 
                   <ScaleButton style={styles.saveBtn} onPress={saveProfDetails}>
                     {isLoading ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <ActivityIndicator size="small" color={theme.onPrimary} />
                     ) : (
                       <>
-                        <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                        <Ionicons name="checkmark-circle" size={16} color={theme.onPrimary} style={{ marginRight: 6 }} />
                         <Text style={styles.saveBtnText}>Save Professional Info</Text>
                       </>
                     )}
@@ -1429,10 +1430,10 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
 
                   <ScaleButton style={styles.saveBtn} onPress={saveParentInfo}>
                     {isLoading ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <ActivityIndicator size="small" color={theme.onPrimary} />
                     ) : (
                       <>
-                        <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                        <Ionicons name="checkmark-circle" size={16} color={theme.onPrimary} style={{ marginRight: 6 }} />
                         <Text style={styles.saveBtnText}>Save Parent Info</Text>
                       </>
                     )}
@@ -1500,10 +1501,10 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
 
                   <ScaleButton style={styles.saveBtn} onPress={saveEmergencyInfo}>
                     {isLoading ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <ActivityIndicator size="small" color={theme.onPrimary} />
                     ) : (
                       <>
-                        <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                        <Ionicons name="checkmark-circle" size={16} color={theme.onPrimary} style={{ marginRight: 6 }} />
                         <Text style={styles.saveBtnText}>Save Emergency Contact</Text>
                       </>
                     )}
@@ -1584,10 +1585,10 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
 
                 <ScaleButton style={styles.saveBtn} onPress={saveBankDetails}>
                   {isLoading ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <ActivityIndicator size="small" color={theme.onPrimary} />
                   ) : (
                     <>
-                      <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                      <Ionicons name="checkmark-circle" size={16} color={theme.onPrimary} style={{ marginRight: 6 }} />
                       <Text style={styles.saveBtnText}>Save Bank Details</Text>
                     </>
                   )}
@@ -1734,7 +1735,7 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
             {/* Header */}
             <View style={styles.pwdHeader}>
               <View style={styles.pwdHeaderIcon}>
-                <Ionicons name="key" size={24} color="#FFFFFF" />
+                <Ionicons name="key" size={24} color={theme.onPrimary} />
               </View>
               <View style={styles.pwdHeaderTextContainer}>
                 <Text style={styles.pwdHeaderTitle}>Change Password</Text>
@@ -1746,7 +1747,7 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
                 onPress={() => setShowPasswordModal(false)}
                 style={styles.pwdCloseBtn}
               >
-                <Ionicons name="close" size={20} color="#FFFFFF" />
+                <Ionicons name="close" size={20} color={theme.onPrimary} />
               </TouchableOpacity>
             </View>
 
@@ -1839,10 +1840,10 @@ const AccountSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
 
                 <ScaleButton style={styles.saveBtn} onPress={changePassword}>
                   {isLoading ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <ActivityIndicator size="small" color={theme.onPrimary} />
                   ) : (
                     <>
-                      <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                      <Ionicons name="checkmark-circle" size={16} color={theme.onPrimary} style={{ marginRight: 6 }} />
                       <Text style={styles.saveBtnText}>Update Password</Text>
                     </>
                   )}
@@ -1884,7 +1885,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -1907,16 +1908,16 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#A855F7',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
     elevation: 8,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
   headerAvatarImage: {
     width: '100%',
     height: '100%',
@@ -1935,13 +1936,13 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
 
   /* Modernized Hero ID Card */
   heroCard: {
-    backgroundColor: isDarkMode ? '#1E1B4B' : '#F5F3FF',
+    backgroundColor: withAlpha(theme.primary, 0.1),
     borderRadius: 20,
     padding: 20,
     marginHorizontal: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: isDarkMode ? 'rgba(99, 102, 241, 0.35)' : '#DDD6FE',
+    borderColor: withAlpha(theme.primary, 0.35),
     shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: isDarkMode ? 0.3 : 0.08,
@@ -1963,7 +1964,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -1990,7 +1991,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: isDarkMode ? '#1E1B4B' : '#F5F3FF',
+    borderColor: withAlpha(theme.primary, 0.2),
   },
   heroInfo: {
     flex: 1,
@@ -2010,7 +2011,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   heroStatusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.25)' : 'rgba(99, 102, 241, 0.12)',
+    backgroundColor: withAlpha(theme.primary, 0.25),
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -2034,7 +2035,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     backgroundColor: theme.surface,
     borderRadius: 20,
     marginHorizontal: 20,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: isDarkMode ? 0.25 : 0.05,
     shadowRadius: 8,
@@ -2047,7 +2048,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   /* Segmented Navigation Tabs */
   tabsRowContainer: {
     flexDirection: 'row',
-    backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9',
+    backgroundColor: withAlpha(theme.border, 0.4),
     borderRadius: 16,
     margin: 12,
     padding: 3,
@@ -2065,7 +2066,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   },
   tabActive: {
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: isDarkMode ? 0.3 : 0.08,
     shadowRadius: 3,
@@ -2093,7 +2094,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)',
+    backgroundColor: withAlpha(theme.primary, 0.2),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2128,7 +2129,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   lockedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9',
+    backgroundColor: withAlpha(theme.border, 0.4),
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
@@ -2146,7 +2147,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
     borderRadius: 12,
-    backgroundColor: isDarkMode ? '#1E293B' : '#FAFAFA',
+    backgroundColor: theme.surface,
     paddingHorizontal: 12,
   },
   inputWrapperMultiline: {
@@ -2157,7 +2158,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 8,
-    backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.08)',
+    backgroundColor: withAlpha(theme.primary, 0.15),
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
@@ -2185,7 +2186,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   staticFieldWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -2200,7 +2201,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
 
   /* Preference Toggle Cards */
   toggleCard: {
-    backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC',
+    backgroundColor: theme.surface,
     borderRadius: 14,
     padding: 16,
     marginHorizontal: 20,
@@ -2262,7 +2263,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   saveBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
 
   /* Change Password Security Card */
@@ -2270,7 +2271,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC',
+    backgroundColor: theme.surface,
     borderRadius: 14,
     padding: 16,
     marginHorizontal: 20,
@@ -2286,7 +2287,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)',
+    backgroundColor: withAlpha(theme.primary, 0.2),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2304,7 +2305,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   /* Calendar Modal */
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: withAlpha(theme.overlay, 0.65),
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
@@ -2314,7 +2315,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderRadius: 20,
     padding: 24,
     width: '100%',
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
     shadowRadius: 15,
@@ -2372,14 +2373,14 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     fontWeight: '600',
   },
   calDayTextActive: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontWeight: '800',
   },
   closeModalBtn: {
     marginTop: 20,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9',
+    backgroundColor: withAlpha(theme.border, 0.4),
     alignItems: 'center',
   },
   closeModalBtnText: {
@@ -2394,7 +2395,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderRadius: 24,
     width: '100%',
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
     shadowRadius: 15,
@@ -2413,7 +2414,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.25),
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -2425,12 +2426,12 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   pwdHeaderTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     marginBottom: 4,
   },
   pwdHeaderSubtitle: {
     fontSize: 12,
-    color: '#E0E7FF',
+    color: withAlpha(theme.onPrimary, 0.8),
     fontWeight: '500',
   },
   pwdCloseBtn: {
@@ -2440,7 +2441,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     backgroundColor: theme.surface,
   },
   pwdReqBox: {
-    backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     marginHorizontal: 20,
     marginTop: -32,
@@ -2448,7 +2449,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     padding: 16,
     borderLeftWidth: 4,
     borderLeftColor: theme.primary,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: isDarkMode ? 0.2 : 0.05,
     shadowRadius: 8,
@@ -2485,23 +2486,23 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
 
   /* Sessions Styles */
   sessionCard: {
-    backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC',
+    backgroundColor: theme.surface,
     borderWidth: 1,
     borderColor: theme.border,
     borderRadius: 14,
     padding: 16,
     marginHorizontal: 20,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
   },
   currentSessionCard: {
-    borderColor: '#10B981',
+    borderColor: theme.success,
     borderWidth: 1.5,
-    backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.15)' : '#ECFDF5',
+    backgroundColor: withAlpha(theme.success, 0.15),
   },
   sessionHeaderRow: {
     flexDirection: 'row',
@@ -2515,7 +2516,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     color: theme.text,
   },
   currentBadge: {
-    backgroundColor: '#10B981',
+    backgroundColor: theme.success,
     paddingVertical: 3,
     paddingHorizontal: 9,
     borderRadius: 8,
@@ -2523,7 +2524,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   currentBadgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#FFF',
+    color: theme.onPrimary,
   },
   sessionIpText: {
     fontSize: 12,

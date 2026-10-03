@@ -13,6 +13,9 @@ import Animated, {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { withAlpha, LIGHT_COLORS } from '../constants/theme';
+const theme = LIGHT_COLORS;
+
 const { width } = Dimensions.get('window');
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
@@ -46,10 +49,10 @@ const Toast: React.FC<ToastProps> = ({ message, type, onHide, duration = 3000, o
 
   const getColor = () => {
     switch (type) {
-      case 'success': return '#10B981';
-      case 'error': return '#EF4444';
-      case 'warning': return '#F59E0B';
-      default: return '#3B82F6';
+      case 'success': return theme.success;
+      case 'error': return theme.danger;
+      case 'warning': return theme.warning;
+      default: return theme.primary;
     }
   };
 
@@ -75,7 +78,7 @@ const Toast: React.FC<ToastProps> = ({ message, type, onHide, duration = 3000, o
             <Text style={styles.undoText}>UNDO</Text>
           </TouchableOpacity>
         )}
-        <Ionicons name="close" size={20} color="#94A3B8" onPress={onHide} />
+        <Ionicons name="close" size={20} color={theme.subtext} onPress={onHide} />
       </View>
     </Animated.View>
   );
@@ -89,13 +92,13 @@ const styles = StyleSheet.create({
     zIndex: 9999,
   },
   content: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     borderLeftWidth: 5,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.1,
     shadowRadius: 20,
@@ -115,17 +118,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#1E293B',
+    color: theme.text,
     marginBottom: 2,
   },
   message: {
     fontSize: 13,
-    color: '#64748B',
+    color: theme.subtext,
     fontWeight: '500',
     lineHeight: 18,
   },
-  undoBtn: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#F1F5F9', borderRadius: 8, marginRight: 8 },
-  undoText: { fontSize: 11, fontWeight: '800', color: '#4F46E5' },
+  undoBtn: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: withAlpha(theme.primary, 0.1), borderRadius: 8, marginRight: 8 },
+  undoText: { fontSize: 11, fontWeight: '800', color: theme.primary },
 });
 
 export default Toast;

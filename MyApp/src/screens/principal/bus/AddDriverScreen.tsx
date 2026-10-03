@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../../store/ThemeContext';
+import { withAlpha } from '../../../constants/theme';
 import { BusSubHeader } from '../../../components/bus/BusSubHeader';
 import { busStore } from '../../../services/busMockData';
 
@@ -92,7 +93,7 @@ export const AddDriverScreen: React.FC<Props> = ({ navigation }) => {
         {/* Panel 1: Personal Information */}
         <View style={[styles.panelCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.panelTitleRow}>
-            <Ionicons name="person-outline" size={20} color="#7C3AED" style={{ marginRight: 8 }} />
+            <Ionicons name="person-outline" size={20} color={theme.primary} style={{ marginRight: 8 }} />
             <Text style={styles.panelTitle}>Personal Information</Text>
           </View>
 
@@ -102,7 +103,7 @@ export const AddDriverScreen: React.FC<Props> = ({ navigation }) => {
             <TextInput
               style={[
                 styles.textInput,
-                { color: theme.text, borderColor: errors.fullName ? '#EF4444' : theme.border },
+                { color: theme.text, borderColor: errors.fullName ? theme.danger : theme.border },
               ]}
               placeholder="e.g. Rajesh Kumar"
               placeholderTextColor={theme.placeholder}
@@ -118,7 +119,7 @@ export const AddDriverScreen: React.FC<Props> = ({ navigation }) => {
             <TextInput
               style={[
                 styles.textInput,
-                { color: theme.text, borderColor: errors.phone ? '#EF4444' : theme.border },
+                { color: theme.text, borderColor: errors.phone ? theme.danger : theme.border },
               ]}
               placeholder="e.g. +91 98765 43210"
               placeholderTextColor={theme.placeholder}
@@ -159,7 +160,7 @@ export const AddDriverScreen: React.FC<Props> = ({ navigation }) => {
         {/* Panel 2: License Details */}
         <View style={[styles.panelCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.panelTitleRow}>
-            <Ionicons name="card-outline" size={20} color="#7C3AED" style={{ marginRight: 8 }} />
+            <Ionicons name="card-outline" size={20} color={theme.primary} style={{ marginRight: 8 }} />
             <Text style={styles.panelTitle}>License Details</Text>
           </View>
 
@@ -170,7 +171,7 @@ export const AddDriverScreen: React.FC<Props> = ({ navigation }) => {
               <TextInput
                 style={[
                   styles.textInput,
-                  { color: theme.text, borderColor: errors.licenseNumber ? '#EF4444' : theme.border },
+                  { color: theme.text, borderColor: errors.licenseNumber ? theme.danger : theme.border },
                 ]}
                 placeholder="KA-01-20180049210"
                 placeholderTextColor={theme.placeholder}
@@ -219,7 +220,7 @@ export const AddDriverScreen: React.FC<Props> = ({ navigation }) => {
                     {lic.title}
                   </Text>
                   {licenseType === lic.type && (
-                    <Ionicons name="checkmark-circle" size={18} color="#7C3AED" />
+                    <Ionicons name="checkmark-circle" size={18} color={theme.primary} />
                   )}
                 </View>
                 <Text style={styles.licenseCardDesc}>{lic.desc}</Text>
@@ -231,7 +232,7 @@ export const AddDriverScreen: React.FC<Props> = ({ navigation }) => {
         {/* Panel 3: Account Credentials */}
         <View style={[styles.panelCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.panelTitleRow}>
-            <Ionicons name="lock-closed-outline" size={20} color="#7C3AED" style={{ marginRight: 8 }} />
+            <Ionicons name="lock-closed-outline" size={20} color={theme.primary} style={{ marginRight: 8 }} />
             <Text style={styles.panelTitle}>Account Credentials</Text>
           </View>
 
@@ -289,7 +290,7 @@ export const AddDriverScreen: React.FC<Props> = ({ navigation }) => {
             activeOpacity={0.8}
             onPress={handleAddDriver}
           >
-            <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+            <Ionicons name="checkmark-circle-outline" size={18} color={theme.onPrimary} style={{ marginRight: 6 }} />
             <Text style={styles.submitBtnText}>Add Driver</Text>
           </TouchableOpacity>
         </View>
@@ -360,11 +361,11 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderWidth: 1,
       paddingHorizontal: 14,
       fontSize: 14,
-      backgroundColor: isDarkMode ? '#120D24' : '#F8FAFC',
+      backgroundColor: theme.surface,
     },
     errorText: {
       fontSize: 11,
-      color: '#EF4444',
+      color: theme.danger,
       marginTop: 4,
       fontWeight: '600',
     },
@@ -380,11 +381,11 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       padding: 12,
       borderWidth: 1.5,
       borderColor: theme.border,
-      backgroundColor: isDarkMode ? '#120D24' : '#F8FAFC',
+      backgroundColor: theme.surface,
     },
     licenseCardActive: {
-      borderColor: '#7C3AED',
-      backgroundColor: isDarkMode ? '#26174A' : '#F5F3FF',
+      borderColor: theme.primary,
+      backgroundColor: withAlpha(theme.primary, 0.1),
     },
     licenseCardTop: {
       flexDirection: 'row',
@@ -398,7 +399,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       color: theme.text,
     },
     licenseCardTitleActive: {
-      color: '#7C3AED',
+      color: theme.primary,
     },
     licenseCardDesc: {
       fontSize: 11,
@@ -412,7 +413,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderWidth: 1,
       borderColor: theme.border,
       paddingHorizontal: 14,
-      backgroundColor: isDarkMode ? '#120D24' : '#F8FAFC',
+      backgroundColor: theme.surface,
     },
     passwordInput: {
       flex: 1,
@@ -440,11 +441,11 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       flex: 2,
       height: 48,
       borderRadius: 24,
-      backgroundColor: '#7C3AED',
+      backgroundColor: theme.primary,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      shadowColor: '#7C3AED',
+      shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3,
       shadowRadius: 6,
@@ -453,6 +454,6 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     submitBtnText: {
       fontSize: 14,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: theme.onPrimary,
     },
   });

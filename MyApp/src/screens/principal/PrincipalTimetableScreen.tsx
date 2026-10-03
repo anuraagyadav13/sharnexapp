@@ -13,7 +13,8 @@ import {
   Platform,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
-import { COLORS } from '../../constants/theme';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useAuth } from '../../store/AuthContext';
@@ -49,27 +50,27 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 
 const getSubjectColors = (subject?: string, isDarkMode?: boolean, theme?: any) => {
   const norm = typeof subject === 'string' ? subject.toLowerCase().trim() : '';
-  const primary = theme?.primary || COLORS.primary;
-  const secondary = theme?.secondary || COLORS.secondary;
-  const warning = theme?.warning || COLORS.warning;
-  const danger = theme?.danger || COLORS.danger;
-  const success = theme?.success || COLORS.success;
-  const subtext = theme?.subtext || COLORS.textSecondary;
-  const iconBg = theme?.iconBackground || COLORS.background;
+  const primary = theme?.primary || theme.primary;
+  const secondary = theme?.secondary || theme.secondary;
+  const warning = theme?.warning || theme.warning;
+  const danger = theme?.danger || theme.danger;
+  const success = theme?.success || theme.success;
+  const subtext = theme?.subtext || theme.textSecondary;
+  const iconBg = theme?.iconBackground || theme.background;
 
   if (norm.includes('science') || norm.includes('chem') || norm.includes('bio') || norm.includes('phys'))
-    return { iconBg: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)', iconColor: warning, barColor: warning };
+    return { iconBg: withAlpha(theme.warning, 0.2), iconColor: warning, barColor: warning };
   if (norm.includes('math'))
-    return { iconBg: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)', iconColor: danger, barColor: danger };
+    return { iconBg: withAlpha(theme.danger, 0.2), iconColor: danger, barColor: danger };
   if (norm.includes('english') || norm.includes('lit'))
-    return { iconBg: isDarkMode ? 'rgba(59, 130, 246, 0.2)' : iconBg, iconColor: primary, barColor: primary };
+    return { iconBg: withAlpha(theme.info, 0.2), iconColor: primary, barColor: primary };
   if (norm.includes('computer') || norm.includes('it') || norm.includes('code'))
-    return { iconBg: isDarkMode ? 'rgba(107, 114, 128, 0.2)' : 'rgba(107, 114, 128, 0.1)', iconColor: subtext, barColor: subtext };
+    return { iconBg: withAlpha(theme.subtext, 0.2), iconColor: subtext, barColor: subtext };
   if (norm.includes('hindi') || norm.includes('lang'))
-    return { iconBg: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)', iconColor: success, barColor: success };
+    return { iconBg: withAlpha(theme.success, 0.2), iconColor: success, barColor: success };
   if (norm.includes('social') || norm.includes('hist') || norm.includes('geo'))
-    return { iconBg: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)', iconColor: success, barColor: success };
-  return { iconBg: isDarkMode ? 'rgba(139, 92, 246, 0.2)' : iconBg, iconColor: secondary, barColor: secondary };
+    return { iconBg: withAlpha(theme.success, 0.2), iconColor: success, barColor: success };
+  return { iconBg: withAlpha(theme.primary, 0.2), iconColor: secondary, barColor: secondary };
 };
 
 const getSubjectIcon = (subject?: string) => {
@@ -983,7 +984,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: withAlpha(theme.danger, 0.2),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -1160,12 +1161,12 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   todayBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: isDarkMode ? 'rgba(59, 130, 246, 0.2)' : theme.iconBackground,
+    backgroundColor: withAlpha(theme.info, 0.2),
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: isDarkMode ? 'rgba(59, 130, 246, 0.4)' : theme.border,
+    borderColor: withAlpha(theme.info, 0.4),
   },
   todayBtnText: {
     fontSize: 12,
@@ -1346,12 +1347,12 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)',
+    backgroundColor: withAlpha(theme.warning, 0.2),
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: isDarkMode ? 'rgba(245, 158, 11, 0.4)' : theme.warning,
+    borderColor: withAlpha(theme.warning, 0.4),
     marginTop: 4,
   },
   lunchText: {
@@ -1474,7 +1475,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     flex: 1,
   },
   compactAbsentBadge: {
-    backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: withAlpha(theme.danger, 0.2),
     paddingHorizontal: 4,
     paddingVertical: 1,
     borderRadius: 3,
@@ -1489,7 +1490,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
-    backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)',
+    backgroundColor: withAlpha(theme.warning, 0.2),
     paddingHorizontal: 4,
     paddingVertical: 2,
     borderRadius: 4,
@@ -1524,12 +1525,12 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   },
   gridLunchContent: {
     flex: 1,
-    backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)',
+    backgroundColor: withAlpha(theme.warning, 0.2),
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: isDarkMode ? 'rgba(245, 158, 11, 0.4)' : theme.warning,
+    borderColor: withAlpha(theme.warning, 0.4),
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: 4,
@@ -1548,7 +1549,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     marginTop: 2,
   },
   absentBadge: {
-    backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: withAlpha(theme.danger, 0.2),
     paddingVertical: 2,
     paddingHorizontal: 6,
     borderRadius: 4,
@@ -1563,7 +1564,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 6,
-    backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)',
+    backgroundColor: withAlpha(theme.warning, 0.2),
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 6,

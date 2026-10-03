@@ -11,6 +11,7 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../../store/ThemeContext';
+import { withAlpha } from '../../../constants/theme';
 import { NavigationDrawer } from '../../../components/NavigationDrawer';
 import { BusSubHeader } from '../../../components/bus/BusSubHeader';
 import { BusMapPlaceholder } from '../../../components/bus/BusMapPlaceholder';
@@ -83,8 +84,8 @@ export const BusDashboardScreen: React.FC<Props> = ({ navigation }) => {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={onRefresh}
-            colors={['#7C3AED']}
-            tintColor="#7C3AED"
+            colors={[theme.primary]}
+            tintColor={theme.primary}
           />
         }
       >
@@ -96,8 +97,8 @@ export const BusDashboardScreen: React.FC<Props> = ({ navigation }) => {
         >
           {/* Total Buses */}
           <View style={[styles.statCard, { borderColor: theme.border }]}>
-            <View style={[styles.statIconBox, { backgroundColor: isDarkMode ? '#26174A' : '#EDE9FE' }]}>
-              <Ionicons name="bus-outline" size={20} color="#8B5CF6" />
+            <View style={[styles.statIconBox, { backgroundColor: withAlpha(theme.primary, 0.15) }]}>
+              <Ionicons name="bus-outline" size={20} color={theme.primary} />
             </View>
             <Text style={styles.statValue}>{totalBuses}</Text>
             <Text style={styles.statLabel}>Total Buses</Text>
@@ -105,8 +106,8 @@ export const BusDashboardScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* Active Trips */}
           <View style={[styles.statCard, { borderColor: theme.border }]}>
-            <View style={[styles.statIconBox, { backgroundColor: isDarkMode ? '#1E2B37' : '#E0F2FE' }]}>
-              <Ionicons name="navigate-outline" size={20} color="#0EA5E9" />
+            <View style={[styles.statIconBox, { backgroundColor: withAlpha(theme.info, 0.1) }]}>
+              <Ionicons name="navigate-outline" size={20} color={theme.info} />
             </View>
             <Text style={styles.statValue}>{activeTrips}</Text>
             <Text style={styles.statLabel}>Active Trips</Text>
@@ -114,19 +115,19 @@ export const BusDashboardScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* Delayed Buses (Critical/Red) */}
           <View style={[styles.statCard, styles.criticalStatCard]}>
-            <View style={[styles.statIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
-              <Ionicons name="alert-circle-outline" size={20} color="#EF4444" />
+            <View style={[styles.statIconBox, { backgroundColor: withAlpha(theme.danger, 0.15) }]}>
+              <Ionicons name="alert-circle-outline" size={20} color={theme.danger} />
             </View>
-            <Text style={[styles.statValue, { color: '#EF4444' }]}>{delayedBuses}</Text>
-            <Text style={[styles.statLabel, { color: '#EF4444', fontWeight: '700' }]}>
+            <Text style={[styles.statValue, { color: theme.danger }]}>{delayedBuses}</Text>
+            <Text style={[styles.statLabel, { color: theme.danger, fontWeight: '700' }]}>
               Delayed / Issue
             </Text>
           </View>
 
           {/* Active Vehicles */}
           <View style={[styles.statCard, { borderColor: theme.border }]}>
-            <View style={[styles.statIconBox, { backgroundColor: isDarkMode ? '#142E25' : '#D1FAE5' }]}>
-              <Ionicons name="checkmark-circle-outline" size={20} color="#10B981" />
+            <View style={[styles.statIconBox, { backgroundColor: withAlpha(theme.success, 0.1) }]}>
+              <Ionicons name="checkmark-circle-outline" size={20} color={theme.success} />
             </View>
             <Text style={styles.statValue}>{activeVehicles}</Text>
             <Text style={styles.statLabel}>Active Vehicles</Text>
@@ -134,8 +135,8 @@ export const BusDashboardScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* Students Onboard */}
           <View style={[styles.statCard, { borderColor: theme.border }]}>
-            <View style={[styles.statIconBox, { backgroundColor: isDarkMode ? '#3B1A24' : '#FCE7F3' }]}>
-              <Ionicons name="people-outline" size={20} color="#EC4899" />
+            <View style={[styles.statIconBox, { backgroundColor: withAlpha(theme.secondary, 0.1) }]}>
+              <Ionicons name="people-outline" size={20} color={theme.secondary} />
             </View>
             <Text style={styles.statValue}>{studentsOnboard}</Text>
             <Text style={styles.statLabel}>Students Onboard</Text>
@@ -146,7 +147,7 @@ export const BusDashboardScreen: React.FC<Props> = ({ navigation }) => {
         <View style={[styles.panelCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.panelHeaderRow}>
             <View style={styles.panelTitleContainer}>
-              <Ionicons name="map-outline" size={20} color="#7C3AED" style={{ marginRight: 8 }} />
+              <Ionicons name="map-outline" size={20} color={theme.primary} style={{ marginRight: 8 }} />
               <Text style={styles.panelTitle}>Mini Fleet Snapshot</Text>
             </View>
             <TouchableOpacity
@@ -170,7 +171,7 @@ export const BusDashboardScreen: React.FC<Props> = ({ navigation }) => {
         <View style={[styles.panelCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.panelHeaderRow}>
             <View style={styles.panelTitleContainer}>
-              <Ionicons name="flash-outline" size={20} color="#F59E0B" style={{ marginRight: 8 }} />
+              <Ionicons name="flash-outline" size={20} color={theme.warning} style={{ marginRight: 8 }} />
               <Text style={styles.panelTitle}>Priority Active Trips</Text>
             </View>
             <View style={styles.badgePillAmber}>
@@ -190,14 +191,14 @@ export const BusDashboardScreen: React.FC<Props> = ({ navigation }) => {
           {/* Online / Offline Vehicle Counts */}
           <View style={styles.statusCountFooter}>
             <View style={styles.statusCountItem}>
-              <View style={[styles.statusDot, { backgroundColor: '#10B981' }]} />
+              <View style={[styles.statusDot, { backgroundColor: theme.success }]} />
               <Text style={styles.statusCountText}>
                 <Text style={{ fontWeight: '800', color: theme.text }}>{activeVehicles}</Text> Vehicles Online
               </Text>
             </View>
             <View style={styles.statusDivider} />
             <View style={styles.statusCountItem}>
-              <View style={[styles.statusDot, { backgroundColor: '#94A3B8' }]} />
+              <View style={[styles.statusDot, { backgroundColor: theme.subtext }]} />
               <Text style={styles.statusCountText}>
                 <Text style={{ fontWeight: '800', color: theme.text }}>{offlineVehicles}</Text> Vehicles Offline
               </Text>
@@ -209,7 +210,7 @@ export const BusDashboardScreen: React.FC<Props> = ({ navigation }) => {
         <View style={[styles.panelCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.panelHeaderRow}>
             <View style={styles.panelTitleContainer}>
-              <Ionicons name="time-outline" size={20} color="#3B82F6" style={{ marginRight: 8 }} />
+              <Ionicons name="time-outline" size={20} color={theme.info} style={{ marginRight: 8 }} />
               <Text style={styles.panelTitle}>Recent Activity</Text>
             </View>
             <TouchableOpacity onPress={onRefresh} style={{ padding: 4 }}>
@@ -232,66 +233,66 @@ export const BusDashboardScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* Action Row 1: Add New Bus */}
           <TouchableOpacity
-            style={[styles.actionRow, { backgroundColor: isDarkMode ? '#26174A' : '#F5F3FF' }]}
+            style={[styles.actionRow, { backgroundColor: withAlpha(theme.primary, 0.1) }]}
             activeOpacity={0.7}
             onPress={() => navigation.navigate('AddVehicle')}
           >
-            <View style={[styles.actionIconBox, { backgroundColor: '#7C3AED' }]}>
-              <Ionicons name="bus-outline" size={20} color="#FFFFFF" />
+            <View style={[styles.actionIconBox, { backgroundColor: theme.primary }]}>
+              <Ionicons name="bus-outline" size={20} color={theme.onPrimary} />
             </View>
             <View style={styles.actionTextContent}>
               <Text style={styles.actionTitle}>Add New Bus</Text>
               <Text style={styles.actionDesc}>Register a vehicle to your institution fleet</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#7C3AED" />
+            <Ionicons name="chevron-forward" size={18} color={theme.primary} />
           </TouchableOpacity>
 
           {/* Action Row 2: Create Route */}
           <TouchableOpacity
-            style={[styles.actionRow, { backgroundColor: isDarkMode ? '#0F2942' : '#EFF6FF' }]}
+            style={[styles.actionRow, { backgroundColor: withAlpha(theme.info, 0.1) }]}
             activeOpacity={0.7}
             onPress={() => navigation.navigate('RouteConfiguration')}
           >
-            <View style={[styles.actionIconBox, { backgroundColor: '#2563EB' }]}>
-              <Ionicons name="map-outline" size={20} color="#FFFFFF" />
+            <View style={[styles.actionIconBox, { backgroundColor: theme.info }]}>
+              <Ionicons name="map-outline" size={20} color={theme.onPrimary} />
             </View>
             <View style={styles.actionTextContent}>
               <Text style={styles.actionTitle}>Create Route</Text>
               <Text style={styles.actionDesc}>Configure route stops, geofences, and paths</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#2563EB" />
+            <Ionicons name="chevron-forward" size={18} color={theme.info} />
           </TouchableOpacity>
 
           {/* Action Row 3: Assign Driver */}
           <TouchableOpacity
-            style={[styles.actionRow, { backgroundColor: isDarkMode ? '#142E25' : '#ECFDF5' }]}
+            style={[styles.actionRow, { backgroundColor: withAlpha(theme.success, 0.1) }]}
             activeOpacity={0.7}
             onPress={() => navigation.navigate('AddSchedule')}
           >
-            <View style={[styles.actionIconBox, { backgroundColor: '#059669' }]}>
-              <Ionicons name="person-add-outline" size={20} color="#FFFFFF" />
+            <View style={[styles.actionIconBox, { backgroundColor: theme.success }]}>
+              <Ionicons name="person-add-outline" size={20} color={theme.onPrimary} />
             </View>
             <View style={styles.actionTextContent}>
               <Text style={styles.actionTitle}>Assign Driver</Text>
               <Text style={styles.actionDesc}>Link driver to vehicle schedule timetable</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#059669" />
+            <Ionicons name="chevron-forward" size={18} color={theme.success} />
           </TouchableOpacity>
 
           {/* Action Row 4: Enroll Student */}
           <TouchableOpacity
-            style={[styles.actionRow, { backgroundColor: isDarkMode ? '#3B1A24' : '#FDF2F8' }]}
+            style={[styles.actionRow, { backgroundColor: withAlpha(theme.secondary, 0.1) }]}
             activeOpacity={0.7}
             onPress={() => navigation.navigate('EnrollStudent')}
           >
-            <View style={[styles.actionIconBox, { backgroundColor: '#DB2777' }]}>
-              <Ionicons name="school-outline" size={20} color="#FFFFFF" />
+            <View style={[styles.actionIconBox, { backgroundColor: theme.secondary }]}>
+              <Ionicons name="school-outline" size={20} color={theme.onPrimary} />
             </View>
             <View style={styles.actionTextContent}>
               <Text style={styles.actionTitle}>Enroll Student</Text>
               <Text style={styles.actionDesc}>Assign student boarding & drop-off stops</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#DB2777" />
+            <Ionicons name="chevron-forward" size={18} color={theme.secondary} />
           </TouchableOpacity>
         </View>
 
@@ -302,7 +303,7 @@ export const BusDashboardScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => navigation.navigate('RouteManagement')}
         >
           <View style={styles.footerBannerLeft}>
-            <Ionicons name="git-network-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Ionicons name="git-network-outline" size={18} color={theme.onPrimary} style={{ marginRight: 8 }} />
             <Text style={styles.footerBannerText}>
               {routes.length} active routes — Operational
             </Text>
@@ -338,15 +339,15 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderRadius: 16,
       padding: 14,
       borderWidth: 1,
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: isDarkMode ? 0 : 0.05,
       shadowRadius: 6,
       elevation: 2,
     },
     criticalStatCard: {
-      backgroundColor: isDarkMode ? '#2D1418' : '#FEF2F2',
-      borderColor: '#FCA5A5',
+      backgroundColor: withAlpha(theme.danger, 0.1),
+      borderColor: theme.danger,
     },
     statIconBox: {
       width: 36,
@@ -372,7 +373,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       padding: 16,
       marginBottom: 16,
       borderWidth: 1,
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: isDarkMode ? 0 : 0.05,
       shadowRadius: 8,
@@ -396,20 +397,20 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     panelActionText: {
       fontSize: 13,
       fontWeight: '700',
-      color: '#7C3AED',
+      color: theme.primary,
     },
     badgePillAmber: {
-      backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.15)' : '#FEF3C7',
+      backgroundColor: withAlpha(theme.warning, 0.15),
       paddingVertical: 3,
       paddingHorizontal: 8,
       borderRadius: 10,
       borderWidth: 1,
-      borderColor: isDarkMode ? 'rgba(245, 158, 11, 0.3)' : '#FDE68A',
+      borderColor: withAlpha(theme.warning, 0.3),
     },
     badgePillAmberText: {
       fontSize: 11,
       fontWeight: '700',
-      color: '#D97706',
+      color: theme.warning,
     },
     emptyStateBox: {
       alignItems: 'center',
@@ -417,7 +418,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       paddingVertical: 24,
       paddingHorizontal: 16,
       borderRadius: 12,
-      backgroundColor: isDarkMode ? '#120D24' : '#F8FAFC',
+      backgroundColor: theme.surface,
       borderWidth: 1,
       borderColor: theme.border,
       borderStyle: 'dashed',
@@ -494,11 +495,11 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      backgroundColor: '#7C3AED',
+      backgroundColor: theme.primary,
       paddingVertical: 14,
       paddingHorizontal: 18,
       borderRadius: 16,
-      shadowColor: '#7C3AED',
+      shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3,
       shadowRadius: 8,
@@ -509,12 +510,12 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       alignItems: 'center',
     },
     footerBannerText: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontWeight: '700',
       fontSize: 14,
     },
     footerBannerCta: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontWeight: '800',
       fontSize: 13,
     },

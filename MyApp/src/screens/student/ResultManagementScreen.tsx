@@ -23,6 +23,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { StudentHeader } from '../../components/StudentHeader';
 import { useAuth } from '../../store/AuthContext';
 import studentService from '../../services/studentService';
@@ -30,6 +31,8 @@ import { generatePDF } from 'react-native-html-to-pdf';
 import RNPrint from 'react-native-print';
 import Share from 'react-native-share';
 import { toFileUri, toRawFilePath } from '../../utils/fileUtils';
+
+const theme = LIGHT_COLORS;
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -93,7 +96,7 @@ function generateTranscriptHTML(data: AllResultsData): string {
 
   const logoCell = institutionLogoUrl
     ? `<img src="${institutionLogoUrl}" style="width:56px;height:56px;object-fit:contain;border-radius:8px;" alt="Logo" />`
-    : `<div style="width:56px;height:56px;background:#4F46E5;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:900;">${(
+    : `<div style="width:56px;height:56px;background:${LIGHT_COLORS.primary};border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:${LIGHT_COLORS.onPrimary};font-size:22px;font-weight:900;">${(
         institutionName || 'S'
       )
         .charAt(0)
@@ -114,11 +117,11 @@ function generateTranscriptHTML(data: AllResultsData): string {
         .map(exam => {
           const entry = exam.subjectMarks[sub.subjectId];
           if (!entry) {
-            return `<td style="text-align:center;color:#aaa;">—</td>`;
+            return `<td style="text-align:center;color:${LIGHT_COLORS.subtext};">—</td>`;
           }
           const g = entry.grade || '-';
           const gradeColor =
-            g === 'F' ? '#dc2626' : g !== '-' ? '#16a34a' : '#6b7280';
+            g === 'F' ? theme.danger : g !== '-' ? theme.success : theme.subtext;
           return `<td style="text-align:center;">${Number(entry.marks).toFixed(
             2,
           )}/${Number(entry.maxMarks).toFixed(
@@ -148,7 +151,7 @@ function generateTranscriptHTML(data: AllResultsData): string {
         <td style="text-align:center;">${pct}%</td>
         <td style="text-align:center;">${e.grade}</td>
         <td style="text-align:center;font-weight:700;color:${
-          isFail ? '#dc2626' : '#1a202c'
+          isFail ? theme.danger : theme.text
         }">${e.outcome}</td>
       </tr>`;
     })
@@ -169,29 +172,29 @@ function generateTranscriptHTML(data: AllResultsData): string {
 <meta charset="utf-8"/>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;}
-  body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#1a202c;padding:32px;background:#fff;}
+  body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:${LIGHT_COLORS.text};padding:32px;background:${LIGHT_COLORS.surface};}
   .letterhead{display:flex;align-items:center;gap:16px;padding-bottom:16px;}
   .inst-center{flex:1;text-align:center;}
   .inst-name{font-size:22px;font-weight:900;letter-spacing:0.02em;}
-  .inst-addr{font-size:9px;color:#718096;margin-top:4px;line-height:1.5;}
-  hr{border:none;border-top:2px solid #1a202c;margin:0 0 20px;}
-  .student-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #e2e8f0;border-radius:4px;overflow:hidden;margin-bottom:24px;}
-  .grid-cell{padding:8px 12px;border-bottom:1px solid #e2e8f0;}
-  .grid-cell:nth-child(odd){border-right:1px solid #e2e8f0;}
-  .cell-label{font-size:8px;color:#718096;text-transform:uppercase;letter-spacing:0.08em;}
+  .inst-addr{font-size:9px;color:${LIGHT_COLORS.subtext};margin-top:4px;line-height:1.5;}
+  hr{border:none;border-top:2px solid ${LIGHT_COLORS.text};margin:0 0 20px;}
+  .student-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid ${LIGHT_COLORS.border};border-radius:4px;overflow:hidden;margin-bottom:24px;}
+  .grid-cell{padding:8px 12px;border-bottom:1px solid ${LIGHT_COLORS.border};}
+  .grid-cell:nth-child(odd){border-right:1px solid ${LIGHT_COLORS.border};}
+  .cell-label{font-size:8px;color:${LIGHT_COLORS.subtext};text-transform:uppercase;letter-spacing:0.08em;}
   .cell-value{font-size:13px;font-weight:700;margin-top:2px;}
   table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:10px;}
-  th,td{border:1px solid #cbd5e0;padding:7px 8px;vertical-align:middle;}
-  th{background:#f7fafc;font-weight:700;font-size:9px;}
-  .grand-total td{background:#f7fafc;font-weight:700;}
-  .section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#2d3748;margin-bottom:10px;}
+  th,td{border:1px solid ${LIGHT_COLORS.border};padding:7px 8px;vertical-align:middle;}
+  th{background:${LIGHT_COLORS.surface};font-weight:700;font-size:9px;}
+  .grand-total td{background:${LIGHT_COLORS.surface};font-weight:700;}
+  .section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:${LIGHT_COLORS.text};margin-bottom:10px;}
   .signatures{display:flex;justify-content:space-around;margin-top:48px;margin-bottom:24px;}
   .sign-item{text-align:center;width:160px;}
-  .sign-line{border-bottom:1px solid #1a202c;margin-bottom:6px;}
-  .sign-label{font-size:8px;color:#718096;text-transform:uppercase;letter-spacing:0.08em;}
-  .footer{display:flex;align-items:center;justify-content:center;gap:10px;border-top:1px solid #e2e8f0;padding-top:12px;}
-  .footer-logo{width:24px;height:24px;background:#4F46E5;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:900;}
-  .footer-text{font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#718096;}
+  .sign-line{border-bottom:1px solid ${LIGHT_COLORS.text};margin-bottom:6px;}
+  .sign-label{font-size:8px;color:${LIGHT_COLORS.subtext};text-transform:uppercase;letter-spacing:0.08em;}
+  .footer{display:flex;align-items:center;justify-content:center;gap:10px;border-top:1px solid ${LIGHT_COLORS.border};padding-top:12px;}
+  .footer-logo{width:24px;height:24px;background:${LIGHT_COLORS.primary};border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:${LIGHT_COLORS.onPrimary};font-size:11px;font-weight:900;}
+  .footer-text{font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:${LIGHT_COLORS.subtext};}
 </style>
 </head>
 <body>
@@ -401,9 +404,9 @@ const ResultManagementScreen: React.FC<Props> = ({ navigation }) => {
     const isFail = g === 'F';
     const isGood = g !== '-' && g !== 'F';
     const badgeBg = isFail
-      ? theme.danger + '25'
+      ? withAlpha(theme.danger, 0.25)
       : isGood
-      ? theme.success + '25'
+      ? withAlpha(theme.success, 0.25)
       : theme.border;
     const badgeColor = isFail
       ? theme.danger
@@ -535,7 +538,7 @@ const ResultManagementScreen: React.FC<Props> = ({ navigation }) => {
               styles.grandTotalRow,
               {
                 backgroundColor: theme.iconBackground,
-                borderTopColor: theme.primary + '50',
+                borderTopColor: withAlpha(theme.primary, 0.5),
               },
             ]}>
             <View
@@ -602,7 +605,7 @@ const ResultManagementScreen: React.FC<Props> = ({ navigation }) => {
         visible={showTranscript}
         animationType="slide"
         onRequestClose={() => setShowTranscript(false)}>
-        {/* The SafeAreaView and scroll use fixed document colours (#fff / #1a202c).
+        {/* The SafeAreaView and scroll use fixed document colours (light/dark colors).
             The modal chrome (header) uses theme tokens. */}
         <SafeAreaView style={styles.transcriptSafeArea}>
           {/* Modal chrome — themed */}
@@ -636,7 +639,7 @@ const ResultManagementScreen: React.FC<Props> = ({ navigation }) => {
                 onPress={() => generateAndHandlePDF('print')}
                 disabled={isPrinting}
                 activeOpacity={0.8}>
-                <Ionicons name="print-outline" size={14} color="#fff" />
+                <Ionicons name="print-outline" size={14} color={theme.onPrimary} />
                 <Text style={styles.transcriptActionText}>Print</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -650,7 +653,7 @@ const ResultManagementScreen: React.FC<Props> = ({ navigation }) => {
                 onPress={() => generateAndHandlePDF('share')}
                 disabled={isPrinting}
                 activeOpacity={0.8}>
-                <Ionicons name="share-outline" size={14} color="#fff" />
+                <Ionicons name="share-outline" size={14} color={theme.onPrimary} />
                 <Text style={styles.transcriptActionText}>Save PDF</Text>
               </TouchableOpacity>
             </View>
@@ -661,7 +664,7 @@ const ResultManagementScreen: React.FC<Props> = ({ navigation }) => {
               style={[
                 styles.printingBanner,
                 {
-                  backgroundColor: theme.primary + '15',
+                  backgroundColor: withAlpha(theme.primary, 0.15),
                   borderBottomColor: theme.border,
                 },
               ]}>
@@ -748,7 +751,7 @@ const ResultManagementScreen: React.FC<Props> = ({ navigation }) => {
                     key={sub.subjectId}
                     style={[
                       styles.transcriptTRow,
-                      { backgroundColor: idx % 2 === 0 ? '#fff' : '#f9fafb' },
+                      { backgroundColor: idx % 2 === 0 ? theme.surface : theme.background },
                     ]}>
                     <View
                       style={[
@@ -780,10 +783,10 @@ const ResultManagementScreen: React.FC<Props> = ({ navigation }) => {
                                   {
                                     color:
                                       entry.grade === 'F'
-                                        ? '#dc2626'
+                                        ? theme.danger
                                         : entry.grade && entry.grade !== '-'
-                                        ? '#16a34a'
-                                        : '#9ca3af',
+                                        ? theme.success
+                                        : theme.subtext,
                                   },
                                 ]}>
                                 {entry.grade || '-'}
@@ -864,7 +867,7 @@ const ResultManagementScreen: React.FC<Props> = ({ navigation }) => {
                     <Text
                       style={[
                         styles.transcriptSummaryCell,
-                        { flex: 2, textAlign: 'left', color: '#1a202c' },
+                        { flex: 2, textAlign: 'left', color: theme.text },
                       ]}
                       numberOfLines={1}>
                       {e.examName}
@@ -872,14 +875,14 @@ const ResultManagementScreen: React.FC<Props> = ({ navigation }) => {
                     <Text
                       style={[
                         styles.transcriptSummaryCell,
-                        { color: '#1a202c' },
+                        { color: theme.text },
                       ]}>
                       {pct}%
                     </Text>
                     <Text
                       style={[
                         styles.transcriptSummaryCell,
-                        { color: '#1a202c' },
+                        { color: theme.text },
                       ]}>
                       {e.grade}
                     </Text>
@@ -888,7 +891,7 @@ const ResultManagementScreen: React.FC<Props> = ({ navigation }) => {
                         styles.transcriptSummaryCell,
                         {
                           fontWeight: '800',
-                          color: isFail ? '#dc2626' : '#1a202c',
+                          color: isFail ? theme.danger : theme.text,
                         },
                       ]}>
                       {e.outcome}
@@ -1138,7 +1141,7 @@ const ResultManagementScreen: React.FC<Props> = ({ navigation }) => {
                 <View
                   style={[
                     styles.filterIconBox,
-                    { backgroundColor: theme.primary + '18' },
+                    { backgroundColor: withAlpha(theme.primary, 0.18) },
                   ]}>
                   <Ionicons name="funnel" size={15} color={theme.primary} />
                 </View>
@@ -1206,7 +1209,7 @@ const ResultManagementScreen: React.FC<Props> = ({ navigation }) => {
                   <Ionicons
                     name="print-outline"
                     size={13}
-                    color="#fff"
+                    color={theme.onPrimary}
                     style={{ marginRight: 5 }}
                   />
                   <Text style={styles.transcriptTriggerText}>
@@ -1243,7 +1246,7 @@ const ResultManagementScreen: React.FC<Props> = ({ navigation }) => {
                     styles.dropdownItem,
                     { borderBottomColor: theme.border },
                     !selectedExamId && {
-                      backgroundColor: theme.primary + '12',
+                      backgroundColor: withAlpha(theme.primary, 0.12),
                     },
                   ]}
                   onPress={() => {
@@ -1269,7 +1272,7 @@ const ResultManagementScreen: React.FC<Props> = ({ navigation }) => {
                       style={[
                         styles.dropdownItem,
                         { borderBottomColor: theme.border },
-                        isSel && { backgroundColor: theme.primary + '12' },
+                        isSel && { backgroundColor: withAlpha(theme.primary, 0.12) },
                       ]}
                       onPress={() => {
                         setSelectedExamId(exam.examId);
@@ -1327,7 +1330,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderRadius: 12,
       marginTop: 8,
     },
-    retryBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+    retryBtnText: { color: theme.onPrimary, fontWeight: '700', fontSize: 14 },
     emptyContainer: {
       margin: 20,
       padding: 40,
@@ -1349,7 +1352,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderWidth: 1,
       padding: 14,
       elevation: 2,
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.05,
       shadowRadius: 6,
@@ -1368,7 +1371,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       alignItems: 'center',
       marginRight: 12,
     },
-    studentAvatarText: { color: '#fff', fontSize: 18, fontWeight: '900' },
+    studentAvatarText: { color: theme.onPrimary, fontSize: 18, fontWeight: '900' },
     studentInfo: { flex: 1 },
     studentName: { fontSize: 15, fontWeight: '800', marginBottom: 6 },
     studentBadgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
@@ -1449,7 +1452,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderWidth: 1,
       overflow: 'hidden',
       elevation: 1,
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.04,
       shadowRadius: 4,
@@ -1472,7 +1475,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderRadius: 20,
     },
     transcriptTriggerText: {
-      color: '#fff',
+      color: theme.onPrimary,
       fontSize: 9,
       fontWeight: '800',
       letterSpacing: 0.3,
@@ -1527,7 +1530,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     // Exam dropdown modal
     dropdownOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.28)',
+      backgroundColor: withAlpha(theme.overlay, 0.28),
       justifyContent: 'flex-start',
       alignItems: 'flex-end',
       paddingTop: Platform.OS === 'ios' ? 215 : 190,
@@ -1539,7 +1542,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderWidth: 1,
       overflow: 'hidden',
       elevation: 10,
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 0.18,
       shadowRadius: 16,
@@ -1552,7 +1555,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     dropdownItemText: { fontSize: 13 },
 
     // Transcript modal chrome (themed)
-    transcriptSafeArea: { flex: 1, backgroundColor: '#ffffff' },
+    transcriptSafeArea: { flex: 1, backgroundColor: theme.surface },
     transcriptModalHeader: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -1571,7 +1574,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       paddingVertical: 8,
       borderRadius: 8,
     },
-    transcriptActionText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+    transcriptActionText: { color: theme.onPrimary, fontSize: 11, fontWeight: '700' },
     printingBanner: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -1583,11 +1586,11 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     printingBannerText: { fontSize: 13, fontWeight: '600' },
 
     // Transcript document body (fixed white document palette)
-    transcriptScroll: { flex: 1, backgroundColor: '#ffffff' },
+    transcriptScroll: { flex: 1, backgroundColor: theme.surface },
     transcriptScrollContent: {
       padding: 24,
       paddingBottom: 48,
-      backgroundColor: '#ffffff',
+      backgroundColor: theme.surface,
     },
     transcriptLetterhead: {
       flexDirection: 'row',
@@ -1600,31 +1603,31 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 56,
       height: 56,
       borderRadius: 28,
-      backgroundColor: '#4F46E5',
+      backgroundColor: theme.primary,
       justifyContent: 'center',
       alignItems: 'center',
     },
-    transcriptLogoInitial: { color: '#fff', fontSize: 22, fontWeight: '900' },
+    transcriptLogoInitial: { color: theme.onPrimary, fontSize: 22, fontWeight: '900' },
     transcriptInstCenter: { flex: 1, alignItems: 'center' },
     transcriptInstName: {
       fontSize: 19,
       fontWeight: '900',
-      color: '#1a202c',
+      color: theme.text,
       textAlign: 'center',
     },
     transcriptInstAddr: {
       fontSize: 9,
-      color: '#718096',
+      color: theme.subtext,
       textAlign: 'center',
       marginTop: 4,
       lineHeight: 14,
     },
-    transcriptHR: { height: 2, backgroundColor: '#1a202c', marginBottom: 20 },
+    transcriptHR: { height: 2, backgroundColor: theme.text, marginBottom: 20 },
     transcriptStudentGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       borderWidth: 1,
-      borderColor: '#e2e8f0',
+      borderColor: theme.border,
       borderRadius: 8,
       overflow: 'hidden',
       marginBottom: 20,
@@ -1633,74 +1636,74 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: '50%',
       padding: 10,
       borderBottomWidth: 1,
-      borderBottomColor: '#e2e8f0',
+      borderBottomColor: theme.border,
       borderRightWidth: 1,
-      borderRightColor: '#e2e8f0',
+      borderRightColor: theme.border,
     },
     transcriptGridLabel: {
       fontSize: 8,
-      color: '#718096',
+      color: theme.subtext,
       textTransform: 'uppercase',
       letterSpacing: 0.5,
       marginBottom: 2,
     },
-    transcriptGridValue: { fontSize: 13, fontWeight: '700', color: '#1a202c' },
+    transcriptGridValue: { fontSize: 13, fontWeight: '700', color: theme.text },
 
     // Transcript marks table
     transcriptTableScroll: { marginBottom: 20 },
     transcriptTRow: { flexDirection: 'row' },
-    transcriptTHeaderRow: { backgroundColor: '#f7fafc' },
-    transcriptTGrandRow: { backgroundColor: '#f7fafc' },
+    transcriptTHeaderRow: { backgroundColor: theme.background },
+    transcriptTGrandRow: { backgroundColor: theme.background },
     transcriptSubjectTH: {
       width: 110,
       padding: 8,
       borderWidth: 1,
-      borderColor: '#cbd5e0',
+      borderColor: theme.border,
     },
     transcriptExamTH: {
       width: 110,
       padding: 8,
       borderWidth: 1,
-      borderColor: '#cbd5e0',
+      borderColor: theme.border,
       borderLeftWidth: 0,
       alignItems: 'center',
     },
     transcriptTHText: {
       fontSize: 9,
       fontWeight: '800',
-      color: '#2d3748',
+      color: theme.text,
       textAlign: 'center',
     },
     transcriptTHYear: {
       fontSize: 8,
       fontWeight: '400',
-      color: '#718096',
+      color: theme.subtext,
       textAlign: 'center',
     },
     transcriptSubjectTD: {
       width: 110,
       padding: 8,
       borderWidth: 1,
-      borderColor: '#cbd5e0',
+      borderColor: theme.border,
     },
     transcriptTDTop: { borderTopWidth: 0 },
     transcriptExamTD: {
       width: 110,
       padding: 8,
       borderWidth: 1,
-      borderColor: '#cbd5e0',
+      borderColor: theme.border,
       borderLeftWidth: 0,
       alignItems: 'center',
     },
     transcriptSubjectTDText: {
       fontSize: 10,
       fontWeight: '600',
-      color: '#1a202c',
+      color: theme.text,
     },
     transcriptCellMarks: {
       fontSize: 10,
       fontWeight: '600',
-      color: '#1a202c',
+      color: theme.text,
       textAlign: 'center',
     },
     transcriptCellGrade: {
@@ -1711,7 +1714,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     },
     transcriptCellDash: {
       fontSize: 12,
-      color: '#9ca3af',
+      color: theme.subtext,
       textAlign: 'center',
     },
 
@@ -1719,27 +1722,27 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     transcriptSectionTitle: {
       fontSize: 11,
       fontWeight: '800',
-      color: '#2d3748',
+      color: theme.text,
       letterSpacing: 0.5,
       marginBottom: 10,
     },
     transcriptSummaryTable: {
       borderWidth: 1,
-      borderColor: '#e2e8f0',
+      borderColor: theme.border,
       borderRadius: 8,
       overflow: 'hidden',
       marginBottom: 20,
     },
     transcriptSummaryHeaderRow: {
       flexDirection: 'row',
-      backgroundColor: '#f7fafc',
+      backgroundColor: theme.background,
       borderBottomWidth: 1,
-      borderBottomColor: '#e2e8f0',
+      borderBottomColor: theme.border,
     },
     transcriptSummaryDataRow: {
       flexDirection: 'row',
       borderBottomWidth: 1,
-      borderBottomColor: '#f1f5f9',
+      borderBottomColor: theme.background,
     },
     transcriptSummaryCell: {
       flex: 1,
@@ -1751,7 +1754,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     transcriptSummaryTH: {
       fontWeight: '800',
       fontSize: 9,
-      color: '#2d3748',
+      color: theme.text,
       letterSpacing: 0.3,
     },
 
@@ -1766,12 +1769,12 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     transcriptSignLine: {
       width: '100%',
       borderBottomWidth: 1,
-      borderBottomColor: '#1a202c',
+      borderBottomColor: theme.text,
       marginBottom: 6,
     },
     transcriptSignLabel: {
       fontSize: 7,
-      color: '#718096',
+      color: theme.subtext,
       letterSpacing: 0.5,
       textTransform: 'uppercase',
       textAlign: 'center',
@@ -1784,7 +1787,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       justifyContent: 'center',
       gap: 8,
       borderTopWidth: 1,
-      borderTopColor: '#e2e8f0',
+      borderTopColor: theme.border,
       paddingTop: 16,
       marginTop: 8,
     },
@@ -1792,14 +1795,14 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 24,
       height: 24,
       borderRadius: 12,
-      backgroundColor: '#4F46E5',
+      backgroundColor: theme.primary,
       justifyContent: 'center',
       alignItems: 'center',
     },
-    transcriptFooterLogoText: { color: '#fff', fontSize: 11, fontWeight: '900' },
+    transcriptFooterLogoText: { color: theme.onPrimary, fontSize: 11, fontWeight: '900' },
     transcriptFooterText: {
       fontSize: 10,
-      color: '#718096',
+      color: theme.subtext,
       fontWeight: '700',
       letterSpacing: 0.5,
       textTransform: 'uppercase',

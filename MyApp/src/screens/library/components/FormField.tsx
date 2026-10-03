@@ -1,28 +1,33 @@
 import React from 'react';
+import { useTheme } from '../../../store/ThemeContext';
 import { View, Text, TextInput, StyleSheet, TextInputProps } from 'react-native';
-import { LIBRARY_COLORS } from '../theme';
+
 
 interface FormFieldProps extends TextInputProps {
   label?: string;
 }
 
-const FormField: React.FC<FormFieldProps> = ({ label, style, ...props }) => (
+const FormField: React.FC<FormFieldProps> = ({ label, style, ...props }) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+  return (
   <View style={styles.wrapper}>
     {label ? <Text style={styles.label}>{label}</Text> : null}
     <TextInput
-      placeholderTextColor={LIBRARY_COLORS.textDim}
+      placeholderTextColor={theme.subtext}
       style={[styles.input, style]}
       {...props}
     />
   </View>
-);
+  );
+};
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   wrapper: {
     marginBottom: 14,
   },
   label: {
-    color: LIBRARY_COLORS.textMuted,
+    color: theme.placeholder,
     fontSize: 11,
     fontWeight: '600',
     marginBottom: 6,
@@ -30,13 +35,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   input: {
-    backgroundColor: LIBRARY_COLORS.inputBg,
+    backgroundColor: theme.surfaceHigh,
     borderWidth: 1,
-    borderColor: LIBRARY_COLORS.border,
+    borderColor: theme.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: LIBRARY_COLORS.text,
+    color: theme.text,
     fontSize: 14,
   },
 });

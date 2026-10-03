@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-nati
 import Svg, { Rect, Path, Circle, G, Text as SvgText, Defs, LinearGradient, Stop } from 'react-native-svg';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 
 interface BusMapPlaceholderProps {
   height?: number;
@@ -20,22 +21,23 @@ export const BusMapPlaceholder: React.FC<BusMapPlaceholderProps> = ({
   ctaText = 'Open Full Fleet Tracking',
 }) => {
   const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme, isDarkMode);
 
   // Colors adapted to light/dark themes
-  const mapBg = isDarkMode ? '#131127' : '#E8EEF5';
-  const gridLine = isDarkMode ? '#1F1B3A' : '#D5E0EB';
-  const roadColor = isDarkMode ? '#242045' : '#FFFFFF';
-  const mainRoadColor = isDarkMode ? '#2E2958' : '#D1DCE8';
-  const waterColor = isDarkMode ? '#0F1A30' : '#C7DCF5';
-  const parkColor = isDarkMode ? '#122524' : '#D3EBDC';
+  const mapBg = isDarkMode ? theme.surface : theme.background;
+  const gridLine = isDarkMode ? theme.border : theme.border;
+  const roadColor = theme.background;
+  const mainRoadColor = theme.border;
+  const waterColor = theme.info;
+  const parkColor = theme.success;
 
   return (
     <View style={[styles.container, { height, backgroundColor: mapBg, borderColor: theme.border }]}>
       <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
         <Defs>
           <LinearGradient id="routeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor="#8B5CF6" stopOpacity="1" />
-            <Stop offset="100%" stopColor="#3B82F6" stopOpacity="1" />
+            <Stop offset="0%" stopColor={theme.primary} stopOpacity="1" />
+            <Stop offset="100%" stopColor={theme.info} stopOpacity="1" />
           </LinearGradient>
         </Defs>
 
@@ -64,9 +66,9 @@ export const BusMapPlaceholder: React.FC<BusMapPlaceholderProps> = ({
         {showRoutePath && (
           <>
             {/* Geofence Radii Rings */}
-            <Circle cx="70" cy="80" r="24" fill="#8B5CF6" opacity={0.15} stroke="#8B5CF6" strokeWidth="1" strokeDasharray="3 3" />
-            <Circle cx="190" cy="140" r="30" fill="#8B5CF6" opacity={0.18} stroke="#8B5CF6" strokeWidth="1" strokeDasharray="3 3" />
-            <Circle cx="310" cy="90" r="22" fill="#3B82F6" opacity={0.15} stroke="#3B82F6" strokeWidth="1" strokeDasharray="3 3" />
+            <Circle cx="70" cy="80" r="24" fill={theme.primary} opacity={0.15} stroke={theme.primary} strokeWidth="1" strokeDasharray="3 3" />
+            <Circle cx="190" cy="140" r="30" fill={theme.primary} opacity={0.18} stroke={theme.primary} strokeWidth="1" strokeDasharray="3 3" />
+            <Circle cx="310" cy="90" r="22" fill={theme.info} opacity={0.15} stroke={theme.info} strokeWidth="1" strokeDasharray="3 3" />
 
             {/* Connected Route Polyline */}
             <Path
@@ -80,25 +82,25 @@ export const BusMapPlaceholder: React.FC<BusMapPlaceholderProps> = ({
 
             {/* Numbered Stop Markers */}
             {/* Stop 1 */}
-            <Circle cx="70" cy="80" r="10" fill="#7C3AED" />
-            <SvgText x="70" y="84" fill="#FFF" fontSize="10" fontWeight="bold" textAnchor="middle">1</SvgText>
+            <Circle cx="70" cy="80" r="10" fill={theme.primary} />
+            <SvgText x="70" y="84" fill={theme.onPrimary} fontSize="10" fontWeight="bold" textAnchor="middle">1</SvgText>
 
             {/* Stop 2 */}
-            <Circle cx="140" cy="110" r="10" fill="#7C3AED" />
-            <SvgText x="140" y="114" fill="#FFF" fontSize="10" fontWeight="bold" textAnchor="middle">2</SvgText>
+            <Circle cx="140" cy="110" r="10" fill={theme.primary} />
+            <SvgText x="140" y="114" fill={theme.onPrimary} fontSize="10" fontWeight="bold" textAnchor="middle">2</SvgText>
 
             {/* Stop 3 (Active Bus Location) */}
-            <Circle cx="190" cy="140" r="14" fill="#10B981" />
-            <Circle cx="190" cy="140" r="8" fill="#FFFFFF" />
-            <SvgText x="190" y="144" fill="#10B981" fontSize="9" fontWeight="bold" textAnchor="middle">BUS</SvgText>
+            <Circle cx="190" cy="140" r="14" fill={theme.success} />
+            <Circle cx="190" cy="140" r="8" fill={theme.onPrimary} />
+            <SvgText x="190" y="144" fill={theme.success} fontSize="9" fontWeight="bold" textAnchor="middle">BUS</SvgText>
 
             {/* Stop 4 */}
-            <Circle cx="260" cy="115" r="10" fill="#3B82F6" />
-            <SvgText x="260" y="119" fill="#FFF" fontSize="10" fontWeight="bold" textAnchor="middle">4</SvgText>
+            <Circle cx="260" cy="115" r="10" fill={theme.info} />
+            <SvgText x="260" y="119" fill={theme.onPrimary} fontSize="10" fontWeight="bold" textAnchor="middle">4</SvgText>
 
             {/* Stop 5 */}
-            <Circle cx="310" cy="90" r="10" fill="#3B82F6" />
-            <SvgText x="310" y="94" fill="#FFF" fontSize="10" fontWeight="bold" textAnchor="middle">5</SvgText>
+            <Circle cx="310" cy="90" r="10" fill={theme.info} />
+            <SvgText x="310" y="94" fill={theme.onPrimary} fontSize="10" fontWeight="bold" textAnchor="middle">5</SvgText>
           </>
         )}
       </Svg>
@@ -120,7 +122,7 @@ export const BusMapPlaceholder: React.FC<BusMapPlaceholderProps> = ({
             <Ionicons name="remove" size={16} color={theme.text} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.mapToolBtn} activeOpacity={0.7}>
-            <Ionicons name="locate-outline" size={16} color="#7C3AED" />
+            <Ionicons name="locate-outline" size={16} color={theme.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -133,9 +135,9 @@ export const BusMapPlaceholder: React.FC<BusMapPlaceholderProps> = ({
             activeOpacity={0.8}
             onPress={onOpenFullMap}
           >
-            <Ionicons name="map-outline" size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Ionicons name="map-outline" size={16} color={theme.onPrimary} style={{ marginRight: 8 }} />
             <Text style={styles.ctaButtonText}>{ctaText}</Text>
-            <Ionicons name="chevron-forward" size={16} color="#FFFFFF" style={{ marginLeft: 4 }} />
+            <Ionicons name="chevron-forward" size={16} color={theme.onPrimary} style={{ marginLeft: 4 }} />
           </TouchableOpacity>
         </View>
       )}
@@ -143,7 +145,7 @@ export const BusMapPlaceholder: React.FC<BusMapPlaceholderProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   container: {
     width: '100%',
     borderRadius: 16,
@@ -161,24 +163,24 @@ const styles = StyleSheet.create({
   liveZoneBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    backgroundColor: withAlpha(theme.overlay, 0.85),
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#7C3AED',
+    borderColor: theme.primary,
   },
   livePulseDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#10B981',
+    backgroundColor: theme.success,
     marginRight: 6,
   },
   liveZoneText: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     letterSpacing: 0.5,
   },
   mapToolsRow: {
@@ -189,10 +191,10 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: withAlpha(theme.surface, 0.9),
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
@@ -206,18 +208,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#7C3AED',
+    backgroundColor: theme.primary,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 24,
-    shadowColor: '#7C3AED',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.4,
     shadowRadius: 6,
     elevation: 5,
   },
   ctaButtonText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontWeight: '700',
     fontSize: 13,
   },

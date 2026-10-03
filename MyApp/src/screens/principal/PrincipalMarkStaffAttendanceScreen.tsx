@@ -18,6 +18,7 @@ import {
   PermissionsAndroid,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { launchCamera, ImagePickerResponse } from 'react-native-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -774,35 +775,35 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
           {/* Premium Statistics Dashboard */}
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
-              <View style={[styles.statIconBox, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
+              <View style={[styles.statIconBox, { backgroundColor: withAlpha(theme.primary, 0.1) }]}>
                 <Ionicons name="people" size={16} color={theme.primary} />
               </View>
               <Text style={styles.statValue}>{stats.total}</Text>
               <Text style={styles.statLabel}>Total Staff</Text>
             </View>
             <View style={styles.statCard}>
-              <View style={[styles.statIconBox, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+              <View style={[styles.statIconBox, { backgroundColor: withAlpha(theme.success, 0.1) }]}>
                 <Ionicons name="checkmark-circle" size={16} color={theme.success} />
               </View>
               <Text style={styles.statValue}>{stats.present}</Text>
               <Text style={styles.statLabel}>Present</Text>
             </View>
             <View style={styles.statCard}>
-              <View style={[styles.statIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+              <View style={[styles.statIconBox, { backgroundColor: withAlpha(theme.danger, 0.1) }]}>
                 <Ionicons name="close-circle" size={16} color={theme.danger} />
               </View>
               <Text style={styles.statValue}>{stats.absent}</Text>
               <Text style={styles.statLabel}>Absent</Text>
             </View>
             <View style={styles.statCard}>
-              <View style={[styles.statIconBox, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
+              <View style={[styles.statIconBox, { backgroundColor: withAlpha(theme.warning, 0.1) }]}>
                 <Ionicons name="time" size={16} color={theme.warning} />
               </View>
               <Text style={styles.statValue}>{stats.late}</Text>
               <Text style={styles.statLabel}>Late</Text>
             </View>
             <View style={styles.statCard}>
-              <View style={[styles.statIconBox, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
+              <View style={[styles.statIconBox, { backgroundColor: withAlpha(theme.primary, 0.1) }]}>
                 <Ionicons name="log-out" size={16} color={theme.secondary} />
               </View>
               <Text style={styles.statValue}>{stats.checkedOut}</Text>
@@ -881,7 +882,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                       style={[styles.scannerLine, animatedScannerLineStyle]}
                     />
                     <View style={styles.scannerCenterIcon}>
-                      <MaterialCommunityIcons name="face-recognition" size={40} color="rgba(99, 102, 241, 0.2)" />
+                      <MaterialCommunityIcons name="face-recognition" size={40} color={withAlpha(theme.primary, 0.2)} />
                       <Text style={{ fontSize: 12, color: theme.primary, fontWeight: 'bold', marginTop: 8 }}>Tap to Scan Face</Text>
                     </View>
                   </TouchableOpacity>
@@ -1047,7 +1048,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                                 styles.selectStaffBtn,
                                 selectedStaffIds.includes(log.teacherId) && {
                                   borderColor: theme.success,
-                                  backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)',
+                                  backgroundColor: withAlpha(theme.success, 0.2),
                                 }
                               ]}
                               onPress={() => toggleStaffSelection(log.teacherId)}
@@ -1072,7 +1073,7 @@ const PrincipalMarkStaffAttendanceScreen = ({ navigation }: any) => {
                         )}
                       </View>
                       <View style={styles.logBadgeRow}>
-                        <View style={[styles.logStatusPill, { backgroundColor: log.status === 'Absent' ? (isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)') : (log.status.includes('OUT') ? (isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)') : (isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)')) }]}>
+                        <View style={[styles.logStatusPill, { backgroundColor: log.status === 'Absent' ? (withAlpha(theme.danger, 0.2)) : (log.status.includes('OUT') ? (withAlpha(theme.warning, 0.2)) : (withAlpha(theme.success, 0.2))) }]}>
                           <View style={[styles.statusDot, { backgroundColor: log.status === 'Absent' ? (theme.danger) : (log.status.includes('OUT') ? theme.warning : theme.success) }]} />
                           <Text style={[styles.logStatusText, { color: log.status === 'Absent' ? (theme.danger) : (log.status.includes('OUT') ? theme.warning : theme.success) }]}>{log.status}</Text>
                         </View>
@@ -1514,7 +1515,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   selectAllText: { fontSize: 10, fontWeight: '800', color: theme.primary, letterSpacing: 0.5 },
   staffList: { paddingHorizontal: 20, gap: 12 },
   staffCard: { backgroundColor: theme.surface, borderRadius: 24, padding: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: theme.border, shadowColor: theme.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2 },
-  staffCardActive: { borderColor: theme.primary, backgroundColor: theme.isDarkMode ? 'rgba(79, 70, 229, 0.2)' : theme.iconBackground },
+  staffCardActive: { borderColor: theme.primary, backgroundColor: theme.withAlpha(theme.primary, 0.2) },
   staffAvatar: { width: 48, height: 48, borderRadius: 14, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center' },
   avatarActive: { backgroundColor: theme.primary },
   staffInitial: { fontSize: 18, fontWeight: '800', color: theme.subtext },
@@ -1539,8 +1540,8 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   detailAvatarText: { fontSize: 18, fontWeight: '900', color: theme.secondary },
   detailMainInfo: { flex: 1, marginLeft: 12 },
   detailName: { fontSize: 16, fontWeight: '800', color: theme.onPrimary },
-  detailId: { fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 2, fontWeight: '600' },
-  detailCloseIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  detailId: { fontSize: 11, color: withAlpha(theme.onPrimary, 0.8), marginTop: 2, fontWeight: '600' },
+  detailCloseIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: withAlpha(theme.onPrimary, 0.2), alignItems: 'center', justifyContent: 'center' },
   detailBody: { flex: 1, padding: 20 },
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
   detailCol: { flex: 1 },
@@ -1568,7 +1569,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     fontWeight: '700',
     color: theme.text,
   },
-  editModalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  editModalOverlay: { flex: 1, backgroundColor: withAlpha(theme.overlay, 0.4), justifyContent: 'center', alignItems: 'center', padding: 20 },
   editModalContent: { backgroundColor: theme.surface, width: '92%', maxWidth: 400, borderRadius: 28, padding: 24, shadowColor: theme.text, shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.15, shadowRadius: 30, elevation: 20, borderWidth: 1, borderColor: theme.border },
   editModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   editHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -1592,7 +1593,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   editCancelBtnText: { fontSize: 15, fontWeight: '700', color: theme.subtext },
   editSaveBtn: { flex: 1, height: 52, borderRadius: 14, backgroundColor: theme.primary, alignItems: 'center', justifyContent: 'center', shadowColor: theme.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 8 },
   editSaveBtnText: { color: theme.onPrimary, fontSize: 15, fontWeight: '800' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, backgroundColor: withAlpha(theme.overlay, 0.4), justifyContent: 'flex-end' },
   modalSheet: { backgroundColor: theme.surface, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, maxHeight: '80%', borderWidth: 1, borderColor: theme.border },
   modalIndicator: { width: 40, height: 4, backgroundColor: theme.border, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
@@ -1733,7 +1734,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
 
   // Error State
   errorState: { alignItems: 'center', padding: 20 },
-  errorIconBox: { width: 48, height: 48, borderRadius: 24, backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  errorIconBox: { width: 48, height: 48, borderRadius: 24, backgroundColor: withAlpha(theme.danger, 0.2), alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   errorTitle: { fontSize: 16, fontWeight: '800', color: theme.text, marginBottom: 4 },
   errorSub: { fontSize: 12, color: theme.subtext, fontWeight: '500', marginBottom: 15 },
   retryBtn: { backgroundColor: theme.secondary, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, height: 38, borderRadius: 10 },
@@ -1746,7 +1747,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   scannerCornerTR: { position: 'absolute', top: 0, right: 0, width: 20, height: 20, borderRightWidth: 3, borderTopWidth: 3, borderColor: theme.primary, borderTopRightRadius: 10 },
   scannerCornerBL: { position: 'absolute', bottom: 0, left: 0, width: 20, height: 20, borderLeftWidth: 3, borderBottomWidth: 3, borderColor: theme.primary, borderBottomLeftRadius: 10 },
   scannerCornerBR: { position: 'absolute', bottom: 0, right: 0, width: 20, height: 20, borderRightWidth: 3, borderBottomWidth: 3, borderColor: theme.primary, borderBottomRightRadius: 10 },
-  scannerLine: { position: 'absolute', width: '90%', height: 2, backgroundColor: 'rgba(99, 102, 241, 0.5)', top: '50%' },
+  scannerLine: { position: 'absolute', width: '90%', height: 2, backgroundColor: withAlpha(theme.primary, 0.5), top: '50%' },
   scannerCenterIcon: { opacity: 0.5 },
   stopScannerBtn: { marginTop: 20 },
   stopScannerText: { color: theme.primary, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },

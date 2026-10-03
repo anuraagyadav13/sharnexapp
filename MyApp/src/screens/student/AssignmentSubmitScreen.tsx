@@ -19,6 +19,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { StudentHeader } from '../../components/StudentHeader';
 import studentService from '../../services/studentService';
 
@@ -489,7 +490,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 32,
       height: 32,
       borderRadius: 16,
-      backgroundColor: 'rgba(255, 255, 255, 0.25)',
+      backgroundColor: withAlpha(theme.onPrimary, 0.25),
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: 14,
@@ -524,7 +525,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
 
     errorCard: {
       padding: 16,
-      backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
+      backgroundColor: withAlpha(theme.danger, 0.15),
       borderRadius: 12,
       marginHorizontal: 16,
     },
@@ -672,7 +673,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       marginTop: 10,
       padding: 8,
       borderRadius: 6,
-      backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
+      backgroundColor: withAlpha(theme.danger, 0.15),
     },
     uploadErrorText: {
       fontSize: 12,

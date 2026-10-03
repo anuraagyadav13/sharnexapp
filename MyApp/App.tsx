@@ -483,33 +483,34 @@ function RootNavigator() {
 }
 
 function ThemedApp() {
-  const { isDarkMode } = useTheme();
+  const { theme, isDarkMode } = useTheme();
+  
+  const navigationTheme = {
+    dark: isDarkMode,
+    colors: {
+      primary: theme.primary,
+      background: theme.background,
+      card: theme.surface,
+      text: theme.text,
+      border: theme.border,
+      notification: theme.danger,
+    },
+    fonts: {
+      regular: { fontFamily: 'System', fontWeight: '400' as const },
+      medium: { fontFamily: 'System', fontWeight: '500' as const },
+      bold: { fontFamily: 'System', fontWeight: '700' as const },
+      heavy: { fontFamily: 'System', fontWeight: '900' as const },
+    },
+  };
+
   return (
     <GestureHandlerRootView style={styles.container}>
-      <NavigationContainer theme={isDarkMode ? DarkNavigationTheme : undefined}>
+      <NavigationContainer theme={navigationTheme as any}>
         <RootNavigator />
       </NavigationContainer>
     </GestureHandlerRootView>
   );
 }
-
-const DarkNavigationTheme = {
-  dark: true,
-  colors: {
-    primary: '#818CF8',
-    background: '#0F172A',
-    card: '#1E293B',
-    text: '#F8FAFC',
-    border: '#334155',
-    notification: '#818CF8',
-  },
-  fonts: {
-    regular: { fontFamily: 'System', fontWeight: '400' as const },
-    medium: { fontFamily: 'System', fontWeight: '500' as const },
-    bold: { fontFamily: 'System', fontWeight: '700' as const },
-    heavy: { fontFamily: 'System', fontWeight: '900' as const },
-  },
-};
 
 function App(): React.JSX.Element {
   return (

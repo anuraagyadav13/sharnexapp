@@ -22,6 +22,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { StudentHeader } from '../../components/StudentHeader';
 import studentService from '../../services/studentService';
 
@@ -50,7 +51,7 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
         style={[styles.summaryCard, { borderTopColor: lineColor || bgColor }]}
       >
         <View style={[styles.summaryIconBox, { backgroundColor: bgColor }]}>
-          <IconComponent name={iconName} size={24} color="#FFFFFF" />
+          <IconComponent name={iconName} size={24} color={theme.onPrimary} />
         </View>
         <View style={styles.summaryTextCol}>
           <Text style={styles.summaryNumber}>{number}</Text>
@@ -92,12 +93,12 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
              
              {isPending ? (
                <ScaleButton style={[styles.btnSubmit, {backgroundColor: theme.primary}]} activeOpacity={0.8} scaleTo={0.95} onPress={onPressSubmit}>
-                 <Ionicons name="send" size={13} color="#FFFFFF" style={styles.btnIconLayout} />
+                 <Ionicons name="send" size={13} color={theme.onPrimary} style={styles.btnIconLayout} />
                  <Text style={styles.btnSubmitText}>Submit</Text>
                </ScaleButton>
              ) : (
                <ScaleButton style={[styles.btnSubmit, {backgroundColor: theme.success}]} activeOpacity={0.8} scaleTo={0.95} onPress={onPressDownload}>
-                 <Ionicons name="download-outline" size={14} color="#FFFFFF" style={styles.btnIconLayout} />
+                 <Ionicons name="download-outline" size={14} color={theme.onPrimary} style={styles.btnIconLayout} />
                  <Text style={styles.btnSubmitText}>Download</Text>
                </ScaleButton>
              )}
@@ -218,10 +219,10 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* Top Summaries Grid 2x2 */}
         <View style={styles.summaryGrid}>
-          <SummaryCard delay={100} number={summary.pending} label="Pending" bgColor="#F97316" lineColor="#3B82F6" iconName="clock-outline" />
-          <SummaryCard delay={150} number={summary.submitted} label="Submitted" bgColor="#10B981" lineColor="#10B981" iconName="check-decagram" />
-          <SummaryCard delay={200} number={summary.graded} label="Graded" bgColor="#8B5CF6" lineColor="#F59E0B" iconName="star" />
-          <SummaryCard delay={250} number={summary.upcoming} label="Upcoming" bgColor="#3B82F6" lineColor="#8B5CF6" iconName="calendar-plus" />
+          <SummaryCard delay={100} number={summary.pending} label="Pending" bgColor={theme.warning} lineColor={theme.info} iconName="clock-outline" />
+          <SummaryCard delay={150} number={summary.submitted} label="Submitted" bgColor={theme.success} lineColor={theme.success} iconName="check-decagram" />
+          <SummaryCard delay={200} number={summary.graded} label="Graded" bgColor={theme.primary} lineColor={theme.warning} iconName="star" />
+          <SummaryCard delay={250} number={summary.upcoming} label="Upcoming" bgColor={theme.info} lineColor={theme.primary} iconName="calendar-plus" />
         </View>
 
         <View style={styles.sectionHeader}>
@@ -237,7 +238,7 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
               <Ionicons name="alert-circle" size={60} color={theme.danger} />
               <Text style={styles.emptyText}>{error}</Text>
               {/* <ScaleButton 
-                style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#4F46E5', borderRadius: 8 }}
+                style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: theme.primary, borderRadius: 8 }}
                 onPress={() => {
                   setError(null);
                   setIsLoading(true);
@@ -266,14 +267,14 @@ const AssignmentsScreen: React.FC<Props> = ({ navigation }) => {
                 }}
                 scaleTo={0.95}
               >
-                <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
+                <Text style={{ color: theme.onPrimary, fontWeight: '600' }}>Retry</Text>
               </ScaleButton> */}
               <ScaleButton
                 style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: theme.primary, borderRadius: 8 }}
                 onPress={() => fetchAssignments()}
                 scaleTo={0.95}
               >
-                <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
+                <Text style={{ color: theme.onPrimary, fontWeight: '600' }}>Retry</Text>
               </ScaleButton>
             </View>
           ) : assignments.length === 0 ? (
@@ -364,7 +365,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     shadowRadius: 6,
     elevation: 8,
   },
-  avatarText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
   pageTitleContainer: {
     paddingHorizontal: 20,
@@ -469,9 +470,9 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 20, 
-    backgroundColor: isDarkMode ? '#1E3A8A' : '#EFF6FF',
+    backgroundColor: withAlpha(theme.info, 0.1),
     borderWidth: 1,
-    borderColor: isDarkMode ? '#3B82F6' : '#93C5FD',
+    borderColor: theme.info,
   },
   categoryBadgeText: {
     fontSize: 11,
@@ -482,21 +483,21 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 20, 
-    backgroundColor: isDarkMode ? '#78350F30' : '#FFFBEB',
+    backgroundColor: withAlpha(theme.warning, 0.15),
     borderWidth: 1,
-    borderColor: isDarkMode ? '#D97706' : '#FCD34D',
+    borderColor: theme.warning,
   },
   statusBadgeText: {
     fontSize: 11,
     fontWeight: '500', 
-    color: '#F59E0B',
+    color: theme.warning,
   },
   statusBadgeSubmitted: {
-    backgroundColor: isDarkMode ? '#065F4630' : '#ECFDF5',
-    borderColor: isDarkMode ? '#34D399' : '#6EE7B7',
+    backgroundColor: withAlpha(theme.success, 0.15),
+    borderColor: theme.success,
   },
   statusBadgeTextSubmitted: {
-    color: isDarkMode ? '#34D399' : '#10B981',
+    color: theme.success,
   },
   
   cardTitle: {
@@ -565,7 +566,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   btnSubmitText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
   emptyContainer: {
     alignItems: 'center',

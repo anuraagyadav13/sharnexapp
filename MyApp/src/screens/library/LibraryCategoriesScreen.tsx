@@ -18,6 +18,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { useAuth } from '../../store/AuthContext';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
@@ -153,7 +154,7 @@ const LibraryCategoriesScreen: React.FC<Props> = ({ navigation }) => {
   const renderCategoryCard = ({ item }: { item: CategoryCard }) => (
     <View style={styles.categoryCard}>
       <View style={styles.tagIconBox}>
-        <Ionicons name="pricetag" size={18} color="#8B5CF6" />
+        <Ionicons name="pricetag" size={18} color={theme.accent} />
       </View>
       <Text style={styles.catName}>{item.name}</Text>
       <Text style={styles.catDesc}>{item.description}</Text>
@@ -198,7 +199,7 @@ const LibraryCategoriesScreen: React.FC<Props> = ({ navigation }) => {
         columnWrapperStyle={styles.columnWrapper}
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={() => loadCategories(true)} colors={['#8B5CF6']} />
+          <RefreshControl refreshing={isRefreshing} onRefresh={() => loadCategories(true)} colors={[theme.primary]} />
         }
         ListHeaderComponent={
           <View style={styles.bannerCard}>
@@ -207,14 +208,14 @@ const LibraryCategoriesScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={styles.bannerSubtitle}>Organize your library collection into logical classifications.</Text>
             </View>
             <TouchableOpacity style={styles.newCategoryBtn} onPress={() => setIsAddModalOpen(true)}>
-              <Ionicons name="add" size={18} color="#FFFFFF" style={{ marginRight: 4 }} />
+              <Ionicons name="add" size={18} color={theme.onPrimary} style={{ marginRight: 4 }} />
               <Text style={styles.newCategoryBtnText}>New Category</Text>
             </TouchableOpacity>
           </View>
         }
         ListEmptyComponent={
           isLoading ? (
-            <ActivityIndicator size="large" color="#8B5CF6" style={{ marginVertical: 40 }} />
+            <ActivityIndicator size="large" color={theme.primary} style={{ marginVertical: 40 }} />
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="pricetags-outline" size={48} color={theme.subtext} />
@@ -240,7 +241,7 @@ const LibraryCategoriesScreen: React.FC<Props> = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="Scientific, Fiction, etc."
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={theme.placeholder}
                 value={categoryName}
                 onChangeText={setCategoryName}
               />
@@ -251,7 +252,7 @@ const LibraryCategoriesScreen: React.FC<Props> = ({ navigation }) => {
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Context or Dewey decimal Info..."
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={theme.placeholder}
                 multiline
                 numberOfLines={3}
                 value={briefDescription}
@@ -292,8 +293,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     },
     menuHandle: { padding: 4 },
     headerTitle: { fontSize: 16, fontWeight: '700', color: theme.primary, flex: 1, marginLeft: 8 },
-    avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#8B5CF6', justifyContent: 'center', alignItems: 'center' },
-    avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
+    avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.accent, justifyContent: 'center', alignItems: 'center' },
+    avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 14 },
     headerAvatarImage: { width: 32, height: 32, borderRadius: 16 },
     listContent: { padding: 16 },
     columnWrapper: { justifyContent: 'space-between', marginBottom: 12 },
@@ -314,12 +315,12 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     newCategoryBtn: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#8B5CF6',
+      backgroundColor: theme.primary,
       paddingVertical: 10,
       paddingHorizontal: 16,
       borderRadius: 10,
     },
-    newCategoryBtnText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
+    newCategoryBtnText: { fontSize: 13, fontWeight: '700', color: theme.onPrimary },
     categoryCard: {
       width: '48%',
       backgroundColor: theme.surface,
@@ -332,7 +333,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 36,
       height: 36,
       borderRadius: 10,
-      backgroundColor: '#F3E8FF',
+      backgroundColor: theme.iconBackground,
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: 10,
@@ -343,7 +344,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     assetCountText: { fontSize: 10, fontWeight: '700', color: theme.subtext },
     emptyContainer: { paddingVertical: 40, alignItems: 'center' },
     emptyTitle: { fontSize: 16, fontWeight: '700', color: theme.text, marginTop: 8 },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+    modalOverlay: { flex: 1, backgroundColor: theme.overlay, justifyContent: 'center', alignItems: 'center', padding: 20 },
     modalCard: { backgroundColor: theme.surface, borderRadius: 16, padding: 20, width: '100%', maxWidth: 380, borderWidth: 1, borderColor: theme.border },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
     modalTitle: { fontSize: 18, fontWeight: '800', color: theme.text },
@@ -354,8 +355,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 8 },
     cancelBtn: { paddingVertical: 8, paddingHorizontal: 14 },
     cancelBtnText: { fontSize: 12, fontWeight: '700', color: theme.subtext },
-    commitBtn: { backgroundColor: '#8B5CF6', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 },
-    commitBtnText: { fontSize: 12, fontWeight: '700', color: '#FFF' },
+    commitBtn: { backgroundColor: theme.primary, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 },
+    commitBtnText: { fontSize: 12, fontWeight: '700', color: theme.onPrimary },
   });
 
 export default LibraryCategoriesScreen;

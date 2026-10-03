@@ -19,6 +19,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import teacherService from '../../services/teacherService';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherEquipmentDetail'>;
 
@@ -73,21 +74,21 @@ const TeacherEquipmentDetailScreen: React.FC<Props> = ({ navigation, route }) =>
 
   const getStatusStyle = (status: string) => {
     switch (status) {
-      case 'APPROVED': return { bg: '#ECFDF5', text: '#10B981', icon: 'checkmark-circle' };
-      case 'REJECTED': return { bg: '#FEF2F2', text: '#EF4444', icon: 'close-circle' };
-      case 'NEEDS_CLARIFICATION': return { bg: '#FFFBEB', text: '#F59E0B', icon: 'help-circle' };
-      case 'DRAFT': return { bg: '#F3F4F6', text: '#6B7280', icon: 'pencil-sharp' };
-      case 'SUBMITTED': return { bg: '#EEF2FF', text: '#4F46E5', icon: 'send' };
-      case 'PARTIALLY_APPROVED': return { bg: '#F0F9FF', text: '#0EA5E9', icon: 'checkmark-done' };
-      case 'ACKNOWLEDGED': return { bg: '#F0FDF4', text: '#16A34A', icon: 'ribbon' };
-      default: return { bg: '#F3F4F6', text: '#6B7280', icon: 'information-circle' };
+      case 'APPROVED': return { bg: withAlpha(theme.success, 0.1), text: theme.success, icon: 'checkmark-circle' };
+      case 'REJECTED': return { bg: withAlpha(theme.danger, 0.1), text: theme.danger, icon: 'close-circle' };
+      case 'NEEDS_CLARIFICATION': return { bg: withAlpha(theme.warning, 0.1), text: theme.warning, icon: 'help-circle' };
+      case 'DRAFT': return { bg: withAlpha(theme.border, 0.5), text: theme.subtext, icon: 'pencil-sharp' };
+      case 'SUBMITTED': return { bg: withAlpha(theme.primary, 0.1), text: theme.primary, icon: 'send' };
+      case 'PARTIALLY_APPROVED': return { bg: withAlpha(theme.info, 0.1), text: theme.info, icon: 'checkmark-done' };
+      case 'ACKNOWLEDGED': return { bg: withAlpha(theme.success, 0.1), text: theme.success, icon: 'ribbon' };
+      default: return { bg: withAlpha(theme.border, 0.5), text: theme.subtext, icon: 'information-circle' };
     }
   };
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -96,12 +97,12 @@ const TeacherEquipmentDetailScreen: React.FC<Props> = ({ navigation, route }) =>
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.background} />
       
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#1E293B" />
+          <Ionicons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
           <Text style={styles.headerTitle}>{request.request_number}</Text>
@@ -125,8 +126,8 @@ const TeacherEquipmentDetailScreen: React.FC<Props> = ({ navigation, route }) =>
             </View>
           )}
           {request.principal_remark && (
-            <View style={[styles.noteBox, { backgroundColor: '#F0F9FF', borderColor: '#BAE6FD' }]}>
-              <Text style={[styles.noteTitle, { color: '#0369A1' }]}>Principal's Remark:</Text>
+            <View style={[styles.noteBox, { backgroundColor: withAlpha(theme.info, 0.1), borderColor: withAlpha(theme.info, 0.2) }]}>
+              <Text style={[styles.noteTitle, { color: theme.info }]}>Principal's Remark:</Text>
               <Text style={styles.noteText}>{request.principal_remark}</Text>
             </View>
           )}
@@ -147,7 +148,7 @@ const TeacherEquipmentDetailScreen: React.FC<Props> = ({ navigation, route }) =>
               <View style={styles.quantityBox}>
                 <Text style={styles.qtyLabel}>Req: <Text style={styles.qtyVal}>{item.requested_quantity} {item.unit}</Text></Text>
                 {item.approved_quantity !== null && (
-                  <Text style={[styles.qtyLabel, { color: '#10B981' }]}>Appr: <Text style={styles.qtyVal}>{item.approved_quantity} {item.unit}</Text></Text>
+                  <Text style={[styles.qtyLabel, { color: theme.success }]}>Appr: <Text style={styles.qtyVal}>{item.approved_quantity} {item.unit}</Text></Text>
                 )}
               </View>
             </View>
@@ -203,7 +204,7 @@ const TeacherEquipmentDetailScreen: React.FC<Props> = ({ navigation, route }) =>
             style={[styles.actionBtn, styles.ackBtn]}
             onPress={() => setShowAcknowledgeModal(true)}
           >
-            <Ionicons name="checkmark-done" size={20} color="#FFF" />
+            <Ionicons name="checkmark-done" size={20} color={theme.onPrimary} />
             <Text style={styles.ackBtnText}>Acknowledge Received Items</Text>
           </TouchableOpacity>
         )}
@@ -246,7 +247,7 @@ const TeacherEquipmentDetailScreen: React.FC<Props> = ({ navigation, route }) =>
               onChangeText={setAckNote}
               multiline
               numberOfLines={3}
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={theme.subtext}
             />
 
             <View style={styles.modalActions}>
@@ -261,7 +262,7 @@ const TeacherEquipmentDetailScreen: React.FC<Props> = ({ navigation, route }) =>
                 onPress={() => handleAction('acknowledge')}
                 disabled={isActionLoading}
               >
-                {isActionLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalConfirmText}>Confirm Receipt</Text>}
+                {isActionLoading ? <ActivityIndicator color={theme.onPrimary} /> : <Text style={styles.modalConfirmText}>Confirm Receipt</Text>}
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -334,7 +335,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   timeline: { paddingLeft: 8 },
   timelineItem: { flexDirection: 'row', gap: 16 },
   timelineLeft: { alignItems: 'center', width: 20 },
-  timelineDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#CBD5E1' },
+  timelineDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: theme.border },
   activeDot: { backgroundColor: theme.primary, transform: [{ scale: 1.2 }] },
   timelineLine: { width: 2, flex: 1, backgroundColor: theme.border, marginVertical: 4 },
   timelineRight: { flex: 1, paddingBottom: 24, paddingRight: 8 },
@@ -353,7 +354,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.surface,
     borderTopWidth: 1,
     borderTopColor: theme.border,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -368,16 +369,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  editBtn: { flex: 1, backgroundColor: theme.isDarkMode ? '#334155' : '#F8FAFC', borderWidth: 1, borderColor: theme.border },
+  editBtn: { flex: 1, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border },
   editBtnText: { color: theme.subtext, fontWeight: '700' },
   submitBtn: { flex: 2, backgroundColor: theme.primary },
-  submitBtnText: { color: '#FFF', fontWeight: '700' },
-  ackBtn: { backgroundColor: '#10B981', width: '100%' },
-  ackBtnText: { color: '#FFF', fontWeight: '700' },
-  cancelBtn: { backgroundColor: '#FEF2F2', width: '100%' },
-  cancelBtnText: { color: '#EF4444', fontWeight: '700' },
+  submitBtnText: { color: theme.onPrimary, fontWeight: '700' },
+  ackBtn: { backgroundColor: theme.success, width: '100%' },
+  ackBtnText: { color: theme.onPrimary, fontWeight: '700' },
+  cancelBtn: { backgroundColor: withAlpha(theme.danger, 0.1), width: '100%' },
+  cancelBtnText: { color: theme.danger, fontWeight: '700' },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+  modalOverlay: { flex: 1, backgroundColor: withAlpha(theme.overlay, 0.5), justifyContent: 'center', padding: 20 },
   modalContent: { backgroundColor: theme.surface, borderRadius: 20, padding: 24 },
   modalTitle: { fontSize: 18, fontWeight: '800', color: theme.text, marginBottom: 8 },
   modalSubtitle: { fontSize: 14, color: theme.subtext, lineHeight: 20, marginBottom: 20 },
@@ -396,8 +397,8 @@ const getStyles = (theme: any) => StyleSheet.create({
   modalActions: { flexDirection: 'row', gap: 12 },
   modalCloseBtn: { flex: 1, height: 48, justifyContent: 'center', alignItems: 'center' },
   modalCloseText: { color: theme.subtext, fontWeight: '700' },
-  modalConfirmBtn: { flex: 2, height: 48, backgroundColor: '#10B981', borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  modalConfirmText: { color: '#FFF', fontWeight: '700' },
+  modalConfirmBtn: { flex: 2, height: 48, backgroundColor: theme.success, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  modalConfirmText: { color: theme.onPrimary, fontWeight: '700' },
 });
 
 export default TeacherEquipmentDetailScreen;

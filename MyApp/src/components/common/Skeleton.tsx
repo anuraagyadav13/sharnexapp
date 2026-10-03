@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, DimensionValue, ViewStyle } from 'react-native';
+import { useTheme } from '../../store/ThemeContext';
+import { withAlpha } from '../../constants/theme';
 import Animated, { 
   useAnimatedStyle, 
   useSharedValue, 
@@ -19,12 +21,15 @@ interface SkeletonProps {
  * Spotify-style Simple Pulse Skeleton.
  * Clean, lightweight, and professional.
  */
-const Skeleton: React.FC<SkeletonProps> = ({ 
+const Skeleton: React.FC<SkeletonProps> = (props) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+  const {  
   width = '100%', 
   height = 20, 
   borderRadius = 8,
   style 
-}) => {
+ } = props;
   const opacity = useSharedValue(0.4);
 
   React.useEffect(() => {
@@ -56,9 +61,9 @@ const Skeleton: React.FC<SkeletonProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   skeleton: {
-    backgroundColor: '#E5E7EB', // Soft gray (Gray-200)
+    backgroundColor: withAlpha(theme.border, 0.5),
   },
 });
 

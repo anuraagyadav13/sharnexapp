@@ -20,7 +20,7 @@ import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import Toast, { ToastType } from '../../components/Toast';
 import { useTheme } from '../../store/ThemeContext';
-import { BRAND } from '../../constants/theme';
+
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PrincipalEditSubject'>;
 
@@ -172,7 +172,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   backBtnHeader: { padding: 4 },
   headerTitle: { fontSize: 16, fontWeight: '500', color: theme.primary, flex: 1, textAlign: 'center', marginHorizontal: 10 },
   headerRight: { flexDirection: 'row', alignItems: 'center' },
-  avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: BRAND.accentPurple, justifyContent: 'center', alignItems: 'center' },
+  avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center' },
   avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
   pageTitleWrapper: { marginTop: 20, marginBottom: 20 },
   pageTitle: { fontSize: 24, fontWeight: '800', color: theme.primary, marginBottom: 4 },

@@ -21,6 +21,7 @@ import { useAuth } from '../../store/AuthContext';
 // Import our easy-to-use teacherService for talking to the server
 import teacherService from '../../services/teacherService';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import Skeleton from '../../components/common/Skeleton';
 
 const PageSkeleton = () => {
@@ -129,7 +130,7 @@ const TeacherAttendanceScreen: React.FC<Props> = ({ navigation }) => {
         <ScrollView 
           contentContainerStyle={styles.scrollContent} 
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.primary]} />}
         >
 
           {/* Page Title */}
@@ -156,7 +157,7 @@ const TeacherAttendanceScreen: React.FC<Props> = ({ navigation }) => {
                     onPress={() => navigation.navigate('TeacherSelfAttendance')}
                   >
                     <Text style={styles.historyLinkText}>View Detailed Logs</Text>
-                    <Ionicons name="arrow-forward" size={12} color="#FFF" />
+                    <Ionicons name="arrow-forward" size={12} color={theme.onPrimary} />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.meProgressBase}>
@@ -169,7 +170,7 @@ const TeacherAttendanceScreen: React.FC<Props> = ({ navigation }) => {
           {/* Big White Main Card */}
           <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.mainCard}>
             <View style={styles.cardHeaderRow}>
-              <Ionicons name="checkbox" size={20} color="#111827" />
+              <Ionicons name="checkbox" size={20} color={theme.text} />
               <Text style={styles.cardHeaderTitle}>Today's Attendance</Text>
             </View>
 
@@ -193,12 +194,12 @@ const TeacherAttendanceScreen: React.FC<Props> = ({ navigation }) => {
                         <Text style={styles.classNameText}>{className}{section ? ` - ${section}` : ''}</Text>
                         <View style={styles.classMetaRow}>
                           <View style={styles.metaBadge}>
-                            <Ionicons name="people" size={13} color="#4F46E5" style={{ marginRight: 6 }} />
+                            <Ionicons name="people" size={13} color={theme.primary} style={{ marginRight: 6 }} />
                             <Text style={styles.metaText}>{totalStudents} Students</Text>
                           </View>
                           {!!grade && (
                             <View style={[styles.metaBadge, { marginLeft: 20 }]}>
-                              <Ionicons name="book" size={13} color="#3B82F6" style={{ marginRight: 6 }} />
+                              <Ionicons name="book" size={13} color={theme.info} style={{ marginRight: 6 }} />
                               <Text style={styles.metaText}>{grade}</Text>
                             </View>
                           )}
@@ -207,7 +208,7 @@ const TeacherAttendanceScreen: React.FC<Props> = ({ navigation }) => {
 
                       {isMarked && (
                         <View style={styles.markedPill}>
-                          <Ionicons name="checkmark-circle" size={12} color="#FFFFFF" style={{ marginRight: 4 }} />
+                          <Ionicons name="checkmark-circle" size={12} color={theme.onPrimary} style={{ marginRight: 4 }} />
                           <Text style={styles.markedPillText}>Marked</Text>
                         </View>
                       )}
@@ -219,22 +220,22 @@ const TeacherAttendanceScreen: React.FC<Props> = ({ navigation }) => {
                       <TouchableOpacity style={styles.actionBtnWhite} activeOpacity={0.7} onPress={() => navigation.navigate('TeacherViewAttendance', { classId: item.id ?? item.class_id })}>
                         <View style={styles.actionBtnLeft}>
                           <View style={styles.checkboxOutline}>
-                            <Ionicons name="checkmark" size={12} color="#9CA3AF" />
+                            <Ionicons name="checkmark" size={12} color={theme.subtext} />
                           </View>
                           <Text style={styles.actionBtnText}>View Attendance Details</Text>
                         </View>
-                        <Ionicons name="chevron-forward" size={16} color="#4F46E5" />
+                        <Ionicons name="chevron-forward" size={16} color={theme.primary} />
                       </TouchableOpacity>
 
                       {/* Mark/Edit */}
                       <TouchableOpacity style={styles.actionBtnPurple} activeOpacity={0.7} onPress={() => navigation.navigate('TeacherMarkAttendance', { classId: item.id ?? item.class_id, className })}>
                         <View style={styles.actionBtnLeft}>
                           <View style={styles.checkboxFilled}>
-                            <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                            <Ionicons name="checkmark" size={14} color={theme.onPrimary} />
                           </View>
                           <Text style={styles.actionBtnText}>Mark/Edit Attendance</Text>
                         </View>
-                        <Ionicons name="chevron-forward" size={16} color="#4F46E5" />
+                        <Ionicons name="chevron-forward" size={16} color={theme.primary} />
                       </TouchableOpacity>
                     </View>
 
@@ -270,7 +271,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -292,13 +293,13 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 17,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#A855F7',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
     elevation: 8,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
   pageTitleWrapper: { marginBottom: 16, paddingHorizontal: 16, marginTop: 20 },
   pageTitle: { fontSize: 22, fontWeight: '800', color: theme.primary, marginBottom: 4 },
@@ -309,7 +310,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 14,
     padding: 20,
     marginHorizontal: 16,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
@@ -330,7 +331,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
 
   classCard: {
-    backgroundColor: theme.isDarkMode ? '#33415530' : '#F7F9FC',
+    backgroundColor: withAlpha(theme.border, 0.3),
     borderRadius: 8,
     padding: 10,
     marginBottom: 16,
@@ -363,18 +364,18 @@ const getStyles = (theme: any) => StyleSheet.create({
   markedPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#22C55E',
+    backgroundColor: theme.success,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
   markedPillText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -389,7 +390,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.surface,
     borderRadius: 8,
     padding: 12,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
@@ -399,7 +400,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: theme.isDarkMode ? '#312E8130' : '#EEF2FF',
+    backgroundColor: withAlpha(theme.primary, 0.15),
     borderRadius: 8,
     padding: 12,
   },
@@ -451,16 +452,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     elevation: 10,
   },
   meInfo: { gap: 12 },
-  meTitle: { color: '#FFF', fontSize: 16, fontWeight: '800' },
-  meSubtitle: { color: '#E0E7FF', fontSize: 10, fontWeight: '500' },
+  meTitle: { color: theme.onPrimary, fontSize: 16, fontWeight: '800' },
+  meSubtitle: { color: withAlpha(theme.onPrimary, 0.8), fontSize: 10, fontWeight: '500' },
   meStatRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   meStat: { alignItems: 'flex-start' },
-  meStatVal: { color: '#FFF', fontSize: 20, fontWeight: '900' },
-  meStatLab: { color: '#E0E7FF', fontSize: 9, fontWeight: '700' },
-  historyLink: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, gap: 5 },
-  historyLinkText: { color: '#FFF', fontSize: 9, fontWeight: '700' },
-  meProgressBase: { flex: 1, height: 6, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 3, marginTop: 12 },
-  meProgressFill: { height: 6, backgroundColor: '#FFF', borderRadius: 3 },
+  meStatVal: { color: theme.onPrimary, fontSize: 20, fontWeight: '900' },
+  meStatLab: { color: withAlpha(theme.onPrimary, 0.8), fontSize: 9, fontWeight: '700' },
+  historyLink: { flexDirection: 'row', alignItems: 'center', backgroundColor: withAlpha(theme.onPrimary, 0.15), paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, gap: 5 },
+  historyLinkText: { color: theme.onPrimary, fontSize: 9, fontWeight: '700' },
+  meProgressBase: { flex: 1, height: 6, backgroundColor: withAlpha(theme.onPrimary, 0.2), borderRadius: 3, marginTop: 12 },
+  meProgressFill: { height: 6, backgroundColor: theme.surface, borderRadius: 3 },
 });
 
 export default TeacherAttendanceScreen;

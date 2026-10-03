@@ -20,7 +20,10 @@ import Animated, { FadeIn, FadeInUp, Layout } from 'react-native-reanimated';
 import teacherService from '../../services/teacherService';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { TeacherHeader } from '../../components/TeacherHeader';
+
+const theme = LIGHT_COLORS;
 
 let DateTimePicker: any = null;
 try {
@@ -43,10 +46,10 @@ interface EquipmentItem {
 }
 
 const PRIORITY_OPTIONS = [
-  { label: 'Low', value: 'LOW', color: '#10B981' },
-  { label: 'Medium', value: 'MEDIUM', color: '#F59E0B' },
-  { label: 'High', value: 'HIGH', color: '#EF4444' },
-  { label: 'Urgent', value: 'URGENT', color: '#B91C1C' },
+  { label: 'Low', value: 'LOW', color: theme.success },
+  { label: 'Medium', value: 'MEDIUM', color: theme.warning },
+  { label: 'High', value: 'HIGH', color: theme.danger },
+  { label: 'Urgent', value: 'URGENT', color: theme.danger },
 ];
 
 const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
@@ -209,14 +212,14 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.background} />
 
       {/* Header */}
       <TeacherHeader
@@ -239,7 +242,7 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
               <MaterialCommunityIcons
                 name="information-outline"
                 size={20}
-                color="#4F46E5"
+                color={theme.primary}
               />
               <Text style={styles.sectionTitle}>Request Information</Text>
             </View>
@@ -256,7 +259,7 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
                 onChangeText={setPurpose}
                 multiline
                 numberOfLines={3}
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={theme.subtext}
               />
             </View>
 
@@ -279,7 +282,7 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
                       <Text
                         style={[
                           styles.priorityLabel,
-                          priority === opt.value && { color: '#FFF' },
+                          priority === opt.value && { color: theme.onPrimary },
                         ]}
                       >
                         {opt.label}
@@ -296,11 +299,11 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
                 style={styles.dateSelector}
                 onPress={() => setShowDatePicker(true)}
               >
-                <Ionicons name="calendar-outline" size={20} color="#64748B" />
+                <Ionicons name="calendar-outline" size={20} color={theme.subtext} />
                 <Text style={styles.dateValue}>
                   {neededByDate.toDateString()}
                 </Text>
-                <Ionicons name="chevron-down" size={16} color="#94A3B8" />
+                <Ionicons name="chevron-down" size={16} color={theme.subtext} />
               </TouchableOpacity>
               {showDatePicker && (
                 <DateTimePicker
@@ -325,7 +328,7 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
                 onChangeText={setTeacherNote}
                 multiline
                 numberOfLines={2}
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={theme.subtext}
               />
             </View>
           </View>
@@ -344,7 +347,7 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
                 <MaterialCommunityIcons
                   name="format-list-bulleted"
                   size={20}
-                  color="#4F46E5"
+                  color={theme.primary}
                 />
                 <Text style={styles.sectionTitle}>Requested Items</Text>
               </View>
@@ -352,7 +355,7 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
                 style={styles.addItemBtn}
                 onPress={handleAddItem}
               >
-                <Ionicons name="add" size={18} color="#4F46E5" />
+                <Ionicons name="add" size={18} color={theme.primary} />
                 <Text style={styles.addItemText}>Add Item</Text>
               </TouchableOpacity>
             </View>
@@ -371,7 +374,7 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
                       <Ionicons
                         name="trash-outline"
                         size={18}
-                        color="#EF4444"
+                        color={theme.danger}
                       />
                     </TouchableOpacity>
                   )}
@@ -386,7 +389,7 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
                     placeholder="e.g. Projector Lamp, Whiteboard Markers"
                     value={item.itemName}
                     onChangeText={val => updateItem(index, 'itemName', val)}
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={theme.subtext}
                   />
                 </View>
 
@@ -407,7 +410,7 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
                           parseFloat(val) || 0,
                         )
                       }
-                      placeholderTextColor="#94A3B8"
+                      placeholderTextColor={theme.subtext}
                     />
                   </View>
                   <View style={[styles.inputGroup, { flex: 2 }]}>
@@ -417,7 +420,7 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
                       placeholder="unit, box, kg, etc."
                       value={item.unit}
                       onChangeText={val => updateItem(index, 'unit', val)}
-                      placeholderTextColor="#94A3B8"
+                      placeholderTextColor={theme.subtext}
                     />
                   </View>
                 </View>
@@ -429,7 +432,7 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
                     placeholder="e.g. Model X, Blue color, must be compatible with..."
                     value={item.itemNote}
                     onChangeText={val => updateItem(index, 'itemNote', val)}
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={theme.subtext}
                   />
                 </View>
               </Animated.View>
@@ -453,7 +456,7 @@ const TeacherAddEquipmentRequestScreen: React.FC<Props> = ({
                 disabled={isSaving}
               >
                 {isSaving ? (
-                  <ActivityIndicator size="small" color="#FFF" />
+                  <ActivityIndicator size="small" color={theme.onPrimary} />
                 ) : (
                   <Text style={styles.draftBtnText}>Save as Draft</Text>
                 )}
@@ -500,7 +503,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginBottom: 20,
     borderWidth: 1,
     borderColor: theme.border,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 5,
@@ -523,7 +526,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginBottom: 6,
     textTransform: 'uppercase',
   },
-  required: { color: '#EF4444' },
+  required: { color: theme.danger },
   input: {
     backgroundColor: theme.background,
     borderWidth: 1,
@@ -588,7 +591,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: theme.border,
-    backgroundColor: theme.isDarkMode ? '#33415550' : '#FAFBFE',
+    backgroundColor: withAlpha(theme.border, 0.2),
   },
   itemCardHeader: {
     flexDirection: 'row',
@@ -608,15 +611,15 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
   },
   cancelBtn: {
-    backgroundColor: theme.isDarkMode ? '#334155' : '#FFFFFF',
+    backgroundColor: theme.surface,
     borderWidth: 1,
     borderColor: theme.border,
   },
   cancelBtnText: { color: theme.subtext, fontWeight: '700' },
-  draftBtn: { backgroundColor: '#8B5CF6' },
-  draftBtnText: { color: '#FFF', fontWeight: '700' },
+  draftBtn: { backgroundColor: theme.primary },
+  draftBtnText: { color: theme.onPrimary, fontWeight: '700' },
   submitBtn: { backgroundColor: theme.primary, flex: 1.5 },
-  submitBtnText: { color: '#FFF', fontWeight: '700' },
+  submitBtnText: { color: theme.onPrimary, fontWeight: '700' },
 });
 
 export default TeacherAddEquipmentRequestScreen;

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../../store/ThemeContext';
+import { withAlpha } from '../../../constants/theme';
 import { BusSubHeader } from '../../../components/bus/BusSubHeader';
 import { busStore } from '../../../services/busMockData';
 
@@ -87,7 +88,7 @@ export const AddScheduleScreen: React.FC<Props> = ({ navigation }) => {
         {/* Panel 1: Bus & Driver Assignment */}
         <View style={[styles.panelCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.panelTitleRow}>
-            <Ionicons name="bus-outline" size={20} color="#7C3AED" style={{ marginRight: 8 }} />
+            <Ionicons name="bus-outline" size={20} color={theme.primary} style={{ marginRight: 8 }} />
             <Text style={styles.panelTitle}>Bus & Resource Assignment</Text>
           </View>
 
@@ -182,7 +183,7 @@ export const AddScheduleScreen: React.FC<Props> = ({ navigation }) => {
         {/* Panel 2: Trip Details & Effective Period */}
         <View style={[styles.panelCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.panelTitleRow}>
-            <Ionicons name="time-outline" size={20} color="#7C3AED" style={{ marginRight: 8 }} />
+            <Ionicons name="time-outline" size={20} color={theme.primary} style={{ marginRight: 8 }} />
             <Text style={styles.panelTitle}>Trip Details & Timetable</Text>
           </View>
 
@@ -203,7 +204,7 @@ export const AddScheduleScreen: React.FC<Props> = ({ navigation }) => {
               <Ionicons
                 name="sunny-outline"
                 size={16}
-                color={tripType === 'Morning Pickup' ? '#FFFFFF' : theme.subtext}
+                color={tripType === 'Morning Pickup' ? theme.onPrimary : theme.subtext}
                 style={{ marginRight: 6 }}
               />
               <Text
@@ -230,7 +231,7 @@ export const AddScheduleScreen: React.FC<Props> = ({ navigation }) => {
               <Ionicons
                 name="moon-outline"
                 size={16}
-                color={tripType === 'Afternoon Drop' ? '#FFFFFF' : theme.subtext}
+                color={tripType === 'Afternoon Drop' ? theme.onPrimary : theme.subtext}
                 style={{ marginRight: 6 }}
               />
               <Text
@@ -303,7 +304,7 @@ export const AddScheduleScreen: React.FC<Props> = ({ navigation }) => {
             activeOpacity={0.8}
             onPress={handleSaveSchedule}
           >
-            <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+            <Ionicons name="checkmark-circle-outline" size={18} color={theme.onPrimary} style={{ marginRight: 6 }} />
             <Text style={styles.submitBtnText}>Save Schedule</Text>
           </TouchableOpacity>
         </View>
@@ -374,7 +375,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      backgroundColor: isDarkMode ? '#120D24' : '#F8FAFC',
+      backgroundColor: theme.surface,
     },
     dropdownText: {
       fontSize: 14,
@@ -410,11 +411,11 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: isDarkMode ? '#120D24' : '#F1F5F9',
+      backgroundColor: theme.surface,
     },
     tripToggleBtnActive: {
-      backgroundColor: '#7C3AED',
-      borderColor: '#7C3AED',
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
     },
     tripToggleText: {
       fontSize: 13,
@@ -422,7 +423,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       color: theme.subtext,
     },
     tripToggleTextActive: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontWeight: '700',
     },
     inputRowGroup: {
@@ -436,7 +437,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderWidth: 1,
       paddingHorizontal: 14,
       fontSize: 14,
-      backgroundColor: isDarkMode ? '#120D24' : '#F8FAFC',
+      backgroundColor: theme.surface,
     },
     buttonRow: {
       flexDirection: 'row',
@@ -460,11 +461,11 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       flex: 2,
       height: 48,
       borderRadius: 24,
-      backgroundColor: '#7C3AED',
+      backgroundColor: theme.primary,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      shadowColor: '#7C3AED',
+      shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3,
       shadowRadius: 6,
@@ -473,6 +474,6 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     submitBtnText: {
       fontSize: 14,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: theme.onPrimary,
     },
   });

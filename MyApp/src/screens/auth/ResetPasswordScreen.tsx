@@ -21,17 +21,18 @@ import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import ThemeSelectionModal from '../../components/modals/ThemeSelectionModal';
 
 
 const ChevronBackIcon = ({ width = 18, height = 18 }) => (
-  <Svg width={width} height={height} viewBox="0 0 24 24" fill="none" stroke="#FFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <Svg width={width} height={height} viewBox="0 0 24 24" fill="none" stroke={LIGHT_COLORS.onPrimary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <Path d="M15.75 19.5L8.25 12l7.5-7.5" />
   </Svg>
 );
 
 const EyeIcon = ({ show }: { show: boolean }) => (
-  <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={LIGHT_COLORS.subtext} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <Path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
     <Circle cx="12" cy="12" r="3" />
     {!show && <Path d="M4 4l16 16" />}
@@ -96,9 +97,9 @@ const ResetPasswordScreen = () => {
         <Svg height="100%" width="100%">
           <Defs>
             <LinearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <Stop offset="0" stopColor="#A855F7" />
-              <Stop offset="0.5" stopColor="#9333EA" />
-              <Stop offset="1" stopColor="#3B82F6" />
+              <Stop offset="0" stopColor={theme.primary} />
+              <Stop offset="0.5" stopColor={theme.primary} />
+              <Stop offset="1" stopColor={theme.info} />
             </LinearGradient>
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#grad)" />
@@ -125,7 +126,7 @@ const ResetPasswordScreen = () => {
                 : 'settings-outline'
             } 
             size={20} 
-            color="#FFF" 
+            color={theme.onPrimary} 
           />
         </ScaleButton>
       </FadeInView>
@@ -147,7 +148,7 @@ const ResetPasswordScreen = () => {
                   <TextInput
                     style={styles.input}
                     placeholder="Verification Code"
-                    placeholderTextColor="#A0AEC0"
+                    placeholderTextColor={theme.subtext}
                     keyboardType="number-pad"
                     value={code}
                     onChangeText={setCode}
@@ -160,7 +161,7 @@ const ResetPasswordScreen = () => {
                   <TextInput
                     style={styles.input}
                     placeholder="New Password"
-                    placeholderTextColor="#A0AEC0"
+                    placeholderTextColor={theme.subtext}
                     secureTextEntry={!showPassword}
                     value={newPassword}
                     onChangeText={setNewPassword}
@@ -176,7 +177,7 @@ const ResetPasswordScreen = () => {
                   <TextInput
                     style={styles.input}
                     placeholder="Confirm New Password"
-                    placeholderTextColor="#A0AEC0"
+                    placeholderTextColor={theme.subtext}
                     secureTextEntry={!showPassword}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
@@ -228,7 +229,7 @@ const getStyles = (theme: any) =>
     backButton: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      backgroundColor: withAlpha(theme.onPrimary, 0.2),
       borderRadius: 8,
       paddingVertical: 7,
       paddingHorizontal: 14,
@@ -238,7 +239,7 @@ const getStyles = (theme: any) =>
       marginLeft: -4,
     },
     backText: {
-      color: '#FFF',
+      color: theme.onPrimary,
       fontSize: 15,
       fontWeight: '600',
     },
@@ -249,7 +250,7 @@ const getStyles = (theme: any) =>
       zIndex: 10,
     },
     themeButton: {
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      backgroundColor: withAlpha(theme.onPrimary, 0.2),
       borderRadius: 8,
       paddingVertical: 7,
       paddingHorizontal: 14,
@@ -259,14 +260,14 @@ const getStyles = (theme: any) =>
     title: {
       fontSize: 27,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       textAlign: 'center',
       marginBottom: 8,
       letterSpacing: -0.3,
     },
     subtitle: {
       fontSize: 15,
-      color: 'rgba(255, 255, 255, 0.8)',
+      color: withAlpha(theme.onPrimary, 0.8),
       textAlign: 'center',
       marginBottom: 24,
     },
@@ -275,7 +276,7 @@ const getStyles = (theme: any) =>
       borderRadius: 24,
       padding: 32,
       width: '100%',
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 0.05,
       shadowRadius: 16,
@@ -311,7 +312,7 @@ const getStyles = (theme: any) =>
       marginTop: 8,
     },
     buttonText: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontSize: 16,
       fontWeight: '700',
     },

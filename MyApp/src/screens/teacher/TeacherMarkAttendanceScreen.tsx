@@ -17,6 +17,7 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { TeacherHeader } from '../../components/TeacherHeader';
 // Import our easy-to-use teacherService for talking to the server
 import teacherService from '../../services/teacherService';
@@ -125,7 +126,7 @@ const TeacherMarkAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.background} />
 
       {/* Global Header */}
       <TeacherHeader
@@ -137,7 +138,7 @@ const TeacherMarkAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
       {/* Blue Header Section */}
       <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={20} color={theme.onPrimary} />
          </TouchableOpacity>
          <Text style={styles.blueTitle}>Mark Attendance</Text>
          <View style={styles.classRow}>
@@ -152,7 +153,7 @@ const TeacherMarkAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
       <ScrollView 
         contentContainerStyle={styles.scrollContent} 
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.primary]} />}
       >
         
         {/* Main Content Card */}
@@ -167,7 +168,7 @@ const TeacherMarkAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
                  activeOpacity={0.7}
                  onPress={() => markAll('P')}
               >
-                 <Ionicons name="checkmark-circle" size={16} color="#22C55E" style={{marginRight: 6}} />
+                 <Ionicons name="checkmark-circle" size={16} color={theme.success} style={{marginRight: 6}} />
                  <Text style={styles.markAllPresentText}>Mark All{'\n'}Present</Text>
               </TouchableOpacity>
 
@@ -176,14 +177,14 @@ const TeacherMarkAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
                  activeOpacity={0.7}
                  onPress={() => markAll('A')}
               >
-                 <Ionicons name="checkmark-circle" size={16} color="#EF4444" style={{marginRight: 6}} />
+                 <Ionicons name="checkmark-circle" size={16} color={theme.danger} style={{marginRight: 6}} />
                  <Text style={styles.markAllAbsentText}>Mark All{'\n'}Absent</Text>
               </TouchableOpacity>
            </View>
 
            {/* List */}
            {isLoading ? (
-             <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 20 }} />
+             <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 20 }} />
            ) : students.length === 0 ? (
              <Text style={styles.emptyText}>No students found in this class.</Text>
            ) : (
@@ -267,10 +268,10 @@ const TeacherMarkAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
             disabled={isSubmitting}
          >
             {isSubmitting ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
+              <ActivityIndicator color={theme.onPrimary} size="small" />
             ) : (
               <>
-                <Ionicons name="checkmark" size={18} color="#FFFFFF" style={{marginRight: 6}} />
+                <Ionicons name="checkmark" size={18} color={theme.onPrimary} style={{marginRight: 6}} />
                 <Text style={styles.submitBtnText}>Submit Attendance</Text>
               </>
             )}
@@ -296,7 +297,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -317,16 +318,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
   blueHeader: {
     backgroundColor: theme.primary,
@@ -340,7 +341,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.25),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -348,7 +349,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   blueTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     marginBottom: 10,
   },
   classRow: {
@@ -360,23 +361,23 @@ const getStyles = (theme: any) => StyleSheet.create({
   classTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
   todayBtn: {
-    backgroundColor: '#79A4F2', 
+    backgroundColor: theme.primary, 
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 8,
   },
   todayBtnText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 12,
     fontWeight: '700',
   },
   blueSubtitle: {
     fontSize: 12,
     fontWeight: '400',
-    color: '#E2E8F0',
+    color: theme.border,
   },
 
   mainCard: {
@@ -385,7 +386,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     padding: 24,
     marginHorizontal: 16,
     marginTop: 20,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
@@ -416,23 +417,23 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderWidth: 1,
   },
   markAllBtnPresent: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#22C55E',
+    backgroundColor: withAlpha(theme.success, 0.05),
+    borderColor: theme.success,
   },
   markAllPresentText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#22C55E',
+    color: theme.success,
     textAlign: 'center',
   },
   markAllBtnAbsent: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#EF4444',
+    backgroundColor: withAlpha(theme.danger, 0.1),
+    borderColor: theme.danger,
   },
   markAllAbsentText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#EF4444',
+    color: theme.danger,
     textAlign: 'center',
   },
 
@@ -452,7 +453,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: theme.isDarkMode ? '#33415530' : '#EEF2FF',
+    backgroundColor: withAlpha(theme.border, 0.3),
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
@@ -491,20 +492,20 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '700',
   },
   toggleTextActive: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
   
-  toggleBtnPresent: { backgroundColor: '#ECFDF5' },
-  toggleBtnPresentActive: { backgroundColor: '#10B981' },
-  toggleTextPresent: { color: '#10B981' },
+  toggleBtnPresent: { backgroundColor: withAlpha(theme.success, 0.1) },
+  toggleBtnPresentActive: { backgroundColor: theme.success },
+  toggleTextPresent: { color: theme.success },
 
-  toggleBtnAbsent: { backgroundColor: '#FEF2F2' },
-  toggleBtnAbsentActive: { backgroundColor: '#EF4444' },
-  toggleTextAbsent: { color: '#EF4444' },
+  toggleBtnAbsent: { backgroundColor: withAlpha(theme.danger, 0.1) },
+  toggleBtnAbsentActive: { backgroundColor: theme.danger },
+  toggleTextAbsent: { color: theme.danger },
 
-  toggleBtnLeave: { backgroundColor: '#FEF3C7' },
-  toggleBtnLeaveActive: { backgroundColor: '#F59E0B' },
-  toggleTextLeave: { color: '#F59E0B' },
+  toggleBtnLeave: { backgroundColor: withAlpha(theme.warning, 0.1) },
+  toggleBtnLeaveActive: { backgroundColor: theme.warning },
+  toggleTextLeave: { color: theme.warning },
 
   bottomBar: {
     position: 'absolute',
@@ -539,14 +540,14 @@ const getStyles = (theme: any) => StyleSheet.create({
   submitBtnText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
   cancelBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.isDarkMode ? '#33415530' : '#F8FAFC',
+    backgroundColor: withAlpha(theme.border, 0.3),
     borderRadius: 8,
     borderWidth: 1,
     borderColor: theme.border,

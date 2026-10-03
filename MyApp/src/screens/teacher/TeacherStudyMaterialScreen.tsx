@@ -23,6 +23,7 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Animated, { FadeInUp, FadeIn, Layout } from 'react-native-reanimated';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import teacherService from '../../services/teacherService';
 
 const { width } = Dimensions.get('window');
@@ -215,7 +216,7 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
         <MaterialCommunityIcons 
           name={item.file_type === 'pdf' ? 'file-pdf-box' : item.file_type === 'video' ? 'play-circle' : 'file-document'} 
           size={32} 
-          color={item.file_type === 'pdf' ? '#EF4444' : item.file_type === 'video' ? '#3B82F6' : '#10B981'} 
+          color={item.file_type === 'pdf' ? theme.danger : item.file_type === 'video' ? theme.info : theme.success} 
         />
       </View>
       <View style={styles.materialInfo}>
@@ -225,7 +226,7 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
       </View>
       <View style={styles.materialActions}>
         <TouchableOpacity style={styles.actionIcon} onPress={() => handleDeleteMaterial(item.id)}>
-          <Ionicons name="trash-outline" size={20} color="#EF4444" />
+          <Ionicons name="trash-outline" size={20} color={theme.danger} />
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.actionIcon}
@@ -271,7 +272,7 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
             onPress={() => setUploadModalVisible(true)}
             activeOpacity={0.8}
           >
-            <Ionicons name="cloud-upload" size={18} color="#FFF" />
+            <Ionicons name="cloud-upload" size={18} color={theme.onPrimary} />
             <Text style={styles.uploadBtnText}>Upload</Text>
           </TouchableOpacity>
         </View>
@@ -279,12 +280,12 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
 
       <ScrollView
         style={styles.container}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.primary]} />}
       >
         {/* Search Bar */}
         <View style={styles.searchSection}>
           <View style={styles.searchContainer}>
-            <Ionicons name="search" size={18} color="#94A3B8" />
+            <Ionicons name="search" size={18} color={theme.subtext} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search materials..."
@@ -312,11 +313,11 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
         {/* Content List */}
         {isLoading ? (
           <View style={styles.centerFill}>
-            <ActivityIndicator size="large" color="#4F46E5" />
+            <ActivityIndicator size="large" color={theme.primary} />
           </View>
         ) : filteredMaterials.length === 0 ? (
           <View style={styles.emptyState}>
-            <MaterialCommunityIcons name="file-search-outline" size={64} color="#E5E7EB" />
+            <MaterialCommunityIcons name="file-search-outline" size={64} color={theme.border} />
             <Text style={styles.emptyStateTitle}>No materials found</Text>
             <Text style={styles.emptyStateSubtext}>Upload your first study resource to get started.</Text>
           </View>
@@ -343,7 +344,7 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Upload New Material</Text>
               <TouchableOpacity onPress={() => setUploadModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#6B7280" />
+                <Ionicons name="close" size={24} color={theme.subtext} />
               </TouchableOpacity>
             </View>
 
@@ -399,7 +400,7 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
               <TouchableOpacity style={styles.filePickerBox} onPress={handlePickFile}>
                 {selectedFile ? (
                   <View style={styles.selectedFileView}>
-                    <Ionicons name="document-attach" size={32} color="#4F46E5" />
+                    <Ionicons name="document-attach" size={32} color={theme.primary} />
                     <Text style={styles.fileName} numberOfLines={1}>{selectedFile.name}</Text>
                     <TouchableOpacity onPress={() => setSelectedFile(null)}>
                       <Text style={styles.removeFile}>Remove</Text>
@@ -407,7 +408,7 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
                   </View>
                 ) : (
                   <>
-                    <Ionicons name="cloud-upload-outline" size={40} color="#94A3B8" />
+                    <Ionicons name="cloud-upload-outline" size={40} color={theme.subtext} />
                     <Text style={styles.uploadText}>Click to browse files</Text>
                     <Text style={styles.uploadSubtext}>Support PDF, DOC, Video (Max 10MB)</Text>
                   </>
@@ -423,7 +424,7 @@ const TeacherStudyMaterialScreen = ({ navigation }: any) => {
                   onPress={handleUpload}
                   disabled={isUploading || !newTitle || !selectedFile}
                 >
-                  {isUploading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalUploadText}>Upload Material</Text>}
+                  {isUploading ? <ActivityIndicator color={theme.onPrimary} /> : <Text style={styles.modalUploadText}>Upload Material</Text>}
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -449,7 +450,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -474,7 +475,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
   },
-  uploadBtnText: { color: '#FFF', fontWeight: '700', fontSize: 13, marginLeft: 6 },
+  uploadBtnText: { color: theme.onPrimary, fontWeight: '700', fontSize: 13, marginLeft: 6 },
 
   searchSection: { padding: 16 },
   searchContainer: {
@@ -501,7 +502,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   categoryPillActive: { backgroundColor: theme.primary, borderColor: theme.primary },
   categoryText: { fontSize: 13, fontWeight: '600', color: theme.subtext },
-  categoryTextActive: { color: '#FFF' },
+  categoryTextActive: { color: theme.onPrimary },
 
   listContent: { padding: 16 },
   materialItem: {
@@ -511,7 +512,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 16,
     marginBottom: 12,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 5,
@@ -539,7 +540,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   emptyStateTitle: { fontSize: 18, fontWeight: '700', color: theme.text, marginTop: 16 },
   emptyStateSubtext: { fontSize: 14, color: theme.subtext, textAlign: 'center', marginTop: 8 },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, backgroundColor: withAlpha(theme.overlay, 0.5), justifyContent: 'flex-end' },
   modalContent: {
     backgroundColor: theme.surface,
     borderTopLeftRadius: 24,
@@ -563,8 +564,8 @@ const getStyles = (theme: any) => StyleSheet.create({
   textArea: { minHeight: 80, textAlignVertical: 'top' },
   inputRow: { flexDirection: 'row', marginBottom: 8 },
   pickerContainer: { marginTop: 4 },
-  miniClassPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9', marginRight: 8, borderWidth: 1, borderColor: 'transparent' },
-  miniClassPillActive: { backgroundColor: theme.isDarkMode ? '#312E8140' : '#EEF2FF', borderColor: theme.primary },
+  miniClassPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: withAlpha(theme.border, 0.5), marginRight: 8, borderWidth: 1, borderColor: 'transparent' },
+  miniClassPillActive: { backgroundColor: withAlpha(theme.primary, 0.15), borderColor: theme.primary },
   miniClassText: { fontSize: 12, color: theme.subtext, fontWeight: '500' },
   miniClassTextActive: { color: theme.primary, fontWeight: '700' },
 
@@ -582,13 +583,13 @@ const getStyles = (theme: any) => StyleSheet.create({
   uploadSubtext: { fontSize: 11, color: theme.subtext, marginTop: 4 },
   selectedFileView: { alignItems: 'center', width: '100%' },
   fileName: { fontSize: 14, fontWeight: '600', color: theme.text, marginTop: 8 },
-  removeFile: { color: '#EF4444', fontSize: 12, fontWeight: '700', marginTop: 8 },
+  removeFile: { color: theme.danger, fontSize: 12, fontWeight: '700', marginTop: 8 },
 
   modalActions: { flexDirection: 'row', gap: 12, marginTop: 32, marginBottom: 40 },
-  modalCancelBtn: { flex: 1, paddingVertical: 14, alignItems: 'center', borderRadius: 12, backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9' },
+  modalCancelBtn: { flex: 1, paddingVertical: 14, alignItems: 'center', borderRadius: 12, backgroundColor: withAlpha(theme.border, 0.5) },
   modalCancelText: { fontSize: 15, fontWeight: '600', color: theme.subtext },
   modalUploadBtn: { flex: 1.5, paddingVertical: 14, alignItems: 'center', borderRadius: 12, backgroundColor: theme.primary },
-  modalUploadText: { fontSize: 15, fontWeight: '600', color: '#FFF' },
+  modalUploadText: { fontSize: 15, fontWeight: '600', color: theme.onPrimary },
   disabledBtn: { opacity: 0.6 },
 });
 

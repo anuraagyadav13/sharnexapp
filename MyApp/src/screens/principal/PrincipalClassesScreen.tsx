@@ -14,7 +14,8 @@ import {
   TextInput,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
-import { BRAND } from '../../constants/theme';
+import { withAlpha } from '../../constants/theme';
+
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useAuth } from '../../store/AuthContext';
@@ -558,7 +559,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: theme.primary + '15',
+    backgroundColor: withAlpha(theme.primary, 0.15),
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -576,7 +577,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
   },
   academicYearBadge: {
-    backgroundColor: theme.primary + '15',
+    backgroundColor: withAlpha(theme.primary, 0.15),
     paddingVertical: 2,
     paddingHorizontal: 8,
     borderRadius: 6,

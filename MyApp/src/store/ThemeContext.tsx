@@ -1,14 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useColorScheme, StatusBar } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LIGHT_COLORS, DARK_COLORS, ThemeMode } from '../constants/theme';
+import { LIGHT_COLORS, DARK_COLORS, ThemeMode, ThemeTokens } from '../constants/theme';
 
 type ThemeContextType = {
   isDarkMode: boolean;
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
   toggleDarkMode: () => void;
-  theme: typeof LIGHT_COLORS | typeof DARK_COLORS;
+  theme: ThemeTokens;
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -94,4 +94,4 @@ export const useTheme = () => {
   }
   return context;
 };
-export { LIGHT_COLORS as COLORS };
+

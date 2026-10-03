@@ -11,6 +11,7 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Svg, { Defs, LinearGradient, Stop, Rect, Path } from 'react-native-svg';
 import { useTheme } from '../../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../../constants/theme';
 import { NavigationDrawer } from '../../../components/NavigationDrawer';
 import { BusSubHeader } from '../../../components/bus/BusSubHeader';
 import { busStore, BusRoute } from '../../../services/busMockData';
@@ -43,9 +44,9 @@ export const RouteManagementScreen: React.FC<Props> = ({ navigation }) => {
   const avgHealth = Math.round(routes.reduce((acc, r) => acc + r.healthPercent, 0) / (routes.length || 1));
 
   const getGradientColors = (type: string) => {
-    if (type === 'Pickup') return ['#7C3AED', '#3B82F6'];
-    if (type === 'Drop-off') return ['#EC4899', '#8B5CF6'];
-    return ['#059669', '#10B981'];
+    if (type === 'Pickup') return [theme.primary, theme.info];
+    if (type === 'Drop-off') return [theme.secondary, theme.primary];
+    return [theme.success, theme.success];
   };
 
   const handleDownloadManifest = (routeName: string) => {
@@ -76,7 +77,7 @@ export const RouteManagementScreen: React.FC<Props> = ({ navigation }) => {
             activeOpacity={0.8}
             onPress={() => navigation.navigate('RouteConfiguration')}
           >
-            <Ionicons name="map-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+            <Ionicons name="map-outline" size={18} color={theme.onPrimary} style={{ marginRight: 6 }} />
             <Text style={styles.buildRouteBtnText}>Build New Route</Text>
           </TouchableOpacity>
         </View>
@@ -114,7 +115,7 @@ export const RouteManagementScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.statTxt}>Active Routes</Text>
           </View>
           <View style={[styles.statBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Text style={[styles.statNum, { color: '#10B981' }]}>{avgHealth}%</Text>
+            <Text style={[styles.statNum, { color: theme.success }]}>{avgHealth}%</Text>
             <Text style={styles.statTxt}>Avg. Health</Text>
           </View>
           <View style={[styles.statBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -122,7 +123,7 @@ export const RouteManagementScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.statTxt}>Total Stops</Text>
           </View>
           <View style={[styles.statBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Text style={[styles.statNum, { color: '#3B82F6' }]}>0</Text>
+            <Text style={[styles.statNum, { color: theme.info }]}>0</Text>
             <Text style={styles.statTxt}>System Alerts</Text>
           </View>
         </View>
@@ -148,7 +149,7 @@ export const RouteManagementScreen: React.FC<Props> = ({ navigation }) => {
                     <Rect width="100%" height="100%" fill={`url(#grad-${item.id})`} />
                     <Path
                       d="M 0,40 Q 60,10 140,50 T 300,30 L 300,90 L 0,90 Z"
-                      fill="#FFFFFF"
+                      fill={theme.onPrimary}
                       opacity={0.15}
                     />
                   </Svg>
@@ -173,9 +174,9 @@ export const RouteManagementScreen: React.FC<Props> = ({ navigation }) => {
                 <View style={styles.cardBody}>
                   <View style={styles.metricRow}>
                     <View style={styles.metricItem}>
-                      <Ionicons name="pulse-outline" size={16} color="#10B981" />
+                      <Ionicons name="pulse-outline" size={16} color={theme.success} />
                       <Text style={styles.metricLabel}>Health:</Text>
-                      <Text style={[styles.metricValue, { color: '#10B981' }]}>{item.healthPercent}%</Text>
+                      <Text style={[styles.metricValue, { color: theme.success }]}>{item.healthPercent}%</Text>
                     </View>
 
                     <View style={styles.metricItem}>
@@ -187,7 +188,7 @@ export const RouteManagementScreen: React.FC<Props> = ({ navigation }) => {
 
                   <View style={styles.metricRow}>
                     <View style={styles.metricItem}>
-                      <Ionicons name="pin-outline" size={16} color="#7C3AED" />
+                      <Ionicons name="pin-outline" size={16} color={theme.primary} />
                       <Text style={styles.metricLabel}>Stops:</Text>
                       <Text style={styles.metricValue}>{item.stopCount} Geofenced Stops</Text>
                     </View>
@@ -203,7 +204,7 @@ export const RouteManagementScreen: React.FC<Props> = ({ navigation }) => {
                     activeOpacity={0.8}
                     onPress={() => navigation.navigate('RouteConfiguration', { routeId: item.id })}
                   >
-                    <Ionicons name="create-outline" size={16} color="#7C3AED" style={{ marginRight: 4 }} />
+                    <Ionicons name="create-outline" size={16} color={theme.primary} style={{ marginRight: 4 }} />
                     <Text style={styles.editBtnText}>Edit Route</Text>
                   </TouchableOpacity>
 
@@ -256,18 +257,18 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     buildRouteBtn: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#7C3AED',
+      backgroundColor: theme.primary,
       paddingVertical: 10,
       paddingHorizontal: 16,
       borderRadius: 20,
-      shadowColor: '#7C3AED',
+      shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 3 },
       shadowOpacity: 0.3,
       shadowRadius: 5,
       elevation: 4,
     },
     buildRouteBtnText: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontWeight: '700',
       fontSize: 13,
     },
@@ -286,13 +287,13 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       paddingVertical: 5,
       paddingHorizontal: 12,
       borderRadius: 14,
-      backgroundColor: isDarkMode ? '#120D24' : '#F1F5F9',
+      backgroundColor: theme.surface,
       borderWidth: 1,
       borderColor: theme.border,
     },
     filterPillActive: {
-      backgroundColor: '#7C3AED',
-      borderColor: '#7C3AED',
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
     },
     filterPillText: {
       fontSize: 12,
@@ -300,7 +301,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       color: theme.subtext,
     },
     filterPillTextActive: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontWeight: '700',
     },
     statGridRow: {
@@ -334,7 +335,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderRadius: 16,
       overflow: 'hidden',
       borderWidth: 1,
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 3 },
       shadowOpacity: isDarkMode ? 0 : 0.06,
       shadowRadius: 8,
@@ -352,13 +353,13 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       justifyContent: 'space-between',
     },
     typeBadge: {
-      backgroundColor: 'rgba(255, 255, 255, 0.25)',
+      backgroundColor: withAlpha(theme.onPrimary, 0.25),
       paddingVertical: 3,
       paddingHorizontal: 8,
       borderRadius: 10,
     },
     typeBadgeText: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontWeight: '800',
       fontSize: 11,
       textTransform: 'uppercase',
@@ -366,7 +367,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     liveBadge: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: 'rgba(16, 185, 129, 0.9)',
+      backgroundColor: withAlpha(theme.success, 0.9),
       paddingVertical: 3,
       paddingHorizontal: 8,
       borderRadius: 10,
@@ -375,21 +376,21 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 5,
       height: 5,
       borderRadius: 2.5,
-      backgroundColor: '#FFFFFF',
+      backgroundColor: theme.surface,
       marginRight: 4,
     },
     liveText: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontWeight: '800',
       fontSize: 10,
     },
     routeCodeText: {
-      color: 'rgba(255, 255, 255, 0.85)',
+      color: withAlpha(theme.onPrimary, 0.85),
       fontSize: 12,
       fontWeight: '700',
     },
     routeNameText: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontSize: 17,
       fontWeight: '800',
     },
@@ -434,12 +435,12 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       paddingVertical: 6,
       paddingHorizontal: 12,
       borderRadius: 14,
-      backgroundColor: isDarkMode ? '#26174A' : '#F5F3FF',
+      backgroundColor: withAlpha(theme.primary, 0.1),
     },
     editBtnText: {
       fontSize: 13,
       fontWeight: '700',
-      color: '#7C3AED',
+      color: theme.primary,
     },
     downloadBtn: {
       padding: 6,

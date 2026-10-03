@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../../store/ThemeContext';
+import { withAlpha } from '../../../constants/theme';
 import { NavigationDrawer } from '../../../components/NavigationDrawer';
 import { BusSubHeader } from '../../../components/bus/BusSubHeader';
 import { busStore, BusDriver } from '../../../services/busMockData';
@@ -83,7 +84,7 @@ export const DriverManagementScreen: React.FC<Props> = ({ navigation }) => {
             activeOpacity={0.8}
             onPress={() => navigation.navigate('AddDriver')}
           >
-            <Ionicons name="person-add-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+            <Ionicons name="person-add-outline" size={18} color={theme.onPrimary} style={{ marginRight: 6 }} />
             <Text style={styles.addDriverBtnText}>Add Driver</Text>
           </TouchableOpacity>
         </View>
@@ -112,17 +113,17 @@ export const DriverManagementScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.statTxt}>Total Drivers</Text>
           </View>
           <View style={[styles.statBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Text style={[styles.statNum, { color: '#10B981' }]}>{onDutyCount}</Text>
+            <Text style={[styles.statNum, { color: theme.success }]}>{onDutyCount}</Text>
             <Text style={styles.statTxt}>On Duty</Text>
           </View>
           <View style={[styles.statBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Text style={[styles.statNum, { color: '#3B82F6' }]}>{totalTrips}</Text>
+            <Text style={[styles.statNum, { color: theme.info }]}>{totalTrips}</Text>
             <Text style={styles.statTxt}>Total Trips</Text>
           </View>
           <View style={[styles.statBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="star" size={16} color="#F59E0B" style={{ marginRight: 4 }} />
-              <Text style={[styles.statNum, { color: '#F59E0B' }]}>{avgRating}</Text>
+              <Ionicons name="star" size={16} color={theme.warning} style={{ marginRight: 4 }} />
+              <Text style={[styles.statNum, { color: theme.warning }]}>{avgRating}</Text>
             </View>
             <Text style={styles.statTxt}>Avg Rating</Text>
           </View>
@@ -153,12 +154,12 @@ export const DriverManagementScreen: React.FC<Props> = ({ navigation }) => {
                     style={[
                       styles.statusPill,
                       isOnDuty
-                        ? (isDarkMode ? { backgroundColor: 'rgba(16, 185, 129, 0.15)', borderColor: 'rgba(16, 185, 129, 0.3)' } : { backgroundColor: '#D1FAE5', borderColor: '#A7F3D0' })
-                        : (isDarkMode ? { backgroundColor: 'rgba(148, 163, 184, 0.15)', borderColor: 'rgba(148, 163, 184, 0.3)' } : { backgroundColor: '#F1F5F9', borderColor: '#CBD5E1' }),
+                        ? ({ backgroundColor: withAlpha(theme.success, 0.15), borderColor: withAlpha(theme.success, 0.3) })
+                        : ({ backgroundColor: withAlpha(theme.subtext, 0.15), borderColor: withAlpha(theme.subtext, 0.3) }),
                     ]}
                   >
-                    <View style={[styles.dotPill, { backgroundColor: isOnDuty ? '#10B981' : '#94A3B8' }]} />
-                    <Text style={[styles.statusPillText, { color: isOnDuty ? '#10B981' : '#64748B' }]}>
+                    <View style={[styles.dotPill, { backgroundColor: isOnDuty ? theme.success : theme.subtext }]} />
+                    <Text style={[styles.statusPillText, { color: isOnDuty ? theme.success : theme.subtext }]}>
                       {item.status}
                     </Text>
                   </View>
@@ -190,7 +191,7 @@ export const DriverManagementScreen: React.FC<Props> = ({ navigation }) => {
                 {/* Rating & Trips Stat Pair */}
                 <View style={styles.ratingTripsRow}>
                   <View style={styles.ratingBox}>
-                    <Ionicons name="star" size={15} color="#F59E0B" style={{ marginRight: 4 }} />
+                    <Ionicons name="star" size={15} color={theme.warning} style={{ marginRight: 4 }} />
                     <Text style={styles.ratingVal}>{item.rating.toFixed(1)}</Text>
                     <Text style={styles.ratingSub}>/ 5.0 Rating</Text>
                   </View>
@@ -198,7 +199,7 @@ export const DriverManagementScreen: React.FC<Props> = ({ navigation }) => {
                   <View style={styles.statDivider} />
 
                   <View style={styles.ratingBox}>
-                    <Ionicons name="speedometer-outline" size={15} color="#7C3AED" style={{ marginRight: 4 }} />
+                    <Ionicons name="speedometer-outline" size={15} color={theme.primary} style={{ marginRight: 4 }} />
                     <Text style={styles.ratingVal}>{item.totalTrips}</Text>
                     <Text style={styles.ratingSub}>Completed Trips</Text>
                   </View>
@@ -211,8 +212,8 @@ export const DriverManagementScreen: React.FC<Props> = ({ navigation }) => {
                     activeOpacity={0.7}
                     onPress={() => handleCallDriver(item.fullName, item.phone)}
                   >
-                    <Ionicons name="call-outline" size={18} color="#10B981" />
-                    <Text style={[styles.actionBtnText, { color: '#10B981' }]}>Call</Text>
+                    <Ionicons name="call-outline" size={18} color={theme.success} />
+                    <Text style={[styles.actionBtnText, { color: theme.success }]}>Call</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -220,8 +221,8 @@ export const DriverManagementScreen: React.FC<Props> = ({ navigation }) => {
                     activeOpacity={0.7}
                     onPress={() => handleEmailDriver(item.fullName, item.email)}
                   >
-                    <Ionicons name="mail-outline" size={18} color="#3B82F6" />
-                    <Text style={[styles.actionBtnText, { color: '#3B82F6' }]}>Email</Text>
+                    <Ionicons name="mail-outline" size={18} color={theme.info} />
+                    <Text style={[styles.actionBtnText, { color: theme.info }]}>Email</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -229,8 +230,8 @@ export const DriverManagementScreen: React.FC<Props> = ({ navigation }) => {
                     activeOpacity={0.7}
                     onPress={() => navigation.navigate('AddDriver')}
                   >
-                    <Ionicons name="pencil-outline" size={18} color="#7C3AED" />
-                    <Text style={[styles.actionBtnText, { color: '#7C3AED' }]}>Edit</Text>
+                    <Ionicons name="pencil-outline" size={18} color={theme.primary} />
+                    <Text style={[styles.actionBtnText, { color: theme.primary }]}>Edit</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -274,18 +275,18 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     addDriverBtn: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#7C3AED',
+      backgroundColor: theme.primary,
       paddingVertical: 10,
       paddingHorizontal: 16,
       borderRadius: 20,
-      shadowColor: '#7C3AED',
+      shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 3 },
       shadowOpacity: 0.3,
       shadowRadius: 5,
       elevation: 4,
     },
     addDriverBtnText: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontWeight: '700',
       fontSize: 13,
     },
@@ -333,7 +334,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderRadius: 16,
       padding: 16,
       borderWidth: 1,
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: isDarkMode ? 0 : 0.05,
       shadowRadius: 6,
@@ -347,12 +348,12 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 44,
       height: 44,
       borderRadius: 22,
-      backgroundColor: '#7C3AED',
+      backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
     },
     avatarInitialsText: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontWeight: '800',
       fontSize: 16,
     },
@@ -412,7 +413,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-around',
-      backgroundColor: isDarkMode ? '#120D24' : '#F8FAFC',
+      backgroundColor: theme.surface,
       borderRadius: 12,
       paddingVertical: 10,
       marginBottom: 12,

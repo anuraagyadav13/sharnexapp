@@ -23,6 +23,7 @@ import Animated, { FadeInDown, FadeInUp, FadeIn } from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { useNavigation } from '@react-navigation/native';
 // Use teacherService so all API calls go through the same centralized layer
 import teacherService from '../../services/teacherService';
@@ -110,7 +111,7 @@ const CustomCalendarPickerOverlay = ({ visible, onClose, onSelect, initialDate }
                 style={[styles.calDateBox, date?.toDateString() === initialDate.toDateString() && styles.calDateActive]}
                 onPress={() => { if (date) { onSelect(date); onClose(); } }}
               >
-                <Text style={[styles.calDateText, !date && { opacity: 0 }, date?.toDateString() === initialDate.toDateString() && { color: '#FFF' }]}>
+                <Text style={[styles.calDateText, !date && { opacity: 0 }, date?.toDateString() === initialDate.toDateString() && { color: theme.onPrimary }]}>
                   {date?.getDate()}
                 </Text>
               </TouchableOpacity>
@@ -134,10 +135,10 @@ const ScheduleCard = ({ item, index }: { item: any, index: number }) => {
   const status = (item.status || 'UPCOMING').toUpperCase();
 
   const statusColors: any = {
-    'ONGOING': '#10B981',
-    'COMPLETED': '#64748B',
-    'UPCOMING': '#6366F1',
-    'REGULAR': '#6366F1'
+    'ONGOING': theme.success,
+    'COMPLETED': theme.subtext,
+    'UPCOMING': theme.primary,
+    'REGULAR': theme.primary
   };
 
   // Break card — shown for periods marked is_break: true (e.g. Lunch, Sports)
@@ -171,14 +172,14 @@ const ScheduleCard = ({ item, index }: { item: any, index: number }) => {
         <View style={styles.cardInfo}>
           <View style={styles.tagLine}>
             <Text style={styles.timeTag}>{startTime && endTime ? `${startTime} - ${endTime}` : (item.time || 'TBD')}</Text>
-            <View style={[styles.statusTag, { backgroundColor: statusColors[status] || '#E0E7FF' }]}>
-              <Text style={[styles.statusTagText, { color: '#FFFFFF' }]}>
+            <View style={[styles.statusTag, { backgroundColor: statusColors[status] || withAlpha(theme.primary, 0.2) }]}>
+              <Text style={[styles.statusTagText, { color: theme.onPrimary }]}>
                 {status}
               </Text>
             </View>
             {isSubstitution && (
-              <View style={[styles.statusTag, { backgroundColor: '#FEE2E2', marginLeft: 8 }]}>
-                <Text style={[styles.statusTagText, { color: '#EF4444' }]}>SUBSTITUTION</Text>
+              <View style={[styles.statusTag, { backgroundColor: withAlpha(theme.danger, 0.15), marginLeft: 8 }]}>
+                <Text style={[styles.statusTagText, { color: theme.danger }]}>SUBSTITUTION</Text>
               </View>
             )}
           </View>
@@ -207,8 +208,8 @@ const ScheduleRow = ({ item, index }: { item: any, index: number }) => {
       <View style={styles.colSubject}><View style={styles.subjectBadge}><Text style={styles.subjectBadgeText}>{item.subject_name}</Text></View></View>
       <View style={styles.colStatus}>
         <View style={styles.statusRowRow}>
-          <View style={[styles.statusDot, { backgroundColor: item.assignment_type === 'substitute' ? '#F59E0B' : '#10B981' }]} />
-          <Text style={[styles.statusLabel, { color: item.assignment_type === 'substitute' ? '#D97706' : '#10B981' }]}>
+          <View style={[styles.statusDot, { backgroundColor: item.assignment_type === 'substitute' ? theme.warning : theme.success }]} />
+          <Text style={[styles.statusLabel, { color: item.assignment_type === 'substitute' ? theme.warning : theme.success }]}>
             {item.assignment_type === 'substitute' ? 'Substitute' : 'Regular'}
           </Text>
         </View>
@@ -420,7 +421,7 @@ const TeacherTimetableScreen = () => {
 
   return (
     <View style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.background} />
 
       {/* Top Header */}
       <TeacherHeader
@@ -437,7 +438,7 @@ const TeacherTimetableScreen = () => {
       <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => setSelectedDate(new Date(selectedDate))} colors={['#6366F1']} />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => setSelectedDate(new Date(selectedDate))} colors={[theme.primary]} />}
       >
         <View style={styles.navRow}>
           <View style={styles.viewToggle}>
@@ -480,7 +481,7 @@ const TeacherTimetableScreen = () => {
 
         <View style={styles.listContainer}>
           {isLoading ? (
-            <View style={styles.empty}><ActivityIndicator color="#6366F1" /></View>
+            <View style={styles.empty}><ActivityIndicator color={theme.primary} /></View>
           ) : viewType === 'Daily' ? (
             <View>
               {schedule.length === 0 && freePeriods.length === 0 && (
@@ -494,7 +495,7 @@ const TeacherTimetableScreen = () => {
                   <Text style={styles.freeSummaryTitle}>FREE SPACE AVAILABLE</Text>
                   {freePeriods.map((fp: any, idx: number) => (
                     <View key={`f-${idx}`} style={styles.freeGapRow}>
-                      <Ionicons name="sparkles" size={14} color="#8B5CF6" />
+                      <Ionicons name="sparkles" size={14} color={theme.primary} />
                       <Text style={styles.freeGapText}>Gap from {fp.start_time || 'N/A'} to {fp.end_time || 'N/A'}</Text>
                     </View>
                   ))}
@@ -516,17 +517,17 @@ const TeacherTimetableScreen = () => {
           )}
 
           <View style={styles.lunchSection}>
-            <View style={styles.lLine} /><View style={styles.lMark}><MaterialCommunityIcons name="silverware-fork-knife" size={14} color="#94A3B8" style={{ marginRight: 6 }} /><Text style={styles.lText}>LUNCH BREAK (11:15 - 12:00)</Text></View><View style={styles.lLine} />
+            <View style={styles.lLine} /><View style={styles.lMark}><MaterialCommunityIcons name="silverware-fork-knife" size={14} color={theme.subtext} style={{ marginRight: 6 }} /><Text style={styles.lText}>LUNCH BREAK (11:15 - 12:00)</Text></View><View style={styles.lLine} />
           </View>
 
           <View style={styles.summaryRow}>
-            <View style={[styles.sumCard, { backgroundColor: '#FFFFFF' }]}>
+            <View style={[styles.sumCard, { backgroundColor: theme.surface }]}>
               <Text style={styles.sumLabel}>REGULAR SESSIONS</Text>
               <Text style={styles.sumVal}>{regularSessions} Classes</Text>
             </View>
-            <View style={[styles.sumCard, { marginLeft: 12, backgroundColor: '#FFFFFF' }]}>
+            <View style={[styles.sumCard, { marginLeft: 12, backgroundColor: theme.surface }]}>
               <Text style={styles.sumLabel}>SUBSTITUTE TASKS</Text>
-              <Text style={[styles.sumVal, { color: '#F97316' }]}>{subSlots} Slots</Text>
+              <Text style={[styles.sumVal, { color: theme.warning }]}>{subSlots} Slots</Text>
             </View>
           </View>
         </View>
@@ -535,7 +536,7 @@ const TeacherTimetableScreen = () => {
           style={styles.printBtn}
           onPress={() => Alert.alert('Export to PDF', 'Generating high-resolution timetable document for printing...')}
         >
-          <Feather name="printer" size={16} color="#64748B" style={{ marginRight: 8 }} />
+          <Feather name="printer" size={16} color={theme.subtext} style={{ marginRight: 8 }} />
           <Text style={styles.printBtnText}>Export Schedule to PDF</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -547,13 +548,13 @@ const TeacherTimetableScreen = () => {
             <Animated.View entering={FadeInUp.springify()} style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <View style={styles.modalHeaderTitleRow}>
-                  <View style={styles.modalIconBox}><Ionicons name="calendar-outline" size={20} color="#8B5CF6" /></View>
+                  <View style={styles.modalIconBox}><Ionicons name="calendar-outline" size={20} color={theme.primary} /></View>
                   <View style={{ marginLeft: 12 }}>
                     <Text style={styles.modalTitle}>Apply Leave</Text>
                     <Text style={styles.modalSub}>Sharnex Management System</Text>
                   </View>
                 </View>
-                <TouchableOpacity onPress={() => setLeaveModalVisible(false)}><Ionicons name="close" size={24} color="#94A3B8" /></TouchableOpacity>
+                <TouchableOpacity onPress={() => setLeaveModalVisible(false)}><Ionicons name="close" size={24} color={theme.subtext} /></TouchableOpacity>
               </View>
 
               <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
@@ -562,14 +563,14 @@ const TeacherTimetableScreen = () => {
                     <Text style={styles.inputLabel}>Start Date</Text>
                     <TouchableOpacity style={styles.inputWrapper} onPress={() => { setDateTarget('start'); setDatePickerVisible(true); }}>
                       <Text style={styles.textInputVal}>{formatNative(leaveData.startDate, 'MM/dd/yyyy')}</Text>
-                      <Ionicons name="calendar-outline" size={18} color="#94A3B8" />
+                      <Ionicons name="calendar-outline" size={18} color={theme.subtext} />
                     </TouchableOpacity>
                   </View>
                   <View style={[styles.formCol, { marginLeft: 12 }]}>
                     <Text style={styles.inputLabel}>End Date</Text>
                     <TouchableOpacity style={styles.inputWrapper} onPress={() => { setDateTarget('end'); setDatePickerVisible(true); }}>
                       <Text style={styles.textInputVal}>{formatNative(leaveData.endDate, 'MM/dd/yyyy')}</Text>
-                      <Ionicons name="calendar-outline" size={18} color="#94A3B8" />
+                      <Ionicons name="calendar-outline" size={18} color={theme.subtext} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -580,7 +581,7 @@ const TeacherTimetableScreen = () => {
                     <Text style={leaveData.type ? styles.textInputVal : styles.inputTextPlaceholder}>
                       {leaveData.type || 'Select the type of leave'}
                     </Text>
-                    <Ionicons name="chevron-down" size={18} color="#94A3B8" />
+                    <Ionicons name="chevron-down" size={18} color={theme.subtext} />
                   </TouchableOpacity>
                 </View>
 
@@ -589,7 +590,7 @@ const TeacherTimetableScreen = () => {
                   <TextInput
                     style={[styles.textInputArea, { height: 100 }]}
                     placeholder="Provide a brief explanation for your request..."
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={theme.subtext}
                     multiline
                     numberOfLines={4}
                     textAlignVertical="top"
@@ -600,7 +601,7 @@ const TeacherTimetableScreen = () => {
 
                 <View style={styles.noteBox}>
                   <Text style={styles.noteText}>
-                    <Text style={{ fontWeight: '800', color: '#7C3AED' }}>Note: </Text>
+                    <Text style={{ fontWeight: '800', color: theme.primary }}>Note: </Text>
                     Once submitted, the Sharnex Auto-Substitution system will find cover for your classes automatically. Notifications will be sent to available faculty.
                   </Text>
                 </View>
@@ -620,7 +621,7 @@ const TeacherTimetableScreen = () => {
                   disabled={isSubmittingLeave}
                 >
                   {isSubmittingLeave ? (
-                    <ActivityIndicator size="small" color="#FFF" />
+                    <ActivityIndicator size="small" color={theme.onPrimary} />
                   ) : (
                     <Text style={styles.submitBtnText}>Submit Request</Text>
                   )}
@@ -650,7 +651,7 @@ const TeacherTimetableScreen = () => {
                         onPress={() => { setLeaveData({ ...leaveData, type: t }); setTypePickerVisible(false); }}
                       >
                         <Text style={[styles.typeText, t === leaveData.type && styles.typeTextActive]}>{t}</Text>
-                        {t === leaveData.type && <Ionicons name="checkmark-circle" size={18} color="#8B5CF6" />}
+                        {t === leaveData.type && <Ionicons name="checkmark-circle" size={18} color={theme.primary} />}
                       </TouchableOpacity>
                     ))}
                   </Animated.View>
@@ -676,7 +677,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -697,16 +698,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#A855F7',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
     elevation: 8,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
   titleArea: { paddingHorizontal: 16, paddingVertical: 10 },
   title: { fontSize: 18, fontWeight: '900', color: theme.primary, marginBottom: 2 },
@@ -715,21 +716,21 @@ const getStyles = (theme: any) => StyleSheet.create({
   navRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 12 },
   dateControl: { flexDirection: 'row', alignItems: 'center' },
   navText: { fontSize: 10, fontWeight: '700', color: theme.subtext },
-  viewToggle: { flexDirection: 'row', backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9', borderRadius: 16, padding: 2, marginHorizontal: 12 },
+  viewToggle: { flexDirection: 'row', backgroundColor: withAlpha(theme.border, 0.4), borderRadius: 16, padding: 2, marginHorizontal: 12 },
   vTab: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   vTabActive: { backgroundColor: theme.primary },
   vTabText: { fontSize: 9, fontWeight: '700', color: theme.subtext },
-  vTabTextActive: { color: '#FFFFFF' },
-  leaveBtn: { backgroundColor: theme.isDarkMode ? '#334155' : '#111827', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
-  leaveBtnText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
+  vTabTextActive: { color: theme.onPrimary },
+  leaveBtn: { backgroundColor: theme.text, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
+  leaveBtnText: { color: theme.onPrimary, fontSize: 10, fontWeight: '700' },
 
   listContainer: { paddingHorizontal: 16 },
-  card: { backgroundColor: theme.surface, borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: theme.border, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
-  freeCard: { borderStyle: 'dashed', backgroundColor: theme.isDarkMode ? '#33415530' : '#FAFAFA', borderColor: theme.border, height: 80, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
+  card: { backgroundColor: theme.surface, borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: theme.border, shadowColor: theme.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
+  freeCard: { borderStyle: 'dashed', backgroundColor: withAlpha(theme.border, 0.15), borderColor: theme.border, height: 80, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
   freeTitle: { flex: 1, fontSize: 13, fontWeight: '700', color: theme.subtext },
   freeTime: { fontSize: 11, color: theme.placeholder, fontWeight: '600' },
   cardHeader: { flexDirection: 'row', alignItems: 'center' },
-  periodCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.isDarkMode ? '#334155' : '#F8FAFC', borderWidth: 1, borderColor: theme.border, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  periodCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: withAlpha(theme.border, 0.3), borderWidth: 1, borderColor: theme.border, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   pLabel: { fontSize: 6, fontWeight: '800', color: theme.subtext, opacity: 0.6 },
   pNum: { fontSize: 13, fontWeight: '900', color: theme.text },
   cardInfo: { flex: 1 },
@@ -748,11 +749,11 @@ const getStyles = (theme: any) => StyleSheet.create({
   tableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.border },
   colTime: { width: 70 }, colClass: { width: 80 }, colSubject: { flex: 1 }, colStatus: { width: 80 }, colAction: { width: 30, alignItems: 'center' },
   tableValue: { fontSize: 11, color: theme.text, fontWeight: '600' }, tableValueBold: { fontSize: 11, color: theme.text, fontWeight: '800' },
-  subjectBadge: { backgroundColor: theme.isDarkMode ? '#312E8130' : '#F5F3FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, alignSelf: 'flex-start' },
+  subjectBadge: { backgroundColor: withAlpha(theme.primary, 0.1), paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, alignSelf: 'flex-start' },
   subjectBadgeText: { fontSize: 10, fontWeight: '700', color: theme.primary },
   statusRowRow: { flexDirection: 'row', alignItems: 'center' },
   statusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 6 },
-  statusLabel: { fontSize: 10, fontWeight: '700', color: '#10B981' },
+  statusLabel: { fontSize: 10, fontWeight: '700', color: theme.success },
   emptyRow: { padding: 40, alignItems: 'center' },
   emptyRowText: { fontSize: 14, color: theme.subtext, fontWeight: '600' },
   lunchSection: { flexDirection: 'row', alignItems: 'center', marginVertical: 32 },
@@ -769,10 +770,10 @@ const getStyles = (theme: any) => StyleSheet.create({
 
   modalOverlay: { flex: 1, backgroundColor: 'transparent', justifyContent: 'center', alignItems: 'center', padding: 20 },
   modalContainer: { width: '100%', maxWidth: 400 },
-  modalContent: { backgroundColor: theme.surface, borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.2, shadowRadius: 30, elevation: 20 },
+  modalContent: { backgroundColor: theme.surface, borderRadius: 20, overflow: 'hidden', shadowColor: theme.shadow, shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.2, shadowRadius: 30, elevation: 20 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: theme.border },
   modalHeaderTitleRow: { flexDirection: 'row', alignItems: 'center' },
-  modalIconBox: { width: 40, height: 40, borderRadius: 12, backgroundColor: theme.isDarkMode ? '#312E8130' : '#F5F3FF', justifyContent: 'center', alignItems: 'center' },
+  modalIconBox: { width: 40, height: 40, borderRadius: 12, backgroundColor: withAlpha(theme.primary, 0.1), justifyContent: 'center', alignItems: 'center' },
   modalTitle: { fontSize: 18, fontWeight: '900', color: theme.text },
   modalSub: { fontSize: 11, color: theme.subtext, fontWeight: '600' },
   modalForm: { padding: 20, maxHeight: height * 0.6 },
@@ -784,16 +785,16 @@ const getStyles = (theme: any) => StyleSheet.create({
   inputTextPlaceholder: { flex: 1, fontSize: 14, color: theme.placeholder, fontWeight: '500' },
   formItem: { marginBottom: 16 },
   textInputArea: { backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 10, padding: 12, fontSize: 14, color: theme.text, fontWeight: '600' },
-  noteBox: { backgroundColor: theme.isDarkMode ? '#312E8130' : '#F5F3FF', borderRadius: 12, padding: 16, marginBottom: 10 },
+  noteBox: { backgroundColor: withAlpha(theme.primary, 0.1), borderRadius: 12, padding: 16, marginBottom: 10 },
   noteText: { fontSize: 12, color: theme.primary, lineHeight: 18, fontWeight: '500' },
   modalFooter: { flexDirection: 'row', padding: 20, gap: 12, borderTopWidth: 1, borderTopColor: theme.border },
   cancelBtn: { flex: 1, height: 48, borderRadius: 12, borderWidth: 1, borderColor: theme.border, justifyContent: 'center', alignItems: 'center' },
   cancelBtnText: { fontSize: 14, fontWeight: '700', color: theme.subtext },
   submitBtn: { flex: 1, height: 48, borderRadius: 12, backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center' },
-  submitBtnText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
+  submitBtnText: { fontSize: 14, fontWeight: '700', color: theme.onPrimary },
 
-  calModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
-  calContainer: { backgroundColor: theme.surface, width: '85%', borderRadius: 20, padding: 20, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 20, elevation: 20 },
+  calModalOverlay: { flex: 1, backgroundColor: withAlpha(theme.overlay, 0.6), justifyContent: 'center', alignItems: 'center' },
+  calContainer: { backgroundColor: theme.surface, width: '85%', borderRadius: 20, padding: 20, shadowColor: theme.shadow, shadowOpacity: 0.1, shadowRadius: 20, elevation: 20 },
   calHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   calTitle: { fontSize: 16, fontWeight: '800', color: theme.text },
   calMonthNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingHorizontal: 10 },
@@ -805,12 +806,12 @@ const getStyles = (theme: any) => StyleSheet.create({
   calDateActive: { backgroundColor: theme.primary },
   calDateText: { fontSize: 13, fontWeight: '600', color: theme.text },
 
-  substitutionCard: { borderColor: '#F59E0B', borderLeftWidth: 4 },
-  substitutionBadge: { backgroundColor: '#F59E0B', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  subText: { color: '#FFF', fontSize: 9, fontWeight: '800' },
+  substitutionCard: { borderColor: theme.warning, borderLeftWidth: 4 },
+  substitutionBadge: { backgroundColor: theme.warning, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  subText: { color: theme.onPrimary, fontSize: 9, fontWeight: '800' },
 
   typeItem: { paddingVertical: 15, paddingHorizontal: 15, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: theme.border },
-  typeItemActive: { backgroundColor: theme.isDarkMode ? '#312E8130' : '#F5F3FF' },
+  typeItemActive: { backgroundColor: withAlpha(theme.primary, 0.1) },
   typeText: { fontSize: 14, fontWeight: '600', color: theme.text },
   typeTextActive: { color: theme.primary, fontWeight: '800' },
 
@@ -819,11 +820,11 @@ const getStyles = (theme: any) => StyleSheet.create({
   weekDayBtn: { width: 50, height: 75, borderRadius: 12, backgroundColor: theme.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: theme.border },
   weekDayBtnActive: { backgroundColor: theme.primary, borderColor: theme.primary, shadowColor: theme.primary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
   weekDayName: { fontSize: 9, fontWeight: '800', color: theme.subtext, marginBottom: 6 },
-  weekDayNameActive: { color: '#E0E7FF' },
+  weekDayNameActive: { color: withAlpha(theme.onPrimary, 0.8) },
   weekDayDate: { fontSize: 18, fontWeight: '900', color: theme.text },
-  weekDayDateActive: { color: '#FFF' },
+  weekDayDateActive: { color: theme.onPrimary },
 
-  freeSummary: { marginTop: 20, padding: 20, backgroundColor: theme.isDarkMode ? '#312E8130' : '#F5F3FF', borderRadius: 16, borderWidth: 1, borderColor: theme.border },
+  freeSummary: { marginTop: 20, padding: 20, backgroundColor: withAlpha(theme.primary, 0.1), borderRadius: 16, borderWidth: 1, borderColor: theme.border },
   freeSummaryTitle: { fontSize: 9, fontWeight: '900', color: theme.primary, letterSpacing: 1, marginBottom: 15 },
   freeGapRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   freeGapText: { fontSize: 13, fontWeight: '700', color: theme.text, marginLeft: 10 },

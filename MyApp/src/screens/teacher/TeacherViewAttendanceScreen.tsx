@@ -20,6 +20,7 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 // Import our easy-to-use teacherService for talking to the server
 import teacherService from '../../services/teacherService';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
@@ -48,9 +49,9 @@ const CustomCalendarPickerOverlay = ({ visible, onClose, onSelect, selectedDate 
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+      <View style={{ flex: 1, backgroundColor: withAlpha(theme.overlay, 0.7), justifyContent: 'center', alignItems: 'center', padding: 20 }}>
         <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} />
-        <Animated.View entering={FadeIn.duration(300)} style={{ backgroundColor: theme.surface, borderRadius: 24, padding: 20, width: '100%', maxWidth: 400, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 15 }}>
+        <Animated.View entering={FadeIn.duration(300)} style={{ backgroundColor: theme.surface, borderRadius: 24, padding: 20, width: '100%', maxWidth: 400, shadowColor: theme.shadow, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 15 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <TouchableOpacity onPress={handlePrevMonth} style={{ padding: 10 }}><Ionicons name="chevron-back" size={20} color={theme.primary} /></TouchableOpacity>
             <Text style={{ fontSize: 18, fontWeight: '800', color: theme.text }}>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</Text>
@@ -63,12 +64,12 @@ const CustomCalendarPickerOverlay = ({ visible, onClose, onSelect, selectedDate 
               const isSelected = d && new Date(selectedDate).toDateString() === new Date(currentDate.getFullYear(), currentDate.getMonth(), d).toDateString();
               return (
                 <TouchableOpacity key={i} disabled={!d} onPress={() => { if (d) { onSelect(new Date(currentDate.getFullYear(), currentDate.getMonth(), d)); onClose(); } }} style={{ width: `${100 / 7}%`, height: 45, justifyContent: 'center', alignItems: 'center', borderRadius: 12, backgroundColor: isSelected ? theme.primary : 'transparent', borderWidth: isToday ? 1 : 0, borderColor: theme.primary }}>
-                  {d && <Text style={{ fontSize: 14, fontWeight: isSelected || isToday ? '900' : '500', color: isSelected ? '#FFFFFF' : isToday ? theme.primary : theme.text }}>{d}</Text>}
+                  {d && <Text style={{ fontSize: 14, fontWeight: isSelected || isToday ? '900' : '500', color: isSelected ? theme.onPrimary : isToday ? theme.primary : theme.text }}>{d}</Text>}
                 </TouchableOpacity>
               );
             })}
           </View>
-          <TouchableOpacity onPress={onClose} style={{ marginTop: 10, padding: 15, backgroundColor: isDarkMode ? '#33415530' : '#F1F5F9', borderRadius: 16, alignItems: 'center' }}><Text style={{ color: theme.subtext, fontWeight: '800' }}>Cancel</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onClose} style={{ marginTop: 10, padding: 15, backgroundColor: withAlpha(theme.border, 0.3), borderRadius: 16, alignItems: 'center' }}><Text style={{ color: theme.subtext, fontWeight: '800' }}>Cancel</Text></TouchableOpacity>
         </Animated.View>
       </View>
     </Modal>
@@ -172,7 +173,7 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.background} />
 
       {/* Global Header */}
       <TeacherHeader
@@ -184,7 +185,7 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
       {/* Blue Header Section */}
       <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-          <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          <Ionicons name="arrow-back" size={20} color={theme.onPrimary} />
         </TouchableOpacity>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View>
@@ -192,7 +193,7 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
             <Text style={styles.blueSubtitle}>{stats.total} Students Recorded • {selectedDate.toLocaleDateString()}</Text>
           </View>
           <TouchableOpacity style={styles.dateSelector} onPress={() => setIsCalendarVisible(true)}>
-            <Ionicons name="calendar" size={18} color="#FFF" />
+            <Ionicons name="calendar" size={18} color={theme.onPrimary} />
             <Text style={styles.dateSelectorText}>Select Date</Text>
           </TouchableOpacity>
         </View>
@@ -201,7 +202,7 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
       <ScrollView 
         contentContainerStyle={styles.scrollContent} 
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.primary]} />}
       >
 
         {/* Main Content Card */}
@@ -209,15 +210,15 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
 
           {/* Summary Stats Grid */}
           <View style={styles.statsRow}>
-            <View style={[styles.statBox, { borderTopColor: '#4F46E5' }]}>
+            <View style={[styles.statBox, { borderTopColor: theme.primary }]}>
               <Text style={styles.statNumber}>{stats.total}</Text>
               <Text style={styles.statLabel}>Students</Text>
             </View>
-            <View style={[styles.statBox, { borderTopColor: '#EF4444' }]}>
+            <View style={[styles.statBox, { borderTopColor: theme.danger }]}>
               <Text style={styles.statNumber}>{stats.absent}</Text>
               <Text style={styles.statLabel}>Absent</Text>
             </View>
-            <View style={[styles.statBox, { borderTopColor: '#22C55E' }]}>
+            <View style={[styles.statBox, { borderTopColor: theme.success }]}>
               <Text style={styles.statNumber}>{stats.present}</Text>
               <Text style={styles.statLabel}>Present</Text>
             </View>
@@ -228,7 +229,7 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
 
           {/* List */}
           {isLoading ? (
-            <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 20 }} />
+            <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 20 }} />
           ) : attendance.length === 0 ? (
             <Text style={styles.emptyText}>No attendance records found for today.</Text>
           ) : (
@@ -268,11 +269,11 @@ const TeacherViewAttendanceScreen: React.FC<Props> = ({ navigation, route }) => 
       {/* Bottom Fixed Action Bar */}
       <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.bottomBar}>
         <TouchableOpacity style={styles.exportBtn} activeOpacity={0.8} onPress={handleExport}>
-          <Ionicons name="download-outline" size={16} color="#4F46E5" style={{ marginRight: 6 }} />
+          <Ionicons name="download-outline" size={16} color={theme.primary} style={{ marginRight: 6 }} />
           <Text style={styles.exportBtnText}>Export</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.doneBtn} activeOpacity={0.8} onPress={() => navigation.goBack()}>
-          <Ionicons name="checkmark" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+          <Ionicons name="checkmark" size={16} color={theme.onPrimary} style={{ marginRight: 6 }} />
           <Text style={styles.doneBtnText}>Done</Text>
         </TouchableOpacity>
       </Animated.View>
@@ -300,7 +301,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -321,16 +322,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
   blueHeader: {
     backgroundColor: theme.primary,
@@ -344,7 +345,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.25),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -352,25 +353,25 @@ const getStyles = (theme: any) => StyleSheet.create({
   blueTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     marginBottom: 6,
   },
   blueSubtitle: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#E0E7FF',
+    color: withAlpha(theme.onPrimary, 0.8),
   },
   dateSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.2),
     paddingHorizontal: 15,
     paddingVertical: 10,
     borderRadius: 10,
     gap: 8,
   },
   dateSelectorText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -381,7 +382,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     padding: 24,
     marginHorizontal: 16,
     marginTop: 20,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
@@ -405,7 +406,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 12,
     marginHorizontal: 4,
     alignItems: 'center',
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
@@ -446,7 +447,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: theme.isDarkMode ? '#33415530' : '#EEF2FF',
+    backgroundColor: withAlpha(theme.border, 0.3),
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -473,20 +474,20 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 4,
   },
   statusPillPresent: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: withAlpha(theme.success, 0.1),
   },
   statusPillAbsent: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: withAlpha(theme.danger, 0.1),
   },
   statusText: {
     fontSize: 12,
     fontWeight: '600',
   },
   statusTextPresent: {
-    color: '#10B981',
+    color: theme.success,
   },
   statusTextAbsent: {
-    color: '#EF4444',
+    color: theme.danger,
   },
 
   bottomBar: {
@@ -507,7 +508,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
+    backgroundColor: withAlpha(theme.border, 0.5),
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 20,
@@ -537,7 +538,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   doneBtnText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
   emptyText: {
     fontSize: 14,

@@ -15,6 +15,7 @@ import {
   ImagePickerResponse,
 } from 'react-native-image-picker';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { usePermissions } from '../../hooks/usePermissions';
 
 interface ImagePickerModalProps {
@@ -99,34 +100,34 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
 
               {/* Option 1: Take Photo */}
               <TouchableOpacity
-                style={[styles.optionRow, { backgroundColor: isDarkMode ? '#26174A' : '#F5F3FF' }]}
+                style={[styles.optionRow, { backgroundColor: withAlpha(theme.primary, 0.15) }]}
                 activeOpacity={0.75}
                 onPress={handleTakePhoto}
               >
-                <View style={[styles.iconBox, { backgroundColor: '#7C3AED' }]}>
-                  <Ionicons name="camera-outline" size={22} color="#FFFFFF" />
+                <View style={[styles.iconBox, { backgroundColor: theme.primary }]}>
+                  <Ionicons name="camera-outline" size={22} color={theme.onPrimary} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.optionTitle}>Take Photo</Text>
                   <Text style={styles.optionDesc}>Capture photo directly using device camera</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color="#7C3AED" />
+                <Ionicons name="chevron-forward" size={18} color={theme.primary} />
               </TouchableOpacity>
 
               {/* Option 2: Choose from Gallery */}
               <TouchableOpacity
-                style={[styles.optionRow, { backgroundColor: isDarkMode ? '#0F2942' : '#EFF6FF' }]}
+                style={[styles.optionRow, { backgroundColor: withAlpha(theme.info, 0.15) }]}
                 activeOpacity={0.75}
                 onPress={handleChooseFromGallery}
               >
-                <View style={[styles.iconBox, { backgroundColor: '#2563EB' }]}>
-                  <Ionicons name="images-outline" size={22} color="#FFFFFF" />
+                <View style={[styles.iconBox, { backgroundColor: theme.info }]}>
+                  <Ionicons name="images-outline" size={22} color={theme.onPrimary} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.optionTitle}>Choose from Gallery</Text>
                   <Text style={styles.optionDesc}>Select existing image from photo library</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color="#2563EB" />
+                <Ionicons name="chevron-forward" size={18} color={theme.info} />
               </TouchableOpacity>
 
               {/* Cancel Button */}
@@ -145,7 +146,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
   StyleSheet.create({
     overlay: {
       flex: 1,
-      backgroundColor: 'rgba(15, 23, 42, 0.65)',
+      backgroundColor: withAlpha(theme.overlay, 0.65),
       justifyContent: 'flex-end',
       padding: 16,
     },
@@ -153,7 +154,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderRadius: 24,
       padding: 20,
       borderWidth: 1,
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: -4 },
       shadowOpacity: 0.2,
       shadowRadius: 16,
@@ -206,7 +207,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderRadius: 24,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: isDarkMode ? '#120D24' : '#F1F5F9',
+      backgroundColor: theme.surface,
       marginTop: 4,
     },
     cancelBtnText: {

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../../store/ThemeContext';
+import { withAlpha } from '../../../constants/theme';
 import { BusSubHeader } from '../../../components/bus/BusSubHeader';
 import { busStore } from '../../../services/busMockData';
 
@@ -75,14 +76,14 @@ export const EnrollStudentScreen: React.FC<Props> = ({ navigation }) => {
           style={styles.backLinkRow}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back-outline" size={16} color="#7C3AED" style={{ marginRight: 4 }} />
+          <Ionicons name="arrow-back-outline" size={16} color={theme.primary} style={{ marginRight: 4 }} />
           <Text style={styles.backLinkText}>Back to enrollments</Text>
         </TouchableOpacity>
 
         {/* Centered Main Card */}
         <View style={[styles.mainCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.cardHeaderIconBox}>
-            <Ionicons name="school-outline" size={28} color="#FFFFFF" />
+            <Ionicons name="school-outline" size={28} color={theme.onPrimary} />
           </View>
 
           <Text style={styles.cardTitle}>Enroll Student on a Bus Route</Text>
@@ -208,7 +209,7 @@ export const EnrollStudentScreen: React.FC<Props> = ({ navigation }) => {
             activeOpacity={0.85}
             onPress={handleEnrollSubmit}
           >
-            <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Ionicons name="checkmark-circle-outline" size={20} color={theme.onPrimary} style={{ marginRight: 8 }} />
             <Text style={styles.submitBtnText}>Enroll Student</Text>
           </TouchableOpacity>
         </View>
@@ -238,13 +239,13 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     backLinkText: {
       fontSize: 14,
       fontWeight: '700',
-      color: '#7C3AED',
+      color: theme.primary,
     },
     mainCard: {
       borderRadius: 20,
       padding: 20,
       borderWidth: 1,
-      shadowColor: '#7C3AED',
+      shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: isDarkMode ? 0 : 0.08,
       shadowRadius: 12,
@@ -254,12 +255,12 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 52,
       height: 52,
       borderRadius: 16,
-      backgroundColor: '#7C3AED',
+      backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
       alignSelf: 'center',
       marginBottom: 12,
-      shadowColor: '#7C3AED',
+      shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 3 },
       shadowOpacity: 0.4,
       shadowRadius: 6,
@@ -296,7 +297,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      backgroundColor: isDarkMode ? '#120D24' : '#F8FAFC',
+      backgroundColor: theme.surface,
     },
     dropdownText: {
       fontSize: 14,
@@ -325,9 +326,9 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       justifyContent: 'center',
       height: 50,
       borderRadius: 25,
-      backgroundColor: '#7C3AED',
+      backgroundColor: theme.primary,
       marginTop: 24,
-      shadowColor: '#7C3AED',
+      shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.35,
       shadowRadius: 8,
@@ -336,6 +337,6 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     submitBtnText: {
       fontSize: 15,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: theme.onPrimary,
     },
   });

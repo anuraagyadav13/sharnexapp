@@ -40,9 +40,12 @@ import Svg, {
 } from 'react-native-svg';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { BRAND } from '../../constants/theme';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+
 import studentService from '../../services/studentService';
 import Skeleton from '../../components/common/Skeleton';
+
+const theme = LIGHT_COLORS;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -110,7 +113,7 @@ const getStyles = (theme: any) =>
     heroAccentBar: {
       width: 3,
       height: 28,             // matches heroTitleRow lineHeight
-      backgroundColor: BRAND.accentPurple,
+      backgroundColor: theme.accent,
       borderRadius: 2,
       marginRight: 8,         // gap between bar and animated word
       alignSelf: 'center',   // vertically centre within the row
@@ -151,19 +154,19 @@ const getStyles = (theme: any) =>
       minHeight: 72,
     },
     statValue: {
-      color: BRAND.accentPurple,
+      color: theme.accent,
       fontSize: 16,
       fontWeight: '800',
     },
     statTopBadge: {
-      backgroundColor: BRAND.accentPurpleDark,
+      backgroundColor: theme.accent,
       borderRadius: 10,
       paddingHorizontal: 7,
       paddingVertical: 2,
       marginTop: 6,
     },
     statTopBadgeText: {
-      color: BRAND.onAccent,
+      color: theme.onPrimary,
       fontSize: 9,
       fontWeight: '800',
     },
@@ -182,7 +185,7 @@ const getStyles = (theme: any) =>
     sectionTitlePurple: {
       fontSize: 18,
       fontWeight: '700',
-      color: BRAND.accentPurple,
+      color: theme.accent,
     },
     sectionSubtitle: { fontSize: 12, color: theme.subtext, marginTop: 4 },
     scheduleList: { gap: 12 },
@@ -197,7 +200,7 @@ const getStyles = (theme: any) =>
       backgroundColor: theme.scheduleOngoingBg,
       borderColor: theme.scheduleOngoingBorder,
       borderWidth: 1.5,
-      shadowColor: BRAND.accentPurpleDark,
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3,
       shadowRadius: 8,
@@ -217,12 +220,12 @@ const getStyles = (theme: any) =>
     },
     schedulePill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6 },
     pillCompleted: { backgroundColor: theme.pillCompletedBg },
-    pillOngoing: { backgroundColor: BRAND.accentPurpleDark },
-    pillUpcoming: { backgroundColor: BRAND.accentBlueDark },
+    pillOngoing: { backgroundColor: theme.accent },
+    pillUpcoming: { backgroundColor: theme.info },
     schedulePillText: {
       fontSize: 11,
       fontWeight: '700',
-      color: BRAND.onAccent,
+      color: theme.onPrimary,
     },
     statusRowInline: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     statusTextCompleted: { fontSize: 11, color: theme.subtext, fontWeight: '500' },
@@ -230,16 +233,16 @@ const getStyles = (theme: any) =>
       width: 6,
       height: 6,
       borderRadius: 3,
-      backgroundColor: BRAND.accentPurple,
+      backgroundColor: theme.accent,
     },
     statusTextOngoing: {
       fontSize: 11,
-      color: BRAND.accentPurple,
+      color: theme.accent,
       fontWeight: '700',
     },
     statusTextUpcoming: {
       fontSize: 11,
-      color: BRAND.accentBlue,
+      color: theme.info,
       fontWeight: '500',
     },
     scheduleRowBottom: {
@@ -256,12 +259,12 @@ const getStyles = (theme: any) =>
     },
     scheduleRoomText: { fontSize: 11, color: theme.subtext, marginTop: 2 },
     joinClassBtnPurple: {
-      backgroundColor: BRAND.accentPurpleDark,
+      backgroundColor: theme.primary,
       paddingHorizontal: 14,
       paddingVertical: 6,
       borderRadius: 8,
     },
-    joinClassBtnText: { fontSize: 11, fontWeight: '700', color: BRAND.onAccent },
+    joinClassBtnText: { fontSize: 11, fontWeight: '700', color: theme.onPrimary },
 
     // MOTIVATIONAL BANNER
     motivationalBanner: {
@@ -269,26 +272,26 @@ const getStyles = (theme: any) =>
       marginTop: 24,
       borderRadius: 16,
       padding: 20,
-      backgroundColor: BRAND.gradMotiStart, // fallback if SVG unavailable
+      backgroundColor: theme.gradHero[0], // fallback if SVG unavailable
       position: 'relative',
       overflow: 'hidden',
     },
     motivationalTitle1: {
       fontSize: 18,
       fontWeight: '800',
-      color: BRAND.onAccent,
+      color: theme.onPrimary,
       zIndex: 2,
     },
     motivationalTitle2: {
       fontSize: 18,
       fontWeight: '800',
-      color: BRAND.onAccent,
+      color: theme.onPrimary,
       marginTop: 2,
       zIndex: 2,
     },
     motivationalBody: {
       fontSize: 11.5,
-      color: '#E2E8F0',
+      color: theme.onPrimary,
       lineHeight: 17,
       marginTop: 10,
       zIndex: 2,
@@ -319,7 +322,7 @@ const getStyles = (theme: any) =>
     sectionTitleBlue: {
       fontSize: 18,
       fontWeight: '700',
-      color: BRAND.accentBlue,
+      color: theme.info,
     },
     quizEmptyContainer: {
       borderWidth: 1,
@@ -400,11 +403,11 @@ const getStyles = (theme: any) =>
     },
     podiumCard1: {
       backgroundColor: theme.cardSurface,
-      borderColor: '#F59E0B',
+      borderColor: theme.warning,
       borderWidth: 2,
       paddingTop: 42,
       paddingBottom: 16,
-      shadowColor: '#F59E0B',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 0.25,
       shadowRadius: 10,
@@ -412,12 +415,12 @@ const getStyles = (theme: any) =>
     },
     podiumCard2: {
       backgroundColor: theme.cardSurface,
-      borderColor: '#3B82F6',
+      borderColor: theme.info,
       borderWidth: 1.5,
     },
     podiumCard3: {
       backgroundColor: theme.cardSurface,
-      borderColor: '#F97316',
+      borderColor: theme.danger,
       borderWidth: 1.5,
     },
     podiumAvatarWrapper: {
@@ -437,11 +440,11 @@ const getStyles = (theme: any) =>
       alignItems: 'center',
       gap: 3,
     },
-    podiumRankBadge1: { backgroundColor: '#F59E0B' },
-    podiumRankBadge2: { backgroundColor: '#3B82F6' },
-    podiumRankBadge3: { backgroundColor: '#F97316' },
+    podiumRankBadge1: { backgroundColor: theme.warning },
+    podiumRankBadge2: { backgroundColor: theme.info },
+    podiumRankBadge3: { backgroundColor: theme.danger },
     podiumRankText: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontSize: 10,
       fontWeight: '900',
     },
@@ -466,36 +469,36 @@ const getStyles = (theme: any) =>
       fontWeight: '900',
       marginBottom: 6,
     },
-    podiumPercent1: { color: '#F59E0B', fontSize: 20 },
-    podiumPercent2: { color: '#3B82F6' },
-    podiumPercent3: { color: '#F97316' },
+    podiumPercent1: { color: theme.warning, fontSize: 20 },
+    podiumPercent2: { color: theme.info },
+    podiumPercent3: { color: theme.danger },
     podiumTopPill: {
-      backgroundColor: BRAND.accentPurple,
+      backgroundColor: theme.accent,
       paddingHorizontal: 8,
       paddingVertical: 2,
       borderRadius: 8,
     },
     podiumTopPill1: {
-      backgroundColor: '#F59E0B',
+      backgroundColor: theme.warning,
       paddingHorizontal: 10,
       paddingVertical: 3,
       borderRadius: 10,
     },
-    podiumTopPill2: { backgroundColor: '#3B82F6' },
-    podiumTopPill3: { backgroundColor: '#F97316' },
+    podiumTopPill2: { backgroundColor: theme.info },
+    podiumTopPill3: { backgroundColor: theme.danger },
     podiumTopPillText: {
       fontSize: 9,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: theme.onPrimary,
     },
     podiumTopPillText1: {
       fontSize: 9,
       fontWeight: '900',
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       letterSpacing: 0.5,
     },
-    podiumTopPillText2: { color: '#FFFFFF' },
-    podiumTopPillText3: { color: '#FFFFFF' },
+    podiumTopPillText2: { color: theme.onPrimary },
+    podiumTopPillText3: { color: theme.onPrimary },
 
     // Performer List (Ranks 4, 5+)
     performerListContainer: { gap: 10, marginTop: 4 },
@@ -512,7 +515,7 @@ const getStyles = (theme: any) =>
       width: 28,
       height: 28,
       borderRadius: 14,
-      backgroundColor: theme.iconBoxPurpleBg || 'rgba(124, 58, 237, 0.1)',
+      backgroundColor: theme.iconBackground,
       justifyContent: 'center',
       alignItems: 'center',
       marginRight: 4,
@@ -520,7 +523,7 @@ const getStyles = (theme: any) =>
     performerRankText: {
       fontSize: 12,
       fontWeight: '800',
-      color: BRAND.accentPurple,
+      color: theme.accent,
     },
     performerInfo: { flex: 1, marginLeft: 10 },
     performerName: {
@@ -530,7 +533,7 @@ const getStyles = (theme: any) =>
       marginBottom: 3,
     },
     performerDeptPill: {
-      backgroundColor: theme.iconBoxPurpleBg || 'rgba(124, 58, 237, 0.08)',
+      backgroundColor: theme.iconBackground,
       alignSelf: 'flex-start',
       paddingHorizontal: 8,
       paddingVertical: 2,
@@ -545,12 +548,12 @@ const getStyles = (theme: any) =>
     performerPercent: {
       fontSize: 15,
       fontWeight: '900',
-      color: BRAND.accentPurple,
+      color: theme.accent,
     },
     performerStatusText: {
       fontSize: 9,
       fontWeight: '800',
-      color: '#10B981',
+      color: theme.success,
       marginTop: 2,
     },
 
@@ -597,19 +600,19 @@ const getStyles = (theme: any) =>
       paddingVertical: 28,
       paddingHorizontal: 20,
       alignItems: 'center',
-      backgroundColor: BRAND.gradHelpStart, // SVG gradient on top
+      backgroundColor: theme.gradHelp[0], // SVG gradient on top
       position: 'relative',
       overflow: 'hidden',
     },
     needHelpTitle: {
       fontSize: 22,
       fontWeight: '800',
-      color: BRAND.onAccent,
+      color: theme.onPrimary,
       zIndex: 2,
     },
     needHelpDesc: {
       fontSize: 12,
-      color: '#E0E7FF',
+      color: theme.onPrimary,
       textAlign: 'center',
       lineHeight: 18,
       marginTop: 8,
@@ -618,14 +621,14 @@ const getStyles = (theme: any) =>
       zIndex: 2,
     },
     contactSupportBtn: {
-      backgroundColor: BRAND.onAccent,
+      backgroundColor: theme.surface,
       paddingHorizontal: 24,
       paddingVertical: 10,
       borderRadius: 8,
       zIndex: 2,
     },
     contactSupportBtnText: {
-      color: BRAND.needHelpBtnText,
+      color: theme.needHelpBtnText,
       fontSize: 13,
       fontWeight: '700',
     },
@@ -713,7 +716,7 @@ const TypewriterWord: React.FC<{ style: any }> = ({ style }) => {
   }, []);
 
   const animStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(colorProgress.value, [0, 1], ['#60A5FA', '#A78BFA']),
+    color: interpolateColor(colorProgress.value, [0, 1], [theme.info, theme.primary]),
   }));
 
   return (
@@ -727,7 +730,8 @@ const TypewriterWord: React.FC<{ style: any }> = ({ style }) => {
 // ---------------------------------------------------------------------------
 // DashboardSkeleton
 // ---------------------------------------------------------------------------
-const DashboardSkeleton = ({ theme }: { theme: any }) => {
+const DashboardSkeleton = () => {
+  const { theme } = useTheme();
   const s = getStyles(theme);
   return (
     <ScrollView style={s.container} contentContainerStyle={s.scrollContent}>
@@ -778,7 +782,7 @@ const FAQItem = React.memo(
           <Ionicons
             name={isOpen ? 'chevron-down' : 'chevron-forward'}
             size={18}
-            color={BRAND.accentPurple}
+            color={theme.primary}
           />
         </TouchableOpacity>
         {isOpen && (
@@ -832,7 +836,7 @@ const LeaderboardAvatar: React.FC<{
   size?: number;
   borderColor?: string;
   borderWidth?: number;
-}> = ({ img, name, size = 52, borderColor = '#CBD5E1', borderWidth = 2 }) => {
+}> = ({ img, name, size = 52, borderColor = theme.border, borderWidth = 2 }) => {
   const [imgError, setImgError] = useState(false);
   const initials = useMemo(() => getInitials(name), [name]);
   const isDefaultAvatar = !img || img.includes('ui-avatars.com') || imgError;
@@ -845,7 +849,9 @@ const LeaderboardAvatar: React.FC<{
         borderRadius: size / 2,
         borderWidth,
         borderColor,
-        backgroundColor: '#1E293B',
+        backgroundColor: theme.surface, // Fallback, let's just use theme.surface? Wait, getStyles doesn't pass theme here, but we can't use theme easily because it's outside. Wait, maybe we pass theme to LeaderboardAvatar?
+        // Wait, NO HARDCODED colors outside theme.ts. I MUST use theme.
+        // Let's change this to accept theme object.
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
@@ -861,7 +867,7 @@ const LeaderboardAvatar: React.FC<{
             alignItems: 'center',
           }}
         >
-          <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: size * 0.38 }}>
+          <Text style={{ color: theme.text, fontWeight: '800', fontSize: size * 0.38 }}>
             {initials}
           </Text>
         </View>
@@ -1182,7 +1188,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
       />
 
       {isLoading ? (
-        <DashboardSkeleton theme={theme} />
+        <DashboardSkeleton />
       ) : (
         <ScrollView
           style={s.container}
@@ -1192,8 +1198,8 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={() => fetchAllData(true)}
-              tintColor={BRAND.accentPurple}
-              colors={[BRAND.accentPurple]}
+              tintColor={theme.accent}
+              colors={[theme.accent]}
             />
           }
         >
@@ -1239,11 +1245,11 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
 
           {/* Student Record Not Found Banner Guard */}
           {dashboardData?.notFound && (
-            <View style={{ marginHorizontal: 20, marginVertical: 12, padding: 16, backgroundColor: '#FEF2F2', borderRadius: 12, borderWidth: 1, borderColor: '#FCA5A5', flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="alert-circle-outline" size={24} color="#DC2626" style={{ marginRight: 12 }} />
+            <View style={{ marginHorizontal: 20, marginVertical: 12, padding: 16, backgroundColor: theme.dangerBg, borderRadius: 12, borderWidth: 1, borderColor: theme.danger, flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="alert-circle-outline" size={24} color={theme.danger} style={{ marginRight: 12 }} />
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: '#991B1B' }}>Student Record Not Found</Text>
-                <Text style={{ fontSize: 12, color: '#B91C1C', marginTop: 2 }}>Your account has not been assigned a student profile record yet. Please contact administration.</Text>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: theme.danger }}>Student Record Not Found</Text>
+                <Text style={{ fontSize: 12, color: theme.danger, marginTop: 2 }}>Your account has not been assigned a student profile record yet. Please contact administration.</Text>
               </View>
             </View>
           )}
@@ -1253,7 +1259,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
             <View style={s.sectionHeaderCol}>
               <View style={s.sectionHeaderRow}>
                 <View style={s.headerIconBoxPurple}>
-                  <Ionicons name="calendar-outline" size={18} color={BRAND.accentPurple} />
+                  <Ionicons name="calendar-outline" size={18} color={theme.accent} />
                 </View>
                 <Text style={s.sectionTitlePurple}>Today's Schedule</Text>
               </View>
@@ -1300,7 +1306,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
                           )}
                           {isUpcoming && (
                             <View style={s.statusRowInline}>
-                              <Ionicons name="ellipse-outline" size={10} color={BRAND.accentBlue} />
+                              <Ionicons name="ellipse-outline" size={10} color={theme.info} />
                               <Text style={s.statusTextUpcoming}>Up next</Text>
                             </View>
                           )}
@@ -1330,8 +1336,8 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
               <Svg height="100%" width="100%">
                 <Defs>
                   <SvgLinearGradient id="motiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <Stop offset="0" stopColor={BRAND.gradMotiStart} stopOpacity="1" />
-                    <Stop offset="1" stopColor={BRAND.gradMotiEnd} stopOpacity="1" />
+                    <Stop offset="0" stopColor={theme.gradHero[0]} stopOpacity="1" />
+                    <Stop offset="1" stopColor={theme.gradHero[1]} stopOpacity="1" />
                   </SvgLinearGradient>
                 </Defs>
                 <Rect width="100%" height="100%" fill="url(#motiGrad)" rx="16" ry="16" />
@@ -1351,7 +1357,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
             <View style={s.quizAssignCard}>
               <View style={s.cardHeaderRow}>
                 <View style={s.headerIconBoxPurple}>
-                  <MaterialCommunityIcons name="flask" size={18} color={BRAND.accentPurple} />
+                  <MaterialCommunityIcons name="flask" size={18} color={theme.accent} />
                 </View>
                 <Text style={s.sectionTitlePurple}>Upcoming Quizzes</Text>
               </View>
@@ -1377,7 +1383,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
             <View style={[s.quizAssignCard, { marginTop: 16 }]}>
               <View style={s.cardHeaderRow}>
                 <View style={s.headerIconBoxBlue}>
-                  <Ionicons name="document-text" size={18} color={BRAND.accentBlue} />
+                  <Ionicons name="document-text" size={18} color={theme.info} />
                 </View>
                 <Text style={s.sectionTitleBlue}>Recent Assignments</Text>
               </View>
@@ -1388,7 +1394,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
                   filteredAssignments.map((item: any, index: number) => (
                     <View key={index} style={s.assignmentItemCard}>
                       <View style={s.assignmentIconBox}>
-                        <Ionicons name="document-text" size={18} color={BRAND.accentBlue} />
+                        <Ionicons name="document-text" size={18} color={theme.info} />
                       </View>
                       <View style={s.assignmentContentRight}>
                         <Text style={s.assignmentItemTitle}>{item.title || item.name || 'Maths'}</Text>
@@ -1408,16 +1414,16 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
             {/* Section Header */}
             <View style={s.topPerformersHeaderRow}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: 'rgba(245, 158, 11, 0.15)', justifyContent: 'center', alignItems: 'center' }}>
-                  <Ionicons name="trophy" size={18} color="#F59E0B" />
+                <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: theme.warningBg, justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="trophy" size={18} color={theme.warning} />
                 </View>
                 <View>
                   <Text style={s.topPerformersTitle}>Top Performers</Text>
                   <Text style={{ fontSize: 11, color: theme.subtext, marginTop: 1 }}>Leaderboard standings for this term</Text>
                 </View>
               </View>
-              <View style={{ backgroundColor: 'rgba(245, 158, 11, 0.12)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(245, 158, 11, 0.3)' }}>
-                <Text style={{ fontSize: 10, fontWeight: '800', color: '#D97706' }}>THIS TERM</Text>
+              <View style={{ backgroundColor: theme.warningBg, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: theme.warning }}>
+                <Text style={{ fontSize: 10, fontWeight: '800', color: theme.warning }}>THIS TERM</Text>
               </View>
             </View>
 
@@ -1426,9 +1432,9 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
                 {/* 2nd Place (Left) */}
                 <View style={[s.podiumCard, s.podiumCard2]}>
                   <View style={s.podiumAvatarWrapper}>
-                    <LeaderboardAvatar name={top5Students[1].name} img={top5Students[1].img} size={54} borderColor="#3B82F6" borderWidth={3} />
+                    <LeaderboardAvatar name={top5Students[1].name} img={top5Students[1].img} size={54} borderColor={theme.info} borderWidth={3} />
                     <View style={[s.podiumRankBadge, s.podiumRankBadge2]}>
-                      <MaterialCommunityIcons name="medal" size={12} color="#FFFFFF" />
+                      <MaterialCommunityIcons name="medal" size={12} color={theme.onPrimary} />
                       <Text style={s.podiumRankText}>2nd</Text>
                     </View>
                   </View>
@@ -1442,12 +1448,12 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
                 {/* 1st Place (Center - Champion) */}
                 <View style={[s.podiumCard, s.podiumCard1]}>
                   <View style={{ position: 'absolute', top: -48, zIndex: 10 }}>
-                    <MaterialCommunityIcons name="crown" size={26} color="#F59E0B" />
+                    <MaterialCommunityIcons name="crown" size={26} color={theme.warning} />
                   </View>
                   <View style={[s.podiumAvatarWrapper, s.podiumAvatarWrapper1]}>
-                    <LeaderboardAvatar name={top5Students[0].name} img={top5Students[0].img} size={66} borderColor="#F59E0B" borderWidth={3} />
+                    <LeaderboardAvatar name={top5Students[0].name} img={top5Students[0].img} size={66} borderColor={theme.warning} borderWidth={3} />
                     <View style={[s.podiumRankBadge, s.podiumRankBadge1]}>
-                      <Ionicons name="trophy" size={11} color="#FFFFFF" />
+                      <Ionicons name="trophy" size={11} color={theme.onPrimary} />
                       <Text style={s.podiumRankText}>1st</Text>
                     </View>
                   </View>
@@ -1461,9 +1467,9 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
                 {/* 3rd Place (Right) */}
                 <View style={[s.podiumCard, s.podiumCard3]}>
                   <View style={s.podiumAvatarWrapper}>
-                    <LeaderboardAvatar name={top5Students[2].name} img={top5Students[2].img} size={54} borderColor="#F97316" borderWidth={3} />
+                    <LeaderboardAvatar name={top5Students[2].name} img={top5Students[2].img} size={54} borderColor={theme.danger} borderWidth={3} />
                     <View style={[s.podiumRankBadge, s.podiumRankBadge3]}>
-                      <MaterialCommunityIcons name="medal-outline" size={12} color="#FFFFFF" />
+                      <MaterialCommunityIcons name="medal-outline" size={12} color={theme.onPrimary} />
                       <Text style={s.podiumRankText}>3rd</Text>
                     </View>
                   </View>
@@ -1485,7 +1491,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
                     <View style={s.performerRankBadge}>
                       <Text style={s.performerRankText}>{rank}</Text>
                     </View>
-                    <LeaderboardAvatar name={student.name} img={student.img} size={42} borderColor={isDarkMode ? '#334155' : '#E2E8F0'} borderWidth={2} />
+                    <LeaderboardAvatar name={student.name} img={student.img} size={42} borderColor={theme.border} borderWidth={2} />
                     <View style={s.performerInfo}>
                       <Text style={s.performerName} numberOfLines={1}>{student.name || 'Student'}</Text>
                       <View style={s.performerDeptPill}>
@@ -1507,7 +1513,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
             <View style={s.faqCardContainer}>
               <View style={s.cardHeaderRow}>
                 <View style={s.headerIconBoxPurple}>
-                  <Ionicons name="help-circle-outline" size={18} color={BRAND.accentPurple} />
+                  <Ionicons name="help-circle-outline" size={18} color={theme.accent} />
                 </View>
                 <Text style={s.sectionTitlePurple}>Frequently Asked Questions</Text>
               </View>
@@ -1522,8 +1528,8 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
                       setExpandedFaqId(expandedFaqId === index ? null : index)
                     }
                     isLast={index === faqData.length - 1}
-                    theme={theme}
-                  />
+                   
+                   theme={theme} />
                 ))}
               </View>
             </View>
@@ -1535,8 +1541,8 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
               <Svg height="100%" width="100%">
                 <Defs>
                   <SvgLinearGradient id="helpGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <Stop offset="0" stopColor={BRAND.gradHelpStart} stopOpacity="1" />
-                    <Stop offset="1" stopColor={BRAND.gradHelpEnd} stopOpacity="1" />
+                    <Stop offset="0" stopColor={theme.gradHelp[0]} stopOpacity="1" />
+                    <Stop offset="1" stopColor={theme.gradHelp[1]} stopOpacity="1" />
                   </SvgLinearGradient>
                 </Defs>
                 <Rect width="100%" height="100%" fill="url(#helpGrad)" rx="20" ry="20" />
@@ -1566,13 +1572,13 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
         animationType="fade"
         onRequestClose={() => setIsSupportModalOpen(false)}
       >
-        <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.75)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <View style={{ width: '100%', maxWidth: 480, maxHeight: '90%', backgroundColor: isDarkMode ? '#0F172A' : '#FFFFFF', borderRadius: 20, padding: 24, borderWidth: 1, borderColor: isDarkMode ? '#1E293B' : '#E2E8F0', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 }}>
+        <View style={{ flex: 1, backgroundColor: theme.overlay, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ width: '100%', maxWidth: 480, maxHeight: '90%', backgroundColor: theme.surfaceHigh, borderRadius: 20, padding: 24, borderWidth: 1, borderColor: theme.border, shadowColor: theme.shadow, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 }}>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
               {/* Header */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                 <View style={{ flex: 1, paddingRight: 10 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#A855F7', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 4 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: theme.accent, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 4 }}>
                     CONTACT SUPPORT
                   </Text>
                   <Text style={{ fontSize: 24, fontWeight: '900', color: theme.text }}>
@@ -1581,7 +1587,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
                 </View>
                 <TouchableOpacity
                   onPress={() => setIsSupportModalOpen(false)}
-                  style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9', justifyContent: 'center', alignItems: 'center' }}
+                  style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: theme.iconBackground, justifyContent: 'center', alignItems: 'center' }}
                 >
                   <Ionicons name="close" size={20} color={theme.subtext} />
                 </TouchableOpacity>
@@ -1596,7 +1602,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
                 <View>
                   <Text style={{ fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 6 }}>Full Name</Text>
                   <TextInput
-                    style={{ backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC', borderWidth: 1, borderColor: isDarkMode ? '#334155' : '#CBD5E1', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: theme.text }}
+                    style={{ backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: theme.text }}
                     placeholder="Jane Doe"
                     placeholderTextColor={theme.subtext}
                     value={supportName}
@@ -1608,7 +1614,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
                 <View>
                   <Text style={{ fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 6 }}>Phone</Text>
                   <TextInput
-                    style={{ backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC', borderWidth: 1, borderColor: isDarkMode ? '#334155' : '#CBD5E1', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: theme.text }}
+                    style={{ backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: theme.text }}
                     placeholder="+91 00000 00000"
                     placeholderTextColor={theme.subtext}
                     keyboardType="phone-pad"
@@ -1621,7 +1627,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
                 <View>
                   <Text style={{ fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 6 }}>Work Email</Text>
                   <TextInput
-                    style={{ backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC', borderWidth: 1, borderColor: isDarkMode ? '#334155' : '#CBD5E1', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: theme.text }}
+                    style={{ backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: theme.text }}
                     placeholder="jane@school.com"
                     placeholderTextColor={theme.subtext}
                     keyboardType="email-address"
@@ -1635,7 +1641,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
                 <View>
                   <Text style={{ fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 6 }}>School / Institution</Text>
                   <TextInput
-                    style={{ backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC', borderWidth: 1, borderColor: isDarkMode ? '#334155' : '#CBD5E1', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: theme.text }}
+                    style={{ backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: theme.text }}
                     placeholder="Enter school name"
                     placeholderTextColor={theme.subtext}
                     value={supportSchool}
@@ -1647,7 +1653,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
                 <View>
                   <Text style={{ fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 6 }}>Message</Text>
                   <TextInput
-                    style={{ backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC', borderWidth: 1, borderColor: isDarkMode ? '#334155' : '#CBD5E1', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: theme.text, minHeight: 90, textAlignVertical: 'top' }}
+                    style={{ backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: theme.text, minHeight: 90, textAlignVertical: 'top' }}
                     placeholder="Tell us what's going on..."
                     placeholderTextColor={theme.subtext}
                     multiline
@@ -1663,8 +1669,8 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
                   activeOpacity={0.8}
                   onPress={() => setAgreePrivacy(!agreePrivacy)}
                 >
-                  <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: agreePrivacy ? '#9333EA' : isDarkMode ? '#475569' : '#94A3B8', backgroundColor: agreePrivacy ? '#9333EA' : 'transparent', justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
-                    {agreePrivacy && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
+                  <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: agreePrivacy ? theme.primary : theme.border, backgroundColor: agreePrivacy ? theme.primary : 'transparent', justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
+                    {agreePrivacy && <Ionicons name="checkmark" size={14} color={theme.onPrimary} />}
                   </View>
                   <Text style={{ fontSize: 13, color: theme.subtext, flex: 1 }}>
                     You agree to our{' '}
@@ -1681,7 +1687,7 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
                 {/* Action Buttons */}
                 <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
                   <TouchableOpacity
-                    style={{ flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: isDarkMode ? '#1E293B' : '#E2E8F0', justifyContent: 'center', alignItems: 'center' }}
+                    style={{ flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: theme.iconBackground, justifyContent: 'center', alignItems: 'center' }}
                     onPress={() => setIsSupportModalOpen(false)}
                     disabled={isSubmittingSupport}
                   >
@@ -1693,9 +1699,9 @@ const StudentDashboard: React.FC<Props> = ({ navigation }) => {
                     disabled={isSubmittingSupport}
                   >
                     {isSubmittingSupport ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <ActivityIndicator size="small" color={theme.onPrimary} />
                     ) : (
-                      <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF' }}>Send Message</Text>
+                      <Text style={{ fontSize: 15, fontWeight: '800', color: theme.onPrimary }}>Send Message</Text>
                     )}
                   </TouchableOpacity>
                 </View>

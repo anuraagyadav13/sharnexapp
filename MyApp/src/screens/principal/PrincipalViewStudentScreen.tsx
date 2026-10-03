@@ -17,6 +17,7 @@ import apiClient, { getApiErrorMessage } from '../../services/apiClient';
 import principalService from '../../services/principalService';
 import { ENDPOINTS } from '../../constants/api';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 
 const PrincipalViewStudentScreen = ({ navigation, route }: any) => {
   const { theme, isDarkMode } = useTheme();
@@ -331,8 +332,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     heroBadges: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     badge: { 
       paddingHorizontal: 10, paddingVertical: 4, 
-      borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', 
-      borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
+      borderRadius: 12, backgroundColor: withAlpha(theme.onPrimary, 0.2), 
+      borderWidth: 1, borderColor: withAlpha(theme.onPrimary, 0.3),
       flexDirection: 'row', alignItems: 'center'
     },
     badgeText: { fontSize: 11, fontWeight: '600', color: theme.onPrimary },

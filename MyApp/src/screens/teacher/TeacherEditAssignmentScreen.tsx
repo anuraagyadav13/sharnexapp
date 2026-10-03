@@ -17,6 +17,7 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { TeacherHeader } from '../../components/TeacherHeader';
 import teacherService from '../../services/teacherService';
 
@@ -124,7 +125,7 @@ const TeacherEditAssignmentScreen: React.FC<Props> = ({ navigation, route }) => 
   if (isLoading) {
     return (
       <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color="#5266EB" />
+        <ActivityIndicator size="large" color={theme.primary} />
         <Text style={styles.loadingText}>Loading Details...</Text>
       </View>
     );
@@ -132,7 +133,7 @@ const TeacherEditAssignmentScreen: React.FC<Props> = ({ navigation, route }) => 
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.background} />
 
       {/* Global Header */}
       <TeacherHeader
@@ -149,14 +150,14 @@ const TeacherEditAssignmentScreen: React.FC<Props> = ({ navigation, route }) => 
               <Text style={styles.pageSubtitle}>Modify details for {className}</Text>
            </View>
            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+              <Ionicons name="arrow-back" size={20} color={theme.onPrimary} />
            </TouchableOpacity>
         </Animated.View>
 
         <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.formCard}>
            
            <View style={styles.cardHeader}>
-              <Ionicons name="create-outline" size={18} color="#5266EB" style={{marginRight: 6}} />
+              <Ionicons name="create-outline" size={18} color={theme.primary} style={{marginRight: 6}} />
               <Text style={styles.cardTitle}>Basic Information</Text>
            </View>
 
@@ -173,7 +174,7 @@ const TeacherEditAssignmentScreen: React.FC<Props> = ({ navigation, route }) => 
            <View style={styles.fieldContainer}>
               <Text style={styles.fieldLabel}>Subject (read-only)</Text>
               <TextInput 
-                 style={[styles.textInput, {backgroundColor: '#F3F4F6'}]}
+                 style={[styles.textInput, {backgroundColor: withAlpha(theme.border, 0.5)}]}
                  value={subject}
                  editable={false}
               />
@@ -204,7 +205,7 @@ const TeacherEditAssignmentScreen: React.FC<Props> = ({ navigation, route }) => 
                     value={dueDate}
                     onChangeText={setDueDate}
                  />
-                 <Ionicons name="calendar-outline" size={18} color="#111827" />
+                 <Ionicons name="calendar-outline" size={18} color={theme.text} />
               </TouchableOpacity>
            </View>
 
@@ -230,7 +231,7 @@ const TeacherEditAssignmentScreen: React.FC<Props> = ({ navigation, route }) => 
                 disabled={isSaving}
               >
                  {isSaving ? (
-                   <ActivityIndicator color="#FFF" size="small" />
+                   <ActivityIndicator color={theme.onPrimary} size="small" />
                  ) : (
                    <Text style={styles.actionBtnPublishText}>Save Changes</Text>
                  )}
@@ -268,11 +269,11 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
   pageTitleWrapper: { 
     flexDirection: 'row',
@@ -286,7 +287,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.25),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -339,7 +340,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
+    backgroundColor: withAlpha(theme.border, 0.5),
     borderRadius: 8,
     paddingVertical: 14,
   },
@@ -352,7 +353,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 14,
   },
-  actionBtnPublishText: { fontSize: 12, fontWeight: '600', color: '#FFFFFF' },
+  actionBtnPublishText: { fontSize: 12, fontWeight: '600', color: theme.onPrimary },
 });
 
 export default TeacherEditAssignmentScreen;

@@ -32,6 +32,7 @@ import principalService, {
 } from '../../services/principalService';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Camera, useCameraPermission, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
 
@@ -283,11 +284,11 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
     const s = status?.toUpperCase();
     switch (s) {
       case 'RETURNED':
-        return { bg: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)', text: theme.success }; // green
+        return { bg: withAlpha(theme.success, 0.2), text: theme.success }; // green
       case 'ISSUED':
-        return { bg: isDarkMode ? 'rgba(59, 130, 246, 0.2)' : theme.iconBackground, text: theme.primary }; // blue
+        return { bg: withAlpha(theme.info, 0.2), text: theme.primary }; // blue
       case 'OVERDUE':
-        return { bg: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)', text: theme.danger }; // red
+        return { bg: withAlpha(theme.danger, 0.2), text: theme.danger }; // red
       default:
         return { bg: isDarkMode ? theme.surface : theme.border, text: theme.subtext }; // grey
     }
@@ -657,7 +658,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
                 <Text style={[styles.fineText, { marginTop: 0 }]}>Overdue</Text>
                 <TouchableOpacity
                   onPress={() => fetchStudentFines(item.studentId, item.studentName)}
-                  style={{ marginLeft: 10, paddingVertical: 2, paddingHorizontal: 8, backgroundColor: isDarkMode ? 'rgba(59, 130, 246, 0.2)' : theme.iconBackground, borderRadius: 4 }}
+                  style={{ marginLeft: 10, paddingVertical: 2, paddingHorizontal: 8, backgroundColor: withAlpha(theme.info, 0.2), borderRadius: 4 }}
                 >
                   <Text style={{ fontSize: 10, fontWeight: '700', color: theme.primary }}>View Fine</Text>
                 </TouchableOpacity>
@@ -1106,7 +1107,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
                 >
                   <View style={styles.cardHeader}>
                     <Text style={styles.bookTitleText}>{item.title}</Text>
-                    <View style={{ backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.2)' : theme.iconBackground, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                    <View style={{ backgroundColor: withAlpha(theme.primary, 0.2), paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
                       <Text style={{ fontSize: 10, fontWeight: '700', color: theme.primary }}>ISBN: {item.isbn}</Text>
                     </View>
                   </View>
@@ -1142,7 +1143,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
               >
                 <View style={styles.cardHeader}>
                   <Text style={styles.bookTitleText}>{item.name}</Text>
-                  <View style={{ backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                  <View style={{ backgroundColor: withAlpha(theme.success, 0.2), paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
                     <Text style={{ fontSize: 10, fontWeight: '700', color: theme.success }}>{item.book_count || 0} Books</Text>
                   </View>
                 </View>
@@ -1183,7 +1184,7 @@ const PrincipalLibraryScreen: React.FC<Props> = ({ navigation }) => {
               renderItem={({ item }) => (
                 <View style={[styles.issueCard, { marginHorizontal: 0 }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isDarkMode ? 'rgba(79, 70, 229, 0.2)' : theme.iconBackground, alignItems: 'center', justifyContent: 'center' }}>
+                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: withAlpha(theme.primary, 0.2), alignItems: 'center', justifyContent: 'center' }}>
                       <Text style={{ fontSize: 16, fontWeight: 'bold', color: theme.primary }}>{item.name?.charAt(0)}</Text>
                     </View>
                     <View style={{ marginLeft: 12 }}>
@@ -1779,13 +1780,13 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   categoryPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.2)' : theme.iconBackground,
+    backgroundColor: withAlpha(theme.primary, 0.2),
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
     marginRight: 10,
     borderWidth: 1,
-    borderColor: isDarkMode ? 'rgba(99, 102, 241, 0.4)' : theme.border,
+    borderColor: withAlpha(theme.primary, 0.4),
   },
   categoryNameText: {
     fontSize: 12,
@@ -1944,7 +1945,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: withAlpha(theme.overlay, 0.5),
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,

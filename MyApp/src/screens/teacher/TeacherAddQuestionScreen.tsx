@@ -16,6 +16,7 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { TeacherHeader } from '../../components/TeacherHeader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherAddQuestion'>;
@@ -80,7 +81,7 @@ const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.background} />
 
       {/* Global Header */}
       <TeacherHeader
@@ -92,7 +93,7 @@ const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation, route }) => {
       {/* Blue Header Section */}
       <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={20} color={theme.onPrimary} />
          </TouchableOpacity>
          <Text style={styles.blueTitle}>{editQuestion ? 'Edit Question' : 'Add New Question'}</Text>
          <Text style={styles.blueSubtitle}>{editQuestion ? 'Modify your question and options' : 'Design your question and options'}</Text>
@@ -110,7 +111,7 @@ const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation, route }) => {
                <TextInput 
                   style={styles.textArea} 
                   placeholder="Enter your question here" 
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={theme.subtext}
                   multiline={true}
                   textAlignVertical="top"
                   value={questionText}
@@ -138,15 +139,15 @@ const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation, route }) => {
                    <View key={index} style={[styles.optionInputRow, isCorrect ? styles.optionInputRowSelected : null]}>
                       <TouchableOpacity onPress={() => setCorrectAnswer(opt.letter)}>
                         {isCorrect ? (
-                          <Ionicons name="checkbox" size={20} color="#059669" style={styles.checkboxIcon} />
+                          <Ionicons name="checkbox" size={20} color={theme.success} style={styles.checkboxIcon} />
                         ) : (
                           <View style={styles.checkboxOutline} />
                         )}
                       </TouchableOpacity>
                       <TextInput 
-                         style={[styles.optionInputText, isCorrect ? {color: '#065F46'} : null]}
+                         style={[styles.optionInputText, isCorrect ? {color: theme.success} : null]}
                          placeholder={`Option ${opt.letter}`}
-                         placeholderTextColor={isCorrect ? '#065F46' : '#9CA3AF'}
+                         placeholderTextColor={isCorrect ? theme.success : theme.subtext}
                          value={opt.value}
                          onChangeText={(text) => handleOptionChange(text, index)}
                       />
@@ -192,13 +193,13 @@ const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation, route }) => {
             {/* List */}
             {false ? ( // TODO: Replace with actual quiz questions from API
               <View style={styles.emptyContainer}>
-                <Ionicons name="help-circle-outline" size={48} color="#D1D5DB" />
+                <Ionicons name="help-circle-outline" size={48} color={theme.border} />
                 <Text style={styles.emptyText}>No questions added yet</Text>
                 <Text style={styles.emptySubtext}>Add questions using the form above</Text>
               </View>
             ) : (
               <View style={styles.emptyContainer}>
-                <Ionicons name="help-circle-outline" size={48} color="#D1D5DB" />
+                <Ionicons name="help-circle-outline" size={48} color={theme.border} />
                 <Text style={styles.emptyText}>No questions added yet</Text>
                 <Text style={styles.emptySubtext}>Add questions using the form above</Text>
               </View>
@@ -213,7 +214,7 @@ const TeacherAddQuestionScreen: React.FC<Props> = ({ navigation, route }) => {
             <Text style={styles.cancelBtnText}>Cancel</Text>
          </TouchableOpacity>
          <TouchableOpacity style={styles.saveBtn} activeOpacity={0.8}>
-            <Ionicons name="save-outline" size={16} color="#FFFFFF" style={{marginRight: 6}} />
+            <Ionicons name="save-outline" size={16} color={theme.onPrimary} style={{marginRight: 6}} />
             <Text style={styles.saveBtnText}>Save All Questions</Text>
          </TouchableOpacity>
       </Animated.View>
@@ -233,7 +234,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -253,16 +254,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
   blueHeader: {
     backgroundColor: theme.primary,
@@ -276,7 +277,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.25),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -284,13 +285,13 @@ const getStyles = (theme: any) => StyleSheet.create({
   blueTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     marginBottom: 4,
   },
   blueSubtitle: {
     fontSize: 11,
     fontWeight: '400',
-    color: '#E0E7FF',
+    color: withAlpha(theme.onPrimary, 0.8),
   },
 
   mainCard: {
@@ -299,7 +300,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     padding: 16,
     marginHorizontal: 16,
     marginTop: 16,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
     shadowRadius: 10,
@@ -360,7 +361,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
 
   answerBox: {
-    backgroundColor: theme.isDarkMode ? '#33415530' : '#F8FAFC',
+    backgroundColor: withAlpha(theme.border, 0.3),
     borderRadius: 8,
     padding: 16,
     marginBottom: 20,
@@ -388,7 +389,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     elevation: 2,
   },
   addOptionBtnText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 11,
     fontWeight: '600',
   },
@@ -404,8 +405,8 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginBottom: 8,
   },
   optionInputRowSelected: {
-    backgroundColor: theme.isDarkMode ? '#065F4630' : '#D1FAE5',
-    borderColor: theme.isDarkMode ? '#059669' : '#A7F3D0',
+    backgroundColor: withAlpha(theme.success, 0.15),
+    borderColor: withAlpha(theme.success, 0.4),
   },
   checkboxIcon: {
     marginRight: 10,
@@ -468,7 +469,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   addQuesBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
 
   quizSummaryText: {
@@ -566,21 +567,21 @@ const getStyles = (theme: any) => StyleSheet.create({
   saveBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
   optionBadge: {
     fontSize: 12,
     fontWeight: '800',
     color: theme.subtext,
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
+    backgroundColor: withAlpha(theme.border, 0.5),
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
     marginLeft: 8,
   },
   optionBadgeCorrect: {
-    color: '#FFFFFF',
-    backgroundColor: '#10B981',
+    color: theme.onPrimary,
+    backgroundColor: theme.success,
   },
   emptyContainer: {
     alignItems: 'center',

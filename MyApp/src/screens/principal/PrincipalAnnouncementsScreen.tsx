@@ -16,6 +16,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useAuth } from '../../store/AuthContext';
@@ -123,9 +124,9 @@ const PrincipalAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
   const getPriorityStyles = useCallback((priority: string) => {
     const p = priority?.toLowerCase();
     if (p === 'urgent') {
-      return { bg: isDarkMode ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.1)', text: theme.danger }; // red
+      return { bg: withAlpha(theme.danger, 0.2), text: theme.danger }; // red
     } else if (p === 'high') {
-      return { bg: isDarkMode ? 'rgba(245,158,11,0.2)' : 'rgba(245,158,11,0.1)', text: theme.warning }; // orange
+      return { bg: withAlpha(theme.warning, 0.2), text: theme.warning }; // orange
     } else {
       return { bg: isDarkMode ? theme.border : theme.background, text: theme.subtext }; // grey
     }
@@ -645,7 +646,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   },
   // Banner style
   newAnnouncementBanner: {
-    backgroundColor: theme.primary + '15',
+    backgroundColor: withAlpha(theme.primary, 0.15),
     borderRadius: 16,
     padding: 16,
     marginBottom: 20,
@@ -770,7 +771,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     color: theme.text,
   },
   draftBadge: {
-    backgroundColor: isDarkMode ? 'rgba(245,158,11,0.2)' : 'rgba(245,158,11,0.1)',
+    backgroundColor: withAlpha(theme.warning, 0.2),
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 4,
@@ -826,7 +827,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     fontWeight: '500',
   },
   audienceBadge: {
-    backgroundColor: theme.primary + '15',
+    backgroundColor: withAlpha(theme.primary, 0.15),
     paddingVertical: 2,
     paddingHorizontal: 8,
     borderRadius: 6,
@@ -867,7 +868,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   // Modal Style
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: withAlpha(theme.overlay, 0.4),
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -936,7 +937,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     backgroundColor: theme.background,
   },
   selectorPillActive: {
-    backgroundColor: theme.primary + '15',
+    backgroundColor: withAlpha(theme.primary, 0.15),
     borderColor: theme.primary,
   },
   selectorPillText: {

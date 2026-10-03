@@ -23,7 +23,7 @@ import { TeacherHeader } from '../../components/TeacherHeader';
 import { useAuth } from '../../store/AuthContext';
 import teacherService from '../../services/teacherService';
 import { useTheme } from '../../store/ThemeContext';
-
+import { withAlpha } from '../../constants/theme';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherResultManagement'>;
@@ -163,20 +163,20 @@ const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
   // State Machine 1: MARKS STATUS
   const getMarksStatusStyle = (status: string) => {
     switch (status?.toUpperCase()) {
-      case 'APPROVED': return { bg: theme.primary + '18', text: theme.primary, icon: 'shield-checkmark-outline', label: 'MARKS: APPROVED' };
-      case 'SUBMITTED': return { bg: theme.primary + '15', text: theme.primary, icon: 'checkmark-circle-outline', label: 'MARKS: SUBMITTED' };
-      case 'REJECTED': return { bg: (theme.danger || '#EF4444') + '18', text: theme.danger || '#EF4444', icon: 'return-up-back-outline', label: 'MARKS: REJECTED' };
+      case 'APPROVED': return { bg: withAlpha(theme.primary, 0.18), text: theme.primary, icon: 'shield-checkmark-outline', label: 'MARKS: APPROVED' };
+      case 'SUBMITTED': return { bg: withAlpha(theme.primary, 0.15), text: theme.primary, icon: 'checkmark-circle-outline', label: 'MARKS: SUBMITTED' };
+      case 'REJECTED': return { bg: withAlpha((theme.danger), 0.18), text: theme.danger, icon: 'return-up-back-outline', label: 'MARKS: REJECTED' };
       case 'NOT_STARTED': return { bg: theme.border, text: theme.subtext, icon: 'ellipse-outline', label: 'MARKS: NOT STARTED' };
-      default: return { bg: theme.primary + '10', text: theme.primary, icon: 'create-outline', label: 'MARKS: DRAFT' };
+      default: return { bg: withAlpha(theme.primary, 0.1), text: theme.primary, icon: 'create-outline', label: 'MARKS: DRAFT' };
     }
   };
 
   // State Machine 2: RESULTS STATUS
   const getResultsStatusStyle = (isPublished: boolean, template: string | null) => {
     if (isPublished) {
-      return { bg: theme.primary + '18', text: theme.primary, icon: 'globe-outline', label: `RESULT: PUBLISHED · ${template || 'CLASSIC'}` };
+      return { bg: withAlpha(theme.primary, 0.18), text: theme.primary, icon: 'globe-outline', label: `RESULT: PUBLISHED · ${template || 'CLASSIC'}` };
     }
-    return { bg: theme.primary + '12', text: theme.text, icon: 'checkmark-done-outline', label: 'RESULT: READY FOR REVIEW' };
+    return { bg: withAlpha(theme.primary, 0.12), text: theme.text, icon: 'checkmark-done-outline', label: 'RESULT: READY FOR REVIEW' };
   };
 
   const renderWorkItems = () => (
@@ -230,7 +230,7 @@ const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
                   })}
                 >
                   <View style={styles.cardHeader}>
-                    <View style={[styles.subjectCircle, { backgroundColor: theme.primary + '15' }]}>
+                    <View style={[styles.subjectCircle, { backgroundColor: withAlpha(theme.primary, 0.15) }]}>
                       <Text style={[styles.subjectInitial, { color: theme.primary }]}>{item.subjectName?.charAt(0) || 'S'}</Text>
                     </View>
                     <View style={[styles.statusBadge, { backgroundColor: marksStyle.bg }]}>
@@ -284,7 +284,7 @@ const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
 
       {reviewError === 'NOT_CLASS_TEACHER' ? (
         <View style={[styles.permissionNoticeCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <View style={[styles.permissionIconCircle, { backgroundColor: theme.primary + '15' }]}>
+          <View style={[styles.permissionIconCircle, { backgroundColor: withAlpha(theme.primary, 0.15) }]}>
             <Ionicons name="shield-half-outline" size={40} color={theme.primary} />
           </View>
           <Text style={[styles.permissionTitle, { color: theme.text }]}>Class Teacher Authorization Required</Text>
@@ -327,7 +327,7 @@ const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
                   })}
                 >
                   <View style={styles.cardHeader}>
-                    <View style={[styles.subjectCircle, { backgroundColor: theme.primary + '15' }]}>
+                    <View style={[styles.subjectCircle, { backgroundColor: withAlpha(theme.primary, 0.15) }]}>
                       <Text style={[styles.subjectInitial, { color: theme.primary }]}>{item.className?.charAt(0) || 'C'}</Text>
                     </View>
                     <View style={[styles.statusBadge, { backgroundColor: resultsStyle.bg }]}>
@@ -387,7 +387,7 @@ const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
 
         {classStudentsError === 'NOT_CLASS_TEACHER' ? (
           <View style={[styles.permissionNoticeCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <View style={[styles.permissionIconCircle, { backgroundColor: theme.primary + '15' }]}>
+            <View style={[styles.permissionIconCircle, { backgroundColor: withAlpha(theme.primary, 0.15) }]}>
               <Ionicons name="school-outline" size={40} color={theme.primary} />
             </View>
             <Text style={[styles.permissionTitle, { color: theme.text }]}>Not Assigned as Class Teacher</Text>
@@ -441,7 +441,7 @@ const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
                     })}
                   >
                     <Text style={styles.viewResultBtnText}>VIEW RESULT</Text>
-                    <Ionicons name="chevron-forward" size={12} color="#FFFFFF" />
+                    <Ionicons name="chevron-forward" size={12} color={theme.onPrimary} />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -540,8 +540,8 @@ const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
                     styles.filterChip,
                     {
                       backgroundColor: isActive 
-                        ? (isDarkMode ? theme.primary + '30' : theme.primary + '15') 
-                        : (isDarkMode ? '#334155' : '#F3F4F6'),
+                        ? (isDarkMode ? withAlpha(theme.primary, 0.3) : withAlpha(theme.primary, 0.15))
+                        : withAlpha(theme.border, 0.5),
                       borderColor: isActive ? theme.primary : 'transparent',
                     }
                   ]}
@@ -564,8 +564,8 @@ const TeacherResultManagementScreen: React.FC<Props> = ({ navigation }) => {
         )}
         {error ? (
           <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
-            <Text style={[styles.errorText, { color: '#EF4444' }]}>{error}</Text>
+            <Ionicons name="alert-circle-outline" size={48} color={theme.danger} />
+            <Text style={[styles.errorText, { color: theme.danger }]}>{error}</Text>
             <TouchableOpacity style={[styles.retryBtn, { backgroundColor: theme.primary }]} onPress={() => fetchData()}>
               <Text style={styles.retryBtnText}>Retry</Text>
             </TouchableOpacity>
@@ -646,7 +646,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -668,16 +668,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#A855F7',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
     elevation: 8,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
   tabBar: {
     flexDirection: 'row',
@@ -718,7 +718,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 6,
     padding: 12,
     borderWidth: 1,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
@@ -766,7 +766,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   progressLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
   progressLabel: { fontSize: 8, fontWeight: '700', color: theme.subtext },
   progressValue: { fontSize: 9, fontWeight: '800', color: theme.text },
-  progressBarBg: { height: 4, borderRadius: 2, overflow: 'hidden', backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9' },
+  progressBarBg: { height: 4, borderRadius: 2, overflow: 'hidden', backgroundColor: withAlpha(theme.border, 0.5) },
   progressBarFill: { height: '100%', borderRadius: 2 },
   reviewDoneText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
 
@@ -830,7 +830,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 2,
     paddingHorizontal: 6,
     borderRadius: 4,
-    backgroundColor: theme.border + '30',
+    backgroundColor: withAlpha(theme.border, 0.3),
   },
   auditIconText: {
     fontSize: 10,
@@ -843,7 +843,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 2,
     paddingHorizontal: 8,
     borderRadius: 4,
-    backgroundColor: theme.primary + '12',
+    backgroundColor: withAlpha(theme.primary, 0.12),
   },
   recallMiniText: {
     fontSize: 10,
@@ -880,7 +880,7 @@ const getStyles = (theme: any) => StyleSheet.create({
 
   modalBg: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: withAlpha(theme.overlay, 0.5),
     justifyContent: 'center',
     padding: 20,
   },
@@ -948,7 +948,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 10,
   },
   retryBtnText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontWeight: '700',
     fontSize: 13,
   },
@@ -996,7 +996,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
   },
   rosterAvatarText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontWeight: '800',
     fontSize: 16,
   },
@@ -1019,7 +1019,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 8,
   },
   viewResultBtnText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.5,

@@ -20,6 +20,7 @@ import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
 
@@ -75,23 +76,23 @@ const TeacherEquipmentScreen: React.FC<Props> = ({ navigation }) => {
 
   const getStatusStyle = (status: string) => {
     switch (status) {
-      case 'APPROVED': return { bg: '#ECFDF5', text: '#10B981' };
-      case 'REJECTED': return { bg: '#FEF2F2', text: '#EF4444' };
-      case 'NEEDS_CLARIFICATION': return { bg: '#FFFBEB', text: '#F59E0B' };
-      case 'DRAFT': return { bg: '#F3F4F6', text: '#6B7280' };
-      case 'SUBMITTED': return { bg: '#EEF2FF', text: '#4F46E5' };
-      case 'CLOSED': return { bg: '#F9FAFB', text: '#9CA3AF' };
-      default: return { bg: '#F3F4F6', text: '#6B7280' };
+      case 'APPROVED': return { bg: withAlpha(theme.success, 0.1), text: theme.success };
+      case 'REJECTED': return { bg: withAlpha(theme.danger, 0.1), text: theme.danger };
+      case 'NEEDS_CLARIFICATION': return { bg: withAlpha(theme.warning, 0.1), text: theme.warning };
+      case 'DRAFT': return { bg: withAlpha(theme.border, 0.5), text: theme.subtext };
+      case 'SUBMITTED': return { bg: withAlpha(theme.primary, 0.1), text: theme.primary };
+      case 'CLOSED': return { bg: theme.background, text: theme.subtext };
+      default: return { bg: withAlpha(theme.border, 0.5), text: theme.subtext };
     }
   };
 
   const getPriorityStyle = (priority: string) => {
     switch (priority) {
       case 'HIGH':
-      case 'URGENT': return { bg: '#EF4444', text: '#FFF' };
-      case 'MEDIUM': return { bg: '#F59E0B', text: '#FFF' };
-      case 'LOW': return { bg: '#10B981', text: '#FFF' };
-      default: return { bg: '#6B7280', text: '#FFF' };
+      case 'URGENT': return { bg: theme.danger, text: theme.onPrimary };
+      case 'MEDIUM': return { bg: theme.warning, text: theme.onPrimary };
+      case 'LOW': return { bg: theme.success, text: theme.onPrimary };
+      default: return { bg: theme.subtext, text: theme.onPrimary };
     }
   };
 
@@ -117,11 +118,11 @@ const TeacherEquipmentScreen: React.FC<Props> = ({ navigation }) => {
             onPress={() => navigation.navigate('TeacherAddEquipmentRequest', {})}
             activeOpacity={0.8}
           >
-            <Ionicons name="add" size={18} color="#FFF" />
+            <Ionicons name="add" size={18} color={theme.onPrimary} />
             <Text style={styles.addBtnText}>Request</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconBtn}>
-            <Ionicons name="notifications-outline" size={22} color="#111827" />
+            <Ionicons name="notifications-outline" size={22} color={theme.text} />
           </TouchableOpacity>
         </View>
       </View>
@@ -145,26 +146,26 @@ const TeacherEquipmentScreen: React.FC<Props> = ({ navigation }) => {
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#94A3B8" style={styles.searchIcon} />
+        <Ionicons name="search" size={20} color={theme.subtext} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search requests..."
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={theme.subtext}
         />
       </View>
 
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.primary]} />}
       >
         {isLoading && !isRefreshing ? (
-          <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
+          <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
         ) : requests.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <MaterialCommunityIcons name="clipboard-text-outline" size={64} color="#CBD5E1" />
+            <MaterialCommunityIcons name="clipboard-text-outline" size={64} color={theme.border} />
             <Text style={styles.emptyText}>No equipment requests found.</Text>
             <TouchableOpacity 
               style={styles.emptyBtn}
@@ -198,11 +199,11 @@ const TeacherEquipmentScreen: React.FC<Props> = ({ navigation }) => {
 
                 <View style={styles.cardDetails}>
                   <View style={styles.detailItem}>
-                    <Ionicons name="calendar-outline" size={14} color="#64748B" />
+                    <Ionicons name="calendar-outline" size={14} color={theme.subtext} />
                     <Text style={styles.detailText}>{new Date(item.created_at).toLocaleDateString()}</Text>
                   </View>
                   <View style={styles.detailItem}>
-                    <MaterialCommunityIcons name="package-variant" size={14} color="#64748B" />
+                    <MaterialCommunityIcons name="package-variant" size={14} color={theme.subtext} />
                     <Text style={styles.detailText}>{item.item_count} Items</Text>
                   </View>
                   <View style={[styles.priorityPill, { backgroundColor: getPriorityStyle(item.priority).bg }]}>
@@ -217,14 +218,14 @@ const TeacherEquipmentScreen: React.FC<Props> = ({ navigation }) => {
                       style={styles.iconAction}
                       onPress={() => navigation.navigate('TeacherEquipmentDetail', { requestId: item.id })}
                     >
-                      <Ionicons name="eye-outline" size={20} color="#6366F1" />
+                      <Ionicons name="eye-outline" size={20} color={theme.primary} />
                     </TouchableOpacity>
                     {(item.status === 'DRAFT' || item.status === 'NEEDS_CLARIFICATION') && (
                       <TouchableOpacity 
                         style={styles.iconAction}
                         onPress={() => navigation.navigate('TeacherAddEquipmentRequest', { requestId: item.id })}
                       >
-                        <Ionicons name="pencil-outline" size={20} color="#4F46E5" />
+                        <Ionicons name="pencil-outline" size={20} color={theme.primary} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -254,7 +255,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -281,7 +282,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 8,
     marginRight: 4,
   },
-  addBtnText: { color: '#FFF', fontSize: 13, fontWeight: '700', marginLeft: 4 },
+  addBtnText: { color: theme.onPrimary, fontSize: 13, fontWeight: '700', marginLeft: 4 },
 
   tabsContainer: { backgroundColor: theme.surface, paddingVertical: 10 },
   tabsScrollContent: { paddingHorizontal: 20, gap: 8 },
@@ -289,11 +290,11 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9',
+    backgroundColor: withAlpha(theme.border, 0.5),
   },
   activeTab: { backgroundColor: theme.primary },
   tabText: { fontSize: 13, fontWeight: '600', color: theme.subtext },
-  activeTabText: { color: '#FFF' },
+  activeTabText: { color: theme.onPrimary },
 
   searchContainer: {
     flexDirection: 'row',
@@ -316,7 +317,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.surface,
     borderRadius: 16,
     marginBottom: 12,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -337,7 +338,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   detailText: { fontSize: 12, fontWeight: '600', color: theme.subtext },
   
   priorityPill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
-  priorityText: { fontSize: 10, fontWeight: '800', color: '#FFF' },
+  priorityText: { fontSize: 10, fontWeight: '800', color: theme.onPrimary },
 
   cardFooter: { 
     flexDirection: 'row', 
@@ -353,7 +354,7 @@ const getStyles = (theme: any) => StyleSheet.create({
 
   emptyContainer: { alignItems: 'center', marginTop: 80 },
   emptyText: { marginTop: 16, fontSize: 16, fontWeight: '700', color: theme.subtext },
-  emptyBtn: { marginTop: 20, backgroundColor: theme.isDarkMode ? '#312E8140' : '#EEF2FF', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 },
+  emptyBtn: { marginTop: 20, backgroundColor: withAlpha(theme.primary, 0.15), paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 },
   emptyBtnText: { color: theme.primary, fontWeight: '700' },
 });
 

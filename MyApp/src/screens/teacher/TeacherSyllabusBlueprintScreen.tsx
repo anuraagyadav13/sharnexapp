@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { useAuth } from '../../store/AuthContext';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { TeacherHeader } from '../../components/TeacherHeader';
@@ -648,7 +649,7 @@ const TeacherSyllabusBlueprintScreen: React.FC<Props> = ({ navigation }) => {
                 : 'warning'
             }
             size={18}
-            color={theme.white}
+            color={theme.surfaceHigh}
           />
           <Text style={styles.toastText}>{toastMessage}</Text>
         </View>
@@ -841,7 +842,7 @@ const TeacherSyllabusBlueprintScreen: React.FC<Props> = ({ navigation }) => {
                 activeOpacity={0.8}
                 onPress={handleOpenAddChapterModal}
               >
-                <Ionicons name="add" size={18} color={theme.white} />
+                <Ionicons name="add" size={18} color={theme.surfaceHigh} />
                 <Text style={styles.primaryAddButtonText}>+ Add Chapter</Text>
               </TouchableOpacity>
             </View>
@@ -1187,10 +1188,10 @@ const TeacherSyllabusBlueprintScreen: React.FC<Props> = ({ navigation }) => {
                 activeOpacity={0.8}
               >
                 {isSavingLog ? (
-                  <ActivityIndicator size="small" color={theme.white} />
+                  <ActivityIndicator size="small" color={theme.surfaceHigh} />
                 ) : (
                   <>
-                    <Ionicons name="checkmark" size={20} color={theme.white} style={{ marginRight: 6 }} />
+                    <Ionicons name="checkmark" size={20} color={theme.surfaceHigh} style={{ marginRight: 6 }} />
                     <Text style={styles.submitButtonText}>✓ Save Daily Work Log</Text>
                   </>
                 )}
@@ -1486,7 +1487,7 @@ const TeacherSyllabusBlueprintScreen: React.FC<Props> = ({ navigation }) => {
                 disabled={isSavingChapter}
               >
                 {isSavingChapter ? (
-                  <ActivityIndicator size="small" color={theme.white} />
+                  <ActivityIndicator size="small" color={theme.surfaceHigh} />
                 ) : (
                   <Text style={styles.modalConfirmButtonText}>
                     {editingChapter ? 'Save Changes' : 'Save Chapter'}
@@ -1551,7 +1552,7 @@ const TeacherSyllabusBlueprintScreen: React.FC<Props> = ({ navigation }) => {
                 disabled={isSavingTopic}
               >
                 {isSavingTopic ? (
-                  <ActivityIndicator size="small" color={theme.white} />
+                  <ActivityIndicator size="small" color={theme.surfaceHigh} />
                 ) : (
                   <Text style={styles.modalConfirmButtonText}>
                     {editingTopic ? 'Save Changes' : 'Save Topic'}
@@ -1613,7 +1614,7 @@ const TeacherSyllabusBlueprintScreen: React.FC<Props> = ({ navigation }) => {
                 disabled={isSavingSubtopic}
               >
                 {isSavingSubtopic ? (
-                  <ActivityIndicator size="small" color={theme.white} />
+                  <ActivityIndicator size="small" color={theme.surfaceHigh} />
                 ) : (
                   <Text style={styles.modalConfirmButtonText}>Save Subtopic</Text>
                 )}
@@ -1672,7 +1673,7 @@ const TeacherSyllabusBlueprintScreen: React.FC<Props> = ({ navigation }) => {
                 disabled={isDeleting}
               >
                 {isDeleting ? (
-                  <ActivityIndicator size="small" color={theme.white} />
+                  <ActivityIndicator size="small" color={theme.surfaceHigh} />
                 ) : (
                   <Text style={styles.deleteDestructiveButtonText}>Yes, Delete</Text>
                 )}
@@ -1932,7 +1933,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       backgroundColor: theme.warning,
     },
     toastText: {
-      color: theme.white,
+      color: theme.surfaceHigh,
       fontSize: 13,
       fontWeight: '600',
       marginLeft: 8,
@@ -2153,7 +2154,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       marginLeft: 12,
     },
     primaryAddButtonText: {
-      color: theme.white,
+      color: theme.surfaceHigh,
       fontSize: 12,
       fontWeight: '700',
       marginLeft: 4,
@@ -2379,7 +2380,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       opacity: 0.6,
     },
     submitButtonText: {
-      color: theme.white,
+      color: theme.surfaceHigh,
       fontSize: 14,
       fontWeight: '700',
     },
@@ -2562,7 +2563,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     // Modal Common Styles
     modalBackdrop: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.5)',
+      backgroundColor: withAlpha(theme.overlay, 0.5),
       justifyContent: 'center',
       alignItems: 'center',
       padding: 20,
@@ -2658,7 +2659,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       alignItems: 'center',
     },
     modalConfirmButtonText: {
-      color: theme.white,
+      color: theme.surfaceHigh,
       fontSize: 13,
       fontWeight: '700',
     },
@@ -2734,7 +2735,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     deleteDestructiveButtonText: {
       fontSize: 13,
       fontWeight: '700',
-      color: theme.white,
+      color: theme.surfaceHigh,
     },
   });
 

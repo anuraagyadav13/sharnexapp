@@ -17,6 +17,7 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { TeacherHeader } from '../../components/TeacherHeader';
 import { Linking } from 'react-native';
 import teacherService from '../../services/teacherService';
@@ -92,7 +93,7 @@ const TeacherViewSubmissionScreen: React.FC<Props> = ({ navigation, route }) => 
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.background} />
 
       {/* Global Header */}
       <TeacherHeader
@@ -104,22 +105,22 @@ const TeacherViewSubmissionScreen: React.FC<Props> = ({ navigation, route }) => 
       {/* Blue Header Section */}
       <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={20} color={theme.onPrimary} />
          </TouchableOpacity>
          <Text style={styles.blueTitle}>{assignmentTitle || 'Submissions'}</Text>
          <Text style={styles.blueSubtitle}>Grading Portal</Text>
          
          <View style={styles.infoRow}>
             <View style={styles.infoItem}>
-               <Ionicons name="school-outline" size={12} color="#E0E7FF" style={{marginRight: 6}} />
+               <Ionicons name="school-outline" size={12} color={theme.onPrimary} style={{marginRight: 6}} />
                <Text style={styles.infoText}>{className || 'All Classes'}</Text>
             </View>
             <View style={styles.infoItem}>
-               <Ionicons name="calendar-outline" size={12} color="#E0E7FF" style={{marginRight: 6}} />
+               <Ionicons name="calendar-outline" size={12} color={theme.onPrimary} style={{marginRight: 6}} />
                <Text style={styles.infoText}>Due: {dueDate ? new Date(dueDate).toLocaleDateString() : 'N/A'}</Text>
             </View>
             <View style={styles.infoItem}>
-               <Ionicons name="people-outline" size={12} color="#E0E7FF" style={{marginRight: 6}} />
+               <Ionicons name="people-outline" size={12} color={theme.onPrimary} style={{marginRight: 6}} />
                <Text style={styles.infoText}>Max: {maxMarks || 100} points</Text>
             </View>
          </View>
@@ -128,13 +129,13 @@ const TeacherViewSubmissionScreen: React.FC<Props> = ({ navigation, route }) => 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
         {isLoading ? (
-          <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
+          <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
         ) : error ? (
-          <View style={{ padding: 16, backgroundColor: '#FEE2E2', borderRadius: 12 }}>
-            <Text style={{ color: '#DC2626', fontWeight: '500' }}>{error}</Text>
+          <View style={{ padding: 16, backgroundColor: withAlpha(theme.danger, 0.15), borderRadius: 12 }}>
+            <Text style={{ color: theme.danger, fontWeight: '500' }}>{error}</Text>
           </View>
         ) : submissions.length === 0 ? (
-          <Text style={{ textAlign: 'center', marginTop: 40, color: '#9CA3AF' }}>No submissions found.</Text>
+          <Text style={{ textAlign: 'center', marginTop: 40, color: theme.subtext }}>No submissions found.</Text>
         ) : (
           submissions.map((submission, idx) => (
             <Animated.View key={submission.studentId} entering={FadeInUp.delay(100 + idx * 100).springify()} style={styles.submissionCard}>
@@ -170,7 +171,7 @@ const TeacherViewSubmissionScreen: React.FC<Props> = ({ navigation, route }) => 
                    <TextInput 
                       style={styles.gradeInput}
                       placeholder={`Enter Grade / ${submission.maxPoints || 100}`}
-                      placeholderTextColor="#9CA3AF"
+                      placeholderTextColor={theme.subtext}
                       keyboardType="numeric"
                       value={grades[submission.id] || submission.grade?.toString() || ''}
                       onChangeText={(val) => handleGradeChange(submission.id, val)}
@@ -181,7 +182,7 @@ const TeacherViewSubmissionScreen: React.FC<Props> = ({ navigation, route }) => 
                    <TextInput 
                       style={styles.gradeInput}
                       placeholder="Enter Teacher Feedback / Remarks..."
-                      placeholderTextColor="#9CA3AF"
+                      placeholderTextColor={theme.subtext}
                       value={feedbacks[submission.id] || submission.feedback || ''}
                       onChangeText={(val) => handleFeedbackChange(submission.id, val)}
                    />
@@ -215,7 +216,7 @@ const TeacherViewSubmissionScreen: React.FC<Props> = ({ navigation, route }) => 
                      disabled={!submission.id}
                      onPress={() => submission.id && submitGrade(submission.id)}
                    >
-                      <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" style={{marginRight: 6}} />
+                      <Ionicons name="checkmark-circle" size={16} color={theme.onPrimary} style={{marginRight: 6}} />
                       <Text style={styles.actionBtnFeedbackText}>Save Grade</Text>
                    </TouchableOpacity>
                 </View>
@@ -241,7 +242,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -261,16 +262,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
   blueHeader: {
     backgroundColor: theme.primary, 
@@ -284,7 +285,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.25),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -292,13 +293,13 @@ const getStyles = (theme: any) => StyleSheet.create({
   blueTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     marginBottom: 6,
   },
   blueSubtitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     marginBottom: 12,
   },
   infoRow: {
@@ -310,7 +311,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   infoText: {
     fontSize: 11,
-    color: '#E0E7FF', 
+    color: withAlpha(theme.onPrimary, 0.8), 
     fontWeight: '500',
   },
 
@@ -319,7 +320,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     marginBottom: 20,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
@@ -360,13 +361,13 @@ const getStyles = (theme: any) => StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 10,
-    backgroundColor: theme.isDarkMode ? '#33415530' : '#F1F5F9',
+    backgroundColor: withAlpha(theme.border, 0.3),
   },
   pdfIconBox: {
     marginRight: 12,
   },
   pdfRedBg: {
-    backgroundColor: '#FF0000',
+    backgroundColor: theme.danger,
     width: 24,
     height: 32,
     borderRadius: 4,
@@ -374,7 +375,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
   },
   pdfIconText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 8,
     fontWeight: '800',
   },
@@ -400,7 +401,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 8,
     fontSize: 14,
     color: theme.text,
-    backgroundColor: theme.isDarkMode ? '#33415550' : '#F8FAFC',
+    backgroundColor: withAlpha(theme.border, 0.1),
   },
 
   actionRow: {
@@ -413,7 +414,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
+    backgroundColor: withAlpha(theme.border, 0.5),
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 20,
@@ -436,7 +437,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   actionBtnFeedbackText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
 });
 

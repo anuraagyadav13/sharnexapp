@@ -8,6 +8,8 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
+import { useTheme } from '../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../constants/theme';
 import Animated, {
   useAnimatedStyle,
   withTiming,
@@ -29,6 +31,8 @@ interface MenuItemProps {
 }
 
 const MenuItem: React.FC<MenuItemProps> = ({ icon, label, isActive, onPress, isFontAwesome }) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
   return (
     <TouchableOpacity
       style={[styles.menuItem, isActive && styles.activeMenuItem]}
@@ -37,9 +41,9 @@ const MenuItem: React.FC<MenuItemProps> = ({ icon, label, isActive, onPress, isF
     >
       <View style={styles.iconContainer}>
         {isFontAwesome ? (
-          <FontAwesome5 name={icon} size={20} color="#FFFFFF" />
+          <FontAwesome5 name={icon} size={20} color={theme.onPrimary} />
         ) : (
-          <Icon name={icon} size={24} color="#FFFFFF" />
+          <Icon name={icon} size={24} color={theme.onPrimary} />
         )}
       </View>
       <Text style={styles.menuLabel}>{label}</Text>
@@ -64,6 +68,8 @@ const ExpandableMenuItem: React.FC<ExpandableMenuItemProps> = ({
   children,
   isFontAwesome,
 }) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
   const animatedHeight = useSharedValue(0);
   const rotation = useSharedValue(0);
 
@@ -95,14 +101,14 @@ const ExpandableMenuItem: React.FC<ExpandableMenuItemProps> = ({
       >
         <View style={styles.iconContainer}>
           {isFontAwesome ? (
-            <FontAwesome5 name={icon} size={20} color="#FFFFFF" />
+            <FontAwesome5 name={icon} size={20} color={theme.onPrimary} />
           ) : (
-            <Icon name={icon} size={24} color="#FFFFFF" />
+            <Icon name={icon} size={24} color={theme.onPrimary} />
           )}
         </View>
         <Text style={styles.menuLabel}>{label}</Text>
         <Animated.View style={arrowStyle}>
-          <Icon name="chevron-down" size={24} color="#FFFFFF" />
+          <Icon name="chevron-down" size={24} color={theme.onPrimary} />
         </Animated.View>
       </TouchableOpacity>
       <Animated.View style={contentStyle}>
@@ -113,6 +119,8 @@ const ExpandableMenuItem: React.FC<ExpandableMenuItemProps> = ({
 };
 
 export const InstitutionPortalMenu = () => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
   const [academicOpen, setAcademicOpen] = useState(true);
 
   return (
@@ -162,10 +170,10 @@ export const InstitutionPortalMenu = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#8B5CF6', // Primary Purple matching the image
+    backgroundColor: theme.primary,
     width: 280,
     height: SCREEN_HEIGHT,
   },
@@ -175,12 +183,12 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
   headerTitle: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 22,
     fontWeight: 'bold',
   },
   headerSubtitle: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: withAlpha(theme.onPrimary, 0.8),
     fontSize: 14,
     marginTop: 4,
   },
@@ -195,10 +203,10 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   activeMenuItem: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.1),
   },
   expandableActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.15),
     borderRadius: 12,
     marginHorizontal: 10,
     paddingHorizontal: 10,
@@ -208,7 +216,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   menuLabel: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 15,
@@ -224,20 +232,20 @@ const styles = StyleSheet.create({
     width: '90%',
   },
   subMenuItemActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.2),
     borderRadius: 10,
     paddingHorizontal: 15,
   },
   subMenuLabel: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 15,
     fontWeight: '500',
   },
   footer: {
     paddingBottom: Platform.OS === 'ios' ? 40 : 20,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: withAlpha(theme.onPrimary, 0.1),
     paddingTop: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    backgroundColor: withAlpha(theme.overlay, 0.05),
   },
 });

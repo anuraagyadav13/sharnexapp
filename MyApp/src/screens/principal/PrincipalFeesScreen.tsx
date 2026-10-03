@@ -23,7 +23,8 @@ import principalService, { InvoiceStats, InvoiceItem, ReconciliationData, Reconc
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { BRAND, COLORS } from '../../constants/theme';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+
 import { getCacheBustedUri } from '../../utils/image';
 import { generatePDF } from 'react-native-html-to-pdf';
 import RNPrint from 'react-native-print';
@@ -102,9 +103,9 @@ function generatePrincipalFeeReceiptHTML(receipt: any, theme: any): string {
   <title>Official Receipt - ${escapeHtml(invNum)}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: ${theme.background}; color: ${theme.text}; margin: 0; padding: 40px 20px; }
-    .receipt-container { max-width: 680px; margin: 0 auto; background: ${theme.surface}; border-radius: 16px; border: 1px solid ${theme.border}; box-shadow: 0 10px 25px -5px ${theme.text}0D; overflow: hidden; }
+    .receipt-container { max-width: 680px; margin: 0 auto; background: ${theme.surface}; border-radius: 16px; border: 1px solid ${theme.border}; box-shadow: 0 10px 25px -5px ${theme.shadow}; overflow: hidden; }
     .header { background: ${theme.primary}; color: ${theme.onPrimary}; padding: 32px; display: flex; justify-content: space-between; align-items: flex-start; }
-    .badge { background: ${theme.success}33; border: 1px solid ${theme.success}66; color: ${theme.onPrimary}; font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 4px 10px; border-radius: 9999px; display: inline-block; margin-bottom: 8px; }
+    .badge { background: ${theme.successBg}; border: 1px solid ${theme.success}; color: ${theme.success}; font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 4px 10px; border-radius: 9999px; display: inline-block; margin-bottom: 8px; }
     .title { font-size: 24px; font-weight: 800; margin: 0; color: ${theme.onPrimary}; }
     .school { font-size: 14px; color: ${theme.onPrimary}; margin-top: 4px; }
     .content { padding: 32px; }
@@ -226,8 +227,9 @@ const getInitials = (name: string) => {
   return parts.length > 1 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : parts[0][0].toUpperCase();
 };
 
-const avatarColors = [COLORS.secondary, COLORS.danger, COLORS.warning, COLORS.success, COLORS.primary];
-const getAvatarColor = (name: string) => {
+const getAvatarColor = (name: string, theme: any) => {
+  const avatarColors = [theme.secondary, theme.danger, theme.warning, theme.success, theme.primary];
+
   let hash = 0;
   for (let i = 0; i < (name || '').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
   return avatarColors[Math.abs(hash) % avatarColors.length];
@@ -482,9 +484,9 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
   // Status Badge
   const StatusBadge = ({ status }: { status: string }) => {
     const normalized = (status || 'PENDING').toUpperCase();
-    let bg = isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)'; let text = theme.warning; let icon = 'time-outline'; let label = 'Pending';
-    if (normalized === 'PAID' || normalized === 'SUCCESS') { bg = isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)'; text = theme.success; icon = 'checkmark-circle'; label = 'Paid'; }
-    else if (normalized === 'OVERDUE') { bg = isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)'; text = theme.danger; icon = 'alert-circle'; label = 'Overdue'; }
+    let bg = isDarkMode ? theme.warningBg : theme.warningBg; let text = theme.warning; let icon = 'time-outline'; let label = 'Pending';
+    if (normalized === 'PAID' || normalized === 'SUCCESS') { bg = isDarkMode ? theme.successBg : theme.successBg; text = theme.success; icon = 'checkmark-circle'; label = 'Paid'; }
+    else if (normalized === 'OVERDUE') { bg = isDarkMode ? theme.dangerBg : theme.dangerBg; text = theme.danger; icon = 'alert-circle'; label = 'Overdue'; }
     else if (normalized === 'CANCELLED') { bg = isDarkMode ? theme.surface : theme.border; text = theme.subtext; icon = 'close-circle'; label = 'Cancelled'; }
     return (
       <View style={[s.statusBadge, { backgroundColor: bg }]}>
@@ -496,11 +498,11 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
 
   const PaymentModeBadge = ({ mode }: { mode: string }) => {
     const m = (mode || '').toUpperCase();
-    let bg = isDarkMode ? 'rgba(79, 70, 229, 0.2)' : theme.iconBackground; let text = theme.primary; let icon = 'card-outline';
-    if (m === 'UPI') { bg = isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)'; text = theme.success; icon = 'phone-portrait-outline'; }
-    else if (m === 'CASH') { bg = isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)'; text = theme.warning; icon = 'cash-outline'; }
-    else if (m === 'CHEQUE') { bg = isDarkMode ? 'rgba(192, 38, 211, 0.2)' : theme.iconBackground; text = theme.secondary; icon = 'document-text-outline'; }
-    else if (m === 'NETBANKING') { bg = isDarkMode ? 'rgba(3, 105, 161, 0.2)' : theme.iconBackground; text = theme.primary; icon = 'globe-outline'; }
+    let bg = isDarkMode ? theme.primaryBg : theme.iconBackground; let text = theme.primary; let icon = 'card-outline';
+    if (m === 'UPI') { bg = isDarkMode ? theme.successBg : theme.successBg; text = theme.success; icon = 'phone-portrait-outline'; }
+    else if (m === 'CASH') { bg = isDarkMode ? theme.warningBg : theme.warningBg; text = theme.warning; icon = 'cash-outline'; }
+    else if (m === 'CHEQUE') { bg = isDarkMode ? theme.secondaryBg : theme.iconBackground; text = theme.secondary; icon = 'document-text-outline'; }
+    else if (m === 'NETBANKING') { bg = isDarkMode ? theme.infoBg : theme.iconBackground; text = theme.primary; icon = 'globe-outline'; }
     return (
       <View style={[s.paymentModeBadge, { backgroundColor: bg }]}>
         <Ionicons name={icon} size={12} color={text} />
@@ -595,11 +597,11 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
               </View>
               <Text style={[s.kpiValue, { color: theme.surface }]}>{formatRupee(netSettled)}</Text>
             </View>
-            <View style={[s.kpiIcon, { backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }]}>
+            <View style={[s.kpiIcon, { backgroundColor: withAlpha(theme.onPrimary, 0.1), borderWidth: 1, borderColor: withAlpha(theme.onPrimary, 0.15) }]}>
               <Ionicons name="business" size={20} color={theme.primary} />
             </View>
           </View>
-          <View style={[s.kpiDivider, { backgroundColor: 'rgba(99,102,241,0.3)' }]} />
+          <View style={[s.kpiDivider, { backgroundColor: withAlpha(theme.primary, 0.3) }]} />
           <View style={s.kpiBottom}>
             <Text style={[s.kpiBottomText, { color: isDarkMode ? theme.primary : theme.primary }]}>{formatRupee(gatewayDeductions)} absorbed</Text>
             <View style={s.netBadge}>
@@ -641,7 +643,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
                 </View>
               </View>
             </View>
-            <View style={[s.kpiIcon, { backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)' }]}>
+            <View style={[s.kpiIcon, { backgroundColor: withAlpha(theme.success, 0.2) }]}>
               <Ionicons name="speedometer" size={20} color={theme.success} />
             </View>
           </View>
@@ -718,7 +720,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
   const renderRefundsSubHeader = () => (
     <View style={s.subHeaderSection}>
       <View style={s.subHeaderRow}>
-        <View style={[s.subHeaderIcon, { backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)' }]}>
+        <View style={[s.subHeaderIcon, { backgroundColor: withAlpha(theme.danger, 0.2) }]}>
           <Ionicons name="return-down-back" size={16} color={theme.danger} />
         </View>
         <View style={{ flex: 1 }}>
@@ -732,7 +734,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
 
   // INVOICE CARD
   const renderInvoiceCard = ({ item }: { item: InvoiceItem }) => {
-    const color = getAvatarColor(item.studentName);
+    const color = getAvatarColor(item.studentName, theme);
     return (
       <View style={s.invoiceCard}>
         <View style={s.cardTop}>
@@ -840,7 +842,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
       {/* Bank Settlements Header */}
       <View style={s.settlementsTopCard}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-          <View style={[s.subHeaderIcon, { backgroundColor: 'rgba(16,185,129,0.1)' }]}>
+          <View style={[s.subHeaderIcon, { backgroundColor: withAlpha(theme.success, 0.1) }]}>
             <Ionicons name="business" size={16} color={theme.success} />
           </View>
           <View style={{ flex: 1 }}>
@@ -888,7 +890,7 @@ const PrincipalFeesScreen: React.FC<Props> = ({ navigation }) => {
               <Ionicons name="shield-checkmark" size={16} color={theme.success} />
             </View>
             <Text style={[s.reconValue, { color: theme.surface }]}>{formatRupee(reconciliation.totalSettled)}</Text>
-            <Text style={[s.reconMeta, { color: 'rgba(110,231,183,0.8)' }]}>Verified Bank Account • Reconciled</Text>
+            <Text style={[s.reconMeta, { color: withAlpha(theme.success, 0.8) }]}>Verified Bank Account • Reconciled</Text>
           </View>
         </ScrollView>
       ) : null}
@@ -1268,8 +1270,8 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   titleTextRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   titleText: { fontSize: 20, fontWeight: '800', color: theme.text },
   badge: {
-    backgroundColor: isDarkMode ? 'rgba(124,58,237,0.2)' : theme.iconBackground, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10,
-    borderWidth: 1, borderColor: isDarkMode ? 'rgba(124,58,237,0.4)' : theme.border,
+    backgroundColor: isDarkMode ? theme.primaryBg : theme.iconBackground, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10,
+    borderWidth: 1, borderColor: isDarkMode ? theme.primary : theme.border,
   },
   badgeText: { fontSize: 10, fontWeight: '800', color: theme.primary },
   subtitleText: { fontSize: 12, color: theme.subtext, marginTop: 2 },
@@ -1284,20 +1286,20 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
 
   // Ledger Banner
   ledgerBanner: {
-    backgroundColor: isDarkMode ? 'rgba(124,58,237,0.1)' : 'rgba(124,58,237,0.06)', borderWidth: 1, borderColor: isDarkMode ? 'rgba(124,58,237,0.2)' : 'rgba(124,58,237,0.15)',
+    backgroundColor: theme.primaryBg, borderWidth: 1, borderColor: theme.primary,
     borderRadius: 16, padding: 12, marginBottom: 16,
   },
   ledgerBannerRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
   ledgerIconBox: {
-    width: 28, height: 28, borderRadius: 8, backgroundColor: isDarkMode ? 'rgba(124,58,237,0.2)' : 'rgba(124,58,237,0.1)',
+    width: 28, height: 28, borderRadius: 8, backgroundColor: theme.primaryBg,
     justifyContent: 'center', alignItems: 'center',
   },
   ledgerBannerLabel: { fontSize: 10, fontWeight: '800', color: theme.primary, textTransform: 'uppercase', letterSpacing: 0.5 },
   ledgerBannerDesc: { fontSize: 11, color: theme.subtext, fontWeight: '500' },
   syncBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: isDarkMode ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.1)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
-    borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)', alignSelf: 'flex-start',
+    backgroundColor: theme.successBg, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
+    borderWidth: 1, borderColor: theme.success, alignSelf: 'flex-start',
   },
   syncDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: theme.success },
   syncBadgeText: { fontSize: 10, fontWeight: '700', color: theme.success },
@@ -1320,9 +1322,9 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   kpiDivider: { height: 1, backgroundColor: theme.border, marginVertical: 12 },
   kpiBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   kpiBottomText: { fontSize: 11, color: theme.subtext, fontWeight: '500' },
-  netBadge: { backgroundColor: isDarkMode ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
+  netBadge: { backgroundColor: theme.infoBg, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
   netBadgeText: { fontSize: 10, fontWeight: '700', color: theme.primary },
-  pendingTag: { backgroundColor: isDarkMode ? 'rgba(244,63,94,0.15)' : 'rgba(244,63,94,0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  pendingTag: { backgroundColor: theme.dangerBg, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   pendingTagText: { fontSize: 10, fontWeight: '700', color: theme.danger },
 
   // Main Tabs
@@ -1434,12 +1436,12 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   },
   reconCardDark: {
     width: width * 0.6, borderRadius: 16, padding: 16,
-    backgroundColor: isDarkMode ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.1)', borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)',
+    backgroundColor: theme.successBg, borderWidth: 1, borderColor: theme.success,
   },
   reconLabel: { fontSize: 10, fontWeight: '800', color: theme.subtext, letterSpacing: 0.5, textTransform: 'uppercase' },
   reconValue: { fontSize: 22, fontWeight: '800', color: theme.text, marginTop: 6 },
   reconMeta: { fontSize: 11, color: theme.subtext, marginTop: 8 },
-  gstBadge: { backgroundColor: isDarkMode ? 'rgba(79,70,229,0.15)' : theme.iconBackground, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 },
+  gstBadge: { backgroundColor: theme.primaryBg, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 },
   gstBadgeText: { fontSize: 8, fontWeight: '800', color: theme.primary },
 
   // Payout Header
@@ -1468,8 +1470,8 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   reconStatusRow: { marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: theme.border },
   reconStatusBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: isDarkMode ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.1)', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
-    borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)', alignSelf: 'flex-start',
+    backgroundColor: theme.successBg, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
+    borderWidth: 1, borderColor: theme.success, alignSelf: 'flex-start',
   },
   reconStatusText: { fontSize: 11, fontWeight: '700', color: theme.success },
 
@@ -1480,7 +1482,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
 
   // Refund Modal
   modalOverlay: {
-    flex: 1, backgroundColor: isDarkMode ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 16,
+    flex: 1, backgroundColor: theme.overlay, justifyContent: 'center', alignItems: 'center', padding: 16,
   },
   refundModal: {
     backgroundColor: theme.surface, borderRadius: 20, width: '100%', maxHeight: '90%',
@@ -1488,8 +1490,8 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   },
   refundHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: 16, borderBottomWidth: 1, borderBottomColor: isDarkMode ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.1)',
-    backgroundColor: isDarkMode ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.05)', borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 16, borderBottomWidth: 1, borderBottomColor: theme.danger,
+    backgroundColor: theme.dangerBg, borderTopLeftRadius: 20, borderTopRightRadius: 20,
   },
   refundIcon: {
     width: 40, height: 40, borderRadius: 20, backgroundColor: theme.danger,
@@ -1497,12 +1499,12 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   },
   refundTitle: { fontSize: 16, fontWeight: '800', color: theme.text },
   refundTxId: { fontSize: 11, color: theme.subtext, marginTop: 2, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
-  adminBadge: { backgroundColor: isDarkMode ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  adminBadge: { backgroundColor: theme.warningBg, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   adminBadgeText: { fontSize: 8, fontWeight: '800', color: theme.warning },
 
   policyWarning: {
     flexDirection: 'row', gap: 10, margin: 16, padding: 14,
-    backgroundColor: isDarkMode ? 'rgba(245,158,11,0.1)' : 'rgba(245,158,11,0.05)', borderWidth: 1, borderColor: isDarkMode ? 'rgba(245,158,11,0.3)' : theme.warning, borderRadius: 12,
+    backgroundColor: theme.warningBg, borderWidth: 1, borderColor: theme.warning, borderRadius: 12,
   },
   policyTitle: { fontSize: 12, fontWeight: '800', color: theme.warning, marginBottom: 4 },
   policyDesc: { fontSize: 11, color: theme.warning, lineHeight: 16 },
@@ -1525,7 +1527,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   },
   reasonText: { fontSize: 13, color: theme.text, flex: 1 },
 
-  confirmSection: { margin: 16, padding: 14, backgroundColor: isDarkMode ? 'rgba(245,158,11,0.1)' : 'rgba(245,158,11,0.05)', borderRadius: 12, borderWidth: 1, borderColor: isDarkMode ? 'rgba(245,158,11,0.3)' : theme.warning },
+  confirmSection: { margin: 16, padding: 14, backgroundColor: theme.warningBg, borderRadius: 12, borderWidth: 1, borderColor: theme.warning },
   checkboxRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 16 },
   checkbox: {
     width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: theme.border,

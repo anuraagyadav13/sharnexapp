@@ -18,6 +18,7 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { StudentHeader } from '../../components/StudentHeader';
 import { useAuth } from '../../store/AuthContext';
 import studentService from '../../services/studentService';
@@ -78,7 +79,7 @@ function generateMarksheetHTML(
           : 0;
       const isFailed = s.is_failed || sGrade === 'F';
       const isAbsent = s.is_absent;
-      const gradeColor = isFailed ? '#dc2626' : '#16a34a';
+      const gradeColor = isFailed ? LIGHT_COLORS.danger : LIGHT_COLORS.success;
 
       return `
       <tr>
@@ -90,7 +91,7 @@ function generateMarksheetHTML(
       }</td>
         <td style="text-align:center;">${sPct}%</td>
         <td style="text-align:center;font-weight:700;color:${
-          isFailed ? '#dc2626' : '#16a34a'
+          isFailed ? LIGHT_COLORS.danger : LIGHT_COLORS.success
         };">${isFailed ? 'FAILED' : 'PASSED'}</td>
       </tr>
     `;
@@ -103,29 +104,29 @@ function generateMarksheetHTML(
 <meta charset="utf-8"/>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;color:#1a202c;padding:32px;background:#fff;}
-  .letterhead{display:flex;align-items:center;gap:16px;padding-bottom:16px;border-bottom:2px solid #1a202c;}
-  .logo-box{width:54px;height:54px;background:#4F46E5;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:900;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;color:${LIGHT_COLORS.text};padding:32px;background:${LIGHT_COLORS.surface};}
+  .letterhead{display:flex;align-items:center;gap:16px;padding-bottom:16px;border-bottom:2px solid ${LIGHT_COLORS.text};}
+  .logo-box{width:54px;height:54px;background:${LIGHT_COLORS.primary};border-radius:50%;display:flex;align-items:center;justify-content:center;color:${LIGHT_COLORS.onPrimary};font-size:24px;font-weight:900;}
   .inst-center{flex:1;text-align:center;}
-  .inst-name{font-size:22px;font-weight:900;letter-spacing:0.02em;color:#1e1b4b;}
-  .inst-title{font-size:12px;color:#64748b;margin-top:4px;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;}
-  .student-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;margin:20px 0;}
-  .grid-cell{padding:10px 14px;border-bottom:1px solid #e2e8f0;}
-  .grid-cell:nth-child(odd){border-right:1px solid #e2e8f0;}
-  .cell-label{font-size:9px;color:#718096;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;}
-  .cell-value{font-size:13px;font-weight:700;margin-top:2px;color:#0f172a;}
+  .inst-name{font-size:22px;font-weight:900;letter-spacing:0.02em;color:${LIGHT_COLORS.text};}
+  .inst-title{font-size:12px;color:${LIGHT_COLORS.subtext};margin-top:4px;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;}
+  .student-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid ${LIGHT_COLORS.border};border-radius:6px;overflow:hidden;margin:20px 0;}
+  .grid-cell{padding:10px 14px;border-bottom:1px solid ${LIGHT_COLORS.border};}
+  .grid-cell:nth-child(odd){border-right:1px solid ${LIGHT_COLORS.border};}
+  .cell-label{font-size:9px;color:${LIGHT_COLORS.subtext};text-transform:uppercase;letter-spacing:0.08em;font-weight:700;}
+  .cell-value{font-size:13px;font-weight:700;margin-top:2px;color:${LIGHT_COLORS.text};}
   table{width:100%;border-collapse:collapse;margin:20px 0;font-size:11px;}
-  th,td{border:1px solid #cbd5e0;padding:8px 10px;vertical-align:middle;}
-  th{background:#f8fafc;font-weight:700;font-size:10px;color:#475569;}
-  .summary-card{display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border:1px solid #e2e8f0;padding:14px 20px;border-radius:8px;margin:20px 0;}
+  th,td{border:1px solid ${LIGHT_COLORS.border};padding:8px 10px;vertical-align:middle;}
+  th{background:${LIGHT_COLORS.background};font-weight:700;font-size:10px;color:${LIGHT_COLORS.text};}
+  .summary-card{display:flex;justify-content:space-between;align-items:center;background:${LIGHT_COLORS.background};border:1px solid ${LIGHT_COLORS.border};padding:14px 20px;border-radius:8px;margin:20px 0;}
   .summary-item{text-align:center;}
-  .summary-label{font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;}
-  .summary-val{font-size:18px;font-weight:900;color:#0f172a;margin-top:2px;}
+  .summary-label{font-size:10px;color:${LIGHT_COLORS.subtext};font-weight:700;text-transform:uppercase;}
+  .summary-val{font-size:18px;font-weight:900;color:${LIGHT_COLORS.text};margin-top:2px;}
   .signatures{display:flex;justify-content:space-around;margin-top:50px;margin-bottom:24px;}
   .sign-item{text-align:center;width:150px;}
-  .sign-line{border-bottom:1px solid #1a202c;margin-bottom:6px;}
-  .sign-label{font-size:9px;color:#718096;text-transform:uppercase;letter-spacing:0.08em;}
-  .footer{text-align:center;border-top:1px solid #e2e8f0;padding-top:14px;font-size:10px;color:#94a3b8;}
+  .sign-line{border-bottom:1px solid ${LIGHT_COLORS.text};margin-bottom:6px;}
+  .sign-label{font-size:9px;color:${LIGHT_COLORS.subtext};text-transform:uppercase;letter-spacing:0.08em;}
+  .footer{text-align:center;border-top:1px solid ${LIGHT_COLORS.border};padding-top:14px;font-size:10px;color:${LIGHT_COLORS.subtext};}
 </style>
 </head>
 <body>
@@ -144,7 +145,7 @@ function generateMarksheetHTML(
     <div class="grid-cell"><div class="cell-label">Academic Year / Term</div><div class="cell-value">${academicYear}</div></div>
     <div class="grid-cell" style="border-bottom:none;"><div class="cell-label">Examination</div><div class="cell-value">${examName} (${examType})</div></div>
     <div class="grid-cell" style="border-bottom:none;"><div class="cell-label">Result Status</div><div class="cell-value" style="color:${
-      outcome === 'PASS' ? '#16a34a' : '#dc2626'
+      outcome === 'PASS' ? LIGHT_COLORS.success : LIGHT_COLORS.danger
     }">${outcome}</div></div>
   </div>
 
@@ -168,7 +169,7 @@ function generateMarksheetHTML(
     <div class="summary-item"><div class="summary-label">Total Percentage</div><div class="summary-val">${percentage}%</div></div>
     <div class="summary-item"><div class="summary-label">Overall Grade</div><div class="summary-val">${grade}</div></div>
     <div class="summary-item"><div class="summary-label">Final Outcome</div><div class="summary-val" style="color:${
-      outcome === 'PASS' ? '#16a34a' : '#dc2626'
+      outcome === 'PASS' ? LIGHT_COLORS.success : LIGHT_COLORS.danger
     }">${outcome}</div></div>
   </div>
 

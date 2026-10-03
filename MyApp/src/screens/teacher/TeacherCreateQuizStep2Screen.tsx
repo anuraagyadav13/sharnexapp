@@ -16,6 +16,7 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { TeacherHeader } from '../../components/TeacherHeader';
 let DocumentPicker: any = null;
 let DocumentPickerTypes: any = null;
@@ -446,7 +447,7 @@ const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation, route }) =>
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.background} />
 
       {/* Standardized Global Header */}
       <TeacherHeader
@@ -469,7 +470,7 @@ const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation, route }) =>
             }} 
             activeOpacity={0.8}
          >
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={20} color={theme.onPrimary} />
          </TouchableOpacity>
          <Text style={styles.blueTitle}>{quizData?.id ? 'Edit Quiz' : 'Create New Quiz'}</Text>
          <Text style={styles.blueSubtitle}>Design and configure your Quiz</Text>
@@ -543,7 +544,7 @@ const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation, route }) =>
                       numberOfLines={10}
                       textAlignVertical="top"
                       placeholder={'[\n  {\n    "question": "What is 2 + 2?",\n    "options": ["3", "4", "5", "6"],\n    "answer": "4"\n  }\n]'}
-                      placeholderTextColor="#9CA3AF"
+                      placeholderTextColor={theme.subtext}
                       value={jsonText}
                       onChangeText={setJsonText}
                    />
@@ -575,7 +576,7 @@ const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation, route }) =>
                 <View style={styles.importInfoBar}>
                   <Text style={styles.importLimitText}>Max 50 questions per import</Text>
                   <TouchableOpacity 
-                    style={[styles.importBtn, { backgroundColor: '#C084FC' }]}
+                    style={[styles.importBtn, { backgroundColor: theme.primary }]}
                     onPress={handleImportJSON}
                     disabled={isImporting}
                   >
@@ -586,7 +587,7 @@ const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation, route }) =>
                 </View>
 
                 <View style={styles.tipBox}>
-                   <Ionicons name="information-circle-outline" size={16} color="#B45309" style={{ marginRight: 8 }} />
+                   <Ionicons name="information-circle-outline" size={16} color={theme.warning} style={{ marginRight: 8 }} />
                    <View style={{ flex: 1 }}>
                      <Text style={styles.tipText}>
                        <Text style={{ fontWeight: 'bold' }}>JSON Format Note:</Text> Use the structure below for successful import:
@@ -636,7 +637,7 @@ const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation, route }) =>
                 <View style={styles.importInfoBar}>
                   <Text style={styles.importLimitText}>Max 50 rows per upload</Text>
                   <TouchableOpacity 
-                    style={[styles.importBtn, { backgroundColor: '#C084FC' }]}
+                    style={[styles.importBtn, { backgroundColor: theme.primary }]}
                     onPress={handleImportExcel}
                     disabled={isImporting}
                   >
@@ -678,7 +679,7 @@ const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation, route }) =>
                         style={styles.qActionBtn} 
                         onPress={() => navigation.navigate('TeacherAddQuestion', { quizData, editQuestion: q, editIndex: qIndex } as any)}
                       >
-                        <Ionicons name="create-outline" size={16} color="#4F46E5" />
+                        <Ionicons name="create-outline" size={16} color={theme.primary} />
                       </TouchableOpacity>
                       <TouchableOpacity 
                         style={[styles.qActionBtn, { marginLeft: 8 }]} 
@@ -689,7 +690,7 @@ const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation, route }) =>
                           ]);
                         }}
                       >
-                        <Ionicons name="trash-outline" size={16} color="#F43F5E" />
+                        <Ionicons name="trash-outline" size={16} color={theme.danger} />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -718,7 +719,7 @@ const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation, route }) =>
 
             {questions.length === 0 && (
               <View style={styles.emptyContainer}>
-                <Ionicons name="documents-outline" size={48} color="#D1D5DB" />
+                <Ionicons name="documents-outline" size={48} color={theme.border} />
                 <Text style={styles.emptyText}>No questions added yet</Text>
                 <Text style={styles.emptySubtext}>Click the button above to add your first question</Text>
               </View>
@@ -742,12 +743,12 @@ const TeacherCreateQuizStep2Screen: React.FC<Props> = ({ navigation, route }) =>
               });
             }}
          >
-            <Ionicons name="arrow-back" size={16} color="#111827" style={{marginRight: 6}} />
+            <Ionicons name="arrow-back" size={16} color={theme.text} style={{marginRight: 6}} />
             <Text style={styles.cancelBtnText}>Previous</Text>
          </TouchableOpacity>
          <TouchableOpacity style={styles.nextBtn} activeOpacity={0.8} onPress={handleNext}>
             <Text style={styles.nextBtnText}>Next Step</Text>
-            <Ionicons name="arrow-forward" size={16} color="#FFFFFF" style={{marginLeft: 6}} />
+            <Ionicons name="arrow-forward" size={16} color={theme.onPrimary} style={{marginLeft: 6}} />
          </TouchableOpacity>
       </Animated.View>
     </View>
@@ -766,7 +767,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -786,16 +787,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
   blueHeader: {
     backgroundColor: theme.primary,
@@ -809,7 +810,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.25),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -817,13 +818,13 @@ const getStyles = (theme: any) => StyleSheet.create({
   blueTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     marginBottom: 4,
   },
   blueSubtitle: {
     fontSize: 11,
     fontWeight: '400',
-    color: '#E0E7FF',
+    color: withAlpha(theme.onPrimary, 0.8),
   },
 
   stepperContainer: {
@@ -831,7 +832,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
     gap: 40,
     paddingVertical: 20,
-    backgroundColor: theme.isDarkMode ? '#33415530' : '#F8FAFC',
+    backgroundColor: withAlpha(theme.border, 0.3),
   },
   stepItem: {
     alignItems: 'center',
@@ -852,8 +853,8 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderColor: theme.primary,
   },
   stepCircleCompleted: {
-    backgroundColor: '#22C55E',
-    borderColor: '#22C55E',
+    backgroundColor: theme.success,
+    borderColor: theme.success,
   },
   stepNumber: {
     fontSize: 12,
@@ -861,7 +862,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '600',
   },
   stepNumberActive: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
   stepText: {
     fontSize: 12,
@@ -872,7 +873,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.primary,
   },
   stepTextCompleted: {
-    color: '#22C55E',
+    color: theme.success,
   },
 
   contentWrapper: {
@@ -885,7 +886,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderColor: theme.border,
     padding: 20,
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -911,7 +912,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   questionCountBox: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9',
+    backgroundColor: withAlpha(theme.border, 0.5),
     borderRadius: 6,
   },
   questionCountText: {
@@ -932,7 +933,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   segmentedControl: {
     flexDirection: 'row',
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9',
+    backgroundColor: withAlpha(theme.border, 0.5),
     borderRadius: 8,
     padding: 4,
     flex: 1,
@@ -952,10 +953,10 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '600',
   },
   segmentBtnTextActive: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
   uploadBox: {
-    backgroundColor: theme.isDarkMode ? '#33415530' : '#F8FAFC',
+    backgroundColor: withAlpha(theme.border, 0.3),
     borderRadius: 10,
     borderWidth: 1,
     borderColor: theme.border,
@@ -996,18 +997,18 @@ const getStyles = (theme: any) => StyleSheet.create({
   fileBtn: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: theme.isDarkMode ? '#4A044E30' : '#FDF4FF',
+    backgroundColor: withAlpha(theme.primary, 0.15),
     borderWidth: 1,
-    borderColor: theme.isDarkMode ? '#C026D3' : '#F0ABFC',
+    borderColor: theme.primary,
     borderRadius: 8,
   },
   fileBtnDisabled: {
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
+    backgroundColor: withAlpha(theme.border, 0.5),
     borderColor: theme.border,
   },
   fileBtnText: {
     fontSize: 12,
-    color: '#C026D3',
+    color: theme.primary,
     fontWeight: '700',
   },
   fileName: {
@@ -1017,7 +1018,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   pickerWarningText: {
     fontSize: 12,
-    color: '#DC2626',
+    color: theme.danger,
     marginTop: 8,
     marginLeft: 6,
   },
@@ -1035,7 +1036,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
   },
   importBtnText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontWeight: '700',
     fontSize: 13,
   },
@@ -1052,30 +1053,30 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '500',
   },
   tipBox: {
-    backgroundColor: theme.isDarkMode ? '#78350F30' : '#FFFBEB',
+    backgroundColor: withAlpha(theme.warning, 0.15),
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.isDarkMode ? '#D97706' : '#FEF3C7',
+    borderColor: withAlpha(theme.warning, 0.3),
     padding: 12,
     flexDirection: 'row',
   },
   tipText: {
     fontSize: 11,
-    color: theme.isDarkMode ? '#F59E0B' : '#B45309',
+    color: theme.warning,
     lineHeight: 16,
   },
   codeBlock: {
     marginTop: 8,
-    backgroundColor: theme.isDarkMode ? '#991B1B30' : '#FDF2F2',
+    backgroundColor: withAlpha(theme.danger, 0.15),
     padding: 8,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: theme.isDarkMode ? '#EF4444' : '#FEE2E2',
+    borderColor: withAlpha(theme.danger, 0.3),
   },
   codeText: {
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontSize: 10,
-    color: theme.isDarkMode ? '#EF4444' : '#991B1B',
+    color: theme.danger,
   },
   requiredRow: {
     marginBottom: 16,
@@ -1091,7 +1092,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     gap: 6,
   },
   badge: {
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9',
+    backgroundColor: withAlpha(theme.border, 0.5),
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -1102,15 +1103,15 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   warningBox: {
-    backgroundColor: theme.isDarkMode ? '#78350F30' : '#FFFBEB',
+    backgroundColor: withAlpha(theme.warning, 0.15),
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.isDarkMode ? '#D97706' : '#FEF3C7',
+    borderColor: withAlpha(theme.warning, 0.3),
     padding: 12,
   },
   warningText: {
     fontSize: 12,
-    color: theme.isDarkMode ? '#F59E0B' : '#92400E',
+    color: theme.warning,
     lineHeight: 18,
   },
   warningHighlight: {
@@ -1143,14 +1144,14 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 12,
     borderRadius: 8,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
   addBtnText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -1169,7 +1170,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   qActionBtn: {
     padding: 4,
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
+    backgroundColor: withAlpha(theme.border, 0.5),
     borderRadius: 6,
   },
   questionNumLabel: {
@@ -1199,20 +1200,20 @@ const getStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.surface,
   },
   optionRowCorrect: {
-    backgroundColor: theme.isDarkMode ? '#065F4630' : '#D1FAE5',
-    borderColor: theme.isDarkMode ? '#059669' : '#A7F3D0',
+    backgroundColor: withAlpha(theme.success, 0.15),
+    borderColor: withAlpha(theme.success, 0.4),
   },
   optionLetterCircle: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
+    backgroundColor: withAlpha(theme.border, 0.5),
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   optionLetterCircleCorrect: {
-    backgroundColor: '#10B981',
+    backgroundColor: theme.success,
   },
   optionLetter: {
     fontSize: 11,
@@ -1220,7 +1221,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.text,
   },
   optionLetterCorrect: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
   optionValue: {
     fontSize: 13,
@@ -1230,7 +1231,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   correctNote: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#10B981',
+    color: theme.success,
   },
 
   bottomBar: {
@@ -1281,7 +1282,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   nextBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
   emptyContainer: {
     alignItems: 'center',

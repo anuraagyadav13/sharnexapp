@@ -335,7 +335,7 @@ const StudyMaterialScreen: React.FC<Props> = ({ navigation }) => {
                     style={styles.downloadBtn}
                     onPress={() => handleDownloadMaterial(item)}
                   >
-                    <Ionicons name="download-outline" size={16} color={theme.white} style={{ marginRight: 6 }} />
+                    <Ionicons name="download-outline" size={16} color={theme.surfaceHigh} style={{ marginRight: 6 }} />
                     <Text style={styles.downloadBtnText}>Download</Text>
                   </ScaleButton>
                 </View>
@@ -437,7 +437,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     fontWeight: '500',
   },
   pillTextActive: {
-    color: theme.white,
+    color: theme.surfaceHigh,
     fontWeight: '700',
   },
   filterStatusRow: {
@@ -531,7 +531,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderRadius: 6,
   },
   downloadBtnText: {
-    color: theme.white,
+    color: theme.surfaceHigh,
     fontWeight: '600',
     fontSize: 13,
   },

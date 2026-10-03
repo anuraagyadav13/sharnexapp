@@ -15,6 +15,7 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { StudentHeader } from '../../components/StudentHeader';
 import studentService from '../../services/studentService';
 
@@ -145,7 +146,7 @@ const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
             scaleTo={0.9}
             onPress={() => navigation.goBack()}
           >
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={20} color={theme.onPrimary} />
           </ScaleButton>
 
           <Text style={styles.heroTitle}>{quiz?.title || 'Quiz Result'}</Text>
@@ -232,7 +233,7 @@ const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
                   <Text style={styles.questionMainText}>
                     {question.questionText || `Question ${idx + 1}`}
                   </Text>
-                  <View style={[styles.pointsBadge, { backgroundColor: isDarkMode ? '#065F4630' : '#ECFDF5' }]}>
+                  <View style={[styles.pointsBadge, { backgroundColor: withAlpha(theme.success, 0.15) }]}>
                     <Text style={[styles.pointsBadgeText, { color: theme.success }]}>
                       {question.marks || 0}/{question.maxMarks || 1} Marks
                     </Text>
@@ -251,21 +252,21 @@ const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
                     let itemBg = theme.surface;
                     let itemBorder = theme.border;
                     let itemTextColor = theme.text;
-                    let letterBg = isDarkMode ? '#334155' : '#F1F5F9';
+                    let letterBg = withAlpha(theme.border, 0.5);
                     let letterColor = theme.text;
 
                     if (isRightAnswer) {
-                      itemBg = isDarkMode ? '#065F4630' : '#ECFDF5';
+                      itemBg = withAlpha(theme.success, 0.2);
                       itemBorder = theme.success;
                       itemTextColor = theme.success;
                       letterBg = theme.success;
-                      letterColor = '#FFFFFF';
+                      letterColor = theme.onPrimary;
                     } else if (isSubmitted && !isCorrect) {
-                      itemBg = isDarkMode ? '#7F1D1D30' : '#FEF1F2';
+                      itemBg = withAlpha(theme.danger, 0.2);
                       itemBorder = theme.danger;
                       itemTextColor = theme.danger;
                       letterBg = theme.danger;
-                      letterColor = '#FFFFFF';
+                      letterColor = theme.onPrimary;
                     }
 
                     return (
@@ -289,7 +290,7 @@ const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
                 <View
                   style={[
                     styles.resultFeedbackPill,
-                    { backgroundColor: isCorrect ? (isDarkMode ? '#065F4630' : '#ECFDF5') : (isDarkMode ? '#7F1D1D30' : '#FEF1F2') },
+                    { backgroundColor: isCorrect ? withAlpha(theme.success, 0.2) : withAlpha(theme.danger, 0.2) },
                   ]}
                 >
                   <Ionicons
@@ -314,7 +315,7 @@ const QuizResultScreen: React.FC<Props> = ({ navigation, route }) => {
               scaleTo={0.96}
               onPress={() => navigation.navigate('Quizzes')}
             >
-              <Ionicons name="arrow-back" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Ionicons name="arrow-back" size={18} color={theme.onPrimary} style={{ marginRight: 8 }} />
               <Text style={styles.backBtnFullText}>Back to Quizzes</Text>
             </ScaleButton>
           </Animated.View>
@@ -341,7 +342,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.2),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -349,7 +350,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   heroTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     marginBottom: 8,
   },
   heroRow: {
@@ -359,11 +360,11 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   heroSubtitle: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.85)',
+    color: withAlpha(theme.onPrimary, 0.85),
     fontWeight: '500',
   },
   completedBadge: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -388,7 +389,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderColor: theme.border,
     alignItems: 'center',
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
@@ -411,7 +412,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 16,
     marginBottom: 16,
   },
-  performancePillText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
+  performancePillText: { color: theme.onPrimary, fontSize: 12, fontWeight: '800' },
 
   statsGridRow: {
     flexDirection: 'row',
@@ -463,7 +464,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginRight: 10,
     marginTop: 2,
   },
-  questionNumberText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
+  questionNumberText: { color: theme.onPrimary, fontSize: 11, fontWeight: '700' },
   questionMainText: { flex: 1, fontSize: 14, fontWeight: '700', color: theme.text, lineHeight: 20 },
   pointsBadge: {
     paddingHorizontal: 8,
@@ -512,7 +513,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 14,
     elevation: 3,
   },
-  backBtnFullText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+  backBtnFullText: { color: theme.onPrimary, fontSize: 15, fontWeight: '800' },
 
   loadingContainer: {
     flex: 1,
@@ -549,7 +550,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 8,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 14,
     fontWeight: '600',
   },

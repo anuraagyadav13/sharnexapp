@@ -25,6 +25,7 @@ import { RootStackParamList } from '../../types/navigation';
 import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import ThemeSelectionModal from '../../components/modals/ThemeSelectionModal';
 
 
@@ -372,9 +373,9 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           <Switch
             value={isYearly}
             onValueChange={setIsYearly}
-            trackColor={{ false: '#E5E7EB', true: '#E5E7EB' }}
-            thumbColor={isYearly ? '#FFFFFF' : '#FFFFFF'}
-            ios_backgroundColor="#E5E7EB"
+            trackColor={{ false: theme.border, true: theme.border }}
+            thumbColor={isYearly ? theme.onPrimary : theme.onPrimary}
+            ios_backgroundColor={theme.border}
             style={styles.switchStyle}
           />
           <Text style={styles.toggleLabel}>Yearly</Text>
@@ -469,14 +470,14 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
             <TextInput
               style={styles.inputField}
               placeholder="Enter your full name"
-              placeholderTextColor="#A0AEC0"
+              placeholderTextColor={theme.subtext}
             />
 
             <Text style={styles.inputLabel}>Email Address</Text>
             <TextInput
               style={styles.inputField}
               placeholder="Enter your email address"
-              placeholderTextColor="#A0AEC0"
+              placeholderTextColor={theme.subtext}
               keyboardType="email-address"
             />
 
@@ -484,14 +485,14 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
             <TextInput
               style={[styles.inputField, styles.inputFieldActive]}
               placeholder="Enter your School name"
-              placeholderTextColor="#A0AEC0"
+              placeholderTextColor={theme.subtext}
             />
 
             <Text style={styles.inputLabel}>Message</Text>
             <TextInput
               style={[styles.inputField, styles.textArea]}
               placeholder="How can we help you?"
-              placeholderTextColor="#A0AEC0"
+              placeholderTextColor={theme.subtext}
               multiline={true}
               numberOfLines={4}
               textAlignVertical="top"
@@ -681,7 +682,7 @@ const getStyles = (theme: any) =>
       shadowRadius: 12,
       elevation: 4,
     },
-    primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+    primaryButtonText: { color: theme.onPrimary, fontSize: 16, fontWeight: '600' },
     secondaryButton: {
       width: '100%',
       height: 52,
@@ -744,7 +745,7 @@ const getStyles = (theme: any) =>
       borderRadius: 24,
       padding: 32,
       alignItems: 'center',
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 0.05,
       shadowRadius: 16,
@@ -776,8 +777,8 @@ const getStyles = (theme: any) =>
       textAlign: 'center',
     },
     newBadgeCentered: {
-      backgroundColor: '#DEF7EC',
-      color: '#03543F',
+      backgroundColor: withAlpha(theme.success, 0.1),
+      color: theme.success,
       fontSize: 12,
       fontWeight: '600',
       paddingHorizontal: 16,
@@ -787,8 +788,8 @@ const getStyles = (theme: any) =>
       overflow: 'hidden',
     },
     comingSoonBadgeCentered: {
-      backgroundColor: '#FEF2F2',
-      color: '#9B1C1C',
+      backgroundColor: withAlpha(theme.danger, 0.1),
+      color: theme.danger,
       fontSize: 12,
       fontWeight: '600',
       paddingHorizontal: 16,
@@ -815,7 +816,7 @@ const getStyles = (theme: any) =>
       alignItems: 'center',
       borderWidth: 1,
       borderColor: theme.border,
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.05,
       shadowRadius: 4,
@@ -837,16 +838,16 @@ const getStyles = (theme: any) =>
       borderColor: theme.primary,
     },
     pageNumberText: { color: theme.text, fontSize: 16, fontWeight: '600' },
-    pageNumberTextActive: { color: '#FFFFFF' },
+    pageNumberTextActive: { color: theme.onPrimary },
     headerLoginButton: {
       paddingHorizontal: 16,
       paddingVertical: 8,
       borderRadius: 8,
-      backgroundColor: '#EEF2FF',
+      backgroundColor: withAlpha(theme.primary, 0.1),
       marginRight: 8,
     },
     headerLoginText: {
-      color: '#4F46E5',
+      color: theme.primary,
       fontWeight: '700',
       fontSize: 14,
     },
@@ -858,7 +859,7 @@ const getStyles = (theme: any) =>
       backgroundColor: theme.background,
     },
     pricingBadgeContainer: {
-      backgroundColor: theme.isDarkMode ? '#3B0764' : '#F3E8FF',
+      backgroundColor: withAlpha(theme.primary, 0.15),
       paddingHorizontal: 14,
       paddingVertical: 8,
       borderRadius: 20,
@@ -874,19 +875,19 @@ const getStyles = (theme: any) =>
     toggleLabel: { fontSize: 15, fontWeight: '600', color: theme.text },
     switchStyle: { transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }] },
     saveBadge: {
-      backgroundColor: '#DEF7EC',
+      backgroundColor: withAlpha(theme.success, 0.1),
       paddingHorizontal: 10,
       paddingVertical: 6,
       borderRadius: 12,
     },
-    saveBadgeText: { color: '#059669', fontSize: 12, fontWeight: '700' },
+    saveBadgeText: { color: theme.success, fontSize: 12, fontWeight: '700' },
 
     pricingCard: {
       backgroundColor: theme.surface,
       borderRadius: 24,
       padding: 32,
       width: '100%',
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 0.06,
       shadowRadius: 20,
@@ -939,7 +940,7 @@ const getStyles = (theme: any) =>
       shadowRadius: 8,
       elevation: 3,
     },
-    getStartedButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+    getStartedButtonText: { color: theme.onPrimary, fontSize: 16, fontWeight: '700' },
 
     pricingDotsContainer: {
       flexDirection: 'row',
@@ -970,7 +971,7 @@ const getStyles = (theme: any) =>
       width: '100%',
       borderWidth: 1,
       borderColor: theme.border,
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.03,
       shadowRadius: 8,
@@ -985,7 +986,7 @@ const getStyles = (theme: any) =>
     checkSquare: {
       width: 36,
       height: 36,
-      backgroundColor: theme.isDarkMode ? '#312E81' : '#EDE9FE',
+      backgroundColor: withAlpha(theme.primary, 0.15),
       borderRadius: 10,
       justifyContent: 'center',
       alignItems: 'center',
@@ -1020,8 +1021,8 @@ const getStyles = (theme: any) =>
       alignItems: 'center',
       padding: 28,
     },
-    contactHeaderText: { color: '#FFFFFF', fontSize: 20, fontWeight: '700' },
-    contactHeaderIcon: { color: '#FFFFFF', fontSize: 24 },
+    contactHeaderText: { color: theme.onPrimary, fontSize: 20, fontWeight: '700' },
+    contactHeaderIcon: { color: theme.onPrimary, fontSize: 24 },
     contactForm: {
       backgroundColor: theme.surface,
       padding: 28,
@@ -1072,7 +1073,7 @@ const getStyles = (theme: any) =>
       shadowRadius: 8,
       elevation: 3,
     },
-    sendButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+    sendButtonText: { color: theme.onPrimary, fontSize: 16, fontWeight: '700' },
 
     footer: {
       paddingHorizontal: 24,
@@ -1086,7 +1087,7 @@ const getStyles = (theme: any) =>
     modalOverlay: {
       flex: 1,
       flexDirection: 'row',
-      backgroundColor: 'rgba(0,0,0,0.5)',
+      backgroundColor: withAlpha(theme.overlay, 0.5),
     },
     modalBackground: { flex: 1 },
     drawer: {
@@ -1098,7 +1099,7 @@ const getStyles = (theme: any) =>
       width: width * 0.75,
       backgroundColor: theme.surface,
       paddingHorizontal: 28,
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: -10, height: 0 },
       shadowOpacity: 0.15,
       shadowRadius: 20,
@@ -1136,7 +1137,7 @@ const getStyles = (theme: any) =>
       shadowRadius: 12,
       elevation: 4,
     },
-    drawerLoginText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+    drawerLoginText: { color: theme.onPrimary, fontSize: 16, fontWeight: '700' },
     badgeRow: { flexDirection: 'row' },
     drawerOverlay: { zIndex: 999 },
   });

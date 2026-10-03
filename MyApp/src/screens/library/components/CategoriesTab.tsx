@@ -1,7 +1,8 @@
 import React from 'react';
+import { useTheme } from '../../../store/ThemeContext';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { Book } from '../types';
-import { LIBRARY_COLORS } from '../theme';
+
 import LibraryButton from './LibraryButton';
 
 interface CategoriesTabProps {
@@ -10,7 +11,10 @@ interface CategoriesTabProps {
   onAddPress: () => void;
 }
 
-const CategoriesTab: React.FC<CategoriesTabProps> = ({ categories, books, onAddPress }) => (
+const CategoriesTab: React.FC<CategoriesTabProps> = ({ categories, books, onAddPress }) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+  return (
   <View style={styles.wrapper}>
     <View style={styles.header}>
       <LibraryButton onPress={onAddPress} size="sm">+ Add Category</LibraryButton>
@@ -43,9 +47,10 @@ const CategoriesTab: React.FC<CategoriesTabProps> = ({ categories, books, onAddP
       }}
     />
   </View>
-);
+  );
+};
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   wrapper: {
     flex: 1,
   },
@@ -63,9 +68,9 @@ const styles = StyleSheet.create({
   },
   card: {
     flex: 1,
-    backgroundColor: LIBRARY_COLORS.surface,
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: LIBRARY_COLORS.borderLight,
+    borderColor: theme.borderLight,
     borderRadius: 12,
     padding: 16,
     minWidth: '46%',
@@ -80,32 +85,32 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   countPill: {
-    backgroundColor: LIBRARY_COLORS.blueBg,
+    backgroundColor: theme.infoBg,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 5,
   },
   countText: {
-    color: LIBRARY_COLORS.primaryLight,
+    color: theme.primaryLight,
     fontSize: 10,
     fontWeight: '700',
   },
   name: {
     fontWeight: '700',
-    color: LIBRARY_COLORS.text,
+    color: theme.text,
     fontSize: 15,
     marginBottom: 10,
   },
   barTrack: {
     height: 3,
     borderRadius: 2,
-    backgroundColor: LIBRARY_COLORS.border,
+    backgroundColor: theme.border,
     overflow: 'hidden',
   },
   barFill: {
     height: '100%',
     borderRadius: 2,
-    backgroundColor: LIBRARY_COLORS.primary,
+    backgroundColor: theme.primary,
   },
 });
 

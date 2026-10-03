@@ -314,7 +314,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     color: theme.subtext,
   },
   tabTextActive: {
-    color: theme.white,
+    color: theme.surfaceHigh,
     fontWeight: '700',
   },
   tabBadge: {
@@ -324,7 +324,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     backgroundColor: isDarkMode ? theme.iconBackground : theme.border,
   },
   tabBadgeActive: {
-    backgroundColor: theme.white,
+    backgroundColor: theme.surfaceHigh,
   },
   tabBadgeText: {
     fontSize: 10,
@@ -431,7 +431,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     bottom: 2,
     fontSize: 5,
     fontWeight: '900',
-    color: theme.white,
+    color: theme.surfaceHigh,
     backgroundColor: theme.danger,
     paddingHorizontal: 2,
     borderRadius: 2,
@@ -463,7 +463,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderRadius: 8,
   },
   retryBtnText: {
-    color: theme.white,
+    color: theme.surfaceHigh,
     fontWeight: '700',
     fontSize: 13,
   },

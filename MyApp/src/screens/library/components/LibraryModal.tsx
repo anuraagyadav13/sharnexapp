@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTheme } from '../../../store/ThemeContext';
 import {
   Modal,
   View,
@@ -10,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { LIBRARY_COLORS } from '../theme';
+
 
 interface LibraryModalProps {
   visible: boolean;
@@ -19,7 +20,10 @@ interface LibraryModalProps {
   children: React.ReactNode;
 }
 
-const LibraryModal: React.FC<LibraryModalProps> = ({ visible, title, onClose, children }) => (
+const LibraryModal: React.FC<LibraryModalProps> = ({ visible, title, onClose, children }) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+  return (
   <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
     <KeyboardAvoidingView
       style={styles.overlay}
@@ -30,7 +34,7 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ visible, title, onClose, ch
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={18} color={LIBRARY_COLORS.textMuted} />
+              <Ionicons name="close" size={18} color={theme.placeholder} />
             </TouchableOpacity>
           </View>
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -40,22 +44,23 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ visible, title, onClose, ch
       </View>
     </KeyboardAvoidingView>
   </Modal>
-);
+  );
+};
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   overlay: {
     flex: 1,
   },
   backdrop: {
     flex: 1,
-    backgroundColor: LIBRARY_COLORS.overlay,
+    backgroundColor: theme.overlay,
     justifyContent: 'center',
     padding: 20,
   },
   content: {
-    backgroundColor: LIBRARY_COLORS.card,
+    backgroundColor: theme.card,
     borderWidth: 1,
-    borderColor: LIBRARY_COLORS.border,
+    borderColor: theme.border,
     borderRadius: 16,
     padding: 24,
     maxHeight: '85%',
@@ -67,13 +72,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    color: LIBRARY_COLORS.text,
+    color: theme.text,
     fontWeight: '700',
     fontSize: 18,
     flex: 1,
   },
   closeBtn: {
-    backgroundColor: LIBRARY_COLORS.border,
+    backgroundColor: theme.border,
     width: 32,
     height: 32,
     borderRadius: 8,

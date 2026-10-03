@@ -15,7 +15,8 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
-import { BRAND } from '../../constants/theme';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+
 import { useAuth } from '../../store/AuthContext';
 import { getCacheBustedUri } from '../../utils/image';
 import principalService, {
@@ -373,7 +374,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
 
       {isLoading ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={BRAND.accentPurpleDark} />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text style={styles.loadingText}>Loading exam configuration...</Text>
         </View>
       ) : (
@@ -473,7 +474,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
                 onPress={handleAddParticipatingClass}
                 activeOpacity={0.8}
               >
-                <Ionicons name="add" size={16} color={BRAND.accentPurpleDark} />
+                <Ionicons name="add" size={16} color={theme.primary} />
                 <Text style={styles.addClassLinkText}>Add Participating Class</Text>
               </TouchableOpacity>
             </View>
@@ -493,7 +494,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
                     {/* Participating Class Header */}
                     <View style={styles.classBlockHeader}>
                       <View style={styles.classSelectGroup}>
-                        <Ionicons name="school-outline" size={20} color={BRAND.accentPurpleDark} style={{ marginRight: 8 }} />
+                        <Ionicons name="school-outline" size={20} color={theme.primary} style={{ marginRight: 8 }} />
                         <View style={{ flex: 1 }}>
                           <Text style={styles.fieldLabel}>PARTICIPATING CLASS</Text>
                           <TouchableOpacity
@@ -594,7 +595,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
                           onPress={() => handleAddSubjectToClass(cIdx)}
                           activeOpacity={0.8}
                         >
-                          <Ionicons name="add" size={14} color={BRAND.accentPurpleDark} />
+                          <Ionicons name="add" size={14} color={theme.primary} />
                           <Text style={styles.addSubjBtnText}>Add Subject to Class</Text>
                         </TouchableOpacity>
 
@@ -684,7 +685,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
                     }}
                   >
                     <Text style={styles.dropdownOptionText}>{opt}</Text>
-                    {examType === opt && <Ionicons name="checkmark" size={18} color={BRAND.accentPurpleDark} />}
+                    {examType === opt && <Ionicons name="checkmark" size={18} color={theme.primary} />}
                   </TouchableOpacity>
                 ))}
 
@@ -708,7 +709,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
                       }}
                     >
                       <Text style={styles.dropdownOptionText}>{label}</Text>
-                      {status === opt && <Ionicons name="checkmark" size={18} color={BRAND.accentPurpleDark} />}
+                      {status === opt && <Ionicons name="checkmark" size={18} color={theme.primary} />}
                     </TouchableOpacity>
                   );
                 })}
@@ -733,7 +734,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
                       <Text style={styles.dropdownOptionText}>
                         {cls.name} {cls.section ? `(${cls.section})` : ''}
                       </Text>
-                      {isSelected && <Ionicons name="checkmark" size={18} color={BRAND.accentPurpleDark} />}
+                      {isSelected && <Ionicons name="checkmark" size={18} color={theme.primary} />}
                     </TouchableOpacity>
                   );
                 })}
@@ -759,7 +760,7 @@ export const PrincipalCreateExamScreen = ({ navigation, route }: any) => {
                       <Text style={styles.dropdownOptionText}>
                         {subj.name} {subj.code ? `(${subj.code})` : '(No Code)'}
                       </Text>
-                      {isSelected && <Ionicons name="checkmark" size={18} color={BRAND.accentPurpleDark} />}
+                      {isSelected && <Ionicons name="checkmark" size={18} color={theme.primary} />}
                     </TouchableOpacity>
                   );
                 })}
@@ -927,7 +928,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     addClassLinkText: {
       fontSize: 12,
       fontWeight: '700',
-      color: BRAND.accentPurpleDark,
+      color: theme.primary,
     },
     emptyClassBox: {
       padding: 20,
@@ -966,7 +967,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     deleteBlockBtn: {
       padding: 6,
       borderRadius: 8,
-      backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
+      backgroundColor: withAlpha(theme.danger, 0.15),
     },
     subjectTableContainer: {
       backgroundColor: theme.surface,
@@ -1041,7 +1042,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     addSubjBtnText: {
       fontSize: 11,
       fontWeight: '700',
-      color: BRAND.accentPurpleDark,
+      color: theme.primary,
     },
     selectAllBtn: {
       flexDirection: 'row',
@@ -1073,7 +1074,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       color: theme.subtext,
     },
     submitButton: {
-      backgroundColor: BRAND.accentPurpleDark,
+      backgroundColor: theme.primary,
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 16,
@@ -1087,7 +1088,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(15, 23, 42, 0.5)',
+      backgroundColor: withAlpha(theme.overlay, 0.5),
       justifyContent: 'center',
       alignItems: 'center',
       padding: 20,
@@ -1116,7 +1117,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       justifyContent: 'space-between',
     },
     dropdownOptionSelected: {
-      backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.2)' : theme.iconBackground,
+      backgroundColor: withAlpha(theme.primary, 0.2),
     },
     dropdownOptionText: {
       fontSize: 13,

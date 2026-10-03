@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useTheme } from '../../../store/ThemeContext';
+import { withAlpha } from '../../../constants/theme';
 import {
   View,
   Text,
@@ -10,7 +12,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { PickerOption } from '../types';
-import { LIBRARY_COLORS } from '../theme';
+
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -29,6 +31,9 @@ const PickerField: React.FC<PickerFieldProps> = ({
   placeholder = 'Select…',
   onSelect,
 }) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+
   const [visible, setVisible] = useState(false);
   const selected = options.find(o => o.value === value);
 
@@ -39,7 +44,7 @@ const PickerField: React.FC<PickerFieldProps> = ({
         <Text style={[styles.triggerText, !selected && styles.placeholder]} numberOfLines={1}>
           {selected?.label ?? placeholder}
         </Text>
-        <Ionicons name="chevron-down" size={18} color={LIBRARY_COLORS.textMuted} />
+        <Ionicons name="chevron-down" size={18} color={theme.placeholder} />
       </TouchableOpacity>
 
       <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
@@ -48,7 +53,7 @@ const PickerField: React.FC<PickerFieldProps> = ({
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{label ?? 'Select'}</Text>
               <TouchableOpacity onPress={() => setVisible(false)} style={styles.closeBtn}>
-                <Ionicons name="close" size={22} color={LIBRARY_COLORS.textMuted} />
+                <Ionicons name="close" size={22} color={theme.placeholder} />
               </TouchableOpacity>
             </View>
             <FlatList
@@ -66,7 +71,7 @@ const PickerField: React.FC<PickerFieldProps> = ({
                     {item.label}
                   </Text>
                   {item.value === value && (
-                    <Ionicons name="checkmark" size={18} color={LIBRARY_COLORS.primary} />
+                    <Ionicons name="checkmark" size={18} color={theme.primary} />
                   )}
                 </TouchableOpacity>
               )}
@@ -79,12 +84,12 @@ const PickerField: React.FC<PickerFieldProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   wrapper: {
     marginBottom: 14,
   },
   label: {
-    color: LIBRARY_COLORS.textMuted,
+    color: theme.placeholder,
     fontSize: 11,
     fontWeight: '600',
     marginBottom: 6,
@@ -92,9 +97,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   trigger: {
-    backgroundColor: LIBRARY_COLORS.inputBg,
+    backgroundColor: theme.surfaceHigh,
     borderWidth: 1,
-    borderColor: LIBRARY_COLORS.border,
+    borderColor: theme.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
@@ -104,25 +109,25 @@ const styles = StyleSheet.create({
   },
   triggerText: {
     flex: 1,
-    color: LIBRARY_COLORS.text,
+    color: theme.text,
     fontSize: 14,
     marginRight: 8,
   },
   placeholder: {
-    color: LIBRARY_COLORS.textDim,
+    color: theme.subtext,
   },
   overlay: {
     flex: 1,
-    backgroundColor: LIBRARY_COLORS.overlay,
+    backgroundColor: theme.overlay,
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: LIBRARY_COLORS.card,
+    backgroundColor: theme.card,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: SCREEN_HEIGHT * 0.55,
     borderWidth: 1,
-    borderColor: LIBRARY_COLORS.border,
+    borderColor: theme.border,
   },
   sheetHeader: {
     flexDirection: 'row',
@@ -131,12 +136,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: LIBRARY_COLORS.borderLight,
+    borderBottomColor: theme.borderLight,
   },
   sheetTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: LIBRARY_COLORS.text,
+    color: theme.text,
   },
   closeBtn: {
     padding: 4,
@@ -151,18 +156,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: LIBRARY_COLORS.borderLight,
+    borderBottomColor: theme.borderLight,
   },
   optionActive: {
-    backgroundColor: LIBRARY_COLORS.blueBg + '55',
+    backgroundColor: withAlpha(theme.infoBg, 0.55),
   },
   optionText: {
     fontSize: 15,
-    color: LIBRARY_COLORS.textSecondary,
+    color: theme.textSecondary,
     flex: 1,
   },
   optionTextActive: {
-    color: LIBRARY_COLORS.text,
+    color: theme.text,
     fontWeight: '600',
   },
 });

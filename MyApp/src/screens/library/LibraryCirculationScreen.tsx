@@ -19,6 +19,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { useAuth } from '../../store/AuthContext';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
@@ -214,20 +215,20 @@ const LibraryCirculationScreen: React.FC<Props> = ({ navigation }) => {
           style={[
             styles.statusBadge,
             item.status === 'RETURNED'
-              ? { backgroundColor: '#ECFDF5' }
+              ? { backgroundColor: withAlpha(theme.success, 0.1) }
               : item.status === 'ISSUED'
-              ? { backgroundColor: '#EFF6FF' }
-              : { backgroundColor: '#FEF2F2' },
+              ? { backgroundColor: withAlpha(theme.info, 0.1) }
+              : { backgroundColor: withAlpha(theme.danger, 0.1) },
           ]}
         >
           <Text
             style={[
               styles.statusBadgeText,
               item.status === 'RETURNED'
-                ? { color: '#10B981' }
+                ? { color: theme.success }
                 : item.status === 'ISSUED'
-                ? { color: '#3B82F6' }
-                : { color: '#EF4444' },
+                ? { color: theme.info }
+                : { color: theme.danger },
             ]}
           >
             {item.status}
@@ -270,7 +271,7 @@ const LibraryCirculationScreen: React.FC<Props> = ({ navigation }) => {
         renderItem={renderIssueRow}
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={() => loadIssues(true)} colors={['#8B5CF6']} />
+          <RefreshControl refreshing={isRefreshing} onRefresh={() => loadIssues(true)} colors={[theme.primary]} />
         }
         ListHeaderComponent={
           <>
@@ -287,7 +288,7 @@ const LibraryCirculationScreen: React.FC<Props> = ({ navigation }) => {
                   setIsWizardOpen(true);
                 }}
               >
-                <Ionicons name="add" size={18} color="#FFFFFF" style={{ marginRight: 4 }} />
+                <Ionicons name="add" size={18} color={theme.onPrimary} style={{ marginRight: 4 }} />
                 <Text style={styles.issueBookBtnText}>Issue Book</Text>
               </TouchableOpacity>
             </View>
@@ -317,7 +318,7 @@ const LibraryCirculationScreen: React.FC<Props> = ({ navigation }) => {
         }
         ListEmptyComponent={
           isLoading ? (
-            <ActivityIndicator size="large" color="#8B5CF6" style={{ marginVertical: 40 }} />
+            <ActivityIndicator size="large" color={theme.primary} style={{ marginVertical: 40 }} />
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="swap-horizontal-outline" size={48} color={theme.subtext} />
@@ -369,7 +370,7 @@ const LibraryCirculationScreen: React.FC<Props> = ({ navigation }) => {
                   <TextInput
                     style={styles.modalSearchInput}
                     placeholder="Search classes..."
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor={theme.placeholder}
                     value={classSearch}
                     onChangeText={setClassSearch}
                   />
@@ -490,8 +491,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     },
     menuHandle: { padding: 4 },
     headerTitle: { fontSize: 16, fontWeight: '700', color: theme.primary, flex: 1, marginLeft: 8 },
-    avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#8B5CF6', justifyContent: 'center', alignItems: 'center' },
-    avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
+    avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.accent, justifyContent: 'center', alignItems: 'center' },
+    avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 14 },
     headerAvatarImage: { width: 32, height: 32, borderRadius: 16 },
     listContent: { padding: 16 },
     bannerCard: {
@@ -511,12 +512,12 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     issueBookBtn: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#8B5CF6',
+      backgroundColor: theme.primary,
       paddingVertical: 10,
       paddingHorizontal: 16,
       borderRadius: 10,
     },
-    issueBookBtnText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
+    issueBookBtnText: { fontSize: 13, fontWeight: '700', color: theme.onPrimary },
     filterBar: { marginBottom: 16 },
     searchBox: {
       flexDirection: 'row',
@@ -564,26 +565,26 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     emptyContainer: { paddingVertical: 40, alignItems: 'center' },
     emptyTitle: { fontSize: 16, fontWeight: '700', color: theme.text, marginTop: 8 },
     emptySub: { fontSize: 12, color: theme.subtext, marginTop: 4 },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+    modalOverlay: { flex: 1, backgroundColor: theme.overlay, justifyContent: 'center', alignItems: 'center', padding: 20 },
     modalCard: { backgroundColor: theme.surface, borderRadius: 16, padding: 20, width: '100%', maxWidth: 420, borderWidth: 1, borderColor: theme.border },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
     modalTitle: { fontSize: 18, fontWeight: '800', color: theme.text },
     stepperRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
     stepCol: { alignItems: 'center' },
-    stepBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: isDarkMode ? '#374151' : '#E5E7EB', justifyContent: 'center', alignItems: 'center' },
-    stepBadgeActive: { backgroundColor: '#8B5CF6' },
+    stepBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: theme.cardNested, justifyContent: 'center', alignItems: 'center' },
+    stepBadgeActive: { backgroundColor: theme.primary },
     stepBadgeText: { fontSize: 12, fontWeight: '700', color: theme.subtext },
-    stepBadgeTextActive: { color: '#FFF' },
+    stepBadgeTextActive: { color: theme.onPrimary },
     stepLabel: { fontSize: 9, fontWeight: '700', color: theme.subtext, marginTop: 4 },
-    stepLine: { flex: 1, height: 2, backgroundColor: isDarkMode ? '#374151' : '#E5E7EB', marginHorizontal: 6 },
-    stepLineActive: { backgroundColor: '#8B5CF6' },
+    stepLine: { flex: 1, height: 2, backgroundColor: theme.border, marginHorizontal: 6 },
+    stepLineActive: { backgroundColor: theme.primary },
     stepContent: { marginBottom: 16 },
     modalSearchBox: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: theme.border, borderRadius: 10, paddingHorizontal: 10, height: 38, marginBottom: 10 },
     modalSearchInput: { flex: 1, fontSize: 13, color: theme.text },
     listItemOption: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, borderBottomWidth: 1, borderBottomColor: theme.border },
-    listItemOptionActive: { backgroundColor: isDarkMode ? '#374151' : '#F3F4F6' },
+    listItemOptionActive: { backgroundColor: theme.cardNested },
     listItemText: { fontSize: 13, color: theme.text },
-    listItemTextActive: { fontWeight: '700', color: '#8B5CF6' },
+    listItemTextActive: { fontWeight: '700', color: theme.primary },
     stepSubTitle: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 10 },
     summaryBox: { backgroundColor: theme.background, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: theme.border, gap: 6 },
     summaryLine: { fontSize: 12, color: theme.subtext },
@@ -592,8 +593,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     stepIndicatorText: { fontSize: 11, fontWeight: '700', color: theme.subtext },
     backStepBtn: { paddingVertical: 6, paddingHorizontal: 12 },
     backStepBtnText: { fontSize: 13, fontWeight: '600', color: theme.subtext },
-    confirmBtn: { backgroundColor: '#8B5CF6', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 },
-    confirmBtnText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
+    confirmBtn: { backgroundColor: theme.primary, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 },
+    confirmBtnText: { fontSize: 13, fontWeight: '700', color: theme.onPrimary },
   });
 
 export default LibraryCirculationScreen;

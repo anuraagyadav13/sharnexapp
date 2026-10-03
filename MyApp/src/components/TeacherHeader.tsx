@@ -13,6 +13,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import ScaleButton from './animations/ScaleButton';
 import ThemeToggle from './common/ThemeToggle';
 import { useTheme } from '../store/ThemeContext';
+import { withAlpha } from '../constants/theme';
 import { useAuth } from '../store/AuthContext';
 import { ThemeMode } from '../constants/theme';
 import { getCacheBustedUri } from '../utils/image';
@@ -144,7 +145,7 @@ const getStyles = (theme: any) =>
       paddingTop: Platform.OS === 'ios' ? 60 : 40,
       paddingBottom: 16,
       backgroundColor: theme.surface,
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 0.08,
       shadowRadius: 10,
@@ -168,17 +169,17 @@ const getStyles = (theme: any) =>
       width: 32,
       height: 32,
       borderRadius: 16,
-      backgroundColor: '#9F7AEA',
+      backgroundColor: theme.primary,
       justifyContent: 'center',
       alignItems: 'center',
       marginLeft: 4,
-      shadowColor: '#1E293B',
+      shadowColor: theme.border,
       shadowOffset: { width: 0, height: 10 },
       shadowOpacity: 0.06,
       shadowRadius: 20,
       elevation: 6,
     },
-    avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+    avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
     headerAvatarImage: {
       width: 32,
       height: 32,
@@ -189,7 +190,7 @@ const getStyles = (theme: any) =>
     // ---- Theme Picker Modal ----
     modalBackdrop: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.45)',
+      backgroundColor: withAlpha(theme.overlay, 0.45),
       justifyContent: 'flex-start',
       alignItems: 'flex-end',
       paddingTop: Platform.OS === 'ios' ? 96 : 76,
@@ -200,7 +201,7 @@ const getStyles = (theme: any) =>
       borderRadius: 16,
       paddingHorizontal: 16,
       paddingVertical: 14,
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 0.18,
       shadowRadius: 16,
@@ -232,7 +233,7 @@ const getStyles = (theme: any) =>
       gap: 6,
     },
     segmentBtnActive: {
-      backgroundColor: '#7C3AED',
+      backgroundColor: theme.primary,
     },
     segmentLabel: {
       fontSize: 11,
@@ -240,6 +241,6 @@ const getStyles = (theme: any) =>
       color: theme.subtext,
     },
     segmentLabelActive: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
     },
   });

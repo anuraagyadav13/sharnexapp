@@ -1,4 +1,6 @@
 import React from 'react';
+import { useTheme } from '../../../store/ThemeContext';
+import { withAlpha } from '../../../constants/theme';
 import {
   View,
   Text,
@@ -10,7 +12,7 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { CirculationRecord, CirculationStatus } from '../types';
 import { fmtDate, isOverdue } from '../utils';
-import { LIBRARY_COLORS } from '../theme';
+
 import StatusBadge from './StatusBadge';
 import LibraryButton from './LibraryButton';
 import PickerField from './PickerField';
@@ -42,17 +44,20 @@ const CirculationTab: React.FC<CirculationTabProps> = ({
   onIssuePress,
   onReturn,
 }) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+
   const statusOptions = CIRCULATION_STATUS_OPTIONS.map(o => ({ label: o.label, value: o.value }));
 
   return (
     <View style={styles.container}>
       <View style={styles.toolbar}>
         <View style={styles.searchBox}>
-          <Ionicons name="search" size={16} color={LIBRARY_COLORS.textDim} style={styles.searchIcon} />
+          <Ionicons name="search" size={16} color={theme.subtext} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Filter by book or student…"
-            placeholderTextColor={LIBRARY_COLORS.textDim}
+            placeholderTextColor={theme.subtext}
             value={filter}
             onChangeText={onFilterChange}
           />
@@ -74,7 +79,7 @@ const CirculationTab: React.FC<CirculationTabProps> = ({
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="document-text-outline" size={40} color={LIBRARY_COLORS.textDim} />
+            <Ionicons name="document-text-outline" size={40} color={theme.subtext} />
             <Text style={styles.emptyText}>No records found.</Text>
           </View>
         }
@@ -120,7 +125,7 @@ const CirculationTab: React.FC<CirculationTabProps> = ({
                   </LibraryButton>
                 ) : (
                   <TouchableOpacity disabled>
-                    <Ionicons name="checkmark-circle" size={24} color={LIBRARY_COLORS.success} />
+                    <Ionicons name="checkmark-circle" size={24} color={theme.success} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -132,12 +137,12 @@ const CirculationTab: React.FC<CirculationTabProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: LIBRARY_COLORS.surface,
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: LIBRARY_COLORS.borderLight,
+    borderColor: theme.borderLight,
     borderRadius: 14,
     overflow: 'hidden',
   },
@@ -145,14 +150,14 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 10,
     borderBottomWidth: 1,
-    borderBottomColor: LIBRARY_COLORS.borderLight,
+    borderBottomColor: theme.borderLight,
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: LIBRARY_COLORS.card,
+    backgroundColor: theme.card,
     borderWidth: 1,
-    borderColor: LIBRARY_COLORS.border,
+    borderColor: theme.border,
     borderRadius: 9,
     paddingHorizontal: 12,
   },
@@ -162,7 +167,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     paddingVertical: 10,
-    color: LIBRARY_COLORS.text,
+    color: theme.text,
     fontSize: 13,
   },
   pickerWrap: {
@@ -174,10 +179,10 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   card: {
-    backgroundColor: LIBRARY_COLORS.card,
+    backgroundColor: theme.card,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: LIBRARY_COLORS.border,
+    borderColor: theme.border,
     padding: 14,
     marginBottom: 10,
   },
@@ -193,11 +198,11 @@ const styles = StyleSheet.create({
   },
   bookTitle: {
     fontWeight: '700',
-    color: LIBRARY_COLORS.text,
+    color: theme.text,
     fontSize: 15,
   },
   copyId: {
-    color: LIBRARY_COLORS.primary,
+    color: theme.primary,
     fontSize: 11,
     marginTop: 3,
   },
@@ -211,36 +216,36 @@ const styles = StyleSheet.create({
   metaLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: LIBRARY_COLORS.textDim,
+    color: theme.subtext,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
     marginBottom: 4,
   },
   metaValue: {
     fontWeight: '600',
-    color: '#E2E8F0',
+    color: theme.border,
     fontSize: 13,
   },
   metaSub: {
-    color: LIBRARY_COLORS.textDim,
+    color: theme.subtext,
     fontSize: 11,
     marginTop: 2,
   },
   dateOut: {
-    color: LIBRARY_COLORS.textMuted,
+    color: theme.placeholder,
     fontSize: 12,
   },
   dateDue: {
     fontWeight: '700',
-    color: LIBRARY_COLORS.text,
+    color: theme.text,
     fontSize: 13,
     marginTop: 2,
   },
   dateOverdue: {
-    color: LIBRARY_COLORS.danger,
+    color: theme.danger,
   },
   dateRet: {
-    color: LIBRARY_COLORS.success,
+    color: theme.success,
     fontSize: 12,
     marginTop: 2,
   },
@@ -254,7 +259,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   emptyText: {
-    color: '#4B5563',
+    color: theme.subtext,
     fontSize: 14,
   },
 });

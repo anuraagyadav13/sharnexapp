@@ -32,6 +32,7 @@ try {
 
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import apiClient, { getApiErrorMessage } from '../../services/apiClient';
 import principalService from '../../services/principalService';
 import { ENDPOINTS } from '../../constants/api';
@@ -338,7 +339,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleRow}>
                   <View
-                    style={[styles.sectionIcon, { backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.15)' : theme.iconBackground }]}
+                    style={[styles.sectionIcon, { backgroundColor: withAlpha(theme.primary, 0.15) }]}
                   >
                     <MaterialCommunityIcons
                       name="account-outline"
@@ -466,7 +467,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleRow}>
                   <View
-                    style={[styles.sectionIcon, { backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.08)' }]}
+                    style={[styles.sectionIcon, { backgroundColor: withAlpha(theme.success, 0.15) }]}
                   >
                     <MaterialCommunityIcons
                       name="bank-outline"
@@ -587,7 +588,7 @@ const PrincipalAddStaffScreen = ({ navigation }: any) => {
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleRow}>
                   <View
-                    style={[styles.sectionIcon, { backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.15)' : theme.iconBackground }]}
+                    style={[styles.sectionIcon, { backgroundColor: withAlpha(theme.primary, 0.15) }]}
                   >
                     <MaterialCommunityIcons
                       name="face-recognition"
@@ -771,7 +772,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       position: 'absolute',
       height: '100%',
       width: SCREEN_WIDTH / 3 - 16,
-      backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.2)' : theme.iconBackground,
+      backgroundColor: withAlpha(theme.primary, 0.2),
       borderRadius: 12,
       top: 4,
       left: 4,

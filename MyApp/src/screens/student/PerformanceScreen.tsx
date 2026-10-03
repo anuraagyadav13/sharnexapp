@@ -18,6 +18,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { StudentHeader } from '../../components/StudentHeader';
 import studentService from '../../services/studentService';
 import Svg, { Circle, G } from 'react-native-svg';
@@ -145,7 +146,7 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
   if (error && !performance) {
     return (
       <View style={[styles.mainContainer, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }]}>
-        <Ionicons name="alert-circle" size={64} color="#EF4444" style={{ marginBottom: 16 }} />
+        <Ionicons name="alert-circle" size={64} color={theme.danger} style={{ marginBottom: 16 }} />
         <Text style={{ fontSize: 16, fontWeight: '700', color: theme.text, textAlign: 'center' }}>Unable to Load Performance</Text>
         <Text style={{ fontSize: 13, color: theme.subtext, textAlign: 'center', marginTop: 8 }}>{error}</Text>
         <ScaleButton
@@ -153,7 +154,7 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => fetchPerformance()}
           scaleTo={0.95}
         >
-          <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
+          <Text style={{ color: theme.onPrimary, fontWeight: '600' }}>Retry</Text>
         </ScaleButton>
       </View>
     );
@@ -274,17 +275,17 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
 
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Quiz Average</Text>
-            <Text style={[styles.statValue, { color: '#9333EA' }]}>{quizAverage}%</Text>
+            <Text style={[styles.statValue, { color: theme.primary }]}>{quizAverage}%</Text>
           </View>
 
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Attendance</Text>
-            <Text style={[styles.statValue, { color: '#10B981' }]}>{attendancePercentage}%</Text>
+            <Text style={[styles.statValue, { color: theme.success }]}>{attendancePercentage}%</Text>
           </View>
 
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Quiz Completion</Text>
-            <Text style={[styles.statValue, { color: '#F97316' }]}>{quizCompletionRate}%</Text>
+            <Text style={[styles.statValue, { color: theme.warning }]}>{quizCompletionRate}%</Text>
             <Text style={styles.statSubText}>{quizzesAttempted} of {quizzesAvailable} quizzes</Text>
           </View>
         </Animated.View>
@@ -342,9 +343,9 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
                 <Ionicons 
                   name={quizDiff >= 0 ? "arrow-up" : "trending-down"} 
                   size={12} 
-                  color={quizDiff >= 0 ? "#10B981" : "#EF4444"} 
+                  color={quizDiff >= 0 ? theme.success : theme.danger} 
                 />
-                <Text style={[styles.badgeText, { color: quizDiff >= 0 ? "#10B981" : "#EF4444" }]}>
+                <Text style={[styles.badgeText, { color: quizDiff >= 0 ? theme.success : theme.danger }]}>
                   {quizDiff >= 0 ? `+${quizDiff}%` : `${quizDiff}%`} vs prev month
                 </Text>
               </View>
@@ -379,7 +380,7 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
                     cx="70"
                     cy="70"
                     r={radius}
-                    stroke={isDarkMode ? '#334155' : '#E2E8F0'}
+                    stroke={theme.border}
                     strokeWidth="12"
                     fill="none"
                   />
@@ -429,9 +430,9 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
                 <Ionicons 
                   name={attDiff >= 0 ? "arrow-up" : "trending-down"} 
                   size={12} 
-                  color={attDiff >= 0 ? "#10B981" : "#EF4444"} 
+                  color={attDiff >= 0 ? theme.success : theme.danger} 
                 />
-                <Text style={[styles.badgeText, { color: attDiff >= 0 ? "#10B981" : "#EF4444" }]}>
+                <Text style={[styles.badgeText, { color: attDiff >= 0 ? theme.success : theme.danger }]}>
                   {attDiff >= 0 ? `+${attDiff}%` : `${attDiff}%`} vs prev month
                 </Text>
               </View>
@@ -459,25 +460,25 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
           {/* 4 Stat Tiles */}
           <View style={styles.attGridContainer}>
             <View style={styles.attGridTile}>
-              <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
+              <View style={[styles.legendDot, { backgroundColor: theme.success }]} />
               <Text style={styles.attTileVal}>{presentPct}%</Text>
               <Text style={styles.attTileLbl}>Present</Text>
             </View>
 
             <View style={styles.attGridTile}>
-              <View style={[styles.legendDot, { backgroundColor: '#F59E0B' }]} />
+              <View style={[styles.legendDot, { backgroundColor: theme.warning }]} />
               <Text style={styles.attTileVal}>{latePct}%</Text>
               <Text style={styles.attTileLbl}>Late</Text>
             </View>
 
             <View style={styles.attGridTile}>
-              <View style={[styles.legendDot, { backgroundColor: '#EF4444' }]} />
+              <View style={[styles.legendDot, { backgroundColor: theme.danger }]} />
               <Text style={styles.attTileVal}>{absentPct}%</Text>
               <Text style={styles.attTileLbl}>Absent</Text>
             </View>
 
             <View style={styles.attGridTile}>
-              <View style={[styles.legendDot, { backgroundColor: '#6B7280' }]} />
+              <View style={[styles.legendDot, { backgroundColor: theme.subtext }]} />
               <Text style={styles.attTileVal}>{excusedPct}%</Text>
               <Text style={styles.attTileLbl}>Excused</Text>
             </View>
@@ -494,7 +495,7 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
                       cx="70"
                       cy="70"
                       r={radius}
-                      stroke="#10B981"
+                      stroke={theme.success}
                       strokeWidth="14"
                       fill="none"
                       strokeDasharray={`${pDash} ${circumference}`}
@@ -507,7 +508,7 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
                       cx="70"
                       cy="70"
                       r={radius}
-                      stroke="#F59E0B"
+                      stroke={theme.warning}
                       strokeWidth="14"
                       fill="none"
                       strokeDasharray={`${lDash} ${circumference}`}
@@ -520,7 +521,7 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
                       cx="70"
                       cy="70"
                       r={radius}
-                      stroke="#EF4444"
+                      stroke={theme.danger}
                       strokeWidth="14"
                       fill="none"
                       strokeDasharray={`${aDash} ${circumference}`}
@@ -533,7 +534,7 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
                       cx="70"
                       cy="70"
                       r={radius}
-                      stroke="#6B7280"
+                      stroke={theme.subtext}
                       strokeWidth="14"
                       fill="none"
                       strokeDasharray={`${eDash} ${circumference}`}
@@ -551,22 +552,22 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
             {/* Legend List */}
             <View style={styles.legendList}>
               <View style={styles.legendRow}>
-                <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
+                <View style={[styles.legendDot, { backgroundColor: theme.success }]} />
                 <Text style={styles.legendLabel}>Present:</Text>
                 <Text style={styles.legendValue}>{presentPct}%</Text>
               </View>
               <View style={styles.legendRow}>
-                <View style={[styles.legendDot, { backgroundColor: '#F59E0B' }]} />
+                <View style={[styles.legendDot, { backgroundColor: theme.warning }]} />
                 <Text style={styles.legendLabel}>Late:</Text>
                 <Text style={styles.legendValue}>{latePct}%</Text>
               </View>
               <View style={styles.legendRow}>
-                <View style={[styles.legendDot, { backgroundColor: '#EF4444' }]} />
+                <View style={[styles.legendDot, { backgroundColor: theme.danger }]} />
                 <Text style={styles.legendLabel}>Absent:</Text>
                 <Text style={styles.legendValue}>{absentPct}%</Text>
               </View>
               <View style={styles.legendRow}>
-                <View style={[styles.legendDot, { backgroundColor: '#6B7280' }]} />
+                <View style={[styles.legendDot, { backgroundColor: theme.subtext }]} />
                 <Text style={styles.legendLabel}>Excused:</Text>
                 <Text style={styles.legendValue}>{excusedPct}%</Text>
               </View>
@@ -578,7 +579,7 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
         <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.card}>
           <View style={styles.cardRowBetween}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="sparkles" size={18} color="#9333EA" />
+              <Ionicons name="sparkles" size={18} color={theme.primary} />
               <Text style={styles.cardHeader}>AI Insights</Text>
             </View>
 
@@ -588,7 +589,7 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
               disabled={insightsLoading}
             >
               {insightsLoading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <ActivityIndicator size="small" color={theme.onPrimary} />
               ) : (
                 <Text style={styles.aiBtnText}>
                   {insights ? "Refresh insights" : "Get AI insights"}
@@ -608,7 +609,7 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
           {/* Error State */}
           {insightsError && !insightsLoading && (
             <View style={styles.aiErrorBox}>
-              <Ionicons name="warning-outline" size={18} color="#EF4444" />
+              <Ionicons name="warning-outline" size={18} color={theme.danger} />
               <Text style={styles.aiErrorText}>{insightsError}</Text>
             </View>
           )}
@@ -619,7 +620,7 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
               {/* Section 1: Strengths */}
               {strengthsList.length > 0 && (
                 <View style={styles.insightSection}>
-                  <Text style={[styles.insightTitle, { color: '#10B981' }]}>🏆 Strengths</Text>
+                  <Text style={[styles.insightTitle, { color: theme.success }]}>🏆 Strengths</Text>
                   {strengthsList.map((item, idx) => (
                     <View key={idx} style={styles.bulletRow}>
                       <Text style={styles.bulletDot}>•</Text>
@@ -632,7 +633,7 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
               {/* Section 2: Improve */}
               {improveList.length > 0 && (
                 <View style={styles.insightSection}>
-                  <Text style={[styles.insightTitle, { color: '#F97316' }]}>🎯 Areas to Improve</Text>
+                  <Text style={[styles.insightTitle, { color: theme.warning }]}>🎯 Areas to Improve</Text>
                   {improveList.map((item, idx) => (
                     <View key={idx} style={styles.bulletRow}>
                       <Text style={styles.bulletDot}>•</Text>
@@ -645,7 +646,7 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
               {/* Section 3: Recommended Actions */}
               {actionsList.length > 0 && (
                 <View style={styles.insightSection}>
-                  <Text style={[styles.insightTitle, { color: '#3B82F6' }]}>💡 Recommended Actions</Text>
+                  <Text style={[styles.insightTitle, { color: theme.info }]}>💡 Recommended Actions</Text>
                   {actionsList.map((item, idx) => (
                     <View key={idx} style={styles.bulletRow}>
                       <Text style={styles.bulletDot}>•</Text>
@@ -658,7 +659,7 @@ const PerformanceScreen: React.FC<Props> = ({ navigation }) => {
               {/* Section 4: Motivation */}
               {!!motivationText && (
                 <View style={styles.insightSection}>
-                  <Text style={[styles.insightTitle, { color: '#9333EA' }]}>🚀 Motivation</Text>
+                  <Text style={[styles.insightTitle, { color: theme.primary }]}>🚀 Motivation</Text>
                   <View style={styles.motivationBox}>
                     <Text style={styles.motivationText}>"{motivationText}"</Text>
                   </View>
@@ -693,7 +694,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginHorizontal: 20,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -722,7 +723,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: theme.border,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 6,
@@ -745,7 +746,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   noAttemptText: { fontSize: 12, fontStyle: 'italic', color: theme.subtext, marginTop: 4 },
   subjectAttemptCaption: { fontSize: 11, color: theme.subtext, fontWeight: '500', marginTop: 6 },
 
-  progressBarBg: { height: 7, backgroundColor: isDarkMode ? '#334155' : '#E2E8F0', borderRadius: 4, width: '100%', overflow: 'hidden' },
+  progressBarBg: { height: 7, backgroundColor: withAlpha(theme.border, 0.5), borderRadius: 4, width: '100%', overflow: 'hidden' },
   progressBarFill: { height: '100%', borderRadius: 4 },
 
   // Chips
@@ -754,7 +755,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9',
+    backgroundColor: withAlpha(theme.border, 0.4),
     borderWidth: 1,
     borderColor: theme.border,
   },
@@ -763,12 +764,12 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderColor: theme.primary,
   },
   chipText: { fontSize: 11, fontWeight: '600', color: theme.subtext },
-  chipTextActive: { color: '#FFFFFF', fontWeight: '700' },
+  chipTextActive: { color: theme.onPrimary, fontWeight: '700' },
 
   // Badges
   badgePill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, gap: 4 },
-  badgeSuccess: { backgroundColor: '#D1FAE5' },
-  badgeDanger: { backgroundColor: '#FEE2E2' },
+  badgeSuccess: { backgroundColor: withAlpha(theme.success, 0.15) },
+  badgeDanger: { backgroundColor: withAlpha(theme.danger, 0.15) },
   badgeText: { fontSize: 10, fontWeight: '700' },
 
   // Donut Charts
@@ -780,14 +781,14 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
 
   // Month Scores Indicator List
   monthScoresRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 8 },
-  monthScoreBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC' },
+  monthScoreBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: theme.surface },
   monthScoreBadgeActive: { borderWidth: 1, borderColor: theme.primary },
   dotIndicator: { width: 6, height: 6, borderRadius: 3 },
   monthScoreLabel: { fontSize: 11, color: theme.subtext, fontWeight: '500' },
 
   // Attendance Grid & Chart Layout
   attGridContainer: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, marginVertical: 12 },
-  attGridTile: { flex: 1, backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC', borderRadius: 8, padding: 10, alignItems: 'center' },
+  attGridTile: { flex: 1, backgroundColor: theme.surface, borderRadius: 8, padding: 10, alignItems: 'center' },
   attTileVal: { fontSize: 14, fontWeight: '800', color: theme.text, marginTop: 4 },
   attTileLbl: { fontSize: 10, color: theme.subtext, fontWeight: '500' },
 
@@ -800,7 +801,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
 
   // AI Insights Styles
   aiBtn: {
-    backgroundColor: '#9333EA',
+    backgroundColor: theme.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
@@ -808,7 +809,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     justifyContent: 'center',
   },
   aiBtnText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -823,13 +824,13 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: isDarkMode ? '#311414' : '#FEE2E2',
+    backgroundColor: withAlpha(theme.danger, 0.15),
     padding: 10,
     borderRadius: 8,
   },
   aiErrorText: {
     fontSize: 12,
-    color: '#EF4444',
+    color: theme.danger,
     flex: 1,
   },
   insightsContent: {
@@ -860,9 +861,9 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     lineHeight: 18,
   },
   motivationBox: {
-    backgroundColor: isDarkMode ? '#1E1B4B' : '#F3E8FF',
+    backgroundColor: withAlpha(theme.primary, 0.15),
     borderLeftWidth: 4,
-    borderLeftColor: '#9333EA',
+    borderLeftColor: theme.primary,
     padding: 12,
     borderRadius: 8,
     marginTop: 4,

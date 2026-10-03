@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../store/ThemeContext';
+import { withAlpha } from '../constants/theme';
 import principalService, { RmsMarksAuditItem } from '../services/principalService';
 
 interface MarksAuditModalProps {
@@ -82,7 +83,7 @@ export const MarksAuditModal: React.FC<MarksAuditModalProps> = ({
               <View style={styles.header}>
                 <View style={styles.headerTitleRow}>
                   <View style={styles.clockIconBox}>
-                    <Ionicons name="time-outline" size={20} color="#7C3AED" />
+                    <Ionicons name="time-outline" size={20} color={theme.primary} />
                   </View>
                   <View style={styles.titleTextCol}>
                     <Text style={styles.modalTitle}>Marks Audit History</Text>
@@ -103,12 +104,12 @@ export const MarksAuditModal: React.FC<MarksAuditModalProps> = ({
               <View style={styles.body}>
                 {isLoading ? (
                   <View style={styles.centerContainer}>
-                    <ActivityIndicator size="small" color="#7C3AED" />
+                    <ActivityIndicator size="small" color={theme.primary} />
                     <Text style={styles.loadingText}>Loading history records...</Text>
                   </View>
                 ) : error ? (
                   <View style={styles.errorBox}>
-                    <Ionicons name="alert-circle" size={20} color="#EF4444" />
+                    <Ionicons name="alert-circle" size={20} color={theme.danger} />
                     <Text style={styles.errorText}>{error}</Text>
                   </View>
                 ) : history.length === 0 ? (
@@ -137,7 +138,7 @@ export const MarksAuditModal: React.FC<MarksAuditModalProps> = ({
                             <Text style={styles.oldMarksLabel}>
                               Old Marks: <Text style={styles.marksVal}>{item.old_marks ?? 'N/A'}</Text>
                             </Text>
-                            <Ionicons name="arrow-forward" size={14} color="#7C3AED" style={{ marginHorizontal: 6 }} />
+                            <Ionicons name="arrow-forward" size={14} color={theme.primary} style={{ marginHorizontal: 6 }} />
                             <Text style={styles.newMarksLabel}>
                               New Marks: <Text style={styles.newMarksVal}>{item.new_marks ?? 'N/A'}</Text>
                             </Text>
@@ -179,7 +180,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
   StyleSheet.create({
     overlay: {
       flex: 1,
-      backgroundColor: 'rgba(15, 23, 42, 0.6)',
+      backgroundColor: withAlpha(theme.overlay, 0.6),
       justifyContent: 'center',
       alignItems: 'center',
       padding: 16,
@@ -188,11 +189,11 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: '100%',
       maxWidth: 520,
       maxHeight: '80%',
-      backgroundColor: isDarkMode ? '#0F172A' : '#FFFFFF',
+      backgroundColor: theme.surface,
       borderRadius: 16,
-      borderColor: isDarkMode ? '#1E293B' : '#E2E8F0',
+      borderColor: theme.border,
       borderWidth: 1,
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 10 },
       shadowOpacity: 0.25,
       shadowRadius: 15,
@@ -203,11 +204,11 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       paddingHorizontal: 20,
       paddingVertical: 16,
       borderBottomWidth: 1,
-      borderBottomColor: isDarkMode ? '#1E293B' : '#F1F5F9',
+      borderBottomColor: theme.border,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.4)' : '#FAF9FF',
+      backgroundColor: withAlpha(theme.primary, 0.05),
     },
     headerTitleRow: {
       flexDirection: 'row',
@@ -218,7 +219,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 36,
       height: 36,
       borderRadius: 10,
-      backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.15)' : '#F3E8FF',
+      backgroundColor: withAlpha(theme.primary, 0.15),
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -228,11 +229,11 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     modalTitle: {
       fontSize: 16,
       fontWeight: '700',
-      color: isDarkMode ? '#F8FAFC' : '#0F172A',
+      color: theme.text,
     },
     recordIdSubtext: {
       fontSize: 11,
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
       marginTop: 1,
     },
     closeIconButton: {
@@ -252,14 +253,14 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     loadingText: {
       marginTop: 10,
       fontSize: 13,
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
     },
     errorBox: {
       padding: 14,
       borderRadius: 12,
-      backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.15)' : '#FEF2F2',
+      backgroundColor: withAlpha(theme.danger, 0.15),
       borderWidth: 1,
-      borderColor: isDarkMode ? '#991B1B' : '#FCA5A5',
+      borderColor: withAlpha(theme.danger, 0.4),
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
@@ -267,7 +268,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     errorText: {
       fontSize: 13,
       fontWeight: '500',
-      color: '#EF4444',
+      color: theme.danger,
       flex: 1,
     },
     emptyContainer: {
@@ -277,7 +278,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     },
     emptyText: {
       fontSize: 14,
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
       textAlign: 'center',
     },
     scrollList: {
@@ -298,9 +299,9 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 10,
       height: 10,
       borderRadius: 5,
-      backgroundColor: '#7C3AED',
+      backgroundColor: theme.primary,
       borderWidth: 2,
-      borderColor: isDarkMode ? '#0F172A' : '#FFFFFF',
+      borderColor: theme.surface,
       zIndex: 2,
     },
     timelineLine: {
@@ -309,15 +310,15 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       top: 16,
       bottom: -20,
       width: 2,
-      backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.3)' : '#DDD6FE',
+      backgroundColor: withAlpha(theme.primary, 0.3),
       zIndex: 1,
     },
     historyCard: {
-      backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.6)' : '#F8FAFC',
+      backgroundColor: theme.background,
       borderRadius: 12,
       padding: 12,
       borderWidth: 1,
-      borderColor: isDarkMode ? '#1E293B' : '#E2E8F0',
+      borderColor: theme.border,
     },
     historyHeader: {
       flexDirection: 'row',
@@ -328,11 +329,11 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     changedByText: {
       fontSize: 12,
       fontWeight: '700',
-      color: isDarkMode ? '#F8FAFC' : '#0F172A',
+      color: theme.text,
     },
     dateText: {
       fontSize: 10,
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
     },
     marksRow: {
       flexDirection: 'row',
@@ -341,54 +342,54 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     },
     oldMarksLabel: {
       fontSize: 13,
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
       fontWeight: '500',
     },
     marksVal: {
       fontWeight: '700',
-      color: isDarkMode ? '#F8FAFC' : '#0F172A',
+      color: theme.text,
     },
     newMarksLabel: {
       fontSize: 13,
-      color: '#7C3AED',
+      color: theme.primary,
       fontWeight: '600',
     },
     newMarksVal: {
       fontWeight: '800',
-      color: '#7C3AED',
+      color: theme.primary,
     },
     reasonBox: {
       marginTop: 8,
       padding: 8,
       borderRadius: 8,
-      backgroundColor: isDarkMode ? '#0F172A' : '#FFFFFF',
+      backgroundColor: theme.surface,
       borderWidth: 1,
-      borderColor: isDarkMode ? '#1E293B' : '#E2E8F0',
+      borderColor: theme.border,
     },
     reasonText: {
       fontSize: 11,
       fontStyle: 'italic',
-      color: theme.subtext || '#64748B',
+      color: theme.subtext,
     },
     footer: {
       paddingHorizontal: 20,
       paddingVertical: 12,
       borderTopWidth: 1,
-      borderTopColor: isDarkMode ? '#1E293B' : '#F1F5F9',
+      borderTopColor: theme.border,
       flexDirection: 'row',
       justifyContent: 'flex-end',
-      backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.4)' : '#FAF9FF',
+      backgroundColor: withAlpha(theme.primary, 0.05),
     },
     closeButton: {
       paddingHorizontal: 16,
       paddingVertical: 8,
       borderRadius: 8,
-      backgroundColor: isDarkMode ? '#334155' : '#E2E8F0',
+      backgroundColor: withAlpha(theme.primary, 0.2),
     },
     closeButtonText: {
       fontSize: 13,
       fontWeight: '600',
-      color: isDarkMode ? '#F8FAFC' : '#334155',
+      color: theme.text,
     },
   });
 

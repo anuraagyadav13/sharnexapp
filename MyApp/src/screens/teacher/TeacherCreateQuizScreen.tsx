@@ -17,6 +17,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { TeacherHeader } from '../../components/TeacherHeader';
 import teacherService from '../../services/teacherService';
 import { RootStackParamList } from '../../types/navigation';
@@ -260,7 +261,7 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.background} />
 
       {/* Global Header */}
       <TeacherHeader
@@ -272,7 +273,7 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation, route }) => {
       {/* Blue Header Section */}
       <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={20} color={theme.onPrimary} />
          </TouchableOpacity>
          <Text style={styles.blueTitle}>{route.params?.initialQuiz ? 'Edit Quiz' : 'Create New Quiz'}</Text>
          <Text style={styles.blueSubtitle}>Design and configure your Quiz</Text>
@@ -314,7 +315,7 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation, route }) => {
                 <TextInput 
                   style={styles.textInput} 
                   placeholder="e.g. Mid-term Exam" 
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={theme.subtext}
                   value={title}
                   onChangeText={setTitle}
                 />
@@ -329,10 +330,10 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation, route }) => {
                       style={[styles.textInput, styles.dropdownInput]}
                       onPress={() => setShowSubjectDropdown(!showSubjectDropdown)}
                     >
-                      <Text style={[styles.pickerValueText, !subject && {color: '#9CA3AF'}]}>
+                      <Text style={[styles.pickerValueText, !subject && {color: theme.subtext}]}>
                         {subject || 'Select a subject'}
                       </Text>
-                      <Ionicons name="caret-down" size={14} color="#6B7280" />
+                      <Ionicons name="caret-down" size={14} color={theme.subtext} />
                     </TouchableOpacity>
                     {showSubjectDropdown && (
                       <View style={styles.dropdownMenu}>
@@ -357,7 +358,7 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation, route }) => {
                   <TextInput 
                     style={styles.textInput}
                     placeholder="Enter a subject"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor={theme.subtext}
                     value={subject}
                     onChangeText={setSubject}
                   />
@@ -371,7 +372,7 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation, route }) => {
                <TextInput 
                  style={[styles.textInput, { height: 80, textAlignVertical: 'top' }]} 
                  placeholder="Provide a brief description about quiz......" 
-                 placeholderTextColor="#9CA3AF"
+                 placeholderTextColor={theme.subtext}
                  multiline
                  value={description}
                  onChangeText={setDescription}
@@ -389,7 +390,7 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation, route }) => {
                   <Text style={[styles.pickerValueText]}>
                     {startDate.toLocaleDateString()}
                   </Text>
-                  <Ionicons name="calendar-outline" size={16} color="#4F46E5" />
+                  <Ionicons name="calendar-outline" size={16} color={theme.primary} />
                 </TouchableOpacity>
               </View>
 
@@ -403,7 +404,7 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation, route }) => {
                   <Text style={[styles.pickerValueText]}>
                     {startDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                   </Text>
-                  <Ionicons name="time-outline" size={16} color="#4F46E5" />
+                  <Ionicons name="time-outline" size={16} color={theme.primary} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -419,7 +420,7 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation, route }) => {
                   <Text style={[styles.pickerValueText]}>
                     {dueDate.toLocaleDateString()}
                   </Text>
-                  <Ionicons name="calendar-outline" size={16} color="#4F46E5" />
+                  <Ionicons name="calendar-outline" size={16} color={theme.primary} />
                 </TouchableOpacity>
               </View>
 
@@ -433,7 +434,7 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation, route }) => {
                   <Text style={[styles.pickerValueText]}>
                     {dueDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                   </Text>
-                  <Ionicons name="time-outline" size={16} color="#4F46E5" />
+                  <Ionicons name="time-outline" size={16} color={theme.primary} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -450,7 +451,7 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation, route }) => {
                       onPress={() => toggleClass(cls.id)}
                     >
                       <View style={[styles.checkbox, selectedClasses.includes(cls.id) && styles.checkboxActive]}>
-                        {selectedClasses.includes(cls.id) && <Ionicons name="checkmark" size={12} color="#FFFFFF" />}
+                        {selectedClasses.includes(cls.id) && <Ionicons name="checkmark" size={12} color={theme.onPrimary} />}
                       </View>
                       <Text style={styles.checkboxLabel}>{cls.name} {cls.section}</Text>
                     </TouchableOpacity>
@@ -464,9 +465,9 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation, route }) => {
                 <Text style={styles.inputLabel}>Duration</Text>
                 <View style={[styles.textInput, styles.rowInputs]}>
                   <TextInput 
-                    style={{ flex: 1, padding: 0, fontSize: 13, color: '#1E293B' }}
+                    style={{ flex: 1, padding: 0, fontSize: 13, color: theme.text }}
                     placeholder="Enter duration in minutes" 
-                    placeholderTextColor="#9CA3AF" 
+                    placeholderTextColor={theme.subtext} 
                     keyboardType="numeric"
                     value={duration}
                     onChangeText={handleDurationChange}
@@ -522,7 +523,7 @@ const TeacherCreateQuizScreen: React.FC<Props> = ({ navigation, route }) => {
          </TouchableOpacity>
          <TouchableOpacity style={styles.nextBtn} activeOpacity={0.8} onPress={handleNext}>
             <Text style={styles.nextBtnText}>{route.params?.initialQuiz ? 'Save & Next' : 'Next Step'}</Text>
-            <Ionicons name="arrow-forward" size={16} color="#FFFFFF" style={{marginLeft: 6}} />
+            <Ionicons name="arrow-forward" size={16} color={theme.onPrimary} style={{marginLeft: 6}} />
          </TouchableOpacity>
       </Animated.View>
     </View>
@@ -541,7 +542,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -561,16 +562,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
   blueHeader: {
     backgroundColor: theme.primary,
@@ -584,7 +585,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.25),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -592,13 +593,13 @@ const getStyles = (theme: any) => StyleSheet.create({
   blueTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     marginBottom: 4,
   },
   blueSubtitle: {
     fontSize: 11,
     fontWeight: '400',
-    color: '#E0E7FF',
+    color: withAlpha(theme.onPrimary, 0.8),
   },
 
   stepperContainer: {
@@ -606,7 +607,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
     gap: 40,
     paddingVertical: 20,
-    backgroundColor: theme.isDarkMode ? '#33415530' : '#F8FAFC',
+    backgroundColor: withAlpha(theme.border, 0.3),
   },
   stepItem: {
     alignItems: 'center',
@@ -632,7 +633,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '600',
   },
   stepNumberActive: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
   stepText: {
     fontSize: 11,
@@ -648,7 +649,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 6,
     padding: 20,
     marginHorizontal: 16,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 12,
@@ -725,7 +726,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
     borderRadius: 6,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -829,7 +830,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginVertical: 2,
   },
   timeItemActive: {
-    backgroundColor: theme.isDarkMode ? '#312E8130' : '#EEF2FF',
+    backgroundColor: withAlpha(theme.primary, 0.15),
   },
   timeText: {
     fontSize: 16,
@@ -858,7 +859,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
   },
   confirmBtnText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontWeight: 'bold',
   },
   timeModalCancelBtn: {
@@ -921,11 +922,11 @@ const getStyles = (theme: any) => StyleSheet.create({
   nextBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: withAlpha(theme.overlay, 0.5),
     justifyContent: 'flex-end',
   },
   modalContent: {

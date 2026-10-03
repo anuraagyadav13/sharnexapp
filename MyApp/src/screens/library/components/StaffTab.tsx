@@ -1,9 +1,11 @@
 import React from 'react';
+import { useTheme } from '../../../store/ThemeContext';
+import { withAlpha } from '../../../constants/theme';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { StaffMember } from '../types';
 import { fmtDate } from '../utils';
-import { LIBRARY_COLORS } from '../theme';
+
 import LibraryButton from './LibraryButton';
 
 interface StaffTabProps {
@@ -12,7 +14,10 @@ interface StaffTabProps {
   onRemove: (id: string) => void;
 }
 
-const StaffTab: React.FC<StaffTabProps> = ({ staff, onAddPress, onRemove }) => (
+const StaffTab: React.FC<StaffTabProps> = ({ staff, onAddPress, onRemove }) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+  return (
   <View style={styles.wrapper}>
     <View style={styles.header}>
       <LibraryButton onPress={onAddPress} size="sm">+ Add Staff</LibraryButton>
@@ -36,15 +41,15 @@ const StaffTab: React.FC<StaffTabProps> = ({ staff, onAddPress, onRemove }) => (
 
           <View style={styles.contactList}>
             <View style={styles.contactRow}>
-              <Ionicons name="mail-outline" size={14} color={LIBRARY_COLORS.textMuted} />
+              <Ionicons name="mail-outline" size={14} color={theme.placeholder} />
               <Text style={styles.contactText}>{item.email}</Text>
             </View>
             <View style={styles.contactRow}>
-              <Ionicons name="call-outline" size={14} color={LIBRARY_COLORS.textMuted} />
+              <Ionicons name="call-outline" size={14} color={theme.placeholder} />
               <Text style={styles.contactText}>{item.phone || '—'}</Text>
             </View>
             <View style={styles.contactRow}>
-              <Ionicons name="calendar-outline" size={14} color={LIBRARY_COLORS.textMuted} />
+              <Ionicons name="calendar-outline" size={14} color={theme.placeholder} />
               <Text style={styles.contactText}>Since {fmtDate(item.since)}</Text>
             </View>
           </View>
@@ -58,9 +63,10 @@ const StaffTab: React.FC<StaffTabProps> = ({ staff, onAddPress, onRemove }) => (
       )}
     />
   </View>
-);
+  );
+};
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   wrapper: {
     flex: 1,
   },
@@ -74,9 +80,9 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   card: {
-    backgroundColor: LIBRARY_COLORS.surface,
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: LIBRARY_COLORS.borderLight,
+    borderColor: theme.borderLight,
     borderRadius: 14,
     padding: 20,
     marginBottom: 14,
@@ -91,25 +97,25 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: LIBRARY_COLORS.primary,
+    backgroundColor: theme.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
   profileInfo: {
     flex: 1,
   },
   name: {
     fontWeight: '700',
-    color: LIBRARY_COLORS.text,
+    color: theme.text,
     fontSize: 16,
   },
   role: {
-    color: LIBRARY_COLORS.textDim,
+    color: theme.subtext,
     fontSize: 13,
     marginTop: 2,
   },
@@ -122,7 +128,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   contactText: {
-    color: LIBRARY_COLORS.textMuted,
+    color: theme.placeholder,
     fontSize: 13,
     flex: 1,
   },

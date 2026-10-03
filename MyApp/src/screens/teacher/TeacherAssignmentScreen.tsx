@@ -25,6 +25,7 @@ import { useAuth } from '../../store/AuthContext';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha } from '../../constants/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherAssignment'>;
 
@@ -98,9 +99,9 @@ const TeacherAssignmentScreen: React.FC<Props> = ({ navigation }) => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return '#10B981';
-      case 'pending': return '#EF4444';
-      default: return '#4F46E5';
+      case 'completed': return theme.success;
+      case 'pending': return theme.danger;
+      default: return theme.primary;
     }
   };
 
@@ -131,7 +132,7 @@ const TeacherAssignmentScreen: React.FC<Props> = ({ navigation }) => {
                style={[styles.addBtn, { backgroundColor: theme.primary }]} 
                onPress={() => navigation.navigate('TeacherCreateAssignment')}
              >
-               <Ionicons name="add" size={20} color="#FFF" />
+               <Ionicons name="add" size={20} color={theme.onPrimary} />
                <Text style={styles.addBtnText}>Create New</Text>
              </TouchableOpacity>
           </View>
@@ -142,7 +143,7 @@ const TeacherAssignmentScreen: React.FC<Props> = ({ navigation }) => {
             <TextInput
               style={[styles.searchInput, { color: theme.text }]}
               placeholder="Search by title, subject or class..."
-              placeholderTextColor={theme.subtext + '80'}
+              placeholderTextColor={withAlpha(theme.subtext, 0.8)}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
@@ -163,7 +164,7 @@ const TeacherAssignmentScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           ) : filteredAssignments.length === 0 ? (
             <Animated.View entering={ZoomIn.duration(400)} style={styles.emptyContainer}>
-               <View style={[styles.emptyIconCircle, { backgroundColor: theme.primary + '10' }]}>
+               <View style={[styles.emptyIconCircle, { backgroundColor: withAlpha(theme.primary, 0.1) }]}>
                   <MaterialCommunityIcons name="clipboard-text-outline" size={60} color={theme.primary} />
                </View>
                <Text style={[styles.emptyTitle, { color: theme.text }]}>No assignments found</Text>
@@ -185,7 +186,7 @@ const TeacherAssignmentScreen: React.FC<Props> = ({ navigation }) => {
                 >
                    {/* Card Header */}
                    <View style={styles.cardHeader}>
-                      <View style={[styles.subjectTag, { backgroundColor: theme.primary + '15' }]}>
+                      <View style={[styles.subjectTag, { backgroundColor: withAlpha(theme.primary, 0.15) }]}>
                         <Text style={[styles.subjectTagText, { color: theme.primary }]}>{item.subject}</Text>
                       </View>
                       <View style={[styles.statusBadge, { backgroundColor: statusColor + '15' }]}>
@@ -233,7 +234,7 @@ const TeacherAssignmentScreen: React.FC<Props> = ({ navigation }) => {
                           maxMarks: item.maxPoints
                         })}
                       >
-                         <Ionicons name="eye-outline" size={16} color="#FFF" />
+                         <Ionicons name="eye-outline" size={16} color={theme.onPrimary} />
                          <Text style={styles.actionTextMain}>View Submissions</Text>
                       </TouchableOpacity>
                       
@@ -245,10 +246,10 @@ const TeacherAssignmentScreen: React.FC<Props> = ({ navigation }) => {
                            <Ionicons name="create-outline" size={18} color={theme.text} />
                         </TouchableOpacity>
                         <TouchableOpacity 
-                          style={[styles.iconActionBtn, { backgroundColor: '#FEE2E2' }]} 
+                          style={[styles.iconActionBtn, { backgroundColor: withAlpha(theme.danger, 0.15) }]} 
                           onPress={() => handleDelete(item.id, item.title)}
                         >
-                           <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                           <Ionicons name="trash-outline" size={18} color={theme.danger} />
                         </TouchableOpacity>
                       </View>
                    </View>
@@ -276,7 +277,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -300,20 +301,20 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 17,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#A855F7',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
     elevation: 8,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold' },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold' },
 
   topSection: { padding: 16 },
   welcomeText: { fontSize: 12, fontWeight: '600', marginBottom: 2, color: theme.subtext },
   pageTitle: { fontSize: 22, fontWeight: '900', letterSpacing: -0.5, color: theme.text },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 2, marginBottom: 12 },
   addBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: theme.primary },
-  addBtnText: { color: '#FFF', fontSize: 12, fontWeight: '800', marginLeft: 4 },
+  addBtnText: { color: theme.onPrimary, fontSize: 12, fontWeight: '800', marginLeft: 4 },
 
   searchContainer: {
     flexDirection: 'row',
@@ -331,7 +332,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   loaderContainer: { marginTop: 60, alignItems: 'center' },
   loadingText: { marginTop: 12, fontSize: 14, fontWeight: '500', color: theme.text },
 
-  card: { backgroundColor: theme.surface, borderColor: theme.border, borderRadius: 20, padding: 18, marginBottom: 16, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
+  card: { backgroundColor: theme.surface, borderColor: theme.border, borderRadius: 20, padding: 18, marginBottom: 16, borderWidth: 1, shadowColor: theme.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   subjectTag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   subjectTagText: { fontSize: 11, fontWeight: '800' },
@@ -349,17 +350,17 @@ const getStyles = (theme: any) => StyleSheet.create({
   progressHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   progressLabel: { fontSize: 12, fontWeight: '600', color: theme.subtext },
   progressValue: { fontSize: 12, fontWeight: '800', color: theme.text },
-  progressTrack: { height: 8, borderRadius: 4, width: '100%', overflow: 'hidden', backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9' },
+  progressTrack: { height: 8, borderRadius: 4, width: '100%', overflow: 'hidden', backgroundColor: withAlpha(theme.border, 0.5) },
   progressFill: { height: '100%', borderRadius: 4 },
 
   cardFooter: { flexDirection: 'row', alignItems: 'center', paddingTop: 16, borderTopWidth: 1, borderTopColor: theme.border },
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, gap: 8 },
-  actionTextMain: { color: '#FFF', fontSize: 13, fontWeight: '800' },
+  actionTextMain: { color: theme.onPrimary, fontSize: 13, fontWeight: '800' },
   footerRight: { flexDirection: 'row', alignItems: 'center', gap: 10, marginLeft: 12 },
   iconActionBtn: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
 
   emptyContainer: { marginTop: 40, alignItems: 'center', padding: 20 },
-  emptyIconCircle: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', marginBottom: 20, backgroundColor: theme.isDarkMode ? '#312E8130' : '#EEF2FF' },
+  emptyIconCircle: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', marginBottom: 20, backgroundColor: withAlpha(theme.primary, 0.15) },
   emptyTitle: { fontSize: 20, fontWeight: '800', marginBottom: 8, color: theme.text },
   emptyDesc: { fontSize: 14, textAlign: 'center', lineHeight: 22, color: theme.subtext }
 });

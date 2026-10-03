@@ -28,6 +28,7 @@ import { getCacheBustedUri } from '../../utils/image';
 import Skeleton from '../../components/common/Skeleton';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -680,7 +681,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: theme.isDarkMode ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)',
+    backgroundColor: withAlpha(theme.success, 0.15),
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
@@ -777,7 +778,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
 
   // Events
-  addEventBtn: { backgroundColor: theme.isDarkMode ? 'rgba(79, 70, 229, 0.2)' : theme.iconBackground, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+  addEventBtn: { backgroundColor: withAlpha(theme.primary, 0.2), paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
   addEventBtnText: { color: theme.primary, fontSize: 11, fontWeight: '800' },
   eventsGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, gap: 12 },
   eventCard: { width: (SCREEN_WIDTH - 52) / 2, backgroundColor: theme.surface, borderRadius: 24, padding: 16, borderWidth: 1, borderColor: theme.border, shadowColor: theme.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 3 },
@@ -790,7 +791,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   // Holidays
   holidaysWrapper: { paddingHorizontal: 20, gap: 12 },
   holidayCard: { backgroundColor: theme.surface, borderRadius: 24, padding: 15, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: theme.border, shadowColor: theme.text, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2 },
-  holidayIconBox: { width: 44, height: 44, borderRadius: 12, backgroundColor: theme.isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)', alignItems: 'center', justifyContent: 'center' },
+  holidayIconBox: { width: 44, height: 44, borderRadius: 12, backgroundColor: theme.withAlpha(theme.warning, 0.2), alignItems: 'center', justifyContent: 'center' },
   holidayMain: { flex: 1, marginLeft: 15 },
   holidayName: { fontSize: 14, fontWeight: '700', color: theme.text },
   holidayDateRange: { fontSize: 11, color: theme.subtext, marginTop: 2, fontWeight: '600' },
@@ -817,7 +818,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: theme.isDarkMode ? 'rgba(236, 72, 153, 0.2)' : 'rgba(236, 72, 153, 0.1)',
+    backgroundColor: withAlpha(theme.primary, 0.2),
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
@@ -831,7 +832,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 10,
-    backgroundColor: theme.isDarkMode ? 'rgba(99, 102, 241, 0.2)' : theme.iconBackground,
+    backgroundColor: theme.withAlpha(theme.primary, 0.2),
   },
   examClassText: { fontSize: 11, fontWeight: '800', color: theme.primary },
   emptyCardFull: {
@@ -869,7 +870,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
 
   // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalOverlay: { flex: 1, backgroundColor: withAlpha(theme.overlay, 0.5), justifyContent: 'center', alignItems: 'center', padding: 20 },
   modalContent: { backgroundColor: theme.surface, borderRadius: 28, width: '100%', maxWidth: 400, maxHeight: '80%', padding: 24, borderWidth: 1, borderColor: theme.border },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitle: { fontSize: 20, fontWeight: '800', color: theme.text },

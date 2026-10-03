@@ -23,7 +23,8 @@ import Animated, { FadeInUp, FadeInDown, SlideInRight } from 'react-native-reani
 import ScaleButton from '../../components/animations/ScaleButton';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { BRAND } from '../../constants/theme';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 
@@ -187,7 +188,7 @@ const PrincipalStaffDetailsScreen: React.FC<Props> = ({ navigation, route }) => 
                         <EliteField icon="account-outline" label="LAST NAME" value={staffData?.lastName} color={theme.primary} />
                      </View>
 
-                     <EliteField icon="email-outline" label="EMAIL ADDRESS" value={staffData?.email} color={BRAND.accentBlue} />
+                     <EliteField icon="email-outline" label="EMAIL ADDRESS" value={staffData?.email} color={theme.info} />
                      <EliteField icon="phone-outline" label="PHONE NUMBER" value={staffData?.phone} color={theme.success} />
                      
                      <View style={styles.inputRow}>
@@ -302,16 +303,16 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     // Elite Hero Header
     heroHeader: { height: 320, paddingBottom: 20 },
     headerTopActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 60 : 40 },
-    glassBackBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
-    glassCloseBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+    glassBackBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: withAlpha(theme.onPrimary, 0.15), alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: withAlpha(theme.onPrimary, 0.2) },
+    glassCloseBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: withAlpha(theme.onPrimary, 0.15), alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: withAlpha(theme.onPrimary, 0.2) },
     heroTitleText: { color: theme.onPrimary, fontSize: 18, fontWeight: '800', letterSpacing: 0.5 },
 
     heroProfileContent: { alignItems: 'center', marginTop: 0 },
-    heroAvatarCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.25)', borderWidth: 4, borderColor: theme.onPrimary, alignItems: 'center', justifyContent: 'center', shadowColor: theme.text, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 15, elevation: 10 },
+    heroAvatarCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: withAlpha(theme.onPrimary, 0.25), borderWidth: 4, borderColor: theme.onPrimary, alignItems: 'center', justifyContent: 'center', shadowColor: theme.text, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 15, elevation: 10 },
     heroAvatarText: { color: theme.onPrimary, fontSize: 42, fontWeight: '900' },
     activeStatusDot: { position: 'absolute', bottom: 5, right: 5, width: 18, height: 18, borderRadius: 9, backgroundColor: theme.success, borderWidth: 3, borderColor: theme.onPrimary },
-    heroNameText: { color: theme.onPrimary, fontSize: 24, fontWeight: '900', marginTop: 12, textShadowColor: 'rgba(0,0,0,0.1)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
-    glassDeptBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, marginTop: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
+    heroNameText: { color: theme.onPrimary, fontSize: 24, fontWeight: '900', marginTop: 12, textShadowColor: withAlpha(theme.shadow, 0.1), textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
+    glassDeptBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: withAlpha(theme.onPrimary, 0.2), paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, marginTop: 6, borderWidth: 1, borderColor: withAlpha(theme.onPrimary, 0.3) },
     glassDeptText: { color: theme.onPrimary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
 
     contentBody: { flex: 1, marginTop: -25, backgroundColor: theme.background, borderTopLeftRadius: 32, borderTopRightRadius: 32, shadowColor: theme.text, shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.05, shadowRadius: 20, elevation: 10 },

@@ -19,7 +19,8 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { BRAND } from '../../constants/theme';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+
 import apiClient from '../../services/apiClient';
 import principalService from '../../services/principalService';
 import { ENDPOINTS } from '../../constants/api';
@@ -700,7 +701,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   // Picker Modals
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: withAlpha(theme.overlay, 0.6),
     justifyContent: 'flex-end',
   },
   pickerModal: {
@@ -762,7 +763,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginBottom: 2,
   },
   teacherNameTextActive: { color: theme.primary },
-  teacherOptionActive: { borderColor: theme.primary, backgroundColor: theme.primary + '10' },
+  teacherOptionActive: { borderColor: theme.primary, backgroundColor: withAlpha(theme.primary, 0.1) },
   teacherEmailText: { fontSize: 11, color: theme.subtext, fontWeight: '500' },
   removeAssignmentBtn: {
     flexDirection: 'row',
@@ -770,9 +771,9 @@ const getStyles = (theme: any) => StyleSheet.create({
     padding: 14,
     borderRadius: 12,
     marginBottom: 12,
-    backgroundColor: theme.isDarkMode ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.08)',
+    backgroundColor: withAlpha(theme.danger, 0.15),
     borderWidth: 1,
-    borderColor: theme.isDarkMode ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)',
+    borderColor: withAlpha(theme.danger, 0.3),
     gap: 10,
   },
   removeAssignmentText: { fontSize: 14, fontWeight: '700', color: theme.danger },

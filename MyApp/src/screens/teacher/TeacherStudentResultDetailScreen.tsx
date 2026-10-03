@@ -17,7 +17,7 @@ import { TeacherHeader } from '../../components/TeacherHeader';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import teacherService from '../../services/teacherService';
 import { useTheme } from '../../store/ThemeContext';
-
+import { withAlpha } from '../../constants/theme';
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherStudentResultDetail'>;
 
 const TeacherStudentResultDetailScreen: React.FC<Props> = ({ navigation, route }) => {
@@ -68,9 +68,9 @@ const TeacherStudentResultDetailScreen: React.FC<Props> = ({ navigation, route }
     if (cell.isAbsent) {
       return (
         <View style={styles.cellContainer}>
-          <Text style={[styles.absentText, { color: theme.danger || '#EF4444' }]}>AB</Text>
-          <View style={[styles.absentBadge, { backgroundColor: (theme.danger || '#EF4444') + '15', borderColor: (theme.danger || '#EF4444') + '30' }]}>
-            <Text style={[styles.absentBadgeText, { color: theme.danger || '#EF4444' }]}>Absent</Text>
+          <Text style={[styles.absentText, { color: theme.danger }]}>AB</Text>
+          <View style={[styles.absentBadge, { backgroundColor: (theme.danger) + '15', borderColor: (theme.danger) + '30' }]}>
+            <Text style={[styles.absentBadgeText, { color: theme.danger }]}>Absent</Text>
           </View>
         </View>
       );
@@ -78,19 +78,19 @@ const TeacherStudentResultDetailScreen: React.FC<Props> = ({ navigation, route }
 
     return (
       <View style={styles.cellContainer}>
-        <Text style={[styles.marksText, { color: cell.isFailed ? (theme.danger || '#EF4444') : theme.text }]}>
+        <Text style={[styles.marksText, { color: cell.isFailed ? (theme.danger) : theme.text }]}>
           {cell.marks !== undefined ? Number(cell.marks).toFixed(2) : '0.00'}/{cell.maxMarks !== undefined ? Number(cell.maxMarks).toFixed(2) : '100.00'}
         </Text>
         <View style={[
           styles.gradeBadge,
           {
-            backgroundColor: cell.isFailed ? (theme.danger || '#EF4444') + '15' : theme.primary + '15',
-            borderColor: cell.isFailed ? (theme.danger || '#EF4444') + '30' : theme.primary + '30',
+            backgroundColor: cell.isFailed ? withAlpha((theme.danger), 0.15) : withAlpha(theme.primary, 0.15),
+            borderColor: cell.isFailed ? withAlpha((theme.danger), 0.3) : withAlpha(theme.primary, 0.3),
           }
         ]}>
           <Text style={[
             styles.gradeBadgeText,
-            { color: cell.isFailed ? (theme.danger || '#EF4444') : theme.primary }
+            { color: cell.isFailed ? (theme.danger) : theme.primary }
           ]}>
             {cell.grade || '-'}
           </Text>
@@ -140,7 +140,7 @@ const TeacherStudentResultDetailScreen: React.FC<Props> = ({ navigation, route }
               style={[styles.printTranscriptBtn, { backgroundColor: theme.primary }]}
               onPress={() => navigation.navigate('OfficialResult', { resultId: studentId })}
             >
-              <Ionicons name="print-outline" size={14} color="#FFFFFF" />
+              <Ionicons name="print-outline" size={14} color={theme.onPrimary} />
               <Text style={styles.printTranscriptText}>VIEW & PRINT TRANSCRIPT</Text>
             </TouchableOpacity>
           </View>
@@ -153,8 +153,8 @@ const TeacherStudentResultDetailScreen: React.FC<Props> = ({ navigation, route }
           </View>
         ) : error ? (
           <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={48} color={theme.danger || '#EF4444'} />
-            <Text style={[styles.errorText, { color: theme.danger || '#EF4444' }]}>{error}</Text>
+            <Ionicons name="alert-circle-outline" size={48} color={theme.danger} />
+            <Text style={[styles.errorText, { color: theme.danger }]}>{error}</Text>
             <TouchableOpacity style={[styles.retryBtn, { backgroundColor: theme.primary }]} onPress={() => fetchResults(false)}>
               <Text style={styles.retryBtnText}>Retry</Text>
             </TouchableOpacity>
@@ -171,7 +171,7 @@ const TeacherStudentResultDetailScreen: React.FC<Props> = ({ navigation, route }
             <ScrollView horizontal showsHorizontalScrollIndicator={true}>
               <View>
                 {/* Header Row */}
-                <View style={[styles.tableHeaderRow, { backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC', borderBottomColor: theme.border }]}>
+                <View style={[styles.tableHeaderRow, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
                   <Text style={[styles.headerCellSubject, { color: theme.subtext }]}>SUBJECT</Text>
                   {exams.map((exam: any) => (
                     <View key={exam.examId} style={styles.headerCellExam}>
@@ -201,7 +201,7 @@ const TeacherStudentResultDetailScreen: React.FC<Props> = ({ navigation, route }
                 ))}
 
                 {/* Total Row */}
-                <View style={[styles.tableTotalRow, { backgroundColor: theme.primary + '10', borderTopColor: theme.primary + '30' }]}>
+                <View style={[styles.tableTotalRow, { backgroundColor: withAlpha(theme.primary, 0.1), borderTopColor: withAlpha(theme.primary, 0.3) }]}>
                   <Text style={[styles.totalLabelCell, { color: theme.primary }]}>TOTAL</Text>
                   {exams.map((exam: any) => (
                     <View key={exam.examId} style={styles.totalValCell}>
@@ -254,7 +254,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 8,
   },
   printTranscriptText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.5,
@@ -266,7 +266,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   errorContainer: { alignItems: 'center', justifyContent: 'center', padding: 40 },
   errorText: { fontSize: 14, textAlign: 'center', marginTop: 12, marginBottom: 16 },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
-  retryBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 13 },
+  retryBtnText: { color: theme.onPrimary, fontWeight: '700', fontSize: 13 },
 
   emptyCard: { alignItems: 'center', justifyContent: 'center', padding: 40, borderRadius: 16, borderWidth: 1, marginTop: 20 },
   emptyText: { textAlign: 'center', marginTop: 12, fontSize: 13, lineHeight: 18 },

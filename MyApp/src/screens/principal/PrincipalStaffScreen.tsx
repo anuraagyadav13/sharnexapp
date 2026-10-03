@@ -17,6 +17,7 @@ import {
   Image,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
@@ -111,9 +112,9 @@ const StaffCard = ({ item, index, delay, onToggleStatus, onEnrollFace }: any) =>
 
       <View style={styles.badgeRow}>
         <View style={styles.badge}><Text style={styles.badgeText}>{item.department || 'General'}</Text></View>
-        <View style={[styles.statusBadge, { backgroundColor: item.isActive ? (isDarkMode ? 'rgba(79,70,229,0.2)' : 'rgba(79,70,229,0.1)') : (isDarkMode ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.1)') }]}><Text style={[styles.statusText, { color: item.isActive ? theme.primary : theme.danger }]}>{item.isActive ? 'Active' : 'Inactive'}</Text></View>
+        <View style={[styles.statusBadge, { backgroundColor: item.isActive ? (withAlpha(theme.primary, 0.2)) : (withAlpha(theme.danger, 0.2)) }]}><Text style={[styles.statusText, { color: item.isActive ? theme.primary : theme.danger }]}>{item.isActive ? 'Active' : 'Inactive'}</Text></View>
         {item.faceEnrolled && (
-          <View style={[styles.statusBadge, { backgroundColor: isDarkMode ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.1)' }]}>
+          <View style={[styles.statusBadge, { backgroundColor: withAlpha(theme.success, 0.2) }]}>
             <Text style={[styles.statusText, { color: theme.success }]}>Face ✓</Text>
           </View>
         )}
@@ -442,7 +443,7 @@ const PrincipalStaffScreen = ({ navigation }: any) => {
                 <View key={cls.id} style={styles.assignmentCard}>
                   <View style={styles.assignmentHeader}>
                     <Text style={styles.className}>{cls.className || cls.name}</Text>
-                    <View style={[styles.assignedBadge, { backgroundColor: cls.teacher ? (isDarkMode ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.1)') : (isDarkMode ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.1)') }]}>
+                    <View style={[styles.assignedBadge, { backgroundColor: cls.teacher ? (withAlpha(theme.success, 0.2)) : (withAlpha(theme.danger, 0.2)) }]}>
                       <Text style={[styles.assignedText, { color: cls.teacher ? theme.success : theme.danger }]}>
                         {cls.teacher ? 'Assigned' : 'Vacant'}
                       </Text>
@@ -584,7 +585,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   badgeRow: { flexDirection: 'row', gap: 6, marginTop: 10 },
   badge: { backgroundColor: theme.background, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 5 },
   badgeText: { fontSize: 9, fontWeight: '700', color: theme.primary },
-  statusBadge: { backgroundColor: isDarkMode ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.1)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 5 },
+  statusBadge: { backgroundColor: withAlpha(theme.success, 0.2), paddingHorizontal: 7, paddingVertical: 3, borderRadius: 5 },
   statusText: { fontSize: 9, fontWeight: '700', color: theme.success },
 
   contactFooter: { flexDirection: 'row', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: theme.border, gap: 15 },
@@ -597,13 +598,13 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   assignmentCard: { backgroundColor: theme.surface, borderRadius: 20, padding: 16, width: 200, borderWidth: 1, borderColor: theme.border },
   assignmentHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   className: { fontSize: 13, fontWeight: '800', color: theme.text },
-  assignedBadge: { backgroundColor: isDarkMode ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  assignedBadge: { backgroundColor: withAlpha(theme.success, 0.2), paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   assignedText: { fontSize: 9, fontWeight: '700', color: theme.success },
   teacherName: { fontSize: 12, fontWeight: '700', color: theme.subtext, marginBottom: 12 },
   changeBtn: { borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 10, alignItems: 'center' },
   changeBtnText: { fontSize: 11, fontWeight: '700', color: theme.primary },
 
-  assignOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  assignOverlay: { flex: 1, backgroundColor: withAlpha(theme.overlay, 0.4), justifyContent: 'center', alignItems: 'center', padding: 20 },
   assignContent: { backgroundColor: theme.surface, width: '100%', maxWidth: 400, borderRadius: 24, padding: 24, shadowColor: theme.text, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10, borderWidth: 1, borderColor: theme.border },
   assignModalTitle: { fontSize: 20, fontWeight: '800', color: theme.text, marginBottom: 20 },
   assignField: { marginBottom: 18 },
@@ -619,7 +620,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   teacherNameText: { fontSize: 14, fontWeight: '700', color: theme.text, marginBottom: 2 },
   teacherNameTextActive: { color: theme.primary },
   teacherEmailText: { fontSize: 11, color: theme.subtext, fontWeight: '500' },
-  removeAssignmentBtn: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 12, marginBottom: 12, backgroundColor: isDarkMode ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.08)', borderWidth: 1, borderColor: isDarkMode ? 'rgba(239,68,68,0.3)' : 'rgba(239,68,68,0.2)', gap: 10 },
+  removeAssignmentBtn: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 12, marginBottom: 12, backgroundColor: withAlpha(theme.danger, 0.15), borderWidth: 1, borderColor: withAlpha(theme.danger, 0.3), gap: 10 },
   removeAssignmentText: { fontSize: 14, fontWeight: '700', color: theme.danger },
   emptyTeachersBox: { padding: 30, alignItems: 'center', justifyContent: 'center' },
   emptyTeachersText: { fontSize: 14, color: theme.subtext, fontWeight: '500', fontStyle: 'italic' },

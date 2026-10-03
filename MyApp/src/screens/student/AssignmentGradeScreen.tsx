@@ -17,6 +17,7 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { StudentHeader } from '../../components/StudentHeader';
 import studentService from '../../services/studentService';
 
@@ -106,7 +107,7 @@ const AssignmentGradeScreen: React.FC<Props> = ({ navigation, route }) => {
             activeOpacity={0.7}
             scaleTo={0.9}
           >
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={20} color={theme.onPrimary} />
           </ScaleButton>
           
           <Text style={styles.heroTitle}>Assignment Grade</Text>
@@ -116,10 +117,10 @@ const AssignmentGradeScreen: React.FC<Props> = ({ navigation, route }) => {
         <View style={styles.cardsContainer}>
           
           {isLoading ? (
-            <ActivityIndicator size="large" color="#4361EE" style={{ marginTop: 40 }} />
+            <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
           ) : error ? (
-            <View style={{ padding: 20, backgroundColor: '#FEE2E2', borderRadius: 12 }}>
-              <Text style={{ color: '#DC2626', textAlign: 'center' }}>{error}</Text>
+            <View style={{ padding: 20, backgroundColor: withAlpha(theme.danger, 0.15), borderRadius: 12 }}>
+              <Text style={{ color: theme.danger, textAlign: 'center' }}>{error}</Text>
             </View>
           ) : (
             <>
@@ -127,7 +128,7 @@ const AssignmentGradeScreen: React.FC<Props> = ({ navigation, route }) => {
               <Animated.View entering={FadeInUp.delay(50).springify()} style={styles.headerInfoSection}>
                 <View style={styles.badgeContainer}>
                   <View style={styles.gradedBadge}>
-                    <Ionicons name="checkmark-circle" size={14} color="#00C48C" />
+                    <Ionicons name="checkmark-circle" size={14} color={theme.success} />
                     <Text style={styles.gradedBadgeText}>Completed & Graded</Text>
                   </View>
                 </View>
@@ -145,7 +146,7 @@ const AssignmentGradeScreen: React.FC<Props> = ({ navigation, route }) => {
               {/* Card 1: Assignment Grade */}
               <Animated.View entering={FadeInUp.delay(100).springify()} style={[styles.card, styles.gradeCard]}>
                 <View style={styles.cardRibbonHeader}>
-                  <Ionicons name="ribbon-outline" size={18} color="#00C48C" />
+                  <Ionicons name="ribbon-outline" size={18} color={theme.success} />
                   <Text style={styles.cardHeaderTitle}>Assignment Grade</Text>
                 </View>
 
@@ -221,7 +222,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 14 },
 
   scrollContent: {
     paddingBottom: 40,
@@ -239,7 +240,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)', 
+    backgroundColor: withAlpha(theme.onPrimary, 0.25), 
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -247,12 +248,12 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   heroTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     marginBottom: 4,
   },
   heroSubtitle: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: withAlpha(theme.onPrimary, 0.9),
     fontWeight: '500',
   },
 
@@ -277,13 +278,13 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#34D399', 
-    backgroundColor: isDarkMode ? '#065F4630' : '#ECFDF5', 
+    borderColor: theme.success, 
+    backgroundColor: withAlpha(theme.success, 0.15), 
   },
   gradedBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: isDarkMode ? '#34D399' : '#00C48C',
+    color: theme.success,
     marginLeft: 6,
   },
   submittedDateContainer: {
@@ -308,7 +309,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderRadius: 16, 
     paddingVertical: 24,
     paddingHorizontal: 20,
-    shadowColor: '#1E293B', 
+    shadowColor: theme.border, 
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08, 
     shadowRadius: 20,
@@ -319,7 +320,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   
   gradeCard: {
     borderTopWidth: 5,
-    borderTopColor: '#00C48C', 
+    borderTopColor: theme.success, 
     alignItems: 'center',
   },
   cardRibbonHeader: {
@@ -339,7 +340,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   gradeLetter: {
     fontSize: 64,
     fontWeight: '800',
-    color: '#00C48C',
+    color: theme.success,
     lineHeight: 74,
   },
   marksWrapper: {
@@ -375,7 +376,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     marginLeft: 10,
   },
   feedbackBox: {
-    backgroundColor: isDarkMode ? '#334155' : '#F8FAFC',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 24,
     marginBottom: 24,
@@ -409,7 +410,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   instructorAvatarText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
   instructorMeta: {
     justifyContent: 'center',

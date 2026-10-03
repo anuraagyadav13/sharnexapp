@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../../constants/theme';
 import { BusSubHeader } from '../../../components/bus/BusSubHeader';
 import { BusMapPlaceholder } from '../../../components/bus/BusMapPlaceholder';
 import { busStore, BusRouteStop } from '../../../services/busMockData';
@@ -112,7 +113,7 @@ export const RouteConfigurationScreen: React.FC<Props> = ({ navigation, route })
         {/* Panel 1: Route Form */}
         <View style={[styles.panelCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.panelTitleRow}>
-            <Ionicons name="map-outline" size={20} color="#7C3AED" style={{ marginRight: 8 }} />
+            <Ionicons name="map-outline" size={20} color={theme.primary} style={{ marginRight: 8 }} />
             <Text style={styles.panelTitle}>Route Details</Text>
           </View>
 
@@ -133,7 +134,7 @@ export const RouteConfigurationScreen: React.FC<Props> = ({ navigation, route })
               <TextInput
                 style={[
                   styles.textInput,
-                  { color: theme.text, borderColor: errors.routeName ? '#EF4444' : theme.border },
+                  { color: theme.text, borderColor: errors.routeName ? theme.danger : theme.border },
                 ]}
                 placeholder="e.g. Northern Express"
                 placeholderTextColor={theme.placeholder}
@@ -179,7 +180,7 @@ export const RouteConfigurationScreen: React.FC<Props> = ({ navigation, route })
               onChangeText={setNewStopAddress}
             />
             <TouchableOpacity style={styles.addStopBtn} activeOpacity={0.8} onPress={handleAddStop}>
-              <Ionicons name="add" size={20} color="#FFFFFF" />
+              <Ionicons name="add" size={20} color={theme.onPrimary} />
             </TouchableOpacity>
           </View>
 
@@ -192,7 +193,7 @@ export const RouteConfigurationScreen: React.FC<Props> = ({ navigation, route })
           </View>
 
           {stops.map(s => (
-            <View key={s.id} style={[styles.stopItemRow, { backgroundColor: isDarkMode ? '#120D24' : '#F8FAFC', borderColor: theme.border }]}>
+            <View key={s.id} style={[styles.stopItemRow, { backgroundColor: theme.surface, borderColor: theme.border }]}>
               <View style={styles.stopNumCircle}>
                 <Text style={styles.stopNumText}>{s.sequence}</Text>
               </View>
@@ -203,12 +204,12 @@ export const RouteConfigurationScreen: React.FC<Props> = ({ navigation, route })
 
               {/* Geofence Chip */}
               <View style={styles.geofenceChip}>
-                <Ionicons name="radio-outline" size={12} color="#7C3AED" style={{ marginRight: 4 }} />
+                <Ionicons name="radio-outline" size={12} color={theme.primary} style={{ marginRight: 4 }} />
                 <Text style={styles.geofenceChipText}>{s.geofenceRadiusMeters}m</Text>
               </View>
 
               <TouchableOpacity onPress={() => handleRemoveStop(s.id)} style={{ padding: 4, marginLeft: 6 }}>
-                <Ionicons name="close-circle-outline" size={20} color="#EF4444" />
+                <Ionicons name="close-circle-outline" size={20} color={theme.danger} />
               </TouchableOpacity>
             </View>
           ))}
@@ -217,7 +218,7 @@ export const RouteConfigurationScreen: React.FC<Props> = ({ navigation, route })
         {/* Panel 2: Interactive Map Panel */}
         <View style={[styles.panelCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.panelTitleRow}>
-            <Ionicons name="navigate-outline" size={20} color="#7C3AED" style={{ marginRight: 8 }} />
+            <Ionicons name="navigate-outline" size={20} color={theme.primary} style={{ marginRight: 8 }} />
             <Text style={styles.panelTitle}>Interactive Path Preview</Text>
           </View>
 
@@ -230,18 +231,18 @@ export const RouteConfigurationScreen: React.FC<Props> = ({ navigation, route })
           {/* Map Bottom Bar (Distance & Est Time) */}
           <View style={styles.mapMetricsBar}>
             <View style={styles.mapMetricItem}>
-              <Ionicons name="analytics-outline" size={16} color="#7C3AED" style={{ marginRight: 6 }} />
+              <Ionicons name="analytics-outline" size={16} color={theme.primary} style={{ marginRight: 6 }} />
               <Text style={styles.mapMetricText}>Distance: <Text style={{ fontWeight: '800', color: theme.text }}>14.2 km</Text></Text>
             </View>
             <View style={styles.mapMetricDivider} />
             <View style={styles.mapMetricItem}>
-              <Ionicons name="time-outline" size={16} color="#7C3AED" style={{ marginRight: 6 }} />
+              <Ionicons name="time-outline" size={16} color={theme.primary} style={{ marginRight: 6 }} />
               <Text style={styles.mapMetricText}>Est. Time: <Text style={{ fontWeight: '800', color: theme.text }}>{stops.length * 12} mins</Text></Text>
             </View>
           </View>
 
           <TouchableOpacity style={styles.mapOptimizeCta} activeOpacity={0.8} onPress={handleOptimizePath}>
-            <Ionicons name="flash-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+            <Ionicons name="flash-outline" size={16} color={theme.onPrimary} style={{ marginRight: 6 }} />
             <Text style={styles.mapOptimizeCtaText}>Auto-Optimize Stop Sequence</Text>
           </TouchableOpacity>
         </View>
@@ -270,7 +271,7 @@ export const RouteConfigurationScreen: React.FC<Props> = ({ navigation, route })
             activeOpacity={0.8}
             onPress={handleSaveRoute}
           >
-            <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+            <Ionicons name="checkmark-circle-outline" size={18} color={theme.onPrimary} style={{ marginRight: 6 }} />
             <Text style={styles.submitBtnText}>Save Route</Text>
           </TouchableOpacity>
         </View>
@@ -338,11 +339,11 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderWidth: 1,
       paddingHorizontal: 14,
       fontSize: 14,
-      backgroundColor: isDarkMode ? '#120D24' : '#F8FAFC',
+      backgroundColor: theme.surface,
     },
     errorText: {
       fontSize: 11,
-      color: '#EF4444',
+      color: theme.danger,
       marginTop: 4,
       fontWeight: '600',
     },
@@ -358,11 +359,11 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderColor: theme.border,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: isDarkMode ? '#120D24' : '#F1F5F9',
+      backgroundColor: theme.surface,
     },
     typeToggleBtnActive: {
-      backgroundColor: '#7C3AED',
-      borderColor: '#7C3AED',
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
     },
     typeToggleText: {
       fontSize: 13,
@@ -370,7 +371,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       color: theme.subtext,
     },
     typeToggleTextActive: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontWeight: '700',
     },
     addStopRow: {
@@ -382,7 +383,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 46,
       height: 46,
       borderRadius: 12,
-      backgroundColor: '#7C3AED',
+      backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -401,7 +402,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     optimizeLinkText: {
       fontSize: 13,
       fontWeight: '700',
-      color: '#7C3AED',
+      color: theme.primary,
     },
     stopItemRow: {
       flexDirection: 'row',
@@ -415,13 +416,13 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 26,
       height: 26,
       borderRadius: 13,
-      backgroundColor: '#7C3AED',
+      backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
       marginRight: 10,
     },
     stopNumText: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontWeight: '800',
       fontSize: 12,
     },
@@ -441,7 +442,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     geofenceChip: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: isDarkMode ? '#26174A' : '#EDE9FE',
+      backgroundColor: withAlpha(theme.primary, 0.15),
       paddingVertical: 3,
       paddingHorizontal: 8,
       borderRadius: 10,
@@ -449,7 +450,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     geofenceChipText: {
       fontSize: 11,
       fontWeight: '700',
-      color: '#7C3AED',
+      color: theme.primary,
     },
     mapMetricsBar: {
       flexDirection: 'row',
@@ -457,7 +458,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       justifyContent: 'space-around',
       marginTop: 12,
       paddingVertical: 10,
-      backgroundColor: isDarkMode ? '#120D24' : '#F8FAFC',
+      backgroundColor: theme.surface,
       borderRadius: 12,
       borderWidth: 1,
       borderColor: theme.border,
@@ -479,13 +480,13 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#7C3AED',
+      backgroundColor: theme.primary,
       paddingVertical: 10,
       borderRadius: 20,
       marginTop: 12,
     },
     mapOptimizeCtaText: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontWeight: '700',
       fontSize: 13,
     },
@@ -497,7 +498,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     exportLinkText: {
       fontSize: 13,
       fontWeight: '700',
-      color: '#7C3AED',
+      color: theme.primary,
     },
     buttonRow: {
       flexDirection: 'row',
@@ -521,11 +522,11 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       flex: 2,
       height: 48,
       borderRadius: 24,
-      backgroundColor: '#7C3AED',
+      backgroundColor: theme.primary,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      shadowColor: '#7C3AED',
+      shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3,
       shadowRadius: 6,
@@ -534,6 +535,6 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     submitBtnText: {
       fontSize: 14,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: theme.onPrimary,
     },
   });

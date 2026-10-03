@@ -22,6 +22,7 @@ import { ENDPOINTS } from '../../constants/api';
 import Skeleton from '../../components/common/Skeleton';
 import Toast, { ToastType } from '../../components/Toast';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -427,22 +428,22 @@ const PrincipalManageClassScreen = ({ navigation, route }: any) => {
 
             {/* Badge row */}
             <View style={styles.badgeRow}>
-              <View style={[styles.infoBadge, { backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.2)' : theme.iconBackground }]}>
+              <View style={[styles.infoBadge, { backgroundColor: withAlpha(theme.primary, 0.2) }]}>
                 <Text style={[styles.badgeLabel, { color: theme.primary }]}>
                   Section: {classDetails?.section || 'F'}
                 </Text>
               </View>
-              <View style={[styles.infoBadge, { backgroundColor: isDarkMode ? 'rgba(139, 92, 246, 0.2)' : theme.iconBackground }]}>
+              <View style={[styles.infoBadge, { backgroundColor: withAlpha(theme.primary, 0.2) }]}>
                 <Text style={[styles.badgeLabel, { color: theme.secondary }]}>
                   Grade: {classDetails?.grade || '—'}
                 </Text>
               </View>
-              <View style={[styles.infoBadge, { backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)' }]}>
+              <View style={[styles.infoBadge, { backgroundColor: withAlpha(theme.success, 0.2) }]}>
                 <Text style={[styles.badgeLabel, { color: theme.success }]}>
                   Students: {students.length}
                 </Text>
               </View>
-              <View style={[styles.infoBadge, { backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)' }]}>
+              <View style={[styles.infoBadge, { backgroundColor: withAlpha(theme.warning, 0.2) }]}>
                 <Text style={[styles.badgeLabel, { color: theme.warning }]}>
                   Teacher: {classDetails?.teacher_name ? '1' : '0'}
                 </Text>
@@ -653,7 +654,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     // ── Modal overlay / card ──
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.6)',
+      backgroundColor: withAlpha(theme.overlay, 0.6),
       justifyContent: 'flex-end',
       paddingHorizontal: 0,
     },
@@ -705,10 +706,10 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     warningBox: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.1)',
+      backgroundColor: withAlpha(theme.warning, 0.15),
       borderRadius: 12,
       borderWidth: 1,
-      borderColor: isDarkMode ? 'rgba(245, 158, 11, 0.4)' : theme.warning,
+      borderColor: withAlpha(theme.warning, 0.4),
       padding: 14,
       marginBottom: 6,
     },
@@ -784,7 +785,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       justifyContent: 'center',
     },
     primaryBtnDisabled: {
-      backgroundColor: isDarkMode ? 'rgba(79, 70, 229, 0.3)' : 'rgba(79, 70, 229, 0.1)',
+      backgroundColor: withAlpha(theme.primary, 0.3),
     },
     primaryBtnText: {
       fontSize: 15,
@@ -796,10 +797,10 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     confirmWarningBox: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.1)',
+      backgroundColor: withAlpha(theme.warning, 0.15),
       borderRadius: 14,
       borderWidth: 1,
-      borderColor: isDarkMode ? 'rgba(245, 158, 11, 0.4)' : theme.warning,
+      borderColor: withAlpha(theme.warning, 0.4),
       padding: 16,
     },
     confirmWarningTitle: {
@@ -817,7 +818,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     // ── Picker dropdown ──
     pickerBackdrop: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.4)',
+      backgroundColor: withAlpha(theme.overlay, 0.4),
       justifyContent: 'center',
       paddingHorizontal: 24,
     },
@@ -850,7 +851,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       paddingLeft: 24,
     },
     pickerItemSelected: {
-      backgroundColor: isDarkMode ? 'rgba(79, 70, 229, 0.2)' : theme.iconBackground,
+      backgroundColor: withAlpha(theme.primary, 0.2),
     },
     pickerItemText: {
       fontSize: 14,

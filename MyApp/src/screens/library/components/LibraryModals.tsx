@@ -1,4 +1,6 @@
 import React from 'react';
+import { useTheme } from '../../../store/ThemeContext';
+import { withAlpha } from '../../../constants/theme';
 import { View, Text, StyleSheet } from 'react-native';
 import LibraryModal from './LibraryModal';
 import FormField from './FormField';
@@ -7,13 +9,16 @@ import LibraryButton from './LibraryButton';
 import { LibraryManagement } from '../hooks/useLibraryManagement';
 import { STAFF_ROLES } from '../constants';
 import { addDays, fmtDate, today } from '../utils';
-import { LIBRARY_COLORS } from '../theme';
+
 
 interface LibraryModalsProps {
   library: LibraryManagement;
 }
 
 const LibraryModals: React.FC<LibraryModalsProps> = ({ library }) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+
   const { modals, forms, books, students, categories, actions } = library;
   const { issueForm, setIssueForm, addBookForm, setAddBookForm, addStaffForm, setAddStaffForm, newCategory, setNewCategory } = forms;
 
@@ -183,7 +188,7 @@ const LibraryModals: React.FC<LibraryModalsProps> = ({ library }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   actions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -191,28 +196,28 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   hintBox: {
-    backgroundColor: '#0A1628',
+    backgroundColor: theme.background,
     borderWidth: 1,
-    borderColor: LIBRARY_COLORS.blueBg,
+    borderColor: theme.infoBg,
     borderRadius: 8,
     padding: 12,
     marginBottom: 14,
   },
   hintText: {
     fontSize: 13,
-    color: '#93C5FD',
+    color: theme.info,
   },
   hintBold: {
     fontWeight: '700',
   },
   confirmText: {
-    color: LIBRARY_COLORS.textMuted,
+    color: theme.placeholder,
     fontSize: 14,
     marginBottom: 20,
     lineHeight: 22,
   },
   confirmBold: {
-    color: LIBRARY_COLORS.text,
+    color: theme.text,
     fontWeight: '700',
   },
 });

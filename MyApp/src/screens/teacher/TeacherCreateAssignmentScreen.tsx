@@ -17,6 +17,7 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { TeacherHeader } from '../../components/TeacherHeader';
 import teacherService from '../../services/teacherService';
 
@@ -129,7 +130,7 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.background} />
 
       {/* Global Header */}
       <TeacherHeader
@@ -147,7 +148,7 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={styles.pageSubtitle}>Assign assignments to students</Text>
            </View>
            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-              <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+              <Ionicons name="arrow-back" size={20} color={theme.onPrimary} />
            </TouchableOpacity>
         </Animated.View>
 
@@ -155,7 +156,7 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
         <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.formCard}>
            
            <View style={styles.cardHeader}>
-              <Ionicons name="add-circle" size={18} color="#5266EB" style={{marginRight: 6}} />
+              <Ionicons name="add-circle" size={18} color={theme.primary} style={{marginRight: 6}} />
               <Text style={styles.cardTitle}>Assignments Details</Text>
            </View>
 
@@ -165,7 +166,7 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
               <TextInput 
                  style={styles.textInput}
                  placeholder="e.g. Calculus Derivatives"
-                 placeholderTextColor="#9CA3AF"
+                 placeholderTextColor={theme.subtext}
                  value={title}
                  onChangeText={setTitle}
               />
@@ -186,7 +187,7 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
                     >
                        <Ionicons 
                           name={classId === c.id ? 'radio-button-on' : 'radio-button-off'} 
-                          size={18} color={classId === c.id ? '#5266EB' : '#D1D5DB'} 
+                          size={18} color={classId === c.id ? theme.primary : theme.border} 
                        />
                        <Text style={[styles.radioTitle, { marginLeft: 8 }]}>{c.name} - {c.subject}</Text>
                     </TouchableOpacity>
@@ -200,7 +201,7 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
               <TextInput 
                  style={styles.textInput}
                  placeholder="e.g. Mathematics"
-                 placeholderTextColor="#9CA3AF"
+                 placeholderTextColor={theme.subtext}
                  value={course}
                  onChangeText={setCourse}
               />
@@ -220,7 +221,7 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
                       <Ionicons 
                          name={selectedType === type ? 'radio-button-on' : 'radio-button-off'} 
                          size={20} 
-                         color={selectedType === type ? '#5266EB' : '#D1D5DB'} 
+                         color={selectedType === type ? theme.primary : theme.border} 
                          style={styles.radioIcon} 
                       />
                       <Text style={styles.radioTitle}>{type}</Text>
@@ -235,7 +236,7 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
               <TextInput 
                  style={[styles.textInput, styles.textArea]}
                  placeholder="Enter assignment instructions..."
-                 placeholderTextColor="#9CA3AF"
+                 placeholderTextColor={theme.subtext}
                  multiline
                  numberOfLines={4}
                  value={instruction}
@@ -254,11 +255,11 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
                  <TextInput 
                     style={[styles.textInput, { flex: 1, borderWidth: 0, paddingHorizontal: 0 }]}
                     placeholder="2025-10-15"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor={theme.subtext}
                     value={dueDate}
                     onChangeText={setDueDate}
                  />
-                 <Ionicons name="calendar-outline" size={18} color="#111827" />
+                 <Ionicons name="calendar-outline" size={18} color={theme.text} />
               </TouchableOpacity>
            </View>
 
@@ -268,7 +269,7 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
               <TextInput 
                  style={styles.textInput}
                  placeholder="100"
-                 placeholderTextColor="#9CA3AF"
+                 placeholderTextColor={theme.subtext}
                  keyboardType="numeric"
                  value={maxMarks}
                  onChangeText={setMaxMarks}
@@ -288,7 +289,7 @@ const TeacherCreateAssignmentScreen: React.FC<Props> = ({ navigation }) => {
                 disabled={isPublishing}
               >
                  {isPublishing ? (
-                   <ActivityIndicator color="#FFF" size="small" />
+                   <ActivityIndicator color={theme.onPrimary} size="small" />
                  ) : (
                    <Text style={styles.actionBtnPublishText}>Publish Assignment</Text>
                  )}
@@ -314,7 +315,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -334,16 +335,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
   pageTitleWrapper: { 
     flexDirection: 'row',
@@ -358,7 +359,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.25)', 
+    backgroundColor: withAlpha(theme.onPrimary, 0.25), 
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -367,7 +368,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 24,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
@@ -432,7 +433,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   radioItemSelected: {
     borderColor: theme.primary,
-    backgroundColor: theme.isDarkMode ? '#312E8130' : '#F5F7FF',
+    backgroundColor: withAlpha(theme.primary, 0.1),
   },
   radioIcon: {
     marginRight: 10,
@@ -477,7 +478,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 8,
   },
   browseButtonText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 11,
     fontWeight: '600',
   },
@@ -492,7 +493,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
+    backgroundColor: withAlpha(theme.border, 0.5),
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 20,
@@ -514,7 +515,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   actionBtnPublishText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
 });
 

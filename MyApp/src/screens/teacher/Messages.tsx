@@ -22,11 +22,14 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { TeacherHeader } from '../../components/TeacherHeader';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import ScaleButton from '../../components/animations/ScaleButton';
 import messageService from '../../services/messageService';
 import { getStoredTokens } from '../../services/apiClient';
 import { API_BASE_URL, ENDPOINTS } from '../../constants/api';
+
+const theme = LIGHT_COLORS;
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -64,7 +67,7 @@ const getInitials = (name: string) => {
 };
 
 const getAvatarColor = (id: string) => {
-  const colors = ['#F97316', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#EF4444'];
+  const colors = [theme.warning, theme.success, theme.info, theme.primary, theme.primary, theme.danger];
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
     hash = id.charCodeAt(i) + ((hash << 5) - hash);
@@ -622,7 +625,7 @@ const Messages = () => {
               </View>
             ) : messagesError ? (
               <View style={styles.emptyThreadContainer}>
-                <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+                <Ionicons name="alert-circle-outline" size={48} color={theme.danger} />
                 <Text style={[styles.emptyThreadText, { color: theme.text }]}>{messagesError}</Text>
                 <TouchableOpacity
                   onPress={() => setMessageLimit(50)}
@@ -679,17 +682,17 @@ const Messages = () => {
 
           {/* Input Bar Pinned to Bottom */}
           <View style={[styles.inputContainer, { backgroundColor: theme.surface, borderTopColor: theme.border }]}>
-            <View style={[styles.inputPill, { backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC', borderColor: theme.border }]}>
+            <View style={[styles.inputPill, { backgroundColor: theme.surface, borderColor: theme.border }]}>
               <TextInput
                 style={[styles.textInput, { color: theme.text }]}
                 placeholder={`Type a message to ${activeChat.name.split(' ')[0]}...`}
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={theme.subtext}
                 value={inputText}
                 onChangeText={setInputText}
                 onSubmitEditing={handleSendMessage}
               />
               <TouchableOpacity onPress={handleSendMessage} style={styles.sendBtn}>
-                <Ionicons name="paper-plane" size={18} color="#FFF" />
+                <Ionicons name="paper-plane" size={18} color={theme.onPrimary} />
               </TouchableOpacity>
             </View>
           </View>
@@ -706,10 +709,10 @@ const Messages = () => {
 
           {/* Search Bar */}
           <View style={[styles.searchWrapper, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Ionicons name="search-outline" size={20} color="#94A3B8" style={styles.searchIcon} />
+            <Ionicons name="search-outline" size={20} color={theme.subtext} style={styles.searchIcon} />
             <TextInput
               placeholder="Search student or roll no..."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={theme.subtext}
               style={[styles.searchInput, { color: theme.text }]}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -718,7 +721,7 @@ const Messages = () => {
 
           {/* Section title */}
           <View style={styles.sectionHeader}>
-            <Ionicons name="chatbubbles" size={20} color="#8B5CF6" />
+            <Ionicons name="chatbubbles" size={20} color={theme.primary} />
             <Text style={[styles.sectionHeaderText, { color: theme.text }]}>Class Chat</Text>
           </View>
 
@@ -739,12 +742,12 @@ const Messages = () => {
               <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
             ) : error ? (
               <View style={styles.emptyContainer}>
-                <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+                <Ionicons name="alert-circle-outline" size={48} color={theme.danger} />
                 <Text style={styles.emptyText}>{error}</Text>
               </View>
             ) : filteredConversations.length === 0 ? (
               <View style={styles.emptyContainer}>
-                <Ionicons name="chatbubbles-outline" size={48} color="#CBD5E1" />
+                <Ionicons name="chatbubbles-outline" size={48} color={theme.border} />
                 <Text style={styles.emptyText}>No conversations yet</Text>
               </View>
             ) : (
@@ -816,7 +819,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -841,7 +844,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   portalLabel: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#8B5CF6',
+    color: theme.primary,
     letterSpacing: 0.5,
     marginTop: 2,
   },
@@ -855,14 +858,14 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 17,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#A855F7',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
     elevation: 8,
   },
   avatarText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontWeight: 'bold',
     fontSize: 16,
   },
@@ -886,7 +889,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
   },
   avatarInitial: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 14,
     fontWeight: '900',
   },
@@ -934,7 +937,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.02,
     shadowRadius: 10,
@@ -943,10 +946,10 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderColor: theme.border,
   },
   chatRowSelected: {
-    borderColor: theme.isDarkMode ? '#8B5CF6' : '#C7D2FE',
+    borderColor: theme.primary,
     borderLeftWidth: 4,
     borderLeftColor: theme.primary,
-    backgroundColor: theme.isDarkMode ? '#312E8140' : '#F5F7FF',
+    backgroundColor: withAlpha(theme.primary, 0.1),
   },
   chatInfo: {
     flex: 1,
@@ -990,7 +993,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginLeft: 8,
   },
   unreadBadgeText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 10,
     fontWeight: 'bold',
   },
@@ -1009,7 +1012,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9',
+    backgroundColor: withAlpha(theme.border, 0.5),
     marginVertical: 10,
   },
   loadMoreText: {
@@ -1062,7 +1065,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginBottom: 18,
   },
   msgAvatarText: {
-    color: '#FFF',
+    color: theme.onPrimary,
     fontSize: 10,
     fontWeight: '900',
   },
@@ -1073,7 +1076,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.02,
     shadowRadius: 4,
@@ -1084,7 +1087,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderBottomRightRadius: 4,
   },
   bubbleThem: {
-    backgroundColor: theme.isDarkMode ? '#334155' : '#FFF',
+    backgroundColor: theme.surface,
     borderWidth: 1,
     borderColor: theme.border,
     borderBottomLeftRadius: 4,
@@ -1095,7 +1098,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '500',
   },
   bubbleTextMe: {
-    color: '#FFF',
+    color: theme.onPrimary,
   },
   bubbleTextThem: {
     color: theme.text,

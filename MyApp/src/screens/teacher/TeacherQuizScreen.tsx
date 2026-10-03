@@ -20,6 +20,7 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { TeacherHeader } from '../../components/TeacherHeader';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import RNFS from 'react-native-fs';
@@ -119,20 +120,20 @@ const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const renderStatusPill = (status: string) => {
-    let bgColor = '#F3F4F6';
-    let textColor = '#374151';
+    let bgColor = withAlpha(theme.border, 0.5);
+    let textColor = theme.text;
 
     if (status === 'Ongoing' || status === 'active') {
-      bgColor = '#DCFCE7';
-      textColor = '#15803D';
+      bgColor = withAlpha(theme.success, 0.1);
+      textColor = theme.success;
       status = 'Ongoing';
     } else if (status === 'Upcoming' || status === 'draft') {
-      bgColor = '#FEF3C7';
-      textColor = '#B45309';
+      bgColor = withAlpha(theme.warning, 0.1);
+      textColor = theme.warning;
       status = status === 'draft' ? 'Draft' : 'Upcoming';
     } else if (status === 'Completed' || status === 'expired') {
-      bgColor = '#DBEAFE';
-      textColor = '#1D4ED8';
+      bgColor = withAlpha(theme.info, 0.1);
+      textColor = theme.info;
       status = 'Completed';
     }
 
@@ -145,7 +146,7 @@ const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.background} />
 
       {/* Global Header */}
       <TeacherHeader
@@ -157,7 +158,7 @@ const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
       <ScrollView 
         contentContainerStyle={styles.scrollContent} 
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.primary]} />}
       >
 
         {/* Page Title Wrapper */}
@@ -170,7 +171,7 @@ const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
         <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Quiz Repository</Text>
           <TouchableOpacity style={styles.newQuizBtn} activeOpacity={0.8} onPress={() => navigation.navigate('TeacherCreateQuiz')}>
-            <Ionicons name="add-circle" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+            <Ionicons name="add-circle" size={16} color={theme.onPrimary} style={{ marginRight: 6 }} />
             <Text style={styles.newQuizText}>Create Quiz</Text>
           </TouchableOpacity>
         </Animated.View>
@@ -178,10 +179,10 @@ const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
         {/* Quiz List */}
         <View style={styles.listContainer}>
           {isLoading ? (
-            <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
+            <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
           ) : quizzes.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="documents-outline" size={48} color="#D1D5DB" />
+              <Ionicons name="documents-outline" size={48} color={theme.border} />
               <Text style={styles.emptyText}>No quizzes found</Text>
               <Text style={styles.emptySubtext}>Click + button above to create your first quiz</Text>
             </View>
@@ -214,15 +215,15 @@ const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
                 {/* Meta Information Row */}
                 <View style={styles.metaRowHorizontal}>
                   <View style={styles.metaItemCompact}>
-                    <Ionicons name="calendar-outline" size={12} color="#6B7280" style={{ marginRight: 4 }} />
+                    <Ionicons name="calendar-outline" size={12} color={theme.subtext} style={{ marginRight: 4 }} />
                     <Text style={styles.metaTextCompact}>{startTime}</Text>
                   </View>
                   <View style={styles.metaItemCompact}>
-                    <Ionicons name="time-outline" size={12} color="#6B7280" style={{ marginRight: 4 }} />
+                    <Ionicons name="time-outline" size={12} color={theme.subtext} style={{ marginRight: 4 }} />
                     <Text style={styles.metaTextCompact}>{duration} Min</Text>
                   </View>
                   <View style={styles.metaItemCompact}>
-                    <Ionicons name="people-outline" size={12} color="#6B7280" style={{ marginRight: 4 }} />
+                    <Ionicons name="people-outline" size={12} color={theme.subtext} style={{ marginRight: 4 }} />
                     <Text style={styles.metaTextCompact}>{quiz.className || quiz.classId || 'N/A'}</Text>
                   </View>
                 </View>
@@ -230,19 +231,19 @@ const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
                 {/* Stats Grid (More Horizontal) */}
                 <View style={styles.statsHorizontalBox}>
                   <View style={styles.statCell}>
-                    <Ionicons name="help-circle" size={14} color="#64748B" />
+                    <Ionicons name="help-circle" size={14} color={theme.subtext} />
                     <Text style={styles.statValueCell}>{questionCount} Qs</Text>
                   </View>
                   <View style={styles.statCell}>
-                    <Ionicons name="trophy" size={12} color="#D97706" />
+                    <Ionicons name="trophy" size={12} color={theme.warning} />
                     <Text style={styles.statValueCell}>{questionCount} Marks</Text>
                   </View>
                   <View style={styles.statCell}>
-                    <Ionicons name="people" size={14} color="#2563EB" />
+                    <Ionicons name="people" size={14} color={theme.info} />
                     <Text style={styles.statValueCell}>{quiz.participantCount || 0}/{quiz.enrolledCount || 0}</Text>
                   </View>
                   <View style={styles.statCell}>
-                    <Ionicons name="bar-chart" size={12} color="#059669" />
+                    <Ionicons name="bar-chart" size={12} color={theme.success} />
                     <Text style={styles.statValueCell}>{quiz.avgScore !== null && quiz.avgScore !== undefined ? `${quiz.avgScore}%` : '0%'}</Text>
                   </View>
                 </View>
@@ -266,7 +267,7 @@ const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
                   {(displayStatus === 'completed' || displayStatus === 'expired') && (
                     <View style={[styles.actionRowImage, { flex: 1 }]}>
                       <TouchableOpacity 
-                        style={[styles.btnPrimaryImage, { backgroundColor: '#4F46E5', flex: 1.5 }]} 
+                        style={[styles.btnPrimaryImage, { backgroundColor: theme.primary, flex: 1.5 }]} 
                         activeOpacity={0.8} 
                         onPress={() => navigation.navigate('TeacherViewQuizResult', { quizId: quiz.id.toString() })}
                       >
@@ -283,11 +284,11 @@ const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
                   )}
                   {(displayStatus === 'ongoing' || displayStatus === 'active' || displayStatus === 'published') && (
                     <TouchableOpacity 
-                      style={[styles.btnPrimaryImage, { backgroundColor: '#4F46E5', flex: 1 }]} 
+                      style={[styles.btnPrimaryImage, { backgroundColor: theme.primary, flex: 1 }]} 
                       activeOpacity={0.8} 
                       onPress={() => navigation.navigate('TeacherMonitorLive', { quizId: quiz.id.toString() })}
                     >
-                      <Ionicons name="desktop-outline" size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
+                      <Ionicons name="desktop-outline" size={16} color={theme.onPrimary} style={{ marginRight: 8 }} />
                       <Text style={styles.btnPrimaryText}>Monitor Live</Text>
                     </TouchableOpacity>
                   )}
@@ -295,11 +296,11 @@ const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
                     <View style={{ flex: 1, gap: 10 }}>
                       <View style={{ flexDirection: 'row', gap: 10 }}>
                         <TouchableOpacity 
-                          style={[styles.btnPrimaryImage, { backgroundColor: '#4F46E5', flex: 1.5 }]} 
+                          style={[styles.btnPrimaryImage, { backgroundColor: theme.primary, flex: 1.5 }]} 
                           activeOpacity={0.8}
                           onPress={() => navigation.navigate('TeacherCreateQuiz', { initialQuiz: quiz })}
                         >
-                          <Ionicons name="create-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                          <Ionicons name="create-outline" size={16} color={theme.onPrimary} style={{ marginRight: 6 }} />
                           <Text style={styles.btnPrimaryText}>Edit</Text>
                         </TouchableOpacity>
                         <TouchableOpacity 
@@ -307,15 +308,15 @@ const TeacherQuizScreen: React.FC<Props> = ({ navigation }) => {
                           activeOpacity={0.8}
                           onPress={() => handleDuplicateQuiz(quiz.id.toString())}
                         >
-                          <Ionicons name="copy-outline" size={16} color="#4F46E5" style={{ marginRight: 6 }} />
+                          <Ionicons name="copy-outline" size={16} color={theme.primary} style={{ marginRight: 6 }} />
                           <Text style={styles.btnExportText}>Copy</Text>
                         </TouchableOpacity>
                         <TouchableOpacity 
-                          style={[styles.btnExportImage, { flex: 0.5, borderColor: '#F43F5E' }]} 
+                          style={[styles.btnExportImage, { flex: 0.5, borderColor: theme.danger }]} 
                           activeOpacity={0.8}
                           onPress={() => handleDeleteQuiz(quiz.id.toString())}
                         >
-                          <Ionicons name="trash-outline" size={16} color="#F43F5E" />
+                          <Ionicons name="trash-outline" size={16} color={theme.danger} />
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -350,7 +351,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -371,16 +372,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
   pageTitleWrapper: { marginBottom: 20, paddingHorizontal: 16, marginTop: 24 },
   pageTitle: { fontSize: 24, fontWeight: '800', color: theme.primary, marginBottom: 6 },
@@ -405,14 +406,14 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 6,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
   },
   newQuizText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -425,7 +426,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     marginBottom: 10,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 6,
@@ -478,7 +479,7 @@ const getStyles = (theme: any) => StyleSheet.create({
 
   statsHorizontalBox: {
     flexDirection: 'row',
-    backgroundColor: theme.isDarkMode ? '#33415530' : '#F8FAFC',
+    backgroundColor: withAlpha(theme.border, 0.3),
     borderRadius: 6,
     padding: 10,
     justifyContent: 'space-between',
@@ -518,7 +519,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     elevation: 3,
   },
   actionBtnPrimaryText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -568,7 +569,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   gradingBarBg: {
     height: 6,
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9',
+    backgroundColor: withAlpha(theme.border, 0.5),
     borderRadius: 3,
     overflow: 'hidden',
     marginBottom: 4,
@@ -607,7 +608,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     elevation: 3,
   },
   btnPrimaryText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -627,7 +628,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '600',
   },
   subjectBadge: {
-    backgroundColor: theme.isDarkMode ? '#312E8130' : '#EEF2FF',
+    backgroundColor: withAlpha(theme.primary, 0.15),
     paddingHorizontal: 8,
     paddingVertical: 4,
   },

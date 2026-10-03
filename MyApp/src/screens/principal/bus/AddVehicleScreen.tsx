@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../../store/ThemeContext';
+import { withAlpha } from '../../../constants/theme';
 import { BusSubHeader } from '../../../components/bus/BusSubHeader';
 import { busStore } from '../../../services/busMockData';
 
@@ -90,7 +91,7 @@ export const AddVehicleScreen: React.FC<Props> = ({ navigation }) => {
         {/* Panel 1: Vehicle Details */}
         <View style={[styles.panelCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.panelTitleRow}>
-            <Ionicons name="bus-outline" size={20} color="#7C3AED" style={{ marginRight: 8 }} />
+            <Ionicons name="bus-outline" size={20} color={theme.primary} style={{ marginRight: 8 }} />
             <Text style={styles.panelTitle}>Vehicle Details</Text>
           </View>
 
@@ -100,7 +101,7 @@ export const AddVehicleScreen: React.FC<Props> = ({ navigation }) => {
             <TextInput
               style={[
                 styles.textInput,
-                { color: theme.text, borderColor: errors.regNumber ? '#EF4444' : theme.border },
+                { color: theme.text, borderColor: errors.regNumber ? theme.danger : theme.border },
               ]}
               placeholder="e.g. KA-01-EQ-9842"
               placeholderTextColor={theme.placeholder}
@@ -117,7 +118,7 @@ export const AddVehicleScreen: React.FC<Props> = ({ navigation }) => {
             <TextInput
               style={[
                 styles.textInput,
-                { color: theme.text, borderColor: errors.capacity ? '#EF4444' : theme.border },
+                { color: theme.text, borderColor: errors.capacity ? theme.danger : theme.border },
               ]}
               placeholder="e.g. 42"
               placeholderTextColor={theme.placeholder}
@@ -134,7 +135,7 @@ export const AddVehicleScreen: React.FC<Props> = ({ navigation }) => {
             <TextInput
               style={[
                 styles.textInput,
-                { color: theme.text, borderColor: errors.make ? '#EF4444' : theme.border },
+                { color: theme.text, borderColor: errors.make ? theme.danger : theme.border },
               ]}
               placeholder="e.g. Ashok Leyland / Tata Motors"
               placeholderTextColor={theme.placeholder}
@@ -150,7 +151,7 @@ export const AddVehicleScreen: React.FC<Props> = ({ navigation }) => {
             <TextInput
               style={[
                 styles.textInput,
-                { color: theme.text, borderColor: errors.model ? '#EF4444' : theme.border },
+                { color: theme.text, borderColor: errors.model ? theme.danger : theme.border },
               ]}
               placeholder="e.g. Falcon 2024"
               placeholderTextColor={theme.placeholder}
@@ -164,7 +165,7 @@ export const AddVehicleScreen: React.FC<Props> = ({ navigation }) => {
         {/* Panel 2: GPS Tracking Config */}
         <View style={[styles.panelCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.panelTitleRow}>
-            <Ionicons name="hardware-chip-outline" size={20} color="#7C3AED" style={{ marginRight: 8 }} />
+            <Ionicons name="hardware-chip-outline" size={20} color={theme.primary} style={{ marginRight: 8 }} />
             <Text style={styles.panelTitle}>GPS Tracking Config</Text>
           </View>
 
@@ -185,10 +186,10 @@ export const AddVehicleScreen: React.FC<Props> = ({ navigation }) => {
                 <Ionicons
                   name="hardware-chip-outline"
                   size={24}
-                  color={gpsMethod === 'dedicated' ? '#7C3AED' : theme.subtext}
+                  color={gpsMethod === 'dedicated' ? theme.primary : theme.subtext}
                 />
                 {gpsMethod === 'dedicated' && (
-                  <Ionicons name="checkmark-circle" size={20} color="#7C3AED" />
+                  <Ionicons name="checkmark-circle" size={20} color={theme.primary} />
                 )}
               </View>
               <Text
@@ -215,10 +216,10 @@ export const AddVehicleScreen: React.FC<Props> = ({ navigation }) => {
                 <Ionicons
                   name="phone-portrait-outline"
                   size={24}
-                  color={gpsMethod === 'phone' ? '#7C3AED' : theme.subtext}
+                  color={gpsMethod === 'phone' ? theme.primary : theme.subtext}
                 />
                 {gpsMethod === 'phone' && (
-                  <Ionicons name="checkmark-circle" size={20} color="#7C3AED" />
+                  <Ionicons name="checkmark-circle" size={20} color={theme.primary} />
                 )}
               </View>
               <Text
@@ -235,7 +236,7 @@ export const AddVehicleScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* Informative Banner */}
           <View style={styles.infoBanner}>
-            <Ionicons name="information-circle-outline" size={20} color="#7C3AED" style={{ marginRight: 8 }} />
+            <Ionicons name="information-circle-outline" size={20} color={theme.primary} style={{ marginRight: 8 }} />
             <Text style={styles.infoBannerText}>
               {gpsMethod === 'dedicated'
                 ? 'Dedicated hardware sends high-frequency 10s ping intervals and engine diagnostics directly to server.'
@@ -259,7 +260,7 @@ export const AddVehicleScreen: React.FC<Props> = ({ navigation }) => {
             activeOpacity={0.8}
             onPress={handleSubmit}
           >
-            <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+            <Ionicons name="checkmark-circle-outline" size={18} color={theme.onPrimary} style={{ marginRight: 6 }} />
             <Text style={styles.submitBtnText}>Add Vehicle</Text>
           </TouchableOpacity>
         </View>
@@ -325,11 +326,11 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderWidth: 1,
       paddingHorizontal: 14,
       fontSize: 14,
-      backgroundColor: isDarkMode ? '#120D24' : '#F8FAFC',
+      backgroundColor: theme.surface,
     },
     errorText: {
       fontSize: 11,
-      color: '#EF4444',
+      color: theme.danger,
       marginTop: 4,
       fontWeight: '600',
     },
@@ -344,11 +345,11 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       padding: 12,
       borderWidth: 1.5,
       borderColor: theme.border,
-      backgroundColor: isDarkMode ? '#120D24' : '#F8FAFC',
+      backgroundColor: theme.surface,
     },
     gpsCardActive: {
-      borderColor: '#7C3AED',
-      backgroundColor: isDarkMode ? '#26174A' : '#F5F3FF',
+      borderColor: theme.primary,
+      backgroundColor: withAlpha(theme.primary, 0.1),
     },
     gpsCardTop: {
       flexDirection: 'row',
@@ -362,7 +363,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       color: theme.text,
     },
     gpsCardTitleActive: {
-      color: '#7C3AED',
+      color: theme.primary,
     },
     gpsCardSub: {
       fontSize: 11,
@@ -375,9 +376,9 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       alignItems: 'center',
       padding: 12,
       borderRadius: 12,
-      backgroundColor: isDarkMode ? '#26174A' : '#F5F3FF',
+      backgroundColor: withAlpha(theme.primary, 0.1),
       borderWidth: 1,
-      borderColor: isDarkMode ? 'rgba(124, 58, 237, 0.3)' : '#DDD6FE',
+      borderColor: withAlpha(theme.primary, 0.3),
       marginTop: 8,
     },
     infoBannerText: {
@@ -409,11 +410,11 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       flex: 2,
       height: 48,
       borderRadius: 24,
-      backgroundColor: '#7C3AED',
+      backgroundColor: theme.primary,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      shadowColor: '#7C3AED',
+      shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3,
       shadowRadius: 6,
@@ -422,6 +423,6 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     submitBtnText: {
       fontSize: 14,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: theme.onPrimary,
     },
   });

@@ -25,6 +25,7 @@ import Animated, { FadeInUp, SlideInRight } from 'react-native-reanimated';
 import { launchCamera, ImagePickerResponse } from 'react-native-image-picker';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { getApiErrorMessage } from '../../services/apiClient';
 import principalService from '../../services/principalService';
 import { COUNTRIES } from '../../constants/countries';
@@ -574,7 +575,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       justifyContent: 'center',
       gap: 6,
     },
-    activeTabItem: { backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.2)' : theme.iconBackground },
+    activeTabItem: { backgroundColor: withAlpha(theme.primary, 0.2) },
     tabLabel: { fontSize: 11, fontWeight: '600', color: theme.subtext },
     activeTabLabel: { color: theme.primary },
 
@@ -704,7 +705,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     },
     updateFaceText: { color: theme.onPrimary, fontSize: 14, fontWeight: '600' },
 
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    modalOverlay: { flex: 1, backgroundColor: withAlpha(theme.overlay, 0.5), justifyContent: 'flex-end' },
     modalContent: { backgroundColor: theme.surface, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 20, maxHeight: '80%' },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
     modalTitle: { fontSize: 18, fontWeight: '800', color: theme.text },

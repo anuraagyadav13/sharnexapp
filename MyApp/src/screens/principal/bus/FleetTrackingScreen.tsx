@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../../constants/theme';
 import { NavigationDrawer } from '../../../components/NavigationDrawer';
 import { BusSubHeader } from '../../../components/bus/BusSubHeader';
 import { busStore, BusVehicle } from '../../../services/busMockData';
@@ -49,8 +50,8 @@ export const FleetTrackingScreen: React.FC<Props> = ({ navigation }) => {
       <View style={[styles.tableRowCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <View style={styles.vehicleHeaderRow}>
           <View style={styles.vehicleRegBox}>
-            <View style={[styles.busIconBadge, { backgroundColor: isDarkMode ? '#26174A' : '#EDE9FE' }]}>
-              <Ionicons name="bus-outline" size={20} color="#7C3AED" />
+            <View style={[styles.busIconBadge, { backgroundColor: withAlpha(theme.primary, 0.15) }]}>
+              <Ionicons name="bus-outline" size={20} color={theme.primary} />
             </View>
             <View>
               <Text style={styles.regNumberText}>{item.registrationNumber}</Text>
@@ -63,12 +64,12 @@ export const FleetTrackingScreen: React.FC<Props> = ({ navigation }) => {
             style={[
               styles.statusPill,
               isActive
-                ? (isDarkMode ? { backgroundColor: 'rgba(16, 185, 129, 0.15)', borderColor: 'rgba(16, 185, 129, 0.3)' } : { backgroundColor: '#D1FAE5', borderColor: '#A7F3D0' })
-                : (isDarkMode ? { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: 'rgba(239, 68, 68, 0.3)' } : { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5' }),
+                ? ({ backgroundColor: withAlpha(theme.success, 0.15), borderColor: withAlpha(theme.success, 0.3) })
+                : ({ backgroundColor: withAlpha(theme.danger, 0.15), borderColor: withAlpha(theme.danger, 0.3) }),
             ]}
           >
-            <View style={[styles.dotPill, { backgroundColor: isActive ? '#10B981' : '#EF4444' }]} />
-            <Text style={[styles.statusPillText, { color: isActive ? '#10B981' : '#EF4444' }]}>
+            <View style={[styles.dotPill, { backgroundColor: isActive ? theme.success : theme.danger }]} />
+            <Text style={[styles.statusPillText, { color: isActive ? theme.success : theme.danger }]}>
               {item.status}
             </Text>
           </View>
@@ -95,7 +96,7 @@ export const FleetTrackingScreen: React.FC<Props> = ({ navigation }) => {
 
         {item.assignedDriver && (
           <View style={styles.driverFooterRow}>
-            <Ionicons name="person-circle-outline" size={16} color="#7C3AED" style={{ marginRight: 6 }} />
+            <Ionicons name="person-circle-outline" size={16} color={theme.primary} style={{ marginRight: 6 }} />
             <Text style={styles.driverFooterText}>Driver: {item.assignedDriver}</Text>
           </View>
         )}
@@ -127,7 +128,7 @@ export const FleetTrackingScreen: React.FC<Props> = ({ navigation }) => {
             activeOpacity={0.8}
             onPress={() => navigation.navigate('AddVehicle')}
           >
-            <Ionicons name="add-circle-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+            <Ionicons name="add-circle-outline" size={18} color={theme.onPrimary} style={{ marginRight: 6 }} />
             <Text style={styles.addVehicleBtnText}>Add Vehicle</Text>
           </TouchableOpacity>
         </View>
@@ -136,7 +137,7 @@ export const FleetTrackingScreen: React.FC<Props> = ({ navigation }) => {
         <View style={[styles.utilizationCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.utilHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="pie-chart-outline" size={20} color="#7C3AED" style={{ marginRight: 8 }} />
+              <Ionicons name="pie-chart-outline" size={20} color={theme.primary} style={{ marginRight: 8 }} />
               <Text style={styles.utilTitle}>Fleet Utilization</Text>
             </View>
             <Text style={styles.utilPercentText}>{utilizationPercent}% Active</Text>
@@ -265,18 +266,18 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     addVehicleBtn: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#7C3AED',
+      backgroundColor: theme.primary,
       paddingVertical: 10,
       paddingHorizontal: 16,
       borderRadius: 20,
-      shadowColor: '#7C3AED',
+      shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 3 },
       shadowOpacity: 0.3,
       shadowRadius: 5,
       elevation: 4,
     },
     addVehicleBtnText: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontWeight: '700',
       fontSize: 13,
     },
@@ -285,7 +286,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       padding: 16,
       marginBottom: 16,
       borderWidth: 1,
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: isDarkMode ? 0 : 0.05,
       shadowRadius: 6,
@@ -305,18 +306,18 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     utilPercentText: {
       fontSize: 14,
       fontWeight: '800',
-      color: '#7C3AED',
+      color: theme.primary,
     },
     progressTrack: {
       height: 10,
-      backgroundColor: isDarkMode ? '#26174A' : '#EDE9FE',
+      backgroundColor: withAlpha(theme.primary, 0.15),
       borderRadius: 5,
       overflow: 'hidden',
       marginBottom: 8,
     },
     fillBar: {
       height: '100%',
-      backgroundColor: '#7C3AED',
+      backgroundColor: theme.primary,
       borderRadius: 5,
     },
     utilStatsRow: {
@@ -356,13 +357,13 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       paddingVertical: 6,
       paddingHorizontal: 12,
       borderRadius: 16,
-      backgroundColor: isDarkMode ? '#120D24' : '#F1F5F9',
+      backgroundColor: theme.surface,
       borderWidth: 1,
       borderColor: theme.border,
     },
     filterChipActive: {
-      backgroundColor: '#7C3AED',
-      borderColor: '#7C3AED',
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
     },
     filterChipText: {
       fontSize: 12,
@@ -370,7 +371,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       color: theme.subtext,
     },
     filterChipTextActive: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontWeight: '700',
     },
     tableRowCard: {

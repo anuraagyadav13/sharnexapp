@@ -16,6 +16,7 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { TeacherHeader } from '../../components/TeacherHeader';
 import apiClient from '../../services/apiClient';
 import teacherService from '../../services/teacherService';
@@ -64,7 +65,7 @@ const TeacherViewQuizResultScreen: React.FC<Props> = ({ navigation, route }) => 
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.background} />
 
       {/* Global Header */}
       <TeacherHeader
@@ -76,7 +77,7 @@ const TeacherViewQuizResultScreen: React.FC<Props> = ({ navigation, route }) => 
       {/* Blue Header Section */}
       <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-          <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          <Ionicons name="arrow-back" size={20} color={theme.onPrimary} />
         </TouchableOpacity>
         <Text style={styles.blueTitle}>{data?.quiz?.title || 'Exam Result Analysis'}</Text>
         <Text style={styles.blueSubtitle}>{data?.quiz?.subject || 'Analyze student performance'}</Text>
@@ -89,8 +90,8 @@ const TeacherViewQuizResultScreen: React.FC<Props> = ({ navigation, route }) => 
 
           {/* Participants Card */}
           <View style={styles.statCard}>
-            <View style={[styles.statIconBox, { backgroundColor: '#4F46E5' }]}>
-              <Ionicons name="person" size={20} color="#FFFFFF" />
+            <View style={[styles.statIconBox, { backgroundColor: theme.primary }]}>
+              <Ionicons name="person" size={20} color={theme.onPrimary} />
             </View>
             <View style={styles.statTextCol}>
               <Text style={styles.statLabel}>Participants</Text>
@@ -100,8 +101,8 @@ const TeacherViewQuizResultScreen: React.FC<Props> = ({ navigation, route }) => 
 
           {/* Avg Score Card */}
           <View style={styles.statCard}>
-            <View style={[styles.statIconBox, { backgroundColor: '#10B981' }]}>
-              <Ionicons name="analytics" size={20} color="#FFFFFF" />
+            <View style={[styles.statIconBox, { backgroundColor: theme.success }]}>
+              <Ionicons name="analytics" size={20} color={theme.onPrimary} />
             </View>
             <View style={styles.statTextCol}>
               <Text style={styles.statLabel}>Avg. Score</Text>
@@ -111,8 +112,8 @@ const TeacherViewQuizResultScreen: React.FC<Props> = ({ navigation, route }) => 
 
           {/* Highest Score Card */}
           <View style={styles.statCard}>
-            <View style={[styles.statIconBox, { backgroundColor: '#F59E0B' }]}>
-              <Ionicons name="trophy" size={20} color="#FFFFFF" />
+            <View style={[styles.statIconBox, { backgroundColor: theme.warning }]}>
+              <Ionicons name="trophy" size={20} color={theme.onPrimary} />
             </View>
             <View style={styles.statTextCol}>
               <Text style={styles.statLabel}>Highest</Text>
@@ -138,9 +139,9 @@ const TeacherViewQuizResultScreen: React.FC<Props> = ({ navigation, route }) => 
 
             {/* Table Rows */}
             {isLoading ? (
-              <ActivityIndicator size="large" color="#4F46E5" style={{ padding: 40 }} />
+              <ActivityIndicator size="large" color={theme.primary} style={{ padding: 40 }} />
             ) : results.length === 0 ? (
-              <Text style={{ textAlign: 'center', padding: 40, color: '#6B7280' }}>No submissions yet</Text>
+              <Text style={{ textAlign: 'center', padding: 40, color: theme.subtext }}>No submissions yet</Text>
             ) : (
               results.map((student: any, index: number) => (
                 <View key={student.studentId} style={[styles.tableRow, index === results.length - 1 && styles.lastTableRow]}>
@@ -177,7 +178,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -199,16 +200,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
   blueHeader: {
     backgroundColor: theme.primary,
@@ -222,7 +223,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.25),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -230,13 +231,13 @@ const getStyles = (theme: any) => StyleSheet.create({
   blueTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     marginBottom: 6,
   },
   blueSubtitle: {
     fontSize: 11,
     fontWeight: '400',
-    color: '#E0E7FF',
+    color: withAlpha(theme.onPrimary, 0.8),
   },
 
   statsRow: {
@@ -254,7 +255,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 8,
     alignItems: 'center',
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -299,7 +300,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   tableContainer: {
     backgroundColor: theme.surface,
     borderRadius: 6,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 12,
@@ -310,7 +311,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: theme.isDarkMode ? '#334155' : '#E5E7EB',
+    backgroundColor: withAlpha(theme.border, 0.5),
     paddingVertical: 14,
     paddingHorizontal: 16,
   },
@@ -344,13 +345,13 @@ const getStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
   },
   statusPill: {
-    backgroundColor: theme.isDarkMode ? '#065F4630' : '#D1FAE5',
+    backgroundColor: withAlpha(theme.success, 0.15),
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
   statusPillText: {
-    color: theme.isDarkMode ? '#34D399' : '#10B981',
+    color: theme.success,
     fontSize: 10,
     fontWeight: '700',
   },

@@ -263,7 +263,7 @@ const LibraryAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
         renderItem={renderAnnouncementCard}
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={() => loadAnnouncements(true)} colors={['#8B5CF6']} />
+          <RefreshControl refreshing={isRefreshing} onRefresh={() => loadAnnouncements(true)} colors={[theme.primary]} />
         }
         ListHeaderComponent={
           <>
@@ -274,7 +274,7 @@ const LibraryAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
                 <Text style={styles.bannerSubtitle}>Broadcast updates about new arrivals, schedule changes, or events.</Text>
               </View>
               <TouchableOpacity style={styles.newAnnounceBtn} onPress={() => setIsAddModalOpen(true)}>
-                <Ionicons name="add" size={18} color="#FFFFFF" style={{ marginRight: 4 }} />
+                <Ionicons name="add" size={18} color={theme.onPrimary} style={{ marginRight: 4 }} />
                 <Text style={styles.newAnnounceBtnText}>New Announcement</Text>
               </TouchableOpacity>
             </View>
@@ -298,7 +298,7 @@ const LibraryAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
         }
         ListEmptyComponent={
           isLoading ? (
-            <ActivityIndicator size="large" color="#8B5CF6" style={{ marginVertical: 40 }} />
+            <ActivityIndicator size="large" color={theme.primary} style={{ marginVertical: 40 }} />
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="megaphone-outline" size={48} color={theme.subtext} />
@@ -315,7 +315,7 @@ const LibraryAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>New Announcement</Text>
               <TouchableOpacity onPress={() => setIsAddModalOpen(false)}>
-                <Ionicons name="close" size={22} color="#FFF" />
+                <Ionicons name="close" size={22} color={theme.onPrimary} />
               </TouchableOpacity>
             </View>
 
@@ -325,7 +325,7 @@ const LibraryAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
                 <TextInput
                   style={styles.input}
                   placeholder="Enter Announcement Title"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={theme.placeholder}
                   value={newTitle}
                   onChangeText={setNewTitle}
                 />
@@ -336,7 +336,7 @@ const LibraryAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   placeholder="Enter Announcement Details"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={theme.placeholder}
                   multiline
                   numberOfLines={4}
                   value={newContent}
@@ -348,10 +348,10 @@ const LibraryAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
                 <Text style={styles.label}>Category</Text>
                 <View style={styles.categoryPillsGrid}>
                   {[
-                    { key: 'urgent', label: 'urgent', bg: '#FEE2E2', text: '#EF4444' },
-                    { key: 'general', label: 'general', bg: '#D1FAE5', text: '#10B981' },
-                    { key: 'event', label: 'event', bg: '#F3E8FF', text: '#9333EA' },
-                    { key: 'update', label: 'update', bg: '#E0F2FE', text: '#0284C7' },
+                    { key: 'urgent', label: 'urgent', bg: theme.dangerBg, text: theme.danger },
+                    { key: 'general', label: 'general', bg: theme.successBg, text: theme.success },
+                    { key: 'event', label: 'event', bg: theme.iconBackground, text: theme.accent },
+                    { key: 'update', label: 'update', bg: theme.infoBg, text: theme.info },
                   ].map(cat => (
                     <TouchableOpacity
                       key={cat.key}
@@ -402,7 +402,7 @@ const LibraryAnnouncementsScreen: React.FC<Props> = ({ navigation }) => {
                 <TextInput
                   style={styles.input}
                   placeholder="dd-mm-yyyy"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={theme.placeholder}
                   value={newExpiryDate}
                   onChangeText={setNewExpiryDate}
                 />
@@ -437,8 +437,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     },
     menuHandle: { padding: 4 },
     headerTitle: { fontSize: 16, fontWeight: '700', color: theme.primary, flex: 1, marginLeft: 8 },
-    avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#8B5CF6', justifyContent: 'center', alignItems: 'center' },
-    avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
+    avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.accent, justifyContent: 'center', alignItems: 'center' },
+    avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 14 },
     headerAvatarImage: { width: 32, height: 32, borderRadius: 16 },
     listContent: { padding: 16 },
     bannerCard: {
@@ -458,17 +458,17 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     newAnnounceBtn: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#8B5CF6',
+      backgroundColor: theme.primary,
       paddingVertical: 10,
       paddingHorizontal: 16,
       borderRadius: 10,
     },
-    newAnnounceBtnText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
+    newAnnounceBtnText: { fontSize: 13, fontWeight: '700', color: theme.onPrimary },
     tabsRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: theme.border, marginBottom: 16 },
     tabItem: { paddingVertical: 8, paddingHorizontal: 16, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-    tabItemActive: { borderBottomColor: '#8B5CF6' },
+    tabItemActive: { borderBottomColor: theme.primary },
     tabItemText: { fontSize: 13, fontWeight: '600', color: theme.subtext },
-    tabItemTextActive: { color: '#8B5CF6', fontWeight: '700' },
+    tabItemTextActive: { color: theme.primary, fontWeight: '700' },
     card: {
       backgroundColor: theme.surface,
       borderRadius: 14,
@@ -480,23 +480,23 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
     cardTitle: { fontSize: 16, fontWeight: '800', color: theme.text },
     statusBadge: { paddingVertical: 2, paddingHorizontal: 8, borderRadius: 6 },
-    statusPublished: { backgroundColor: '#D1FAE5' },
-    statusDraft: { backgroundColor: '#F3F4F6' },
+    statusPublished: { backgroundColor: theme.successBg },
+    statusDraft: { backgroundColor: theme.cardNested },
     statusBadgeText: { fontSize: 10, fontWeight: '800' },
-    statusPublishedText: { color: '#10B981' },
-    statusDraftText: { color: '#6B7280' },
+    statusPublishedText: { color: theme.success },
+    statusDraftText: { color: theme.subtext },
     authorMeta: { fontSize: 12, color: theme.subtext, marginBottom: 8 },
-    roleTag: { backgroundColor: '#DBEAFE', color: '#1D4ED8', fontSize: 10, paddingHorizontal: 6, borderRadius: 4 },
+    roleTag: { backgroundColor: theme.infoBg, color: theme.info, fontSize: 10, paddingHorizontal: 6, borderRadius: 4 },
     detailsLine: { fontSize: 12, color: theme.text, marginBottom: 12, lineHeight: 18 },
     tagsRow: { flexDirection: 'row', gap: 6 },
-    tagPill: { backgroundColor: isDarkMode ? '#374151' : '#F3F4F6', paddingVertical: 2, paddingHorizontal: 8, borderRadius: 4 },
+    tagPill: { backgroundColor: theme.cardNested, paddingVertical: 2, paddingHorizontal: 8, borderRadius: 4 },
     tagPillText: { fontSize: 10, fontWeight: '600', color: theme.subtext },
     emptyContainer: { paddingVertical: 40, alignItems: 'center' },
     emptyTitle: { fontSize: 16, fontWeight: '700', color: theme.text, marginTop: 8 },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+    modalOverlay: { flex: 1, backgroundColor: theme.overlay, justifyContent: 'center', alignItems: 'center', padding: 20 },
     modalCard: { backgroundColor: theme.surface, borderRadius: 16, padding: 20, width: '100%', maxWidth: 420, borderWidth: 1, borderColor: theme.border },
-    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: theme.border, marginBottom: 14, backgroundColor: '#2563EB', marginHorizontal: -20, marginTop: -20, paddingHorizontal: 20, paddingTop: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
-    modalTitle: { fontSize: 18, fontWeight: '800', color: '#FFF' },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: theme.border, marginBottom: 14, backgroundColor: theme.primary, marginHorizontal: -20, marginTop: -20, paddingHorizontal: 20, paddingTop: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
+    modalTitle: { fontSize: 18, fontWeight: '800', color: theme.onPrimary },
     formGroup: { marginBottom: 12 },
     rowForm: { flexDirection: 'row', gap: 10 },
     label: { fontSize: 12, fontWeight: '700', color: theme.subtext, marginBottom: 4 },
@@ -505,8 +505,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     categoryPillsGrid: { flexDirection: 'row', gap: 8 },
     catPillBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
     catPillText: { fontSize: 12, fontWeight: '700' },
-    modalSubmitBtn: { backgroundColor: '#2563EB', paddingVertical: 12, borderRadius: 10, alignItems: 'center', marginTop: 12 },
-    modalSubmitBtnText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+    modalSubmitBtn: { backgroundColor: theme.primary, paddingVertical: 12, borderRadius: 10, alignItems: 'center', marginTop: 12 },
+    modalSubmitBtnText: { color: theme.onPrimary, fontSize: 14, fontWeight: '700' },
   });
 
 export default LibraryAnnouncementsScreen;

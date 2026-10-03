@@ -16,6 +16,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { useAuth } from '../store/AuthContext';
 import { useTheme } from '../store/ThemeContext';
+import { withAlpha } from '../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DRAWER_WIDTH = SCREEN_WIDTH * 0.75;
@@ -117,8 +118,12 @@ const LIBRARY_MENU: MenuItem[] = [
 
 export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onClose, role = 'student' }) => {
   const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { authState, logout } = useAuth();
+  
+  const drawerText = isDarkMode ? theme.text : theme.onPrimary;
+  const drawerBg = isDarkMode ? theme.surface : (role === 'principal' ? theme.primary : withAlpha(theme.primary, 0.95));
   const route = useRoute();
   const currentRouteName = route.name;
 
@@ -340,13 +345,13 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
                 style={[styles.menuItem, isActive && styles.menuItemActive, item.subItems && isExpanded && styles.expandableActive]}
                 onPress={() => item.subItems ? toggleExpand(item.id) : handleNavigation(item.label)}
               >
-                <Ionicons name={item.icon} size={22} color={isActive ? '#FFFFFF' : 'rgba(255,255,255,0.8)'} />
+                <Ionicons name={item.icon} size={22} color={isActive ? drawerText : withAlpha(drawerText, 0.8)} />
                 <Text style={[styles.menuText, isActive && styles.menuTextActive]}>{item.label}</Text>
                 {item.subItems && (
                   <Ionicons
                     name={isExpanded ? "chevron-up" : "chevron-down"}
                     size={18}
-                    color="rgba(255,255,255,0.6)"
+                    color={withAlpha(drawerText, 0.6)}
                     style={{ marginLeft: 'auto' }}
                   />
                 )}
@@ -392,10 +397,10 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
       <GestureDetector gesture={panGesture}>
         <Animated.View style={[styles.drawerContainer, drawerStyle]}>
           {/* Uniform Semi-transparent overlay background */}
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: isDarkMode ? '#1E293B' : (role === 'principal' ? '#8B5CF6' : 'rgba(139, 92, 246, 0.95)') }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: drawerBg }]} />
 
           <TouchableOpacity style={styles.closeBtn} onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Ionicons name="close" size={26} color="#FFFFFF" />
+            <Ionicons name="close" size={26} color={drawerText} />
           </TouchableOpacity>
           <View style={styles.menuList}>
             {renderMenu()}
@@ -406,10 +411,10 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000000',
+    backgroundColor: theme.overlay,
     zIndex: 99,
   },
   drawerContainer: {
@@ -436,12 +441,12 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   headerTitle: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 22,
     fontWeight: 'bold',
   },
   headerSubtitle: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: withAlpha(theme.onPrimary, 0.7),
     fontSize: 14,
     marginTop: 4,
   },
@@ -453,22 +458,22 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   menuItemActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.15),
     borderLeftWidth: 4,
-    borderLeftColor: '#FFFFFF',
+    borderLeftColor: theme.onPrimary,
     paddingLeft: 16,
   },
   expandableActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.1),
   },
   menuText: {
     marginLeft: 14,
     fontSize: 15,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.85)',
+    color: withAlpha(theme.onPrimary, 0.85),
   },
   menuTextActive: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontWeight: '800',
   },
   subMenuContainer: {
@@ -479,23 +484,23 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   subMenuItemActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.2),
     borderRadius: 8,
     marginRight: 20,
     paddingLeft: 10,
   },
   subMenuText: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
+    color: withAlpha(theme.onPrimary, 0.7),
     fontWeight: '500',
   },
   subMenuTextActive: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontWeight: '700',
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.1),
     marginHorizontal: 0,
     marginVertical: 10,
   },

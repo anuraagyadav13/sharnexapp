@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../../constants/theme';
 import { NavigationDrawer } from '../../../components/NavigationDrawer';
 import { BusSubHeader } from '../../../components/bus/BusSubHeader';
 import { busStore, BusSchedule } from '../../../services/busMockData';
@@ -74,7 +75,7 @@ export const SchedulesScreen: React.FC<Props> = ({ navigation }) => {
             activeOpacity={0.8}
             onPress={() => navigation.navigate('AddSchedule')}
           >
-            <Ionicons name="calendar-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+            <Ionicons name="calendar-outline" size={18} color={theme.onPrimary} style={{ marginRight: 6 }} />
             <Text style={styles.addScheduleBtnText}>Add Schedule</Text>
           </TouchableOpacity>
         </View>
@@ -103,15 +104,15 @@ export const SchedulesScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.statTxt}>Total Schedules</Text>
           </View>
           <View style={[styles.statBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Text style={[styles.statNum, { color: '#10B981' }]}>{activeCount}</Text>
+            <Text style={[styles.statNum, { color: theme.success }]}>{activeCount}</Text>
             <Text style={styles.statTxt}>Active</Text>
           </View>
           <View style={[styles.statBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Text style={[styles.statNum, { color: '#7C3AED' }]}>{morningCount}</Text>
+            <Text style={[styles.statNum, { color: theme.primary }]}>{morningCount}</Text>
             <Text style={styles.statTxt}>Morning Trips</Text>
           </View>
           <View style={[styles.statBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Text style={[styles.statNum, { color: '#EC4899' }]}>{afternoonCount}</Text>
+            <Text style={[styles.statNum, { color: theme.secondary }]}>{afternoonCount}</Text>
             <Text style={styles.statTxt}>Afternoon Trips</Text>
           </View>
         </View>
@@ -126,7 +127,7 @@ export const SchedulesScreen: React.FC<Props> = ({ navigation }) => {
               {/* Top Row: UUID ID + Active Badge */}
               <View style={styles.cardHeaderRow}>
                 <View style={styles.idContainer}>
-                  <Ionicons name="qr-code-outline" size={16} color="#7C3AED" style={{ marginRight: 6 }} />
+                  <Ionicons name="qr-code-outline" size={16} color={theme.primary} style={{ marginRight: 6 }} />
                   <Text style={styles.uuidText}>{item.id}</Text>
                 </View>
 
@@ -144,20 +145,20 @@ export const SchedulesScreen: React.FC<Props> = ({ navigation }) => {
                   style={[
                     styles.tripTypePill,
                     item.tripType === 'Morning Pickup'
-                      ? (isDarkMode ? { backgroundColor: '#26174A' } : { backgroundColor: '#EDE9FE' })
-                      : (isDarkMode ? { backgroundColor: '#3B1A24' } : { backgroundColor: '#FCE7F3' }),
+                      ? (isDarkMode ? { backgroundColor: withAlpha(theme.primary, 0.1) } : { backgroundColor: withAlpha(theme.primary, 0.15) })
+                      : (isDarkMode ? { backgroundColor: withAlpha(theme.secondary, 0.1) } : { backgroundColor: withAlpha(theme.secondary, 0.15) }),
                   ]}
                 >
                   <Ionicons
                     name={item.tripType === 'Morning Pickup' ? 'sunny-outline' : 'moon-outline'}
                     size={14}
-                    color={item.tripType === 'Morning Pickup' ? '#7C3AED' : '#EC4899'}
+                    color={item.tripType === 'Morning Pickup' ? theme.primary : theme.secondary}
                     style={{ marginRight: 4 }}
                   />
                   <Text
                     style={[
                       styles.tripTypePillText,
-                      { color: item.tripType === 'Morning Pickup' ? '#7C3AED' : '#EC4899' },
+                      { color: item.tripType === 'Morning Pickup' ? theme.primary : theme.secondary },
                     ]}
                   >
                     {item.tripType}
@@ -209,7 +210,7 @@ export const SchedulesScreen: React.FC<Props> = ({ navigation }) => {
                   style={styles.editIconBtn}
                   onPress={() => navigation.navigate('AddSchedule')}
                 >
-                  <Ionicons name="pencil-outline" size={18} color="#7C3AED" />
+                  <Ionicons name="pencil-outline" size={18} color={theme.primary} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -252,18 +253,18 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     addScheduleBtn: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#7C3AED',
+      backgroundColor: theme.primary,
       paddingVertical: 10,
       paddingHorizontal: 16,
       borderRadius: 20,
-      shadowColor: '#7C3AED',
+      shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 3 },
       shadowOpacity: 0.3,
       shadowRadius: 5,
       elevation: 4,
     },
     addScheduleBtnText: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontWeight: '700',
       fontSize: 13,
     },
@@ -311,7 +312,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderRadius: 16,
       padding: 16,
       borderWidth: 1,
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: isDarkMode ? 0 : 0.05,
       shadowRadius: 6,
@@ -330,13 +331,13 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     uuidText: {
       fontSize: 13,
       fontWeight: '800',
-      color: '#7C3AED',
+      color: theme.primary,
       letterSpacing: 0.5,
     },
     activePill: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.15)' : '#D1FAE5',
+      backgroundColor: withAlpha(theme.success, 0.15),
       paddingVertical: 3,
       paddingHorizontal: 8,
       borderRadius: 10,
@@ -345,13 +346,13 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 5,
       height: 5,
       borderRadius: 2.5,
-      backgroundColor: '#10B981',
+      backgroundColor: theme.success,
       marginRight: 5,
     },
     activePillText: {
       fontSize: 11,
       fontWeight: '800',
-      color: '#10B981',
+      color: theme.success,
     },
     routeNameTitle: {
       fontSize: 16,
@@ -412,10 +413,10 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       paddingVertical: 4,
       paddingHorizontal: 8,
       borderRadius: 8,
-      backgroundColor: isDarkMode ? '#120D24' : '#F1F5F9',
+      backgroundColor: theme.surface,
     },
     dayChipActive: {
-      backgroundColor: '#7C3AED',
+      backgroundColor: theme.primary,
     },
     dayChipText: {
       fontSize: 10,
@@ -423,7 +424,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       color: theme.subtext,
     },
     dayChipTextActive: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
     },
     editIconBtn: {
       marginLeft: 'auto',

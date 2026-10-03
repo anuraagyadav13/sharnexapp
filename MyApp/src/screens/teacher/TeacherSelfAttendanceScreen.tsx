@@ -22,6 +22,7 @@ import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { TeacherHeader } from '../../components/TeacherHeader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeacherSelfAttendance'>;
@@ -98,7 +99,7 @@ const TeacherSelfAttendanceScreen: React.FC<Props> = ({ navigation }) => {
       <ScrollView 
         style={styles.content}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#6366F1']} />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.primary]} />}
       >
         {/* Real-time Performance Overview */}
         <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.statsCard}>
@@ -112,8 +113,8 @@ const TeacherSelfAttendanceScreen: React.FC<Props> = ({ navigation }) => {
                       <Text style={styles.statVal}>{stats?.present || 0}</Text>
                       <Text style={styles.statLab}>Present Days</Text>
                   </View>
-                  <View style={[styles.statItem, { borderLeftWidth: 1, borderLeftColor: '#E2E8F0' }]}>
-                      <Text style={[styles.statVal, { color: '#F59E0B' }]}>{stats?.late || 0}</Text>
+                  <View style={[styles.statItem, { borderLeftWidth: 1, borderLeftColor: theme.border }]}>
+                      <Text style={[styles.statVal, { color: theme.warning }]}>{stats?.late || 0}</Text>
                       <Text style={styles.statLab}>Late Marks</Text>
                   </View>
               </View>
@@ -127,7 +128,7 @@ const TeacherSelfAttendanceScreen: React.FC<Props> = ({ navigation }) => {
                   onPress={() => handleMarkAttendance('IN')}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="log-in-outline" size={20} color="#FFF" style={{marginRight: 8}} />
+                  <Ionicons name="log-in-outline" size={20} color={theme.onPrimary} style={{marginRight: 8}} />
                   <Text style={styles.clockBtnText}>Clock In Today</Text>
                 </TouchableOpacity>
               ) : canClockOut ? (
@@ -136,12 +137,12 @@ const TeacherSelfAttendanceScreen: React.FC<Props> = ({ navigation }) => {
                   onPress={() => handleMarkAttendance('OUT')}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="log-out-outline" size={20} color="#FFF" style={{marginRight: 8}} />
+                  <Ionicons name="log-out-outline" size={20} color={theme.onPrimary} style={{marginRight: 8}} />
                   <Text style={styles.clockBtnText}>Clock Out Now</Text>
                 </TouchableOpacity>
               ) : (
                 <View style={styles.completedDayRow}>
-                  <Ionicons name="checkmark-done-circle" size={24} color="#10B981" />
+                  <Ionicons name="checkmark-done-circle" size={24} color={theme.success} />
                   <Text style={styles.completedText}>Attendance completed for today</Text>
                 </View>
               )}
@@ -151,10 +152,10 @@ const TeacherSelfAttendanceScreen: React.FC<Props> = ({ navigation }) => {
         <Text style={styles.sectionTitle}>Daily Check-in Logs</Text>
 
         {isLoading && !isRefreshing ? (
-          <ActivityIndicator size="large" color="#6366F1" style={{ marginTop: 40 }} />
+          <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
         ) : records.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <MaterialCommunityIcons name="calendar-blank" size={48} color="#CBD5E1" />
+            <MaterialCommunityIcons name="calendar-blank" size={48} color={theme.border} />
             <Text style={styles.emptyText}>No attendance records found yet.</Text>
           </View>
         ) : (
@@ -166,11 +167,11 @@ const TeacherSelfAttendanceScreen: React.FC<Props> = ({ navigation }) => {
                </View>
                <View style={styles.logInfoArea}>
                   <View style={styles.logRow}>
-                      <Ionicons name="time-outline" size={14} color="#64748B" />
+                      <Ionicons name="time-outline" size={14} color={theme.subtext} />
                       <Text style={styles.logTimeText}>{record.in_time || '--:--'} In • {record.out_time || '--:--'} Out</Text>
                   </View>
                   <View style={styles.logRow}>
-                      <Ionicons name="briefcase-outline" size={14} color="#64748B" />
+                      <Ionicons name="briefcase-outline" size={14} color={theme.subtext} />
                       <Text style={styles.logTimeText}>{record.work_hours || '0h 0m'} Work Duration</Text>
                   </View>
                </View>
@@ -197,7 +198,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -219,16 +220,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#A855F7',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
     elevation: 8,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
   content: { flex: 1, paddingHorizontal: 20 },
   
   statsCard: { 
@@ -236,7 +237,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 24, 
     padding: 20, 
     marginTop: -20, 
-    shadowColor: '#1E293B', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10,
+    shadowColor: theme.border, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10,
     borderWidth: 1, borderColor: theme.border
   },
   statsMain: { flexDirection: 'row', alignItems: 'center' },
@@ -249,12 +250,12 @@ const getStyles = (theme: any) => StyleSheet.create({
   statLab: { fontSize: 10, fontWeight: '600', color: theme.subtext, marginTop: 4 },
   
   clockActionRow: { marginTop: 20, paddingTop: 20, borderTopWidth: 1, borderTopColor: theme.border },
-  clockBtn: { height: 50, borderRadius: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', shadowColor: '#1E293B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
+  clockBtn: { height: 50, borderRadius: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', shadowColor: theme.border, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
   clockInBtn: { backgroundColor: theme.primary },
-  clockOutBtn: { backgroundColor: '#F59E0B' },
-  clockBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  clockOutBtn: { backgroundColor: theme.warning },
+  clockBtnText: { color: theme.onPrimary, fontSize: 16, fontWeight: '700' },
   completedDayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 10 },
-  completedText: { fontSize: 14, fontWeight: '700', color: '#10B981' },
+  completedText: { fontSize: 14, fontWeight: '700', color: theme.success },
 
   sectionTitle: { fontSize: 18, fontWeight: '800', color: theme.text, marginTop: 30, marginBottom: 15 },
   logCard: { backgroundColor: theme.surface, borderRadius: 16, padding: 15, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: theme.border },
@@ -266,11 +267,11 @@ const getStyles = (theme: any) => StyleSheet.create({
   logTimeText: { fontSize: 12, fontWeight: '600', color: theme.text },
   
   statusTag: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
-  statusPresent: { backgroundColor: '#ECFDF5' },
-  statusLate: { backgroundColor: '#FFFBEB' },
+  statusPresent: { backgroundColor: withAlpha(theme.success, 0.1) },
+  statusLate: { backgroundColor: withAlpha(theme.warning, 0.1) },
   statusTagText: { fontSize: 9, fontWeight: '800' },
-  statusTextPresent: { color: '#10B981' },
-  statusTextLate: { color: '#D97706' },
+  statusTextPresent: { color: theme.success },
+  statusTextLate: { color: theme.warning },
 
   emptyContainer: { alignItems: 'center', marginTop: 60 },
   emptyText: { marginTop: 15, fontSize: 14, fontWeight: '600', color: theme.subtext },

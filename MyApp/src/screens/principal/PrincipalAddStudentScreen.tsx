@@ -21,7 +21,7 @@ import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { BRAND } from '../../constants/theme';
+
 import apiClient from '../../services/apiClient';
 import principalService from '../../services/principalService';
 import { ENDPOINTS } from '../../constants/api';

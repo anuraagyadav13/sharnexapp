@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { useAuth } from '../../store/AuthContext';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { StudentHeader } from '../../components/StudentHeader';
@@ -1190,10 +1191,10 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderRadius: 8,
     },
     statusBadgeInProgress: {
-      backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.12)',
+      backgroundColor: withAlpha(theme.warning, 0.2),
     },
     statusBadgeCompleted: {
-      backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.12)',
+      backgroundColor: withAlpha(theme.success, 0.2),
     },
     chapterStatusBadgeText: {
       fontSize: 11,
@@ -1365,9 +1366,9 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       marginTop: 6,
     },
     homeworkBox: {
-      backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.1)',
+      backgroundColor: withAlpha(theme.warning, 0.15),
       borderWidth: 1,
-      borderColor: isDarkMode ? 'rgba(245, 158, 11, 0.3)' : 'rgba(245, 158, 11, 0.2)',
+      borderColor: withAlpha(theme.warning, 0.3),
       borderRadius: 8,
       padding: 10,
       marginTop: 10,
@@ -1411,8 +1412,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       paddingVertical: 7,
     },
     markRevisedButtonActive: {
-      backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.12)',
-      borderColor: isDarkMode ? 'rgba(16, 185, 129, 0.4)' : 'rgba(16, 185, 129, 0.3)',
+      backgroundColor: withAlpha(theme.success, 0.2),
+      borderColor: withAlpha(theme.success, 0.4),
     },
     markRevisedButtonText: {
       fontSize: 12,

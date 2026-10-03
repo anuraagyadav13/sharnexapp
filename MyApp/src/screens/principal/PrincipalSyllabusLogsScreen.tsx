@@ -17,6 +17,7 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { useAuth } from '../../store/AuthContext';
 import { getCacheBustedUri } from '../../utils/image';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
@@ -2226,7 +2227,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     // Modal Generic Overlay
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(15, 23, 42, 0.6)',
+      backgroundColor: withAlpha(theme.overlay, 0.6),
       justifyContent: 'center',
       alignItems: 'center',
       padding: 16,

@@ -15,6 +15,7 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { TeacherHeader } from '../../components/TeacherHeader';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
@@ -59,7 +60,7 @@ const TeacherMonitorLiveScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.background} />
 
       {/* Global Header */}
       <TeacherHeader
@@ -71,7 +72,7 @@ const TeacherMonitorLiveScreen: React.FC<Props> = ({ navigation, route }) => {
       {/* Blue Header Section */}
       <Animated.View entering={FadeIn.duration(400)} style={styles.blueHeader}>
          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={20} color={theme.onPrimary} />
          </TouchableOpacity>
          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View>
@@ -94,7 +95,7 @@ const TeacherMonitorLiveScreen: React.FC<Props> = ({ navigation, route }) => {
 
             {/* List */}
             {isLoading && !data ? (
-               <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
+               <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
             ) : students.length === 0 ? (
                <Text style={styles.emptyText}>No students in this class.</Text>
             ) : (
@@ -114,15 +115,15 @@ const TeacherMonitorLiveScreen: React.FC<Props> = ({ navigation, route }) => {
                         </View>
                         <View style={[
                           styles.progressPill, 
-                          participant.status === 'Submitted' && { backgroundColor: '#D1FAE5' },
-                          participant.status === 'In Progress' && { backgroundColor: '#DBEAFE' },
-                          participant.status === 'Not Started' && { backgroundColor: '#F3F4F6' },
+                          participant.status === 'Submitted' && { backgroundColor: withAlpha(theme.success, 0.15) },
+                          participant.status === 'In Progress' && { backgroundColor: withAlpha(theme.info, 0.15) },
+                          participant.status === 'Not Started' && { backgroundColor: withAlpha(theme.border, 0.5) },
                         ]}>
                            <Text style={[
                              styles.progressPillText,
-                             participant.status === 'Submitted' && { color: '#10B981' },
-                             participant.status === 'In Progress' && { color: '#3B82F6' },
-                             participant.status === 'Not Started' && { color: '#9CA3AF' },
+                             participant.status === 'Submitted' && { color: theme.success },
+                             participant.status === 'In Progress' && { color: theme.info },
+                             participant.status === 'Not Started' && { color: theme.subtext },
                            ]}>
                              {participant.status}
                            </Text>
@@ -166,7 +167,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -187,16 +188,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 6,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
   blueHeader: {
     backgroundColor: theme.primary,
@@ -210,7 +211,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.25),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -218,33 +219,33 @@ const getStyles = (theme: any) => StyleSheet.create({
   blueTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     marginBottom: 6,
   },
   blueSubtitle: {
     fontSize: 11,
     fontWeight: '400',
-    color: '#E0E7FF',
+    color: withAlpha(theme.onPrimary, 0.8),
   },
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    backgroundColor: withAlpha(theme.danger, 0.2),
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#EF4444',
+    borderColor: theme.danger,
   },
   liveDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#EF4444',
+    backgroundColor: theme.danger,
     marginRight: 6,
   },
   liveText: {
-    color: '#EF4444',
+    color: theme.danger,
     fontSize: 10,
     fontWeight: '800',
   },
@@ -265,7 +266,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     marginBottom: 20,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
@@ -288,7 +289,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginRight: 12,
   },
   participantAvatarText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -307,13 +308,13 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '600',
   },
   progressPill: {
-    backgroundColor: theme.isDarkMode ? '#065F4630' : '#D1FAE5',
+    backgroundColor: withAlpha(theme.success, 0.15),
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
   progressPillText: {
-    color: theme.isDarkMode ? '#34D399' : '#10B981',
+    color: theme.success,
     fontSize: 11,
     fontWeight: '800',
   },
@@ -324,7 +325,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     gap: 12,
   },
   statBox: {
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
+    backgroundColor: withAlpha(theme.border, 0.5),
     borderRadius: 6,
     paddingVertical: 12,
     alignItems: 'center',

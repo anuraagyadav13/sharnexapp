@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
-import { BRAND } from '../../constants/theme';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
+
 import { useAuth } from '../../store/AuthContext';
 import { getCacheBustedUri } from '../../utils/image';
 import principalService, { RmsExamDetail } from '../../services/principalService';
@@ -201,7 +202,7 @@ export const PrincipalReviewExamScreen = ({ navigation, route }: any) => {
 
       {isLoading ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={BRAND.accentPurpleDark} />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text style={styles.loadingText}>Loading exam overview...</Text>
         </View>
       ) : error ? (
@@ -441,10 +442,10 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       borderRadius: 12,
     },
     statusBadgeActive: {
-      backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)',
+      backgroundColor: withAlpha(theme.success, 0.2),
     },
     statusBadgeDraft: {
-      backgroundColor: isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)',
+      backgroundColor: withAlpha(theme.warning, 0.2),
     },
     statusBadgeText: {
       fontSize: 10,
@@ -508,7 +509,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     errorBox: {
       padding: 20,
       borderRadius: 16,
-      backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
+      backgroundColor: withAlpha(theme.danger, 0.15),
       borderWidth: 1,
       borderColor: theme.danger,
       alignItems: 'center',
@@ -643,7 +644,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       letterSpacing: 0.5,
     },
     automatedBadge: {
-      backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)',
+      backgroundColor: withAlpha(theme.success, 0.15),
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: 16,
@@ -681,7 +682,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       gap: 6,
     },
     officialBadge: {
-      backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.2)' : theme.iconBackground,
+      backgroundColor: withAlpha(theme.primary, 0.2),
       paddingHorizontal: 5,
       paddingVertical: 2,
       borderRadius: 4,
@@ -689,12 +690,12 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     officialBadgeText: {
       fontSize: 9,
       fontWeight: '900',
-      color: BRAND.accentPurpleDark,
+      color: theme.primary,
     },
     viewHistoryBtn: {
-      backgroundColor: isDarkMode ? 'rgba(124, 58, 237, 0.15)' : theme.iconBackground,
+      backgroundColor: withAlpha(theme.primary, 0.15),
       borderWidth: 1,
-      borderColor: isDarkMode ? 'rgba(124, 58, 237, 0.4)' : theme.border,
+      borderColor: withAlpha(theme.primary, 0.4),
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: 6,
@@ -702,7 +703,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     viewHistoryBtnText: {
       fontSize: 10,
       fontWeight: '600',
-      color: BRAND.accentPurpleDark,
+      color: theme.primary,
     },
     marksFooterRow: {
       flexDirection: 'row',

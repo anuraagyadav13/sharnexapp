@@ -21,6 +21,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../store/AuthContext';
 import teacherService from '../../services/teacherService';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -253,7 +254,7 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
           <Text style={styles.portalSubtitle}>{className} / <Text style={{ color: theme.primary }}>{subjectName}</Text></Text>
         </View>
         <View style={styles.lockBadge}>
-          <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+          <Ionicons name="checkmark-circle" size={14} color={theme.success} />
           <Text style={styles.lockText}>SECURELY LOCKED</Text>
         </View>
       </View>
@@ -292,10 +293,10 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
             </Animated.View>
 
             {/* Real-time Performance */}
-            <Animated.View entering={FadeInUp.delay(200).springify()} style={[styles.sidebarCard, { backgroundColor: '#7C3AED' }]}>
+            <Animated.View entering={FadeInUp.delay(200).springify()} style={[styles.sidebarCard, { backgroundColor: theme.primary }]}>
               <View style={styles.cardHeaderRow}>
-                <Ionicons name="stats-chart" size={16} color="#FFFFFF" />
-                <Text style={[styles.sidebarCardTitle, { color: '#FFFFFF' }]}>REAL-TIME PERFORMANCE</Text>
+                <Ionicons name="stats-chart" size={16} color={theme.onPrimary} />
+                <Text style={[styles.sidebarCardTitle, { color: theme.onPrimary }]}>REAL-TIME PERFORMANCE</Text>
               </View>
 
               <View style={styles.performanceRow}>
@@ -303,7 +304,7 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
                   <Text style={styles.perfLabel}>AVERAGE</Text>
                   <Text style={styles.perfValue}>{stats.avg}</Text>
                 </View>
-                <View style={[styles.perfBlock, { borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.2)', paddingLeft: 20 }]}>
+                <View style={[styles.perfBlock, { borderLeftWidth: 1, borderLeftColor: withAlpha(theme.onPrimary, 0.2), paddingLeft: 20 }]}>
                   <Text style={styles.perfLabel}>HIGH/LOW</Text>
                   <Text style={styles.perfValue}>{stats.highest} / {stats.lowest}</Text>
                 </View>
@@ -318,7 +319,7 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
               </View>
 
               <View style={styles.indicatorRow}>
-                <Ionicons name="sparkles" size={14} color="#A78BFA" />
+                <Ionicons name="sparkles" size={14} color={theme.primary} />
                 <Text style={styles.indicatorText}>Automatic performance indicators enabled.</Text>
               </View>
             </Animated.View>
@@ -330,7 +331,7 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
               {/* Search & Meta */}
               <View style={styles.tableControls}>
                 <View style={styles.searchContainer}>
-                  <Ionicons name="search" size={16} color="#9CA3AF" />
+                  <Ionicons name="search" size={16} color={theme.subtext} />
                   <TextInput 
                     style={styles.searchInput}
                     placeholder="Locate student by name or roll number..."
@@ -340,7 +341,7 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
                 </View>
                 <View style={styles.controlRight}>
                   <View style={styles.foundBadge}>
-                    <Ionicons name="people" size={14} color="#7C3AED" />
+                    <Ionicons name="people" size={14} color={theme.primary} />
                     <Text style={styles.foundText}>{filteredStudents.length} FOUND</Text>
                   </View>
                   <View style={styles.validationBadge}>
@@ -397,7 +398,7 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
                       <Text style={[styles.tdRoll, { flex: 0.8 }]}>{student.roll_no || 'N/A'}</Text>
                       <View style={{ flex: 2 }}>
                         <Text style={styles.tdName} numberOfLines={1}>{student.name}</Text>
-                        <Text style={{ fontSize: 10, color: '#9CA3AF' }}>ID: {student.id?.slice(0, 6)}</Text>
+                        <Text style={{ fontSize: 10, color: theme.subtext }}>ID: {student.id?.slice(0, 6)}</Text>
                       </View>
                       <View style={[styles.scoreCell, { flex: 1.8 }]}>
                         <View style={{ alignItems: 'center' }}>
@@ -410,7 +411,7 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
                             placeholder="0.00"
                           />
                           {pct !== null && (
-                            <Text style={{ fontSize: 9, color: '#6B7280', fontWeight: '700', marginTop: 2 }}>
+                            <Text style={{ fontSize: 9, color: theme.subtext, fontWeight: '700', marginTop: 2 }}>
                               {pct.toFixed(1)}% ({grade})
                             </Text>
                           )}
@@ -428,21 +429,21 @@ const TeacherMarksEntryScreen: React.FC<Props> = ({ navigation, route }) => {
                           value={markData.remark || ''}
                           onChangeText={(val) => handleRemarkChange(student.id, val)}
                           placeholder="Add remark..."
-                          placeholderTextColor="#9CA3AF"
+                          placeholderTextColor={theme.subtext}
                         />
                       </View>
                       <View style={[styles.statusCell, { flex: 1 }]}>
                         {markData.isAbsent ? (
-                          <View style={[styles.rankBadge, { backgroundColor: '#FEE2E2' }]}>
-                            <Text style={[styles.rankText, { color: '#EF4444' }]}>ABS</Text>
+                          <View style={[styles.rankBadge, { backgroundColor: withAlpha(theme.danger, 0.15) }]}>
+                            <Text style={[styles.rankText, { color: theme.danger }]}>ABS</Text>
                           </View>
                         ) : rank ? (
                           <View style={styles.rankBadge}>
-                            <Ionicons name="trophy" size={10} color="#F59E0B" />
+                            <Ionicons name="trophy" size={10} color={theme.warning} />
                             <Text style={styles.rankText}>#{rank}</Text>
                           </View>
                         ) : (
-                          <Text style={{ fontSize: 11, color: '#9CA3AF' }}>-</Text>
+                          <Text style={{ fontSize: 11, color: theme.subtext }}>-</Text>
                         )}
                       </View>
                     </View>
@@ -500,13 +501,13 @@ const getStyles = (theme: any) => StyleSheet.create({
   lockBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.isDarkMode ? '#065F4630' : '#ECFDF5',
+    backgroundColor: withAlpha(theme.success, 0.1),
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
     gap: 6,
   },
-  lockText: { fontSize: 10, fontWeight: '900', color: theme.isDarkMode ? '#34D399' : '#10B981' },
+  lockText: { fontSize: 10, fontWeight: '900', color: theme.success },
 
   layoutContainer: {
     flexDirection: Platform.OS === 'web' || SCREEN_WIDTH > 768 ? 'row' : 'column',
@@ -525,14 +526,14 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.02,
     shadowRadius: 10,
     elevation: 2,
   },
   cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#8B5CF6' },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.primary },
   sidebarCardTitle: { fontSize: 12, fontWeight: '800', color: theme.subtext, letterSpacing: 0.5 },
   
   contextItem: { marginBottom: 16 },
@@ -541,16 +542,16 @@ const getStyles = (theme: any) => StyleSheet.create({
 
   performanceRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
   perfBlock: { flex: 1 },
-  perfLabel: { fontSize: 9, fontWeight: '800', color: 'rgba(255,255,255,0.6)', marginBottom: 8 },
-  perfValue: { fontSize: 24, fontWeight: '900', color: '#FFFFFF' },
+  perfLabel: { fontSize: 9, fontWeight: '800', color: withAlpha(theme.onPrimary, 0.6), marginBottom: 8 },
+  perfValue: { fontSize: 24, fontWeight: '900', color: theme.onPrimary },
 
   distributionContainer: { marginBottom: 20 },
-  distributionBarContainer: { height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2, marginTop: 4 },
-  distributionBar: { height: '100%', backgroundColor: '#FFFFFF', borderRadius: 2 },
-  rangeValue: { fontSize: 11, fontWeight: '800', color: '#FFFFFF', textAlign: 'right', marginTop: 4 },
+  distributionBarContainer: { height: 4, backgroundColor: withAlpha(theme.onPrimary, 0.2), borderRadius: 2, marginTop: 4 },
+  distributionBar: { height: '100%', backgroundColor: theme.surface, borderRadius: 2 },
+  rangeValue: { fontSize: 11, fontWeight: '800', color: theme.onPrimary, textAlign: 'right', marginTop: 4 },
 
   indicatorRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  indicatorText: { fontSize: 9, fontWeight: '600', color: 'rgba(255,255,255,0.8)' },
+  indicatorText: { fontSize: 9, fontWeight: '600', color: withAlpha(theme.onPrimary, 0.8) },
 
   // Main Table
   mainContentContainer: { flex: 1 },
@@ -559,7 +560,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: theme.border,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.05,
     shadowRadius: 20,
@@ -593,21 +594,21 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row', 
     alignItems: 'center', 
     gap: 6, 
-    backgroundColor: theme.isDarkMode ? '#7C3AED30' : '#F5F3FF', 
+    backgroundColor: withAlpha(theme.primary, 0.1), 
     paddingHorizontal: 10, 
     paddingVertical: 6, 
     borderRadius: 8 
   },
-  foundText: { fontSize: 10, fontWeight: '900', color: '#7C3AED' },
+  foundText: { fontSize: 10, fontWeight: '900', color: theme.primary },
   validationBadge: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  greenDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981' },
-  validationText: { fontSize: 10, fontWeight: '800', color: '#10B981', letterSpacing: 0.5 },
+  greenDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: theme.success },
+  validationText: { fontSize: 10, fontWeight: '800', color: theme.success, letterSpacing: 0.5 },
 
   tableHeader: {
     flexDirection: 'row',
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F8FAFC',
+    backgroundColor: theme.surface,
     borderBottomWidth: 1,
     borderBottomColor: theme.border,
   },
@@ -637,26 +638,26 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.text,
     textAlign: 'center',
   },
-  disabledInput: { backgroundColor: theme.isDarkMode ? '#1E293B' : '#F1F5F9', color: theme.subtext },
+  disabledInput: { backgroundColor: theme.surface, color: theme.subtext },
   absBtn: {
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9',
+    backgroundColor: withAlpha(theme.border, 0.5),
     paddingVertical: 6,
     paddingHorizontal: 8,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: theme.border,
   },
-  absBtnActive: { backgroundColor: '#FEE2E2', borderColor: '#FECACA' },
+  absBtnActive: { backgroundColor: withAlpha(theme.danger, 0.15), borderColor: withAlpha(theme.danger, 0.4) },
   absText: { fontSize: 10, fontWeight: '800', color: theme.subtext },
-  absTextActive: { color: '#EF4444' },
+  absTextActive: { color: theme.danger },
   
   statusCell: { alignItems: 'flex-end' },
   validatedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  validatedText: { fontSize: 10, fontWeight: '900', color: '#10B981' },
+  validatedText: { fontSize: 10, fontWeight: '900', color: theme.success },
 
   tableFooter: {
     padding: 16,
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F8FAFC',
+    backgroundColor: theme.surface,
     alignItems: 'center',
   },
   footerText: { fontSize: 9, fontWeight: '700', color: theme.subtext, letterSpacing: 0.5 },
@@ -676,7 +677,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   saveDraftBtn: {
     flex: 1,
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9',
+    backgroundColor: withAlpha(theme.border, 0.5),
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
@@ -684,17 +685,17 @@ const getStyles = (theme: any) => StyleSheet.create({
   saveDraftText: { fontSize: 14, fontWeight: '700', color: theme.text },
   submitMarksBtn: {
     flex: 2,
-    backgroundColor: '#7C3AED',
+    backgroundColor: theme.primary,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#7C3AED',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 10,
     elevation: 4,
   },
-  submitMarksText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
+  submitMarksText: { fontSize: 14, fontWeight: '800', color: theme.onPrimary },
 
   emptyText: { textAlign: 'center', padding: 40, color: theme.subtext, fontSize: 14 },
 
@@ -711,12 +712,12 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
+    backgroundColor: withAlpha(theme.border, 0.5),
   },
   filterChipActive: {
-    backgroundColor: theme.isDarkMode ? '#7C3AED30' : '#7C3AED15',
+    backgroundColor: withAlpha(theme.primary, 0.15),
     borderWidth: 1,
-    borderColor: '#7C3AED',
+    borderColor: theme.primary,
   },
   filterChipText: {
     fontSize: 11,
@@ -724,7 +725,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.subtext,
   },
   filterChipTextActive: {
-    color: '#7C3AED',
+    color: theme.primary,
   },
   remarkInput: {
     flex: 1,
@@ -741,7 +742,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: withAlpha(theme.warning, 0.15),
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -749,7 +750,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   rankText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#D97706',
+    color: theme.warning,
   },
 });
 

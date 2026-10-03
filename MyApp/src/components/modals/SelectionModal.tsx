@@ -10,6 +10,8 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
+import { useTheme } from '../../store/ThemeContext';
+import { withAlpha } from '../../constants/theme';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -33,6 +35,8 @@ const SelectionModal: React.FC<SelectionModalProps> = ({
   searchQuery: controlledSearchQuery,
   onSearchQueryChange,
 }) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
   const [internalSearchQuery, setInternalSearchQuery] = useState('');
   const searchQuery = controlledSearchQuery ?? internalSearchQuery;
   const setSearchQuery = onSearchQueryChange ?? setInternalSearchQuery;
@@ -53,16 +57,16 @@ const SelectionModal: React.FC<SelectionModalProps> = ({
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={24} color="#1E293B" />
+              <Ionicons name="close" size={24} color={theme.text} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.searchContainer}>
-            <Ionicons name="search-outline" size={20} color="#94A3B8" />
+            <Ionicons name="search-outline" size={20} color={theme.subtext} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search..."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={theme.subtext}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
@@ -91,14 +95,14 @@ const SelectionModal: React.FC<SelectionModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: withAlpha(theme.overlay, 0.5),
     justifyContent: 'flex-end',
   },
   content: {
-    backgroundColor: '#FFF',
+    backgroundColor: theme.surface,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     height: SCREEN_HEIGHT * 0.7,
@@ -114,7 +118,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#1E293B',
+    color: theme.text,
   },
   closeBtn: {
     padding: 4,
@@ -122,20 +126,20 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.background,
     marginHorizontal: 24,
     paddingHorizontal: 16,
     height: 52,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: theme.border,
     marginBottom: 16,
   },
   searchInput: {
     flex: 1,
     marginLeft: 10,
     fontSize: 16,
-    color: '#1E293B',
+    color: theme.text,
     fontWeight: '600',
   },
   listContent: {
@@ -145,11 +149,11 @@ const styles = StyleSheet.create({
   optionItem: {
     paddingVertical: 18,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: theme.border,
   },
   optionText: {
     fontSize: 16,
-    color: '#334155',
+    color: theme.subtext,
     fontWeight: '500',
   },
 });

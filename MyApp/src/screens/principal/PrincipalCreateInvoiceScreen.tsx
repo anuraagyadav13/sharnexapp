@@ -15,7 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
-import { BRAND } from '../../constants/theme';
+
 import principalService from '../../services/principalService';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'PrincipalCreateInvoice'>;
@@ -225,7 +225,7 @@ const PrincipalCreateInvoiceScreen: React.FC<Props> = ({ navigation }) => {
         <Text style={s.label}>Class <Text style={s.required}>*</Text></Text>
         <TouchableOpacity style={s.selectBox} onPress={() => setClassDropdownOpen(!classDropdownOpen)}>
           <View style={s.selectIconBox}>
-            <Ionicons name="school" size={16} color={BRAND.accentPurpleDark} />
+            <Ionicons name="school" size={16} color={theme.primary} />
           </View>
           <Text style={[s.selectText, !selectedClassId && { color: theme.placeholder }]}>
             {selectedClassId ? getClassName(selectedClassId) : 'Select a class'}
@@ -235,7 +235,7 @@ const PrincipalCreateInvoiceScreen: React.FC<Props> = ({ navigation }) => {
         {classDropdownOpen && (
           <View style={s.dropdown}>
             {isLoadingClasses ? (
-              <ActivityIndicator size="small" color={BRAND.accentPurpleDark} style={{ padding: 16 }} />
+              <ActivityIndicator size="small" color={theme.primary} style={{ padding: 16 }} />
             ) : classes.length === 0 ? (
               <Text style={s.dropdownEmpty}>No classes found</Text>
             ) : (
@@ -245,10 +245,10 @@ const PrincipalCreateInvoiceScreen: React.FC<Props> = ({ navigation }) => {
                   style={[s.dropdownItem, selectedClassId === c.id && s.dropdownItemActive]}
                   onPress={() => { setSelectedClassId(c.id); setClassDropdownOpen(false); }}
                 >
-                  <Text style={[s.dropdownText, selectedClassId === c.id && { color: BRAND.accentPurpleDark, fontWeight: '700' }]}>
+                  <Text style={[s.dropdownText, selectedClassId === c.id && { color: theme.primary, fontWeight: '700' }]}>
                     {c.name}{c.section ? ` ${c.section}` : ''}{c.grade ? ` (Grade ${c.grade})` : ''}
                   </Text>
-                  {selectedClassId === c.id && <Ionicons name="checkmark" size={16} color={BRAND.accentPurpleDark} />}
+                  {selectedClassId === c.id && <Ionicons name="checkmark" size={16} color={theme.primary} />}
                 </TouchableOpacity>
               ))
             )}
@@ -264,7 +264,7 @@ const PrincipalCreateInvoiceScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={s.studentsPlaceholderText}>Select a class first to view students</Text>
             </View>
           ) : isLoadingStudents ? (
-            <ActivityIndicator size="small" color={BRAND.accentPurpleDark} style={{ padding: 20 }} />
+            <ActivityIndicator size="small" color={theme.primary} style={{ padding: 20 }} />
           ) : students.length === 0 ? (
             <Text style={s.studentsPlaceholderText}>No students found in this class</Text>
           ) : (
@@ -322,7 +322,7 @@ const PrincipalCreateInvoiceScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           ))}
           <TouchableOpacity style={s.addFeeBtn} onPress={addFeeItem}>
-            <Ionicons name="add" size={14} color={BRAND.accentPurpleDark} />
+            <Ionicons name="add" size={14} color={theme.primary} />
             <Text style={s.addFeeText}>Add Fee Item</Text>
           </TouchableOpacity>
         </View>
@@ -356,7 +356,7 @@ const PrincipalCreateInvoiceScreen: React.FC<Props> = ({ navigation }) => {
                       style={[s.dropdownItem, month === m && s.dropdownItemActive]}
                       onPress={() => { setMonth(m); setMonthDropdownOpen(false); }}
                     >
-                      <Text style={[s.dropdownText, month === m && { color: BRAND.accentPurpleDark, fontWeight: '700' }]}>{m}</Text>
+                      <Text style={[s.dropdownText, month === m && { color: theme.primary, fontWeight: '700' }]}>{m}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -439,7 +439,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: theme.border,
     backgroundColor: isDarkMode ? theme.surface : theme.background,
   },
-  selectAllText: { fontSize: 12, fontWeight: '700', color: BRAND.accentPurpleDark },
+  selectAllText: { fontSize: 12, fontWeight: '700', color: theme.primary },
   studentItem: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingHorizontal: 14, paddingVertical: 10,
@@ -451,7 +451,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     width: 20, height: 20, borderRadius: 5, borderWidth: 2, borderColor: theme.border,
     justifyContent: 'center', alignItems: 'center',
   },
-  checkboxChecked: { backgroundColor: BRAND.accentPurpleDark, borderColor: BRAND.accentPurpleDark },
+  checkboxChecked: { backgroundColor: theme.primary, borderColor: theme.primary },
 
   feeItemsBox: {
     borderWidth: 1, borderColor: theme.border, borderRadius: 14,
@@ -469,7 +469,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   addFeeBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4,
   },
-  addFeeText: { fontSize: 13, fontWeight: '700', color: BRAND.accentPurpleDark },
+  addFeeText: { fontSize: 13, fontWeight: '700', color: theme.primary },
 
   dateInput: {
     borderWidth: 1, borderColor: theme.border, borderRadius: 14,
@@ -482,7 +482,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     marginTop: 20, padding: 16, backgroundColor: theme.iconBackground, borderRadius: 14,
   },
   totalLabel: { fontSize: 14, fontWeight: '700', color: theme.text },
-  totalValue: { fontSize: 20, fontWeight: '800', color: BRAND.accentPurpleDark },
+  totalValue: { fontSize: 20, fontWeight: '800', color: theme.primary },
 
   footer: {
     flexDirection: 'row', gap: 12, padding: 16,
@@ -495,8 +495,8 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   cancelBtnText: { fontSize: 14, fontWeight: '700', color: theme.subtext },
   submitBtn: {
     flex: 1, paddingVertical: 14, borderRadius: 14, alignItems: 'center',
-    backgroundColor: BRAND.accentPurpleDark,
-    shadowColor: BRAND.accentPurpleDark, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
+    backgroundColor: theme.primary,
+    shadowColor: theme.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
   },
   submitBtnText: { fontSize: 14, fontWeight: '800', color: theme.onPrimary },
 });

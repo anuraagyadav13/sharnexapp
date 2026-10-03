@@ -27,6 +27,7 @@ import { ENDPOINTS } from '../../constants/api';
 import Skeleton from '../../components/common/Skeleton';
 import Toast, { ToastType } from '../../components/Toast';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -90,7 +91,7 @@ const SubjectCard = ({ item, index, delay, onDelete }: any) => {
         >
           <Ionicons name="pencil-outline" size={18} color={theme.primary} />
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.circleActionBtn, { borderColor: isDarkMode ? 'rgba(239,68,68,0.3)' : 'rgba(239,68,68,0.2)' }]} onPress={() => onDelete(item.id)}>
+        <TouchableOpacity style={[styles.circleActionBtn, { borderColor: withAlpha(theme.danger, 0.3) }]} onPress={() => onDelete(item.id)}>
           <Ionicons name="trash-outline" size={18} color={theme.danger} />
         </TouchableOpacity>
       </View>

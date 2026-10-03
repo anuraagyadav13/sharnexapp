@@ -18,6 +18,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { useAuth } from '../../store/AuthContext';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import ScaleButton from '../../components/animations/ScaleButton';
@@ -219,7 +220,7 @@ const LibraryBookCatalogScreen: React.FC<Props> = ({ navigation }) => {
         renderItem={renderBookItem}
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={() => loadBooks(true)} colors={['#8B5CF6']} />
+          <RefreshControl refreshing={isRefreshing} onRefresh={() => loadBooks(true)} colors={[theme.primary]} />
         }
         ListHeaderComponent={
           <>
@@ -242,7 +243,7 @@ const LibraryBookCatalogScreen: React.FC<Props> = ({ navigation }) => {
                   style={styles.addNewBookBtn}
                   onPress={() => setIsAddModalOpen(true)}
                 >
-                  <Ionicons name="add" size={18} color="#FFFFFF" style={{ marginRight: 4 }} />
+                  <Ionicons name="add" size={18} color={theme.onPrimary} style={{ marginRight: 4 }} />
                   <Text style={styles.addNewBookBtnText}>Add New Book</Text>
                 </TouchableOpacity>
               </View>
@@ -273,7 +274,7 @@ const LibraryBookCatalogScreen: React.FC<Props> = ({ navigation }) => {
         }
         ListEmptyComponent={
           isLoading ? (
-            <ActivityIndicator size="large" color="#8B5CF6" style={{ marginVertical: 40 }} />
+            <ActivityIndicator size="large" color={theme.primary} style={{ marginVertical: 40 }} />
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="book-outline" size={48} color={theme.subtext} />
@@ -300,7 +301,7 @@ const LibraryBookCatalogScreen: React.FC<Props> = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="Enter book title"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={theme.placeholder}
                 value={newTitle}
                 onChangeText={setNewTitle}
               />
@@ -312,7 +313,7 @@ const LibraryBookCatalogScreen: React.FC<Props> = ({ navigation }) => {
                 <TextInput
                   style={styles.input}
                   placeholder="Author name"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={theme.placeholder}
                   value={newAuthor}
                   onChangeText={setNewAuthor}
                 />
@@ -323,7 +324,7 @@ const LibraryBookCatalogScreen: React.FC<Props> = ({ navigation }) => {
                 <TextInput
                   style={styles.input}
                   placeholder="ISBN number"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={theme.placeholder}
                   value={newIsbn}
                   onChangeText={setNewIsbn}
                 />
@@ -335,7 +336,7 @@ const LibraryBookCatalogScreen: React.FC<Props> = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="Fiction / Non-Fiction / Technology..."
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={theme.placeholder}
                 value={newCategory}
                 onChangeText={setNewCategory}
               />
@@ -346,7 +347,7 @@ const LibraryBookCatalogScreen: React.FC<Props> = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="1"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={theme.placeholder}
                 keyboardType="numeric"
                 value={newCopies}
                 onChangeText={setNewCopies}
@@ -386,8 +387,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     },
     menuHandle: { padding: 4 },
     headerTitle: { fontSize: 16, fontWeight: '700', color: theme.primary, flex: 1, marginLeft: 8 },
-    avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#8B5CF6', justifyContent: 'center', alignItems: 'center' },
-    avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
+    avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.accent, justifyContent: 'center', alignItems: 'center' },
+    avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 14 },
     headerAvatarImage: { width: 32, height: 32, borderRadius: 16 },
     listContent: { padding: 16 },
     bannerCard: {
@@ -416,12 +417,12 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     addNewBookBtn: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#8B5CF6',
+      backgroundColor: theme.primary,
       paddingVertical: 8,
       paddingHorizontal: 14,
       borderRadius: 8,
     },
-    addNewBookBtnText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
+    addNewBookBtnText: { fontSize: 13, fontWeight: '700', color: theme.onPrimary },
     filterBar: { marginBottom: 16 },
     searchBox: {
       flexDirection: 'row',
@@ -461,7 +462,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     bookTitle: { fontSize: 14, fontWeight: '700', color: theme.text },
     bookMeta: { fontSize: 11, color: theme.subtext, marginTop: 2 },
     categoryBadge: {
-      backgroundColor: isDarkMode ? '#1F2937' : '#F3F4F6',
+      backgroundColor: theme.cardNested,
       paddingVertical: 3,
       paddingHorizontal: 8,
       borderRadius: 6,
@@ -470,11 +471,11 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     categoryBadgeText: { fontSize: 11, fontWeight: '600', color: theme.text },
     stockText: { fontSize: 12, fontWeight: '700', color: theme.text },
     auditBtn: { paddingVertical: 4, paddingHorizontal: 8 },
-    auditBtnText: { fontSize: 11, fontWeight: '800', color: '#8B5CF6' },
+    auditBtnText: { fontSize: 11, fontWeight: '800', color: theme.primary },
     emptyContainer: { paddingVertical: 40, alignItems: 'center' },
     emptyTitle: { fontSize: 16, fontWeight: '700', color: theme.text, marginTop: 8 },
     emptySub: { fontSize: 12, color: theme.subtext, marginTop: 4 },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+    modalOverlay: { flex: 1, backgroundColor: theme.overlay, justifyContent: 'center', alignItems: 'center', padding: 20 },
     modalCard: { backgroundColor: theme.surface, borderRadius: 16, padding: 20, width: '100%', maxWidth: 400, borderWidth: 1, borderColor: theme.border },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
     modalTitle: { fontSize: 18, fontWeight: '800', color: theme.text },
@@ -485,8 +486,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 8 },
     cancelBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 },
     cancelBtnText: { fontSize: 13, fontWeight: '600', color: theme.subtext },
-    saveBtn: { backgroundColor: '#8B5CF6', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 },
-    saveBtnText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
+    saveBtn: { backgroundColor: theme.primary, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 },
+    saveBtnText: { fontSize: 13, fontWeight: '700', color: theme.onPrimary },
   });
 
 export default LibraryBookCatalogScreen;

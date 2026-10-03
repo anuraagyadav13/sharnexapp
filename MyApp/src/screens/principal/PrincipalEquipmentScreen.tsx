@@ -16,6 +16,7 @@ import {
   Image,
 } from 'react-native';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha } from '../../constants/theme';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
@@ -104,11 +105,11 @@ const PrincipalEquipmentScreen: React.FC<Props> = ({ navigation }) => {
     const p = priority?.toUpperCase();
     switch (p) {
       case 'HIGH':
-        return { bg: isDarkMode ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.1)', text: theme.danger };
+        return { bg: withAlpha(theme.danger, 0.2), text: theme.danger };
       case 'MEDIUM':
-        return { bg: isDarkMode ? 'rgba(245,158,11,0.2)' : 'rgba(245,158,11,0.1)', text: theme.warning };
+        return { bg: withAlpha(theme.warning, 0.2), text: theme.warning };
       case 'LOW':
-        return { bg: isDarkMode ? 'rgba(79,70,229,0.2)' : 'rgba(79,70,229,0.1)', text: theme.primary };
+        return { bg: withAlpha(theme.primary, 0.2), text: theme.primary };
       default:
         return { bg: isDarkMode ? theme.border : theme.background, text: theme.subtext };
     }
@@ -616,7 +617,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     marginBottom: 12,
   },
   numberBox: {
-    backgroundColor: theme.primary + '15',
+    backgroundColor: withAlpha(theme.primary, 0.15),
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 8,
@@ -675,11 +676,11 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
     color: theme.text,
   },
   remarkBox: {
-    backgroundColor: isDarkMode ? 'rgba(245,158,11,0.2)' : 'rgba(245,158,11,0.1)',
+    backgroundColor: withAlpha(theme.warning, 0.2),
     padding: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: isDarkMode ? 'rgba(245,158,11,0.3)' : 'rgba(245,158,11,0.2)',
+    borderColor: withAlpha(theme.warning, 0.3),
   },
   remarkLabel: {
     fontSize: 11,
@@ -750,7 +751,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: withAlpha(theme.overlay, 0.5),
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -856,7 +857,7 @@ const getStyles = (theme: any, isDarkMode: boolean = false) => StyleSheet.create
   },
   detailModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: withAlpha(theme.overlay, 0.5),
     justifyContent: 'flex-end',
   },
   detailModalContainer: {

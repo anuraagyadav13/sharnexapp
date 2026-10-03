@@ -18,6 +18,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { StudentHeader } from '../../components/StudentHeader';
 import studentService from '../../services/studentService';
 
@@ -149,7 +150,7 @@ const QuizzesScreen: React.FC<Props> = ({ navigation }) => {
           style={[
             styles.summaryCard,
             { borderTopColor: borderColor },
-            isSelected && { backgroundColor: isDarkMode ? '#1E1B4B' : '#EEF2FF', borderColor: theme.primary },
+            isSelected && { backgroundColor: withAlpha(theme.primary, 0.1), borderColor: theme.primary },
           ]}
         >
           <Text style={[styles.summaryNumber, isSelected && { color: theme.primary }]}>{number}</Text>
@@ -162,13 +163,13 @@ const QuizzesScreen: React.FC<Props> = ({ navigation }) => {
   const renderStatusBadge = (status: string) => {
     switch (status) {
       case 'open':
-        return { text: 'Active Now', color: theme.success, bg: isDarkMode ? '#065F4630' : '#ECFDF5' };
+        return { text: 'Active Now', color: theme.success, bg: withAlpha(theme.success, 0.15) };
       case 'upcoming':
-        return { text: 'Upcoming', color: theme.warning, bg: isDarkMode ? '#78350F30' : '#FEF3C7' };
+        return { text: 'Upcoming', color: theme.warning, bg: withAlpha(theme.warning, 0.15) };
       case 'completed':
-        return { text: 'Completed', color: theme.primary, bg: isDarkMode ? '#312E81' : '#EEF2FF' };
+        return { text: 'Completed', color: theme.primary, bg: withAlpha(theme.primary, 0.15) };
       case 'expired':
-        return { text: 'Expired', color: theme.subtext, bg: isDarkMode ? '#334155' : '#F1F5F9' };
+        return { text: 'Expired', color: theme.subtext, bg: withAlpha(theme.border, 0.5) };
       default:
         return { text: status, color: theme.subtext, bg: theme.surface };
     }
@@ -295,7 +296,7 @@ const QuizzesScreen: React.FC<Props> = ({ navigation }) => {
               let actionText = 'View Details';
               let actionIcon = 'eye';
               let actionBg = theme.primary;
-              let actionColor = '#FFFFFF';
+              let actionColor = theme.onPrimary;
 
               if (quiz.derivedStatus === 'open') {
                 actionText = 'Start Quiz';
@@ -421,7 +422,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 12,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 6,
@@ -482,7 +483,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     padding: 16,
     borderLeftWidth: 4,
     borderLeftColor: theme.primary,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
@@ -592,7 +593,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 8,
   },
   retryBtnText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontWeight: '600',
     fontSize: 13,
   },

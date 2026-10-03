@@ -16,7 +16,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import ScaleButton from '../../components/animations/ScaleButton';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
-import { BRAND } from '../../constants/theme';
+
 import { getApiErrorMessage } from '../../services/apiClient';
 import principalService from '../../services/principalService';
 import { COUNTRIES } from '../../constants/countries';

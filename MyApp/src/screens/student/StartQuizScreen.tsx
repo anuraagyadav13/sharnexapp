@@ -17,6 +17,7 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { StudentHeader } from '../../components/StudentHeader';
 import studentService from '../../services/studentService';
 
@@ -270,7 +271,7 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
               scaleTo={0.9}
               onPress={() => navigation.goBack()}
             >
-              <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+              <Ionicons name="arrow-back" size={20} color={theme.onPrimary} />
             </ScaleButton>
 
             <View style={styles.timerChip}>
@@ -322,13 +323,13 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
                 if (isCurrent) {
                   itemBg = theme.primary;
                   itemBorder = theme.primary;
-                  itemTextColor = '#FFFFFF';
+                  itemTextColor = theme.onPrimary;
                 } else if (isFlagged) {
-                  itemBg = isDarkMode ? '#78350F40' : '#FEF3C7';
+                  itemBg = withAlpha(theme.warning, 0.2);
                   itemBorder = theme.warning;
                   itemTextColor = theme.warning;
                 } else if (isAnswered) {
-                  itemBg = isDarkMode ? '#065F4640' : '#ECFDF5';
+                  itemBg = withAlpha(theme.success, 0.2);
                   itemBorder = theme.success;
                   itemTextColor = theme.success;
                 }
@@ -375,12 +376,12 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
                       styles.optionItem,
                       isSelected && {
                         borderColor: theme.primary,
-                        backgroundColor: isDarkMode ? '#1E1B4B' : '#EEF2FF',
+                        backgroundColor: withAlpha(theme.primary, 0.1),
                       },
                     ]}
                   >
                     <View style={[styles.optionLetterBox, isSelected && { backgroundColor: theme.primary }]}>
-                      <Text style={[styles.optionLetterText, isSelected && { color: '#FFFFFF' }]}>
+                      <Text style={[styles.optionLetterText, isSelected && { color: theme.onPrimary }]}>
                         {letter}
                       </Text>
                     </View>
@@ -396,7 +397,7 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
             <ScaleButton
               style={[
                 styles.flagButton,
-                isCurrentMarked && { backgroundColor: isDarkMode ? '#78350F30' : '#FEF3C7', borderColor: theme.warning },
+                isCurrentMarked && { backgroundColor: withAlpha(theme.warning, 0.15), borderColor: theme.warning },
               ]}
               activeOpacity={0.8}
               scaleTo={0.97}
@@ -435,8 +436,8 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
                 onPress={handleNextQuestion}
                 disabled={currentQuestionIndex === questions.length - 1}
               >
-                <Text style={[styles.navBtnText, { color: '#FFFFFF' }]}>Next</Text>
-                <Ionicons name="arrow-forward" size={16} color="#FFFFFF" style={{ marginLeft: 6 }} />
+                <Text style={[styles.navBtnText, { color: theme.onPrimary }]}>Next</Text>
+                <Ionicons name="arrow-forward" size={16} color={theme.onPrimary} style={{ marginLeft: 6 }} />
               </ScaleButton>
             </View>
 
@@ -448,10 +449,10 @@ const StartQuizScreen: React.FC<Props> = ({ navigation, route }) => {
               disabled={isSubmitting}
             >
               {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <ActivityIndicator size="small" color={theme.onPrimary} />
               ) : (
                 <>
-                  <Ionicons name="paper-plane-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                  <Ionicons name="paper-plane-outline" size={18} color={theme.onPrimary} style={{ marginRight: 8 }} />
                   <Text style={styles.submitBtnText}>Submit Quiz</Text>
                 </>
               )}
@@ -487,7 +488,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: withAlpha(theme.onPrimary, 0.2),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -507,12 +508,12 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   heroTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     marginBottom: 4,
   },
   heroSubtitle: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.85)',
+    color: withAlpha(theme.onPrimary, 0.85),
     fontWeight: '500',
   },
 
@@ -529,7 +530,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 6,
@@ -597,7 +598,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
@@ -616,7 +617,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     marginTop: 2,
   },
   questionBadgeText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 11,
     fontWeight: '800',
   },
@@ -646,7 +647,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: isDarkMode ? '#334155' : '#F1F5F9',
+    backgroundColor: withAlpha(theme.border, 0.5),
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -712,7 +713,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     elevation: 3,
   },
   submitBtnText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 15,
     fontWeight: '800',
   },
@@ -752,7 +753,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderRadius: 8,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 14,
     fontWeight: '600',
   },

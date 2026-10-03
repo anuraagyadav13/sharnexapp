@@ -6,8 +6,11 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { StudentHeader } from '../../components/StudentHeader';
 import studentService from '../../services/studentService';
+
+const theme = LIGHT_COLORS;
 
 type TimetableNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Timetable'>;
 
@@ -23,12 +26,12 @@ const ALL_DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 const getSubjectColors = (subject?: string, isDarkMode?: boolean) => {
   const norm = typeof subject === 'string' ? subject.toLowerCase().trim() : '';
-  if (norm.includes('science')) return { iconBg: '#FFEDD5', iconColor: '#C2410C' };
-  if (norm.includes('maths')) return { iconBg: '#FCE7F3', iconColor: '#DB2777' };
-  if (norm.includes('english')) return { iconBg: '#E0F2FE', iconColor: '#0369A1' };
-  if (norm.includes('computer')) return { iconBg: '#E2E8F0', iconColor: '#334155' };
-  if (norm.includes('hindi')) return { iconBg: '#CCFBF1', iconColor: '#0F766E' };
-  return { iconBg: '#F3E8FF', iconColor: '#7E22CE' };
+  if (norm.includes('science')) return { iconBg: withAlpha(theme.warning, 0.15), iconColor: theme.warning };
+  if (norm.includes('maths')) return { iconBg: withAlpha(theme.danger, 0.15), iconColor: theme.danger };
+  if (norm.includes('english')) return { iconBg: withAlpha(theme.info, 0.15), iconColor: theme.info };
+  if (norm.includes('computer')) return { iconBg: withAlpha(theme.subtext, 0.15), iconColor: theme.subtext };
+  if (norm.includes('hindi')) return { iconBg: withAlpha(theme.success, 0.15), iconColor: theme.success };
+  return { iconBg: withAlpha(theme.primary, 0.15), iconColor: theme.primary };
 };
 
 const getSubjectIcon = (subject?: string) => {
@@ -354,11 +357,11 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
                       <Text style={s.dayTimeEndText}>{slot.endTime}</Text>
                     </View>
                     <View style={s.dayTimelineDotCol}>
-                      <View style={[s.timelineDot, { backgroundColor: '#CBD5E1' }]} />
+                      <View style={[s.timelineDot, { backgroundColor: theme.border }]} />
                     </View>
                     <View style={s.dayContentCol}>
                       <View style={s.lunchDivider}>
-                        <Ionicons name="cafe-outline" size={16} color="#94A3B8" />
+                        <Ionicons name="cafe-outline" size={16} color={theme.subtext} />
                         <Text style={s.lunchText}>LUNCH <Text style={{fontWeight: '400', fontSize: 10}}>(11:15 - 12:00)</Text></Text>
                       </View>
                     </View>
@@ -367,9 +370,9 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
               }
 
               const isFree = slot.isFreePeriod;
-              const colors = isFree ? { iconBg: '#D1FAE5', iconColor: '#059669' } : getSubjectColors(slot.subject, isDarkMode);
+              const colors = isFree ? { iconBg: withAlpha(theme.success, 0.15), iconColor: theme.success } : getSubjectColors(slot.subject, isDarkMode);
               const iconName = isFree ? 'happy-outline' : getSubjectIcon(slot.subject);
-              const dotColor = isFree ? '#E2E8F0' : '#A855F7'; // Purple for classes, grey for free
+              const dotColor = isFree ? theme.border : theme.primary; // Purple for classes, grey for free
               
               return (
                 <View key={`slot-${idx}`} style={s.dayTimelineRow}>
@@ -383,16 +386,16 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
                   <View style={s.dayContentCol}>
                     <View style={[
                       s.dayCard, 
-                      { backgroundColor: isFree ? '#F8FAFC' : '#FFFFFF', borderColor: isFree ? '#F1F5F9' : '#F1F5F9', borderWidth: 1, borderStyle: isFree ? 'dashed' : 'solid' }
+                      { backgroundColor: isFree ? theme.background : theme.surface, borderColor: theme.border, borderWidth: 1, borderStyle: isFree ? 'dashed' : 'solid' }
                     ]}>
                       {/* Left Color Bar */}
-                      {!isFree && <View style={[s.dayCardLeftBar, { backgroundColor: '#A855F7' }]} />}
+                      {!isFree && <View style={[s.dayCardLeftBar, { backgroundColor: theme.primary }]} />}
                       
                       <View style={[s.dayCardIconWrapper, { backgroundColor: colors.iconBg }]}>
                         <Ionicons name={iconName} size={18} color={colors.iconColor} />
                       </View>
                       <View style={s.dayCardTextCol}>
-                        <Text style={[s.dayCardSubject, isFree && { color: '#94A3B8', fontWeight: '700' }]}>{slot.subject}</Text>
+                        <Text style={[s.dayCardSubject, isFree && { color: theme.subtext, fontWeight: '700' }]}>{slot.subject}</Text>
                         {!isFree && (
                           <Text style={s.dayCardTeacher}>
                             {typeof slot.teacher === 'string' ? slot.teacher : slot.teacher?.name || '-'}
@@ -463,7 +466,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
                           return (
                             <View key={`${day}-${time}`} style={s.cellOuter}>
                               <View style={s.freePeriodCard}>
-                                <Ionicons name="cafe-outline" size={14} color="#CBD5E1" />
+                                <Ionicons name="cafe-outline" size={14} color={theme.border} />
                                 <Text style={s.freePeriodText}>FREE PERIOD</Text>
                               </View>
                             </View>
@@ -476,7 +479,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
 
                         return (
                           <View key={`${day}-${time}`} style={s.cellOuter}>
-                            <View style={[s.gridCard, { backgroundColor: '#FFFFFF', borderColor: '#F1F5F9', borderWidth: 1 }]}>
+                            <View style={[s.gridCard, { backgroundColor: theme.surface, borderColor: withAlpha(theme.border, 0.5), borderWidth: 1 }]}>
                               <Text style={s.gridCardSubject} numberOfLines={1}>{subjectLabel}</Text>
                               <Text style={s.gridCardTeacher} numberOfLines={1}>{teacherLabel}</Text>
                             </View>
@@ -522,10 +525,10 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
         >
           {['First', 'Second', 'Third'].map((term, i) => {
             const colors = i === 0 
-              ? { bg: '#EEF2FF', border: '#C7D2FE', accent: '#4F46E5', text: '#312E81' }
+              ? { bg: withAlpha(theme.primary, 0.1), border: withAlpha(theme.primary, 0.3), accent: theme.primary, text: theme.text }
               : i === 1 
-              ? { bg: '#FDF4FF', border: '#F5D0FE', accent: '#C026D3', text: '#701A75' }
-              : { bg: '#F0FDF4', border: '#BBF7D0', accent: '#16A34A', text: '#14532D' };
+              ? { bg: withAlpha(theme.info, 0.1), border: withAlpha(theme.info, 0.3), accent: theme.info, text: theme.text }
+              : { bg: withAlpha(theme.success, 0.1), border: withAlpha(theme.success, 0.3), accent: theme.success, text: theme.text };
 
             return (
               <View key={term} style={[s.termCardHorizontal, { backgroundColor: colors.bg, borderColor: colors.border }]}>
@@ -584,10 +587,10 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
       {/* 3. School Holidays */}
       <View style={s.eventSection}>
         <View style={s.eventSectionHeader}>
-          <Ionicons name="calendar-outline" size={18} color="#EF4444" />
+          <Ionicons name="calendar-outline" size={18} color={theme.danger} />
           <Text style={s.eventSectionTitle}>School Holidays</Text>
         </View>
-        {isEventsLoading ? <ActivityIndicator size="small" color="#EF4444" /> :
+        {isEventsLoading ? <ActivityIndicator size="small" color={theme.danger} /> :
          holidays.length === 0 ? (
            <View style={s.emptyEventCard}><Text style={s.emptyEventText}>No holidays scheduled.</Text></View>
          ) : (
@@ -606,10 +609,10 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
       {/* 4. Exam Schedule */}
       <View style={s.eventSection}>
         <View style={s.eventSectionHeader}>
-          <Ionicons name="document-text-outline" size={18} color="#F59E0B" />
+          <Ionicons name="document-text-outline" size={18} color={theme.warning} />
           <Text style={s.eventSectionTitle}>Exam Schedule</Text>
         </View>
-        {isEventsLoading ? <ActivityIndicator size="small" color="#F59E0B" /> :
+        {isEventsLoading ? <ActivityIndicator size="small" color={theme.warning} /> :
          exams.length === 0 ? (
            <View style={s.emptyEventCard}><Text style={s.emptyEventText}>No exams scheduled.</Text></View>
          ) : (
@@ -652,7 +655,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
           </TouchableOpacity>
           <TouchableOpacity style={[s.tabButton, activeTab === 'events' && s.tabButtonActive]} onPress={() => setActiveTab('events')}>
             <View style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>
-              <Ionicons name="megaphone-outline" size={14} color={activeTab === 'events' ? '#FFF' : theme.subtext} />
+              <Ionicons name="megaphone-outline" size={14} color={activeTab === 'events' ? theme.onPrimary : theme.subtext} />
               <Text style={[s.tabText, activeTab === 'events' && s.tabTextActive]}>EVENTS</Text>
             </View>
           </TouchableOpacity>
@@ -667,7 +670,7 @@ const TimetableScreen: React.FC<Props> = ({ navigation }) => {
             <Ionicons name="alert-circle" size={48} color={theme.danger} style={{ marginBottom: 16 }} />
             <Text style={{ fontSize: 16, fontWeight: '700', color: theme.text }}>Unable to Load Timetable</Text>
             <TouchableOpacity style={{ marginTop: 16, padding: 12, backgroundColor: theme.primary, borderRadius: 8 }} onPress={() => fetchTimetable()}>
-              <Text style={{ color: '#FFF' }}>Retry</Text>
+              <Text style={{ color: theme.onPrimary }}>Retry</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -695,21 +698,21 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   pageTitle: {
     fontSize: 22,
     fontWeight: '900',
-    color: '#0F172A',
+    color: theme.text,
     marginBottom: 4,
   },
   pageSubtitle: {
     fontSize: 13,
-    color: '#64748B',
+    color: theme.subtext,
     marginBottom: 16,
   },
   tabContainer: {
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: withAlpha(theme.border, 0.5),
     borderRadius: 8,
     alignSelf: 'flex-start',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     padding: 2,
   },
   tabButton: {
@@ -718,16 +721,16 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderRadius: 6,
   },
   tabButtonActive: {
-    backgroundColor: '#8B5CF6',
+    backgroundColor: theme.primary,
   },
   tabText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#64748B',
+    color: theme.subtext,
     textTransform: 'uppercase',
   },
   tabTextActive: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
   },
   contentArea: {
     flex: 1,
@@ -747,11 +750,11 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   },
   dayDateText: {
     fontSize: 13,
-    color: '#334155',
+    color: theme.surface,
     fontWeight: '600',
   },
   todayBadge: {
-    backgroundColor: '#F3E8FF',
+    backgroundColor: withAlpha(theme.primary, 0.15),
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -759,7 +762,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   todayBadgeText: {
     fontSize: 9,
     fontWeight: '800',
-    color: '#8B5CF6',
+    color: theme.primary,
   },
   dayNavControls: {
     flexDirection: 'row',
@@ -772,23 +775,23 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.border,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.surface,
     gap: 4,
   },
   dayNavBtnActive: {
-    backgroundColor: '#8B5CF6',
-    borderColor: '#8B5CF6',
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   dayNavText: {
     fontSize: 12,
-    color: '#64748B',
+    color: theme.subtext,
     fontWeight: '600',
   },
   dayNavTextActive: {
     fontSize: 12,
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontWeight: '600',
   },
   dayTimeline: {
@@ -807,11 +810,11 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   dayTimeStartText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#334155',
+    color: theme.surface,
   },
   dayTimeEndText: {
     fontSize: 9,
-    color: '#94A3B8',
+    color: theme.subtext,
     fontWeight: '600',
     marginTop: 2,
   },
@@ -860,12 +863,12 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   dayCardSubject: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#0F172A',
+    color: theme.text,
     marginBottom: 2,
   },
   dayCardTeacher: {
     fontSize: 11,
-    color: '#64748B',
+    color: theme.subtext,
     fontWeight: '500',
   },
   lunchDivider: {

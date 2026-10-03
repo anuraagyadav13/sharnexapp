@@ -17,34 +17,37 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import ThemeSelectionModal from '../../components/modals/ThemeSelectionModal';
+
+const theme = LIGHT_COLORS;
 
 
 
 const ChevronBackIcon = ({ width = 18, height = 18 }) => (
-  <Svg width={width} height={height} viewBox="0 0 24 24" fill="none" stroke="#FFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <Svg width={width} height={height} viewBox="0 0 24 24" fill="none" stroke={LIGHT_COLORS.onPrimary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <Path d="M15.75 19.5L8.25 12l7.5-7.5" />
   </Svg>
 );
 
 const GoogleIcon = () => (
   <Svg width="18" height="18" viewBox="0 0 48 48">
-    <Path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
-    <Path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z" />
-    <Path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z" />
-    <Path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571L37.409 38.808C41.211 35.091 44 30.134 44 24c0-1.341-.138-2.65-.389-3.917z" />
+    <Path fill={theme.warning} d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
+    <Path fill={theme.danger} d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z" />
+    <Path fill={theme.success} d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z" />
+    <Path fill={theme.info} d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571L37.409 38.808C41.211 35.091 44 30.134 44 24c0-1.341-.138-2.65-.389-3.917z" />
   </Svg>
 );
 
 const FacebookIcon = () => (
   <Svg width="18" height="18" viewBox="0 0 24 24">
-    <Path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.246h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-    <Path fill="#ffffff" d="M16.671 15.546l.532-3.469h-3.328V9.831c0-.949.465-1.874 1.956-1.874h1.534V5.004s-1.374-.235-2.686-.235c-2.741 0-4.533 1.662-4.533 4.669v2.639H7.078v3.469h3.047v8.385a12.09 12.09 0 003.75 0v-8.385h2.796z" />
+    <Path fill={theme.info} d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.246h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+    <Path fill={theme.onPrimary} d="M16.671 15.546l.532-3.469h-3.328V9.831c0-.949.465-1.874 1.956-1.874h1.534V5.004s-1.374-.235-2.686-.235c-2.741 0-4.533 1.662-4.533 4.669v2.639H7.078v3.469h3.047v8.385a12.09 12.09 0 003.75 0v-8.385h2.796z" />
   </Svg>
 );
 
 const EyeIcon = ({ show }: { show: boolean }) => (
-  <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={LIGHT_COLORS.subtext} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <Path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
     <Circle cx="12" cy="12" r="3" />
     {!show && <Path d="M4 4l16 16" />}
@@ -119,9 +122,9 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
         <Svg height="100%" width="100%">
           <Defs>
             <LinearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <Stop offset="0" stopColor="#A855F7" />
-              <Stop offset="0.5" stopColor="#9333EA" />
-              <Stop offset="1" stopColor="#3B82F6" />
+              <Stop offset="0" stopColor={theme.primary} />
+              <Stop offset="0.5" stopColor={theme.primary} />
+              <Stop offset="1" stopColor={theme.info} />
             </LinearGradient>
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#grad)" />
@@ -148,7 +151,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                 : 'settings-outline'
             } 
             size={20} 
-            color="#FFF" 
+            color={theme.onPrimary} 
           />
         </ScaleButton>
       </FadeInView>
@@ -170,7 +173,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                   <TextInput
                     style={styles.input}
                     placeholder="Email Address"
-                    placeholderTextColor="#A0AEC0"
+                    placeholderTextColor={theme.subtext}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     value={email}
@@ -184,7 +187,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                   <TextInput
                     style={styles.passwordInput}
                     placeholder="Password"
-                    placeholderTextColor="#A0AEC0"
+                    placeholderTextColor={theme.subtext}
                     secureTextEntry={!showPassword}
                     value={password}
                     onChangeText={setPassword}
@@ -203,7 +206,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                   <TextInput
                     style={styles.passwordInput}
                     placeholder="Confirm Password"
-                    placeholderTextColor="#A0AEC0"
+                    placeholderTextColor={theme.subtext}
                     secureTextEntry={!showConfirmPassword}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
@@ -293,7 +296,7 @@ const getStyles = (theme: any) =>
     backButton: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      backgroundColor: withAlpha(theme.onPrimary, 0.2),
       borderRadius: 8,
       paddingVertical: 7,
       paddingHorizontal: 14,
@@ -303,7 +306,7 @@ const getStyles = (theme: any) =>
       marginLeft: -4,
     },
     backText: {
-      color: '#FFF',
+      color: theme.onPrimary,
       fontSize: 15,
       fontWeight: '600',
     },
@@ -314,7 +317,7 @@ const getStyles = (theme: any) =>
       zIndex: 10,
     },
     themeButton: {
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      backgroundColor: withAlpha(theme.onPrimary, 0.2),
       borderRadius: 8,
       paddingVertical: 7,
       paddingHorizontal: 14,
@@ -324,7 +327,7 @@ const getStyles = (theme: any) =>
     title: {
       fontSize: 27,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       textAlign: 'center',
       marginBottom: 24,
       letterSpacing: -0.3,
@@ -335,7 +338,7 @@ const getStyles = (theme: any) =>
       borderRadius: 24,
       padding: 32,
       width: '100%',
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 0.05,
       shadowRadius: 16,
@@ -377,7 +380,7 @@ const getStyles = (theme: any) =>
       marginBottom: 24,
     },
     registerButtonText: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
       fontSize: 16,
       fontWeight: '700',
     },

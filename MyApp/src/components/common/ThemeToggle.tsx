@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { ThemeMode } from '../../constants/theme';
 
 const THEME_OPTIONS: { mode: ThemeMode; icon: string; label: string }[] = [
@@ -84,7 +85,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
                     <Ionicons
                       name={option.icon}
                       size={18}
-                      color={isActive ? '#FFFFFF' : theme.subtext}
+                      color={isActive ? theme.onPrimary : theme.subtext}
                     />
                     <Text
                       style={[
@@ -116,7 +117,7 @@ const getStyles = (theme: any) =>
     },
     modalBackdrop: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: withAlpha(theme.overlay, 0.5),
       justifyContent: 'center',
       alignItems: 'center',
       paddingHorizontal: 24,
@@ -127,7 +128,7 @@ const getStyles = (theme: any) =>
       backgroundColor: theme.surface,
       borderRadius: 16,
       padding: 20,
-      shadowColor: '#000',
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 0.15,
       shadowRadius: 16,
@@ -167,7 +168,7 @@ const getStyles = (theme: any) =>
       color: theme.subtext,
     },
     segmentLabelActive: {
-      color: '#FFFFFF',
+      color: theme.onPrimary,
     },
   });
 

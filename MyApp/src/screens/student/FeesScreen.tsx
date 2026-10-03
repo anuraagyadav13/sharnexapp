@@ -19,6 +19,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { StudentHeader } from '../../components/StudentHeader';
 import studentService from '../../services/studentService';
 import { getApiErrorMessage } from '../../services/apiClient';
@@ -81,21 +82,21 @@ function generateReceiptHTML(receipt: any): string {
   <meta charset="UTF-8">
   <title>Official Receipt - ${invNum}</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f8fafc; color: #0f172a; margin: 0; padding: 36px 20px; }
-    .receipt-container { max-width: 680px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; }
-    .header { background: #1e1b4b; color: #ffffff; padding: 28px 32px; display: flex; justify-content: space-between; align-items: flex-start; }
-    .badge { background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 4px 10px; border-radius: 9999px; display: inline-block; margin-bottom: 8px; }
-    .title { font-size: 22px; font-weight: 800; margin: 0; color: #ffffff; }
-    .school { font-size: 13px; color: #cbd5e1; margin-top: 4px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: ${LIGHT_COLORS.background}; color: ${LIGHT_COLORS.text}; margin: 0; padding: 36px 20px; }
+    .receipt-container { max-width: 680px; margin: 0 auto; background: ${LIGHT_COLORS.surface}; border-radius: 16px; border: 1px solid ${LIGHT_COLORS.border}; overflow: hidden; }
+    .header { background: ${LIGHT_COLORS.surface}; color: ${LIGHT_COLORS.onPrimary}; padding: 28px 32px; display: flex; justify-content: space-between; align-items: flex-start; }
+    .badge { background: ${withAlpha(LIGHT_COLORS.success, 0.2)}; border: 1px solid ${withAlpha(LIGHT_COLORS.success, 0.4)}; color: ${LIGHT_COLORS.success}; font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 4px 10px; border-radius: 9999px; display: inline-block; margin-bottom: 8px; }
+    .title { font-size: 22px; font-weight: 800; margin: 0; color: ${LIGHT_COLORS.onPrimary}; }
+    .school { font-size: 13px; color: ${LIGHT_COLORS.border}; margin-top: 4px; }
     .content { padding: 28px 32px; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #f1f5f9; }
-    .label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
-    .value { font-size: 14px; font-weight: 600; color: #0f172a; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid ${LIGHT_COLORS.background}; }
+    .label { font-size: 11px; font-weight: 700; color: ${LIGHT_COLORS.subtext}; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .value { font-size: 14px; font-weight: 600; color: ${LIGHT_COLORS.text}; }
     .table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-    .table th { text-align: left; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; padding: 10px 0; border-bottom: 2px solid #e2e8f0; }
-    .table td { padding: 14px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
-    .total-row { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 16px 20px; border-radius: 12px; font-weight: 800; font-size: 17px; margin-bottom: 24px; }
-    .footer { text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #f1f5f9; padding: 18px 32px; background: #fcfcfd; }
+    .table th { text-align: left; font-size: 11px; font-weight: 700; color: ${LIGHT_COLORS.subtext}; text-transform: uppercase; padding: 10px 0; border-bottom: 2px solid ${LIGHT_COLORS.border}; }
+    .table td { padding: 14px 0; border-bottom: 1px solid ${LIGHT_COLORS.background}; font-size: 13px; }
+    .total-row { display: flex; justify-content: space-between; align-items: center; background: ${LIGHT_COLORS.background}; padding: 16px 20px; border-radius: 12px; font-weight: 800; font-size: 17px; margin-bottom: 24px; }
+    .footer { text-align: center; font-size: 11px; color: ${LIGHT_COLORS.subtext}; border-top: 1px solid ${LIGHT_COLORS.background}; padding: 18px 32px; background: ${LIGHT_COLORS.background}; }
   </style>
 </head>
 <body>
@@ -107,8 +108,8 @@ function generateReceiptHTML(receipt: any): string {
         <div class="school">${schoolName}</div>
       </div>
       <div style="text-align: right;">
-        <div style="font-size: 11px; color: #94a3b8;">Receipt #</div>
-        <div style="font-size: 14px; font-weight: 700; color: #ffffff;">${invNum}</div>
+        <div style="font-size: 11px; color: ${LIGHT_COLORS.subtext};">Receipt #</div>
+        <div style="font-size: 14px; font-weight: 700; color: ${LIGHT_COLORS.onPrimary};">${invNum}</div>
       </div>
     </div>
     <div class="content">
@@ -119,7 +120,7 @@ function generateReceiptHTML(receipt: any): string {
         </div>
         <div>
           <div class="label">Payment Status</div>
-          <div class="value" style="color: #059669; font-weight: 700;">&#10003; ${status}</div>
+          <div class="value" style="color: ${LIGHT_COLORS.success}; font-weight: 700;">&#10003; ${status}</div>
         </div>
         <div>
           <div class="label">Transaction Reference</div>
@@ -148,7 +149,7 @@ function generateReceiptHTML(receipt: any): string {
 
       <div class="total-row">
         <span>Total Paid:</span>
-        <span style="color: #4f46e5;">₹${amount}</span>
+        <span style="color: ${LIGHT_COLORS.primary};">₹${amount}</span>
       </div>
     </div>
     <div class="footer">
@@ -516,8 +517,8 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
               styles.statIconBox,
               {
                 backgroundColor: isDarkMode
-                  ? 'rgba(239, 68, 68, 0.2)'
-                  : 'rgba(239, 68, 68, 0.1)',
+                  ? withAlpha(theme.danger, 0.2)
+                  : withAlpha(theme.danger, 0.1),
               },
             ]}
           >
@@ -544,8 +545,8 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
               styles.statIconBox,
               {
                 backgroundColor: isDarkMode
-                  ? 'rgba(16, 185, 129, 0.2)'
-                  : 'rgba(16, 185, 129, 0.1)',
+                  ? withAlpha(theme.success, 0.2)
+                  : withAlpha(theme.success, 0.1),
               },
             ]}
           >
@@ -575,8 +576,8 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
               styles.statIconBox,
               {
                 backgroundColor: isDarkMode
-                  ? 'rgba(245, 158, 11, 0.2)'
-                  : 'rgba(245, 158, 11, 0.1)',
+                  ? withAlpha(theme.warning, 0.2)
+                  : withAlpha(theme.warning, 0.1),
               },
             ]}
           >
@@ -677,7 +678,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
                 {
                   backgroundColor:
                     activeTab === 'Active Invoices'
-                      ? theme.primary + '20'
+                      ? withAlpha(theme.primary, 0.2)
                       : isDarkMode
                       ? theme.cardNested
                       : theme.iconBackground,
@@ -823,15 +824,15 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
                             {
                               backgroundColor: isOverdue
                                 ? isDarkMode
-                                  ? 'rgba(239, 68, 68, 0.2)'
-                                  : 'rgba(239, 68, 68, 0.1)'
+                                  ? withAlpha(theme.danger, 0.2)
+                                  : withAlpha(theme.danger, 0.1)
                                 : isPaid
                                 ? isDarkMode
-                                  ? 'rgba(16, 185, 129, 0.2)'
-                                  : 'rgba(16, 185, 129, 0.1)'
+                                  ? withAlpha(theme.success, 0.2)
+                                  : withAlpha(theme.success, 0.1)
                                 : isDarkMode
-                                ? 'rgba(245, 158, 11, 0.2)'
-                                : 'rgba(245, 158, 11, 0.1)',
+                                ? withAlpha(theme.warning, 0.2)
+                                : withAlpha(theme.warning, 0.1),
                             },
                           ]}
                         >
@@ -1398,8 +1399,8 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
                     height: 36,
                     borderRadius: 18,
                     backgroundColor: isDarkMode
-                      ? 'rgba(16, 185, 129, 0.25)'
-                      : 'rgba(16, 185, 129, 0.15)',
+                      ? withAlpha(theme.success, 0.25)
+                      : withAlpha(theme.success, 0.15),
                     justifyContent: 'center',
                     alignItems: 'center',
                     marginRight: 10,
@@ -1435,8 +1436,8 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
                 styles.amountSummaryBox,
                 {
                   backgroundColor: isDarkMode
-                    ? 'rgba(16, 185, 129, 0.15)'
-                    : 'rgba(16, 185, 129, 0.08)',
+                    ? withAlpha(theme.success, 0.15)
+                    : withAlpha(theme.success, 0.08),
                   borderColor: theme.success,
                   borderWidth: 1,
                   margin: 16,
@@ -1461,7 +1462,7 @@ const FeesScreen: React.FC<Props> = ({ navigation }) => {
                   style={[
                     styles.histStatusPill,
                     {
-                      backgroundColor: theme.success + '20',
+                      backgroundColor: withAlpha(theme.success, 0.2),
                       borderColor: theme.success,
                       marginTop: 4,
                     },
@@ -1738,8 +1739,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     },
     filterCountBadgeActive: {
       backgroundColor: isDarkMode
-        ? 'rgba(255, 255, 255, 0.2)'
-        : 'rgba(255, 255, 255, 0.25)',
+        ? withAlpha(theme.onPrimary, 0.2)
+        : withAlpha(theme.onPrimary, 0.25),
     },
     filterCountBadgeTextActive: {
       color: theme.onPrimary,
@@ -1846,8 +1847,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: isDarkMode
-        ? 'rgba(16, 185, 129, 0.15)'
-        : 'rgba(16, 185, 129, 0.08)',
+        ? withAlpha(theme.success, 0.15)
+        : withAlpha(theme.success, 0.08),
       paddingHorizontal: 12,
       paddingVertical: 7,
       borderRadius: 8,
@@ -1969,7 +1970,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     // Checkout Modal
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.65)',
+      backgroundColor: withAlpha(theme.overlay, 0.65),
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -1992,7 +1993,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     secureBadge: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      backgroundColor: withAlpha(theme.onPrimary, 0.2),
       alignSelf: 'flex-start',
       paddingHorizontal: 8,
       paddingVertical: 3,
@@ -2019,7 +2020,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       width: 32,
       height: 32,
       borderRadius: 16,
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      backgroundColor: withAlpha(theme.onPrimary, 0.2),
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -2082,8 +2083,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     methodCardActive: {
       borderColor: theme.primary,
       backgroundColor: isDarkMode
-        ? 'rgba(79, 70, 229, 0.12)'
-        : 'rgba(79, 70, 229, 0.05)',
+        ? withAlpha(theme.primary, 0.12)
+        : withAlpha(theme.primary, 0.05),
     },
     methodCardTopRow: {
       flexDirection: 'row',
@@ -2104,8 +2105,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     },
     feeBadgeGreen: {
       backgroundColor: isDarkMode
-        ? 'rgba(16, 185, 129, 0.25)'
-        : 'rgba(16, 185, 129, 0.15)',
+        ? withAlpha(theme.success, 0.25)
+        : withAlpha(theme.success, 0.15),
       paddingHorizontal: 6,
       paddingVertical: 2,
       borderRadius: 4,
@@ -2162,8 +2163,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       paddingTop: 8,
       borderTopWidth: 1,
       borderTopColor: isDarkMode
-        ? 'rgba(255, 255, 255, 0.06)'
-        : 'rgba(0, 0, 0, 0.05)',
+        ? withAlpha(theme.onPrimary, 0.06)
+        : withAlpha(theme.overlay, 0.05),
     },
     zeroFeeInlineText: {
       fontSize: 11,
@@ -2189,8 +2190,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
     billValue: { fontSize: 13, fontWeight: '700', color: theme.text },
     exemptBadge: {
       backgroundColor: isDarkMode
-        ? 'rgba(16, 185, 129, 0.25)'
-        : 'rgba(16, 185, 129, 0.15)',
+        ? withAlpha(theme.success, 0.25)
+        : withAlpha(theme.success, 0.15),
       paddingHorizontal: 5,
       paddingVertical: 2,
       borderRadius: 4,

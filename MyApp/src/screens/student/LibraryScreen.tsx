@@ -16,6 +16,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { StudentHeader } from '../../components/StudentHeader';
 import { NavigationDrawer } from '../../components/NavigationDrawer';
 import libraryService, { LibraryIssue, LibraryBookItem } from '../../services/libraryService';
@@ -171,7 +172,7 @@ const LibraryScreen: React.FC<Props> = ({ navigation }) => {
           </View>
 
           <View style={[styles.statCard, { borderLeftColor: theme.danger }]}>
-            <View style={[styles.statIconBox, { backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)' }]}>
+            <View style={[styles.statIconBox, { backgroundColor: withAlpha(theme.danger, 0.2) }]}>
               <Ionicons name="time-outline" size={20} color={theme.danger} />
             </View>
             <View style={styles.statContent}>
@@ -187,7 +188,7 @@ const LibraryScreen: React.FC<Props> = ({ navigation }) => {
           </View>
 
           <View style={[styles.statCard, { borderLeftColor: theme.success }]}>
-            <View style={[styles.statIconBox, { backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)' }]}>
+            <View style={[styles.statIconBox, { backgroundColor: withAlpha(theme.success, 0.2) }]}>
               <Ionicons name="person-circle-outline" size={20} color={theme.success} />
             </View>
             <View style={styles.statContent}>
@@ -211,7 +212,7 @@ const LibraryScreen: React.FC<Props> = ({ navigation }) => {
             <Ionicons
               name="bookmark-outline"
               size={16}
-              color={activeTab === 'my-books' ? theme.white : theme.subtext}
+              color={activeTab === 'my-books' ? theme.surfaceHigh : theme.subtext}
               style={{ marginRight: 6 }}
             />
             <Text style={[styles.tabButtonText, activeTab === 'my-books' && styles.tabButtonTextActive]}>
@@ -230,7 +231,7 @@ const LibraryScreen: React.FC<Props> = ({ navigation }) => {
             <Ionicons
               name="book-outline"
               size={16}
-              color={activeTab === 'browse' ? theme.white : theme.subtext}
+              color={activeTab === 'browse' ? theme.surfaceHigh : theme.subtext}
               style={{ marginRight: 6 }}
             />
             <Text style={[styles.tabButtonText, activeTab === 'browse' && styles.tabButtonTextActive]}>
@@ -587,7 +588,7 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       color: theme.subtext,
     },
     tabButtonTextActive: {
-      color: theme.white,
+      color: theme.surfaceHigh,
       fontWeight: '700',
     },
 
@@ -617,8 +618,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       elevation: 2,
     },
     issueCardOverdue: {
-      borderColor: isDarkMode ? 'rgba(239, 68, 68, 0.5)' : 'rgba(239, 68, 68, 0.35)',
-      backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.12)' : 'rgba(239, 68, 68, 0.05)',
+      borderColor: withAlpha(theme.danger, 0.5),
+      backgroundColor: withAlpha(theme.danger, 0.12),
     },
     cardHeaderRow: {
       flexDirection: 'row',
@@ -677,8 +678,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       fontWeight: '700',
     },
     badgeInfo: {
-      backgroundColor: isDarkMode ? 'rgba(79, 70, 229, 0.2)' : 'rgba(79, 70, 229, 0.1)',
-      borderColor: isDarkMode ? 'rgba(79, 70, 229, 0.4)' : 'rgba(79, 70, 229, 0.25)',
+      backgroundColor: withAlpha(theme.primary, 0.2),
+      borderColor: withAlpha(theme.primary, 0.4),
     },
     badgeTextInfo: {
       color: theme.primary,
@@ -686,8 +687,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       fontWeight: '700',
     },
     badgeDanger: {
-      backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
-      borderColor: isDarkMode ? 'rgba(239, 68, 68, 0.4)' : 'rgba(239, 68, 68, 0.25)',
+      backgroundColor: withAlpha(theme.danger, 0.2),
+      borderColor: withAlpha(theme.danger, 0.4),
     },
     badgeTextDanger: {
       color: theme.danger,
@@ -695,8 +696,8 @@ const getStyles = (theme: any, isDarkMode: boolean) =>
       fontWeight: '700',
     },
     badgeSuccess: {
-      backgroundColor: isDarkMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.12)',
-      borderColor: isDarkMode ? 'rgba(16, 185, 129, 0.4)' : 'rgba(16, 185, 129, 0.25)',
+      backgroundColor: withAlpha(theme.success, 0.2),
+      borderColor: withAlpha(theme.success, 0.4),
     },
     badgeTextSuccess: {
       color: theme.success,

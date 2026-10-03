@@ -19,6 +19,7 @@ import ScaleButton from '../../components/animations/ScaleButton';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import apiClient from '../../services/apiClient';
 import { ENDPOINTS } from '../../constants/api';
 
@@ -128,7 +129,7 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
       <View style={styles.loadingContainer}>
         {renderHeader()}
         <View style={styles.centerFill}>
-          <ActivityIndicator size="large" color="#4F46E5" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text style={styles.loadingText}>Analyzing performance data...</Text>
         </View>
       </View>
@@ -137,14 +138,14 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F9" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.background} />
       {renderHeader()}
 
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#4F46E5']} />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.primary]} />}
       >
 
         {/* Page Titles */}
@@ -155,20 +156,20 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
 
         {/* Overall Stats Cards */}
         <View style={styles.statsGrid}>
-          <Animated.View entering={FadeInUp.delay(100).springify()} style={[styles.statItem, { borderLeftColor: '#3B82F6' }]}>
-            <Text style={[styles.statValue, { color: '#3B82F6' }]}>{performanceData?.overall?.avgQuizScore}%</Text>
+          <Animated.View entering={FadeInUp.delay(100).springify()} style={[styles.statItem, { borderLeftColor: theme.info }]}>
+            <Text style={[styles.statValue, { color: theme.info }]}>{performanceData?.overall?.avgQuizScore}%</Text>
             <Text style={styles.statLabel}>Avg Quiz Score</Text>
           </Animated.View>
-          <Animated.View entering={FadeInUp.delay(150).springify()} style={[styles.statItem, { borderLeftColor: '#10B981' }]}>
-            <Text style={[styles.statValue, { color: '#10B981' }]}>{performanceData?.overall?.attendanceRate}%</Text>
+          <Animated.View entering={FadeInUp.delay(150).springify()} style={[styles.statItem, { borderLeftColor: theme.success }]}>
+            <Text style={[styles.statValue, { color: theme.success }]}>{performanceData?.overall?.attendanceRate}%</Text>
             <Text style={styles.statLabel}>Avg Attendance</Text>
           </Animated.View>
-          <Animated.View entering={FadeInUp.delay(200).springify()} style={[styles.statItem, { borderLeftColor: '#F59E0B' }]}>
-            <Text style={[styles.statValue, { color: '#F59E0B' }]}>{performanceData?.overall?.assignmentRate}%</Text>
+          <Animated.View entering={FadeInUp.delay(200).springify()} style={[styles.statItem, { borderLeftColor: theme.warning }]}>
+            <Text style={[styles.statValue, { color: theme.warning }]}>{performanceData?.overall?.assignmentRate}%</Text>
             <Text style={styles.statLabel}>Submissions</Text>
           </Animated.View>
-          <Animated.View entering={FadeInUp.delay(250).springify()} style={[styles.statItem, { borderLeftColor: '#8B5CF6' }]}>
-            <Text style={[styles.statValue, { color: '#8B5CF6' }]}>{performanceData?.overall?.totalStudents}</Text>
+          <Animated.View entering={FadeInUp.delay(250).springify()} style={[styles.statItem, { borderLeftColor: theme.primary }]}>
+            <Text style={[styles.statValue, { color: theme.primary }]}>{performanceData?.overall?.totalStudents}</Text>
             <Text style={styles.statLabel}>Total Students</Text>
           </Animated.View>
         </View>
@@ -176,7 +177,7 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
         {/* Top Performers Card */}
         <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.cardContainer}>
           <View style={styles.cardHeader}>
-            <MaterialCommunityIcons name="trophy" size={18} color="#F59E0B" style={{ marginRight: 8 }} />
+            <MaterialCommunityIcons name="trophy" size={18} color={theme.warning} style={{ marginRight: 8 }} />
             <Text style={styles.cardTitle}>Top Performers</Text>
           </View>
 
@@ -207,7 +208,7 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
         {/* Quiz Performance Trends */}
         <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.cardContainer}>
           <View style={styles.cardHeader}>
-            <MaterialCommunityIcons name="chart-line" size={18} color="#3B82F6" style={{ marginRight: 8 }} />
+            <MaterialCommunityIcons name="chart-line" size={18} color={theme.info} style={{ marginRight: 8 }} />
             <Text style={styles.cardTitle}>Recent Quiz Performance</Text>
           </View>
 
@@ -220,7 +221,7 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
                     <Text style={styles.quizAvg}>{quiz.averageScore || 0}%</Text>
                   </View>
                   <View style={styles.progressBg}>
-                    <View style={[styles.progressFill, { width: `${quiz.averageScore || 0}%`, backgroundColor: '#3B82F6' }]} />
+                    <View style={[styles.progressFill, { width: `${quiz.averageScore || 0}%`, backgroundColor: theme.info }]} />
                   </View>
                   <View style={styles.quizFooterRow}>
                     <Text style={styles.quizMeta}>{quiz.subject} • {quiz.className || 'Class'}</Text>
@@ -239,7 +240,7 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
         {/* Assignment Insights */}
         <Animated.View entering={FadeInUp.delay(500).springify()} style={styles.cardContainer}>
           <View style={styles.cardHeader}>
-            <MaterialCommunityIcons name="clipboard-check" size={18} color="#10B981" style={{ marginRight: 8 }} />
+            <MaterialCommunityIcons name="clipboard-check" size={18} color={theme.success} style={{ marginRight: 8 }} />
             <Text style={styles.cardTitle}>Assignment Submission Insights</Text>
           </View>
 
@@ -256,8 +257,8 @@ const TeacherPerformanceScreen = ({ navigation }: any) => {
                   <View key={index} style={styles.assignmentPerfItem}>
                     <View style={styles.assignmentInfoRow}>
                       <Text style={styles.assignmentTitle} numberOfLines={1}>{assignment.title || 'Assignment'}</Text>
-                      <View style={[styles.rateTag, { backgroundColor: submissionRate > 70 ? '#D1FAE5' : '#FEE2E2' }]}>
-                        <Text style={[styles.rateTagText, { color: submissionRate > 70 ? '#065F46' : '#991B1B' }]}>
+                      <View style={[styles.rateTag, { backgroundColor: submissionRate > 70 ? withAlpha(theme.success, 0.15) : withAlpha(theme.danger, 0.15) }]}>
+                        <Text style={[styles.rateTagText, { color: submissionRate > 70 ? theme.success : theme.danger }]}>
                           {submissionRate}% Rate
                         </Text>
                       </View>
@@ -295,7 +296,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
     backgroundColor: theme.surface,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -317,16 +318,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#A855F7',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#A855F7',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
     elevation: 8,
   },
-  avatarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  avatarText: { color: theme.onPrimary, fontWeight: 'bold', fontSize: 16 },
 
   loadingContainer: { flex: 1, backgroundColor: theme.background },
   centerFill: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -344,7 +345,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 12,
     marginBottom: 12,
     borderLeftWidth: 4,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 5,
@@ -358,7 +359,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
-    shadowColor: '#1E293B',
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
     shadowRadius: 10,
@@ -381,7 +382,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: theme.isDarkMode ? '#334155' : '#F3F4F6',
+    backgroundColor: withAlpha(theme.border, 0.5),
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -390,15 +391,15 @@ const getStyles = (theme: any) => StyleSheet.create({
   studentInfo: { flex: 1 },
   studentName: { fontSize: 14, fontWeight: '700', color: theme.text },
   studentClass: { fontSize: 11, color: theme.subtext, marginTop: 1 },
-  studentScoreContainer: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, backgroundColor: '#E0F2FE' },
-  studentScore: { fontSize: 12, fontWeight: '800', color: '#0369A1' },
+  studentScoreContainer: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, backgroundColor: withAlpha(theme.info, 0.15) },
+  studentScore: { fontSize: 12, fontWeight: '800', color: theme.info },
 
   quizList: { marginTop: 4 },
   quizPerformanceItem: { marginBottom: 16 },
   quizHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   quizName: { fontSize: 14, fontWeight: '700', color: theme.text, flex: 1 },
-  quizAvg: { fontSize: 14, fontWeight: '800', color: '#3B82F6' },
-  progressBg: { height: 6, backgroundColor: theme.isDarkMode ? '#334155' : '#F1F5F9', borderRadius: 3, overflow: 'hidden' },
+  quizAvg: { fontSize: 14, fontWeight: '800', color: theme.info },
+  progressBg: { height: 6, backgroundColor: withAlpha(theme.border, 0.5), borderRadius: 3, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 3 },
   quizFooterRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
   quizMeta: { fontSize: 10, color: theme.subtext, fontWeight: '500' },

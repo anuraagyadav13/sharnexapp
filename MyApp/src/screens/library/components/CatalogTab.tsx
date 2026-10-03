@@ -1,8 +1,10 @@
 import React from 'react';
+import { useTheme } from '../../../store/ThemeContext';
+import { withAlpha } from '../../../constants/theme';
 import { View, Text, TextInput, FlatList, StyleSheet } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Book } from '../types';
-import { LIBRARY_COLORS } from '../theme';
+
 import LibraryButton from './LibraryButton';
 import PickerField from './PickerField';
 
@@ -27,6 +29,9 @@ const CatalogTab: React.FC<CatalogTabProps> = ({
   onAddPress,
   onDelete,
 }) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+
   const categoryOptions = [
     { label: 'All Categories', value: 'all' },
     ...categories.map(c => ({ label: c, value: c })),
@@ -36,11 +41,11 @@ const CatalogTab: React.FC<CatalogTabProps> = ({
     <View style={styles.container}>
       <View style={styles.toolbar}>
         <View style={styles.searchBox}>
-          <Ionicons name="search" size={16} color={LIBRARY_COLORS.textDim} style={styles.searchIcon} />
+          <Ionicons name="search" size={16} color={theme.subtext} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search by title, author, or ISBN…"
-            placeholderTextColor={LIBRARY_COLORS.textDim}
+            placeholderTextColor={theme.subtext}
             value={filter}
             onChangeText={onFilterChange}
           />
@@ -62,7 +67,7 @@ const CatalogTab: React.FC<CatalogTabProps> = ({
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="book-outline" size={40} color={LIBRARY_COLORS.textDim} />
+            <Ionicons name="book-outline" size={40} color={theme.subtext} />
             <Text style={styles.emptyText}>No books found.</Text>
           </View>
         }
@@ -90,7 +95,7 @@ const CatalogTab: React.FC<CatalogTabProps> = ({
               </View>
               <View style={styles.stat}>
                 <Text style={styles.statLabel}>Available</Text>
-                <Text style={[styles.statValue, { color: item.available > 0 ? LIBRARY_COLORS.success : LIBRARY_COLORS.danger }]}>
+                <Text style={[styles.statValue, { color: item.available > 0 ? theme.success : theme.danger }]}>
                   {item.available}
                 </Text>
               </View>
@@ -105,12 +110,12 @@ const CatalogTab: React.FC<CatalogTabProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: LIBRARY_COLORS.surface,
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: LIBRARY_COLORS.borderLight,
+    borderColor: theme.borderLight,
     borderRadius: 14,
     overflow: 'hidden',
   },
@@ -118,14 +123,14 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 10,
     borderBottomWidth: 1,
-    borderBottomColor: LIBRARY_COLORS.borderLight,
+    borderBottomColor: theme.borderLight,
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: LIBRARY_COLORS.card,
+    backgroundColor: theme.card,
     borderWidth: 1,
-    borderColor: LIBRARY_COLORS.border,
+    borderColor: theme.border,
     borderRadius: 9,
     paddingHorizontal: 12,
   },
@@ -135,7 +140,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     paddingVertical: 10,
-    color: LIBRARY_COLORS.text,
+    color: theme.text,
     fontSize: 13,
   },
   pickerWrap: {
@@ -147,10 +152,10 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   card: {
-    backgroundColor: LIBRARY_COLORS.card,
+    backgroundColor: theme.card,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: LIBRARY_COLORS.border,
+    borderColor: theme.border,
     padding: 14,
     marginBottom: 10,
   },
@@ -168,11 +173,11 @@ const styles = StyleSheet.create({
   },
   title: {
     fontWeight: '700',
-    color: LIBRARY_COLORS.text,
+    color: theme.text,
     fontSize: 15,
   },
   author: {
-    color: LIBRARY_COLORS.textMuted,
+    color: theme.placeholder,
     fontSize: 13,
     marginTop: 2,
   },
@@ -183,18 +188,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   categoryPill: {
-    backgroundColor: LIBRARY_COLORS.blueBg,
+    backgroundColor: theme.infoBg,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 5,
   },
   categoryText: {
-    color: '#93C5FD',
+    color: theme.info,
     fontSize: 12,
     fontWeight: '600',
   },
   isbn: {
-    color: LIBRARY_COLORS.textDim,
+    color: theme.subtext,
     fontSize: 11,
     fontFamily: 'monospace',
   },
@@ -208,13 +213,13 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 10,
-    color: LIBRARY_COLORS.textDim,
+    color: theme.subtext,
     textTransform: 'uppercase',
     marginBottom: 2,
   },
   statValue: {
     fontWeight: '700',
-    color: LIBRARY_COLORS.textSecondary,
+    color: theme.textSecondary,
     fontSize: 16,
   },
   deleteBtn: {
@@ -226,7 +231,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   emptyText: {
-    color: '#4B5563',
+    color: theme.subtext,
     fontSize: 14,
   },
 });

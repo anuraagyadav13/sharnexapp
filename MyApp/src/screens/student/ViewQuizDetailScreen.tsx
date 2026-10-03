@@ -11,6 +11,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useAuth } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
+import { withAlpha, LIGHT_COLORS } from '../../constants/theme';
 import { StudentHeader } from '../../components/StudentHeader';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import ScaleButton from '../../components/animations/ScaleButton';
@@ -101,7 +102,7 @@ const ViewQuizDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   if (error || !quizData) {
     return (
       <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+        <Ionicons name="alert-circle-outline" size={48} color={theme.danger} />
         <Text style={styles.errorText}>{error || 'Quiz not found'}</Text>
         <ScaleButton
           style={styles.retryButton}
@@ -109,7 +110,7 @@ const ViewQuizDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           scaleTo={0.95}
           onPress={fetchQuiz}
         >
-          <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
+          <Text style={{ color: theme.onPrimary, fontWeight: '600' }}>Retry</Text>
         </ScaleButton>
       </View>
     );
@@ -136,7 +137,7 @@ const ViewQuizDetailScreen: React.FC<Props> = ({ navigation, route }) => {
             scaleTo={0.9}
             onPress={() => navigation.goBack()}
           >
-            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={22} color={theme.onPrimary} />
           </ScaleButton>
 
           <Text style={styles.heroTitle}>{quizData?.title || 'Quiz Details'}</Text>
@@ -150,7 +151,7 @@ const ViewQuizDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           {/* Top Info Highlights Card */}
           <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.topHighlightsCard}>
             <View style={styles.highlightCol}>
-              <View style={[styles.highlightIconBg, { backgroundColor: isDarkMode ? '#1E1B4B' : '#EEF2FF' }]}>
+              <View style={[styles.highlightIconBg, { backgroundColor: withAlpha(theme.primary, 0.15) }]}>
                 <Ionicons name="time" size={14} color={theme.primary} />
               </View>
               <Text style={styles.highlightVal}>{quizData?.timeLimit ? `${quizData.timeLimit} min` : 'Untimed'}</Text>
@@ -158,16 +159,16 @@ const ViewQuizDetailScreen: React.FC<Props> = ({ navigation, route }) => {
             </View>
 
             <View style={styles.highlightCol}>
-              <View style={[styles.highlightIconBg, { backgroundColor: isDarkMode ? '#701A7530' : '#FAD1E8' }]}>
-                <Ionicons name="help-circle" size={14} color="#C026D3" />
+              <View style={[styles.highlightIconBg, { backgroundColor: withAlpha(theme.primary, 0.1) }]}>
+                <Ionicons name="help-circle" size={14} color={theme.primary} />
               </View>
               <Text style={styles.highlightVal}>{questionsCount}</Text>
               <Text style={styles.highlightLbl}>Questions</Text>
             </View>
 
             <View style={styles.highlightCol}>
-              <View style={[styles.highlightIconBg, { backgroundColor: isDarkMode ? '#065F4630' : '#DCFCE7' }]}>
-                <Ionicons name="star" size={14} color="#10B981" />
+              <View style={[styles.highlightIconBg, { backgroundColor: withAlpha(theme.success, 0.1) }]}>
+                <Ionicons name="star" size={14} color={theme.success} />
               </View>
               <Text style={styles.highlightVal}>{questionsCount}</Text>
               <Text style={styles.highlightLbl}>Max Points</Text>
@@ -204,7 +205,7 @@ const ViewQuizDetailScreen: React.FC<Props> = ({ navigation, route }) => {
             </View>
 
             <View style={styles.warningPill}>
-              <Ionicons name="information-circle" size={16} color="#F97316" style={{ marginRight: 6 }} />
+              <Ionicons name="information-circle" size={16} color={theme.warning} style={{ marginRight: 6 }} />
               <Text style={styles.warningPillText}>
                 {quizData?.maxAttempts ? `${quizData.maxAttempts} Attempt Allowed` : 'Single Attempt Allowed'}
               </Text>
@@ -249,7 +250,7 @@ const ViewQuizDetailScreen: React.FC<Props> = ({ navigation, route }) => {
                 activeOpacity={0.85}
                 onPress={() => navigation.navigate('QuizResult', { quizId, timestamp: Date.now() })}
               >
-                <Ionicons name="bar-chart-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                <Ionicons name="bar-chart-outline" size={18} color={theme.onPrimary} style={{ marginRight: 8 }} />
                 <Text style={styles.actionBtnText}>View Result</Text>
               </ScaleButton>
             ) : isExpired ? (
@@ -273,7 +274,7 @@ const ViewQuizDetailScreen: React.FC<Props> = ({ navigation, route }) => {
                 activeOpacity={0.85}
                 onPress={() => navigation.navigate('StartQuiz', { quizId })}
               >
-                <Ionicons name="play-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                <Ionicons name="play-outline" size={18} color={theme.onPrimary} style={{ marginRight: 8 }} />
                 <Text style={styles.actionBtnText}>Start Quiz Now</Text>
               </ScaleButton>
             )}
@@ -298,16 +299,16 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     borderBottomLeftRadius: 16,
     borderBottomRightRadius: 16,
   },
-  backButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255, 255, 255, 0.25)', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  heroTitle: { fontSize: 22, fontWeight: '800', color: '#FFFFFF', marginBottom: 8, letterSpacing: -0.5 },
-  heroSubtitle: { fontSize: 11, color: '#E0E7FF', fontWeight: '500', lineHeight: 16 },
+  backButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: withAlpha(theme.onPrimary, 0.25), justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  heroTitle: { fontSize: 22, fontWeight: '800', color: theme.onPrimary, marginBottom: 8, letterSpacing: -0.5 },
+  heroSubtitle: { fontSize: 11, color: withAlpha(theme.onPrimary, 0.8), fontWeight: '500', lineHeight: 16 },
 
   contentWrapper: { paddingHorizontal: 16, marginTop: 16 },
 
   topHighlightsCard: {
     flexDirection: 'row', justifyContent: 'space-between',
     backgroundColor: theme.surface, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 10,
-    shadowColor: '#1E293B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 4,
+    shadowColor: theme.border, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 4,
     marginBottom: 16, borderWidth: 1, borderColor: theme.border,
     borderTopWidth: 4, borderTopColor: theme.primary,
   },
@@ -318,7 +319,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
 
   infoCard: {
     backgroundColor: theme.surface, borderRadius: 12, padding: 14,
-    shadowColor: '#1E293B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4,
+    shadowColor: theme.border, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4,
     marginBottom: 16, borderWidth: 1, borderColor: theme.border
   },
   cardHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
@@ -330,10 +331,10 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   infoRowRight: { fontSize: 12, color: theme.text, fontWeight: '600' },
 
   warningPill: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: isDarkMode ? '#C2410C30' : '#FFF7ED',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: withAlpha(theme.warning, 0.1),
     alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, marginTop: 4
   },
-  warningPillText: { color: '#F97316', fontSize: 10, fontWeight: '600' },
+  warningPillText: { color: theme.warning, fontSize: 10, fontWeight: '600' },
 
   instructionItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
   instIcon: { marginRight: 8, marginTop: 2 },
@@ -354,12 +355,12 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
     elevation: 4,
   },
   actionBtnText: {
-    color: '#FFFFFF',
+    color: theme.onPrimary,
     fontSize: 14,
     fontWeight: '700',
   },
   actionBtnDisabled: {
-    backgroundColor: isDarkMode ? '#334155' : '#E2E8F0',
+    backgroundColor: withAlpha(theme.border, 0.5),
     borderRadius: 12,
     paddingVertical: 14,
     flexDirection: 'row',
@@ -383,7 +384,7 @@ const getStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: '#EF4444',
+    color: theme.danger,
     textAlign: 'center',
     marginTop: 16,
     marginBottom: 24,

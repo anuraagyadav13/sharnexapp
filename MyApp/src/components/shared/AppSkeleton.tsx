@@ -1,3 +1,4 @@
+import { useTheme } from '../../store/ThemeContext';
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import Skeleton from '../common/Skeleton';
@@ -7,8 +8,9 @@ import Skeleton from '../common/Skeleton';
  * Simple, clean blocks that pulse gently.
  */
 const AppSkeleton = () => {
+  const { theme } = useTheme();
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Top Profile/Search Area */}
       <View style={styles.header}>
         <Skeleton width={40} height={40} borderRadius={20} />
@@ -43,8 +45,7 @@ const AppSkeleton = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    padding: 24,
+        padding: 24,
     paddingTop: 60,
   },
   header: {
